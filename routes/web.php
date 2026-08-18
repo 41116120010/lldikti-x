@@ -20,6 +20,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/notulen/create', [AdminController::class, 'createNotulen'])->name('notulen.create');
     Route::get('/notulen/editor', [AdminController::class, 'editNotulen'])->name('notulen.editor');
     Route::post('/notulen', [AdminController::class, 'storeNotulen'])->name('notulen.store');
-    Route::get('/notulen/{index?}', [AdminController::class, 'notulen'])->name('notulen');
+    Route::get('/notulen', [AdminController::class, 'notulenIndex'])->name('notulen');
+    Route::get('/notulen/{index}', [AdminController::class, 'notulen'])->name('notulen.show');
     Route::get('/meetings', [AdminController::class, 'meetings'])->name('meetings');
 });

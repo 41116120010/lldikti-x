@@ -136,6 +136,28 @@ class AdminController extends Controller
 
         return redirect()->route('admin.notulen')->with('success', 'Notulen berhasil disimpan.');
     }
+    public function notulenIndex()
+    {
+        $meetings = $this->meetingsAll();
+        $reports = $this->notulenReports();
+
+        $completed = [];
+        foreach ($meetings as $i => $m) {
+            if ($m['status'] === 'Completed') {
+                $completed[] = [
+                    'index' => $i,
+                    'title' => $m['title'],
+                    'date' => $m['date'],
+                    'unit' => $m['unit'],
+                    'present' => $m['present'] ?? null,
+                    'capacity' => $m['capacity'] ?? null,
+                    'docNo' => $reports[$i]['docNo'] ?? '—',
+                ];
+            }
+        }
+
+        return view('admin.notulen-list', ['reports' => $completed]);
+    }
 
     public function notulen($index = 0)
     {
