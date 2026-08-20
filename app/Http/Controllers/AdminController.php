@@ -144,13 +144,16 @@ class AdminController extends Controller
         $completed = [];
         foreach ($meetings as $i => $m) {
             if ($m['status'] === 'Completed') {
+                $present = $m['present'] ?? null;
+                $capacity = $m['capacity'] ?? null;
                 $completed[] = [
                     'index' => $i,
                     'title' => $m['title'],
                     'date' => $m['date'],
                     'unit' => $m['unit'],
-                    'present' => $m['present'] ?? null,
-                    'capacity' => $m['capacity'] ?? null,
+                    'present' => $present,
+                    'capacity' => $capacity,
+                    'percent' => ($present !== null && $capacity) ? round($present / $capacity * 100) : null,
                     'docNo' => $reports[$i]['docNo'] ?? '—',
                 ];
             }

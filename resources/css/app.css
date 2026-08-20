@@ -196,8 +196,7 @@
     .presence { max-height: 410px; overflow: auto; border-top: 1px solid var(--color-line) }
     .presence .participant { padding: 10px 15px }
 
-    .notes { padding: 19px 23px }
-    .agenda { padding: 0 0 16px; margin-bottom: 16px; border-bottom: 1px solid var(--color-line) }
+    .notes { padding: 24px 28px }
     .agenda h3 { font-size: 14px; margin: 0 0 10px }
     .agenda p { margin: 7px 0; color: #405474; line-height: 1.55 }
 
@@ -296,4 +295,66 @@
     .auth-split { grid-template-columns: 1fr }
     .auth-illustration { display: none }
     .auth-form-panel { padding: 32px 24px }
+}
+@layer components {
+    .field-error { color: #b91c1c; font-size: 11.5px; margin-top: 5px; display: block }
+}
+@layer components {
+    .report-hero { position: relative; overflow: hidden }
+    .report-hero::before { content: ""; position: absolute; inset: 0; background-image: radial-gradient(#ffffff22 1px, transparent 1px); background-size: 16px 16px; opacity: .6; pointer-events: none }
+    .report-hero > * { position: relative }
+
+    .report-hero-meta { display: flex; flex-wrap: wrap; gap: 6px 20px; margin: 13px 0 0; color: #e6ecff; font-size: 12.5px; list-style: none; padding: 0 }
+    .report-hero-meta span { display: inline-flex; align-items: center; gap: 6px }
+    .report-hero-meta svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; opacity: .85; flex: 0 0 auto }
+
+    .metadata { display: grid; grid-template-columns: repeat(4, 1fr); padding: 0 }
+    .metadata > div { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-right: 1px solid var(--color-line) }
+    .metadata > div:last-child { border-right: 0 }
+    .metadata-icon { width: 32px; height: 32px; border-radius: 9px; background: var(--color-soft); color: var(--color-blue); display: grid; place-items: center; flex: 0 0 auto }
+    .metadata-icon svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round }
+
+    .attendance-ring-wrap { display: flex; align-items: center; gap: 18px }
+    .attendance-ring { flex: 0 0 auto }
+    .attendance-pills { display: flex; flex-direction: column; gap: 7px }
+    .attendance-pill { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: #405474 }
+    .attendance-pill i { width: 8px; height: 8px; border-radius: 50%; display: inline-block }
+
+    .agenda-timeline { position: relative; padding-left: 50px }
+    .agenda-timeline .agenda { position: relative; padding-bottom: 24px }
+    .agenda-timeline .agenda:last-child { padding-bottom: 0 }
+    .agenda-timeline .agenda h3 { margin-bottom: 12px }
+    .agenda-timeline .agenda p { margin: 10px 0 }
+    .agenda-timeline .agenda::before { content: attr(data-step); position: absolute; left: -42px; top: 0; width: 24px; height: 24px; border-radius: 50%; background: var(--color-soft); color: var(--color-blue); font-size: 11px; font-weight: 700; display: grid; place-items: center; line-height: 1 }
+    .agenda-timeline .agenda::after { content: ""; position: absolute; left: -30px; top: 26px; bottom: 0; width: 1px; background: var(--color-line) }
+    .agenda-timeline .agenda:last-child::after { display: none }
+
+    .agenda-note { background: var(--color-soft); border: 1px solid #d8e7ff; border-radius: 10px; padding: 14px 16px 2px; margin-left: -4px }
+    .agenda-note::before { background: var(--color-blue) !important; color: #fff !important }
+    .agenda-note h3 { color: var(--color-blue) }
+}
+@layer components {
+    .report-actions { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin: 0 0 18px }
+    .report-export { height: 37px; padding: 0 15px; display: inline-flex; align-items: center; justify-content: center; font-size: 13px }
+    .report-actions .secondary { background: #fff; color: var(--color-blue); border: 1px solid #cbdcf8 }
+    .report-actions .secondary:hover { background: #f1f6ff; border-color: #9dbcf3 }
+}
+
+@media (max-width: 700px) {
+    .report-actions { flex-wrap: wrap; justify-content: flex-start }
+    .report-export { flex: 1 }
+}
+@layer components {
+    .profile-menu-wrap { position: relative }
+    .top-profile { border: 0; background: transparent; cursor: pointer; display: flex; gap: 10px; align-items: center; padding: 4px 6px; border-radius: 8px }
+    .top-profile:hover { background: #f3f7ff }
+    .top-profile .avatar { width: 32px; height: 32px }
+    .top-profile b { font-size: 13px }
+    .profile-dropdown { position: absolute; top: calc(100% + 8px); right: 0; background: #fff; border: 1px solid var(--color-line); border-radius: 10px; box-shadow: 0 12px 30px #1725541f; min-width: 190px; padding: 6px; display: none; z-index: 15 }
+    .profile-dropdown.open { display: block }
+    .profile-dropdown-item { display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 9px 10px; border-radius: 7px; font-size: 13px; color: #405474; cursor: pointer; text-decoration: none }
+    .profile-dropdown-item:hover { background: #f3f7ff; color: #1d5ddb }
+    .profile-dropdown form { margin: 0 }
+    .profile-dropdown-danger { color: #dc2626 }
+    .profile-dropdown-danger:hover { background: #fff5f5; color: #dc2626 }
 }

@@ -58,12 +58,33 @@ document.addEventListener('DOMContentLoaded', () => {
         select.classList.toggle('user', select.value === 'User');
         notify(`Role changed to ${select.value}.`);
     }));
-    document.querySelectorAll('[data-focus-search]').forEach(button => button.addEventListener('click', () => (document.querySelector('[data-table-search]') || document.querySelector('.input'))?.focus()));
+    document.querySelectorAll('[data-focus-search]').forEach(button => button.addEventListener('click', () => {
+    const target = document.querySelector('[data-table-search]');
+    if (target) target.focus();
+    else notify('No searchable list on this page.');
+}));
+
+document.querySelectorAll('[data-profile-toggle]').forEach(button => button.addEventListener('click', event => {
+    event.stopPropagation();
+    const dropdown = button.parentElement.querySelector('[data-profile-dropdown]');
+    const isOpen = dropdown.classList.contains('open');
+    document.querySelectorAll('[data-profile-dropdown]').forEach(d => d.classList.remove('open'));
+    dropdown.classList.toggle('open', !isOpen);
+    button.setAttribute('aria-expanded', String(!isOpen));
+}));
+document.addEventListener('click', () => document.querySelectorAll('[data-profile-dropdown]').forEach(d => d.classList.remove('open')));
 
     document.querySelectorAll('[data-table-search]').forEach(input => input.addEventListener('input', () => {
         const rows = [...document.querySelectorAll(input.dataset.table + ' tbody tr')];
         const query = input.value.toLowerCase().trim();
-        rows.forEach(row => row.classList.toggle('hidden-row', !row.textContent.toLowerCase().includes(query)));
+        let visibleCount = 0;
+        rows.forEach(row => {
+            const match = row.textContent.toLowerCase().includes(query);
+            row.classList.toggle('hidden-row', !match);
+            if (match) visibleCount++;
+        });
+        const emptyState = document.querySelector(input.dataset.table + '-empty');
+        if (emptyState) emptyState.classList.toggle('hidden-row', visibleCount !== 0);
     }));
 
 document.querySelector('#users-table')?.addEventListener('click', event => {
