@@ -85,4 +85,23 @@
         </div>
     </section>
 </div>
+<section class="panel attachments">
+    <div class="attachments-title">Dokumentasi &amp; Lampiran<span class="attachments-meta"><span class="attachments-count">{{ count($report['attachments'] ?? []) }} files</span><button class="button secondary attachments-download-all" type="button" data-toast="Downloading all attachments...">⬇ All</button></span></div>
+    <div class="attachment-grid">
+        @foreach($report['attachments'] ?? [] as $file)
+            <div class="file">
+                <div class="file-preview file-preview-{{ $file['type'] }}"><span class="file-badge">{{ strtoupper($file['type']) }}</span>{{ $file['type'] === 'pdf' ? '📄' : '🖼' }}</div>
+                <div class="file-body">
+                    <b title="{{ $file['name'] }}">{{ $file['name'] }}</b>
+                    <span>{{ $file['size'] }}</span>
+                    <div class="file-actions">
+                        <button type="button" data-file-preview="{{ $file['name'] }}">Preview</button>
+                        <button type="button" class="file-download" data-toast="Downloading {{ $file['name'] }}..." aria-label="Download {{ $file['name'] }}">⬇</button>
+                    </div>
+                </div>
+            </div>
+        @endforeach
+    </div>
+    <div class="attachments-foot">{{ $report['docNo'] }} · Dokumen resmi, tidak dapat diubah tanpa persetujuan pimpinan.</div>
+</section>
 @endsection

@@ -62,6 +62,16 @@ class AdminController extends Controller
         return [
             0 => [
                 'docNo' => 'RPT-IT-2026-08', 'author' => 'Sarah Chen', 'approvedBy' => 'Direktur IT', 'version' => 'Final v1.0',
+                'attachments' => [
+                    ['name' => 'Presentasi Evaluasi Q3.pdf', 'size' => '3.2 MB', 'type' => 'pdf'],
+                    ['name' => 'Foto Sesi Diskusi.jpg', 'size' => '1.8 MB', 'type' => 'jpg'],
+                    ['name' => 'Laporan Uptime Server.pdf', 'size' => '890 KB', 'type' => 'pdf'],
+                    ['name' => 'Foto Presentasi Monitoring.jpg', 'size' => '2.1 MB', 'type' => 'jpg'],
+                    ['name' => 'Foto Peserta Rapat.jpg', 'size' => '1.4 MB', 'type' => 'jpg'],
+                    ['name' => 'Proposal Anggaran Infrastruktur.pdf', 'size' => '1.1 MB', 'type' => 'pdf'],
+                    ['name' => 'Diagram Arsitektur Jaringan.png', 'size' => '945 KB', 'type' => 'png'],
+                    ['name' => 'Notulen Rapat Final.pdf', 'size' => '220 KB', 'type' => 'pdf'],
+                ],
                 'agenda' => [
                     ['title' => 'Opening', 'body' => ['Rapat dibuka oleh Kepala Unit IT, Ibu Sarah Chen, pada pukul 09.05 WIB. Rapat dihadiri oleh 18 dari 20 anggota unit dan tamu undangan dari departemen terkait.']],
                     ['title' => 'Agenda 1 - Evaluasi Kinerja Infrastruktur Q3 2026', 'body' => ['Uptime server mencapai 99.7%, melampaui target SLA sebesar 99.5%.', 'Insiden jaringan berkurang 22% dibandingkan Q2 2026 setelah penerapan monitoring proaktif.']],
@@ -70,6 +80,16 @@ class AdminController extends Controller
             ],
             6 => [
                 'docNo' => 'RPT-HR-2026-07', 'author' => 'Emma Thompson', 'approvedBy' => 'Direktur HR', 'version' => 'Final v1.0',
+                'attachments' => [
+                    ['name' => 'Presentasi Evaluasi Q3.pdf', 'size' => '3.2 MB', 'type' => 'pdf'],
+                    ['name' => 'Foto Sesi Diskusi.jpg', 'size' => '1.8 MB', 'type' => 'jpg'],
+                    ['name' => 'Laporan Uptime Server.pdf', 'size' => '890 KB', 'type' => 'pdf'],
+                    ['name' => 'Foto Presentasi Monitoring.jpg', 'size' => '2.1 MB', 'type' => 'jpg'],
+                    ['name' => 'Foto Peserta Rapat.jpg', 'size' => '1.4 MB', 'type' => 'jpg'],
+                    ['name' => 'Proposal Anggaran Infrastruktur.pdf', 'size' => '1.1 MB', 'type' => 'pdf'],
+                    ['name' => 'Diagram Arsitektur Jaringan.png', 'size' => '945 KB', 'type' => 'png'],
+                    ['name' => 'Notulen Rapat Final.pdf', 'size' => '220 KB', 'type' => 'pdf'],
+                ],
                 'agenda' => [
                     ['title' => 'Opening', 'body' => ['Rapat evaluasi kinerja semester 1 dibuka oleh Kepala Unit HR, Ibu Emma Thompson, pukul 10.05 WIB.']],
                     ['title' => 'Agenda 1 - Rekap Pencapaian KPI Semester 1', 'body' => ['Rata-rata pencapaian KPI seluruh unit berada di angka 92%, melampaui target 85%.']],
@@ -78,6 +98,16 @@ class AdminController extends Controller
             ],
             7 => [
                 'docNo' => 'RPT-ENG-2026-07', 'author' => 'Sarah Chen', 'approvedBy' => 'Direktur Engineering', 'version' => 'Final v1.0',
+                'attachments' => [
+                    ['name' => 'Presentasi Evaluasi Q3.pdf', 'size' => '3.2 MB', 'type' => 'pdf'],
+                    ['name' => 'Foto Sesi Diskusi.jpg', 'size' => '1.8 MB', 'type' => 'jpg'],
+                    ['name' => 'Laporan Uptime Server.pdf', 'size' => '890 KB', 'type' => 'pdf'],
+                    ['name' => 'Foto Presentasi Monitoring.jpg', 'size' => '2.1 MB', 'type' => 'jpg'],
+                    ['name' => 'Foto Peserta Rapat.jpg', 'size' => '1.4 MB', 'type' => 'jpg'],
+                    ['name' => 'Proposal Anggaran Infrastruktur.pdf', 'size' => '1.1 MB', 'type' => 'pdf'],
+                    ['name' => 'Diagram Arsitektur Jaringan.png', 'size' => '945 KB', 'type' => 'png'],
+                    ['name' => 'Notulen Rapat Final.pdf', 'size' => '220 KB', 'type' => 'pdf'],
+                ],
                 'agenda' => [
                     ['title' => 'Opening', 'body' => ['Sprint retrospective dibuka oleh Scrum Master, pukul 15.00 WIB via Zoom.']],
                     ['title' => 'Agenda 1 - Review Sprint Sebelumnya', 'body' => ['Seluruh 14 story point berhasil diselesaikan tepat waktu.']],
@@ -86,6 +116,16 @@ class AdminController extends Controller
             ],
             8 => [
                 'docNo' => 'RPT-PRD-2026-07', 'author' => 'Marcus Williams', 'approvedBy' => 'Direktur Product', 'version' => 'Final v1.0',
+                'attachments' => [
+                    ['name' => 'Presentasi Evaluasi Q3.pdf', 'size' => '3.2 MB', 'type' => 'pdf'],
+                    ['name' => 'Foto Sesi Diskusi.jpg', 'size' => '1.8 MB', 'type' => 'jpg'],
+                    ['name' => 'Laporan Uptime Server.pdf', 'size' => '890 KB', 'type' => 'pdf'],
+                    ['name' => 'Foto Presentasi Monitoring.jpg', 'size' => '2.1 MB', 'type' => 'jpg'],
+                    ['name' => 'Foto Peserta Rapat.jpg', 'size' => '1.4 MB', 'type' => 'jpg'],
+                    ['name' => 'Proposal Anggaran Infrastruktur.pdf', 'size' => '1.1 MB', 'type' => 'pdf'],
+                    ['name' => 'Diagram Arsitektur Jaringan.png', 'size' => '945 KB', 'type' => 'png'],
+                    ['name' => 'Notulen Rapat Final.pdf', 'size' => '220 KB', 'type' => 'pdf'],
+                ],
                 'agenda' => [
                     ['title' => 'Opening', 'body' => ['Rapat Customer Success Review dibuka pukul 13.35 WIB di Conference Room B.']],
                     ['title' => 'Agenda 1 - Customer Health Score', 'body' => ['Skor kesehatan pelanggan rata-rata naik dari 78 ke 85 dibanding kuartal sebelumnya.']],
@@ -200,6 +240,16 @@ class AdminController extends Controller
             'author' => $meeting['host'] ?? 'Admin',
             'approvedBy' => '—',
             'version' => 'Draft',
+            'attachments' => [
+                    ['name' => 'Presentasi Evaluasi Q3.pdf', 'size' => '3.2 MB', 'type' => 'pdf'],
+                    ['name' => 'Foto Sesi Diskusi.jpg', 'size' => '1.8 MB', 'type' => 'jpg'],
+                    ['name' => 'Laporan Uptime Server.pdf', 'size' => '890 KB', 'type' => 'pdf'],
+                    ['name' => 'Foto Presentasi Monitoring.jpg', 'size' => '2.1 MB', 'type' => 'jpg'],
+                    ['name' => 'Foto Peserta Rapat.jpg', 'size' => '1.4 MB', 'type' => 'jpg'],
+                    ['name' => 'Proposal Anggaran Infrastruktur.pdf', 'size' => '1.1 MB', 'type' => 'pdf'],
+                    ['name' => 'Diagram Arsitektur Jaringan.png', 'size' => '945 KB', 'type' => 'png'],
+                    ['name' => 'Notulen Rapat Final.pdf', 'size' => '220 KB', 'type' => 'pdf'],
+        ],
             'agenda' => [
                 ['title' => 'Opening', 'body' => ['Belum ada notulen tercatat untuk meeting ini.']],
             ],
