@@ -1,0 +1,359 @@
+@extends('layouts.app')
+
+@section('title', 'Presensi: ' . $agenda->judul_rapat)
+@section('heading', 'Formulir Presensi Rapat Kedinasan')
+@section('subtitle', 'Perekaman selfie wajah dan tanda tangan digital terverifikasi')
+
+@section('content')
+<div class="max-w-4xl mx-auto space-y-6">
+    <!-- Meeting Summary Info Card -->
+    <div class="bg-gradient-to-r from-slate-900 to-blue-900 text-white rounded-2xl p-6 shadow-md border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="space-y-1.5">
+            <div class="flex items-center gap-2">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-400 text-slate-950 animate-pulse">
+                    ● Sesi Presensi Aktif
+                </span>
+                <span class="text-xs font-mono uppercase text-blue-200">{{ $agenda->tipe_rapat }}</span>
+            </div>
+            <h2 class="text-lg font-bold text-white tracking-tight">{{ $agenda->judul_rapat }}</h2>
+            <div class="text-xs text-blue-100 flex flex-wrap items-center gap-3">
+                <span>🕒 {{ $agenda->waktu_mulai->translatedFormat('d M Y, H:i') }} WIB</span>
+                <span>📍 {{ $agenda->lokasi_ruang ?? 'Daring / Online Meeting' }}</span>
+            </div>
+        </div>
+
+        <div class="p-3 bg-white/10 rounded-xl border border-white/15 text-xs text-right shrink-0">
+            <div class="text-blue-200 text-[10px] uppercase font-semibold">Identitas Pegawai</div>
+            <div class="font-bold text-white mt-0.5">{{ $user->name }}</div>
+            <div class="font-mono text-blue-100 text-[11px]">NIP: {{ $user->nip }}</div>
+        </div>
+    </div>
+
+    <!-- Main Attendance Form -->
+    <form id="attendance-form" method="POST" action="{{ route('attendances.store', $agenda) }}" enctype="multipart/form-data" class="space-y-6">
+        @csrf
+        <input type="hidden" name="selfie_data" id="selfie_data">
+        <input type="hidden" name="signature_data" id="signature_data">
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Step 1: Face Selfie Capture (WebRTC + Auto Compression) -->
+            <div class="panel p-6 flex flex-col justify-between space-y-4">
+                <div>
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                        <div class="flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center">1</span>
+                            <h3 class="font-bold text-slate-800 text-sm">Foto Selfie Wajah</h3>
+                        </div>
+                        <span id="selfie-status-badge" class="text-[11px] font-semibold text-slate-400">Belum Diambil</span>
+                    </div>
+
+                    <!-- Camera Viewport with Oval Frame Guide -->
+                    <div class="relative bg-slate-900 rounded-2xl overflow-hidden aspect-[4/3] flex items-center justify-center border border-slate-800 shadow-inner">
+                        <!-- Live Video Stream -->
+                        <video id="camera-stream" autoplay playsinline muted class="w-full h-full object-cover"></video>
+
+                        <!-- Oval Face Overlay Guide -->
+                        <div id="camera-guide" class="absolute inset-0 pointer-events-none flex items-center justify-center">
+                            <div class="w-44 h-56 border-2 border-dashed border-white/70 rounded-[50%] shadow-2xl"></div>
+                            <div class="absolute bottom-3 text-center text-white/80 text-[11px] font-medium bg-black/40 px-3 py-1 rounded-full backdrop-blur-xs">
+                                Posisikan wajah di dalam bingkai oval
+                            </div>
+                        </div>
+
+                        <!-- Captured Preview Image -->
+                        <img id="selfie-preview" class="hidden w-full h-full object-cover">
+
+                        <!-- Hidden Canvas for Client-side Compression -->
+                        <canvas id="selfie-canvas" class="hidden"></canvas>
+                    </div>
+                </div>
+
+                <!-- Camera Controls & Fallback -->
+                <div class="space-y-2.5 pt-2">
+                    <button type="button" id="btn-capture-selfie" class="button w-full flex items-center justify-center gap-2 text-xs font-bold bg-blue-700 hover:bg-blue-800 h-11">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+                        <span>Ambil Foto Wajah</span>
+                    </button>
+
+                    <button type="button" id="btn-retake-selfie" class="hidden button secondary w-full text-xs font-semibold h-10">
+                        Ambil Ulang Foto
+                    </button>
+
+                    <!-- Fallback Upload Button -->
+                    <div class="pt-2 border-t border-slate-100 text-center">
+                        <label class="text-[11px] text-blue-600 hover:underline cursor-pointer">
+                            <span>Bermasalah dengan kamera? Unggah berkas foto</span>
+                            <input type="file" id="fallback-selfie-file" name="selfie_file" accept="image/*" capture="user" class="hidden">
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Digital Signature Pad -->
+            <div class="panel p-6 flex flex-col justify-between space-y-4">
+                <div>
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                        <div class="flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center">2</span>
+                            <h3 class="font-bold text-slate-800 text-sm">Tanda Tangan Digital</h3>
+                        </div>
+                        <span id="signature-status-badge" class="text-[11px] font-semibold text-slate-400">Belum Ditandatangani</span>
+                    </div>
+
+                    <!-- Canvas Signature Pad -->
+                    <div class="relative bg-slate-50 rounded-2xl border-2 border-dashed border-slate-300 aspect-[4/3] flex items-center justify-center overflow-hidden">
+                        <canvas id="signature-canvas" class="w-full h-full cursor-crosshair touch-none bg-white"></canvas>
+
+                        <div id="signature-placeholder" class="absolute pointer-events-none text-center text-slate-300 text-xs select-none">
+                            <svg class="mx-auto mb-1 opacity-50" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                            Goreskan tanda tangan Anda di area ini
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Signature Controls -->
+                <div class="space-y-2.5 pt-2">
+                    <button type="button" id="btn-clear-signature" class="button secondary w-full text-xs font-semibold h-11 flex items-center justify-center gap-2">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                        <span>Bersihkan / Ulangi TTD</span>
+                    </button>
+                    <p class="text-[11px] text-slate-400 text-center">Gunakan jari tangan pada layar sentuh atau mouse pada laptop.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Confirmation and Submit -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div class="text-xs text-slate-500">
+                <div class="font-bold text-slate-800">Pernyataan Kehadiran:</div>
+                <p>Dengan menekan tombol di bawah, saya menyatakan hadir secara sah pada agenda rapat kedinasan ini.</p>
+            </div>
+
+            <button type="submit" id="btn-submit-attendance" class="button flex items-center justify-center gap-2 text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-8 h-12 shadow-md shrink-0">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                <span>Konfirmasi & Kirim Presensi</span>
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- 1. WebRTC CAMERA & COMPRESSION MODULE ---
+    const video = document.getElementById('camera-stream');
+    const canvas = document.getElementById('selfie-canvas');
+    const preview = document.getElementById('selfie-preview');
+    const guide = document.getElementById('camera-guide');
+    const btnCapture = document.getElementById('btn-capture-selfie');
+    const btnRetake = document.getElementById('btn-retake-selfie');
+    const selfieDataInput = document.getElementById('selfie_data');
+    const selfieBadge = document.getElementById('selfie-status-badge');
+    const fallbackFileInput = document.getElementById('fallback-selfie-file');
+
+    let stream = null;
+
+    async function initCamera() {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: 'user',
+                    width: { ideal: 640 },
+                    height: { ideal: 480 }
+                },
+                audio: false
+            });
+            video.srcObject = stream;
+        } catch (err) {
+            console.warn('WebRTC camera stream not available:', err);
+            guide.innerHTML = '<div class="text-center text-white p-4 text-xs">Akses kamera tidak diizinkan atau tidak didukung.<br>Silakan gunakan opsi unggah foto di bawah.</div>';
+        }
+    }
+
+    initCamera();
+
+    btnCapture.addEventListener('click', () => {
+        if (!video.videoWidth) {
+            alert('Kamera belum siap atau tidak tersedia. Silakan gunakan opsi unggah berkas.');
+            return;
+        }
+
+        // Client-side Canvas Compression (Max 600x800, JPEG 0.75)
+        const maxWidth = 600;
+        const scale = maxWidth / video.videoWidth;
+        const targetWidth = maxWidth;
+        const targetHeight = video.videoHeight * scale;
+
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
+
+        // Convert to WebP or JPEG with 0.75 quality (< 150KB)
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+        selfieDataInput.value = dataUrl;
+
+        // Display preview
+        preview.src = dataUrl;
+        preview.classList.remove('hidden');
+        video.classList.add('hidden');
+        guide.classList.add('hidden');
+
+        btnCapture.classList.add('hidden');
+        btnRetake.classList.remove('hidden');
+
+        selfieBadge.textContent = '✓ Foto Siap';
+        selfieBadge.className = 'text-[11px] font-bold text-emerald-600';
+    });
+
+    btnRetake.addEventListener('click', () => {
+        selfieDataInput.value = '';
+        preview.classList.add('hidden');
+        video.classList.remove('hidden');
+        guide.classList.remove('hidden');
+
+        btnCapture.classList.remove('hidden');
+        btnRetake.classList.add('hidden');
+
+        selfieBadge.textContent = 'Belum Diambil';
+        selfieBadge.className = 'text-[11px] font-semibold text-slate-400';
+    });
+
+    // Fallback file input handler
+    fallbackFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+                const maxWidth = 600;
+                const scale = maxWidth / img.width;
+                canvas.width = maxWidth;
+                canvas.height = img.height * scale;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+                selfieDataInput.value = dataUrl;
+
+                preview.src = dataUrl;
+                preview.classList.remove('hidden');
+                video.classList.add('hidden');
+                guide.classList.add('hidden');
+
+                btnCapture.classList.add('hidden');
+                btnRetake.classList.remove('hidden');
+
+                selfieBadge.textContent = '✓ Foto Berkas Siap';
+                selfieBadge.className = 'text-[11px] font-bold text-emerald-600';
+            };
+            img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // --- 2. HTML5 CANVAS SIGNATURE PAD MODULE ---
+    const sigCanvas = document.getElementById('signature-canvas');
+    const sigPlaceholder = document.getElementById('signature-placeholder');
+    const btnClearSig = document.getElementById('btn-clear-signature');
+    const sigDataInput = document.getElementById('signature_data');
+    const sigBadge = document.getElementById('signature-status-badge');
+
+    const sCtx = sigCanvas.getContext('2d');
+    let isDrawing = false;
+    let hasDrawn = false;
+
+    function resizeSigCanvas() {
+        const rect = sigCanvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        sigCanvas.width = rect.width * dpr;
+        sigCanvas.height = rect.height * dpr;
+        sCtx.scale(dpr, dpr);
+        sCtx.lineWidth = 2.5;
+        sCtx.lineCap = 'round';
+        sCtx.lineJoin = 'round';
+        sCtx.strokeStyle = '#0f172a'; // Deep Navy Ink
+    }
+
+    window.addEventListener('resize', resizeSigCanvas);
+    resizeSigCanvas();
+
+    function getCanvasCoordinates(e) {
+        const rect = sigCanvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return {
+            x: clientX - rect.left,
+            y: clientY - rect.top
+        };
+    }
+
+    function startDrawing(e) {
+        isDrawing = true;
+        hasDrawn = true;
+        sigPlaceholder.classList.add('hidden');
+        const pos = getCanvasCoordinates(e);
+        sCtx.beginPath();
+        sCtx.moveTo(pos.x, pos.y);
+    }
+
+    function draw(e) {
+        if (!isDrawing) return;
+        e.preventDefault();
+        const pos = getCanvasCoordinates(e);
+        sCtx.lineTo(pos.x, pos.y);
+        sCtx.stroke();
+    }
+
+    function stopDrawing() {
+        if (!isDrawing) return;
+        isDrawing = false;
+        // Export transparent PNG
+        sigDataInput.value = sigCanvas.toDataURL('image/png');
+        sigBadge.textContent = '✓ TTD Siap';
+        sigBadge.className = 'text-[11px] font-bold text-emerald-600';
+    }
+
+    // Pointer & Mouse Events
+    sigCanvas.addEventListener('mousedown', startDrawing);
+    sigCanvas.addEventListener('mousemove', draw);
+    sigCanvas.addEventListener('mouseup', stopDrawing);
+    sigCanvas.addEventListener('mouseleave', stopDrawing);
+
+    // Touch Events for Mobile / Tablet
+    sigCanvas.addEventListener('touchstart', startDrawing, { passive: false });
+    sigCanvas.addEventListener('touchmove', draw, { passive: false });
+    sigCanvas.addEventListener('touchend', stopDrawing);
+
+    btnClearSig.addEventListener('click', () => {
+        sCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+        sigDataInput.value = '';
+        hasDrawn = false;
+        sigPlaceholder.classList.remove('hidden');
+        sigBadge.textContent = 'Belum Ditandatangani';
+        sigBadge.className = 'text-[11px] font-semibold text-slate-400';
+    });
+
+    // --- 3. FORM VALIDATION BEFORE SUBMIT ---
+    const form = document.getElementById('attendance-form');
+    form.addEventListener('submit', (e) => {
+        if (!selfieDataInput.value && !fallbackFileInput.files.length) {
+            e.preventDefault();
+            alert('Silakan ambil foto selfie wajah terlebih dahulu.');
+            return false;
+        }
+
+        if (!hasDrawn || !sigDataInput.value) {
+            e.preventDefault();
+            alert('Silakan bubuhkan tanda tangan digital Anda pada area kanvas.');
+            return false;
+        }
+
+        const btnSubmit = document.getElementById('btn-submit-attendance');
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = '<span>Memverifikasi & Menyimpan...</span>';
+    });
+});
+</script>
+@endsection
