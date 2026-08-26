@@ -7,17 +7,17 @@
 @section('content')
 <div class="max-w-2xl mx-auto space-y-6">
     <!-- Official Attendance Card Receipt -->
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <!-- Top Receipt Banner -->
-        <div class="bg-gradient-to-r from-emerald-800 to-teal-900 text-white p-6 sm:p-7 text-center space-y-2">
-            <div class="w-14 h-14 rounded-full bg-white/20 border border-white/30 flex items-center justify-center mx-auto mb-1 text-white shadow-md">
-                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        <div class="bg-slate-900 text-white p-6 sm:p-7 text-center space-y-2 border-b border-slate-800">
+            <div class="w-12 h-12 rounded-full bg-emerald-600 border border-emerald-500 flex items-center justify-center mx-auto mb-1 text-white shadow-sm">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
             </div>
-            <span class="inline-flex items-center px-3 py-0.5 rounded-full text-xs font-bold bg-emerald-400/30 text-emerald-200 border border-emerald-300/40 uppercase tracking-wider">
+            <span class="inline-flex items-center px-3 py-0.5 rounded-full text-xs font-bold bg-emerald-950 text-emerald-300 border border-emerald-800 uppercase tracking-wider">
                 Kehadiran Terverifikasi Sah
             </span>
             <h2 class="text-lg font-bold text-white tracking-tight">Tanda Terima Presensi Digital</h2>
-            <p class="text-xs text-emerald-100 font-mono">ID Bukti: #ATT-{{ str_pad($attendance->id, 6, '0', STR_PAD_LEFT) }}</p>
+            <p class="text-xs text-slate-400 font-mono">ID Bukti: #ATT-{{ str_pad($attendance->id, 6, '0', STR_PAD_LEFT) }}</p>
         </div>
 
         <!-- Receipt Body Details -->
@@ -27,8 +27,14 @@
                 <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">Agenda Pertemuan Rapat:</div>
                 <h3 class="text-base font-bold text-slate-900 leading-snug">{{ $agenda->judul_rapat }}</h3>
                 <div class="text-xs text-slate-500 flex flex-wrap items-center gap-3 pt-1">
-                    <span>🕒 {{ $agenda->waktu_mulai->translatedFormat('l, d F Y &bull; H:i') }} WIB</span>
-                    <span>📍 {{ $agenda->lokasi_ruang ?? 'Daring / Online Meeting' }}</span>
+                    <span class="inline-flex items-center gap-1.5">
+                        <svg class="text-slate-400 shrink-0" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        <span>{{ $agenda->waktu_mulai->translatedFormat('l, d F Y &bull; H:i') }} WIB</span>
+                    </span>
+                    <span class="inline-flex items-center gap-1.5">
+                        <svg class="text-slate-400 shrink-0" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                        <span>{{ $agenda->lokasi_ruang ?? 'Daring / Online Meeting' }}</span>
+                    </span>
                 </div>
             </div>
 

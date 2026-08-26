@@ -86,7 +86,7 @@
                         <div class="flex flex-wrap items-center gap-1.5">
                             @php
                                 $statusStyle = match($agenda->status) {
-                                    'ongoing' => 'bg-amber-50 text-amber-700 border-amber-300 font-bold animate-pulse',
+                                    'ongoing' => 'bg-amber-50 text-amber-700 border-amber-300 font-bold',
                                     'completed' => 'bg-emerald-50 text-emerald-700 border-emerald-300 font-bold',
                                     'draft' => 'bg-slate-100 text-slate-600 border-slate-300',
                                     default => 'bg-blue-50 text-blue-700 border-blue-200'

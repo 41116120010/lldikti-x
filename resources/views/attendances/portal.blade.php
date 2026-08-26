@@ -7,17 +7,17 @@
 @section('content')
 <div class="space-y-6">
     <!-- User Profile Header -->
-    <div class="bg-gradient-to-r from-blue-900 to-indigo-900 text-white rounded-2xl p-6 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div class="bg-slate-900 text-white rounded-2xl p-6 shadow-sm border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div class="flex items-center gap-4">
-            <div class="w-12 h-12 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center font-bold text-lg">
+            <div class="w-12 h-12 rounded-xl bg-blue-600 border border-blue-500 flex items-center justify-center font-bold text-lg text-white">
                 {{ substr($user->name, 0, 2) }}
             </div>
             <div>
                 <h2 class="text-base font-bold">{{ $user->name }}</h2>
-                <p class="text-xs text-blue-100 font-mono">NIP: {{ $user->nip }} &bull; {{ $user->unit?->nama_unit ?? 'Tingkat Lembaga' }}</p>
+                <p class="text-xs text-slate-300 font-mono">NIP: {{ $user->nip }} &bull; {{ $user->unit?->nama_unit ?? 'Tingkat Lembaga' }}</p>
             </div>
         </div>
-        <a href="{{ route('attendances.history') }}" class="button small secondary flex items-center gap-1.5 text-xs bg-white/10 hover:bg-white/20 text-white border-white/20 self-start sm:self-auto">
+        <a href="{{ route('attendances.history') }}" class="button small secondary flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-white border-slate-700 self-start sm:self-auto">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             <span>Riwayat Presensi Pribadi</span>
         </a>
@@ -27,7 +27,7 @@
     <div class="space-y-3">
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
-                <span class="w-3 h-3 rounded-full bg-emerald-500 animate-ping"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
                 <h3 class="font-bold text-slate-800 text-sm">Sesi Rapat Sedang Berlangsung (Buka Presensi)</h3>
             </div>
             <span class="text-xs text-slate-500 font-mono">{{ $ongoingAgendas->count() }} Rapat Aktif</span>
@@ -42,7 +42,7 @@
                     <div class="space-y-2">
                         <div class="flex items-center justify-between">
                             <span class="status text-[11px] font-bold {{ $hasAttended ? 'completed' : 'ongoing' }}">
-                                {{ $hasAttended ? '✓ Anda Sudah Hadir' : '● Sesi Presensi Dibuka' }}
+                                {{ $hasAttended ? 'Sudah Hadir' : 'Sesi Presensi Dibuka' }}
                             </span>
                             <span class="text-[11px] font-mono uppercase bg-slate-100 px-2 py-0.5 rounded text-slate-600">
                                 {{ $agenda->tipe_rapat }}
@@ -112,8 +112,10 @@
                             <span class="font-semibold text-slate-900">{{ $agenda->judul_rapat }}</span>
                             <span class="text-blue-600 font-mono text-[11px]">{{ $agenda->waktu_mulai->format('d/m/Y') }}</span>
                         </div>
-                        <div class="text-slate-500 text-[11px]">
-                            🕒 {{ $agenda->waktu_mulai->format('H:i') }} WIB &bull; 📍 {{ $agenda->lokasi_ruang ?? 'Daring' }}
+                        <div class="text-slate-500 text-[11px] flex items-center gap-2">
+                            <span>{{ $agenda->waktu_mulai->format('H:i') }} WIB</span>
+                            <span>&bull;</span>
+                            <span>{{ $agenda->lokasi_ruang ?? 'Daring' }}</span>
                         </div>
                     </div>
                 @empty

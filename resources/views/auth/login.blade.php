@@ -21,29 +21,71 @@
             </div>
         </div>
 
-        <div class="auth-graphic my-auto py-8">
-            <div class="w-full max-w-sm bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/15 shadow-2xl text-white">
-                <div class="flex items-center justify-between border-b border-white/15 pb-4 mb-4">
-                    <div class="flex items-center gap-2.5">
-                        <span class="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></span>
-                        <span class="text-xs font-semibold uppercase tracking-wider text-emerald-300">Sistem Presensi Aktif</span>
-                    </div>
-                    <span class="text-[11px] font-mono bg-white/15 px-2 py-0.5 rounded text-blue-100">v1.0 LTS</span>
-                </div>
-                
-                <h3 class="text-base font-bold mb-2">Presensi Digital Kedinasan</h3>
-                <p class="text-xs text-blue-100/85 leading-relaxed mb-4">
-                    Pencatatan kehadiran rapat terintegrasi dengan verifikasi kamera selfie wajah dan tanda tangan digital terenkripsi.
-                </p>
+        <!-- 3D Interactive Hero Scene -->
+        <div class="scene-3d my-auto" id="hero-3d-scene">
+            <!-- Orbital Gyroscope Background Rings -->
+            <div class="orbit-ring-1"></div>
+            <div class="orbit-ring-2"></div>
 
-                <div class="grid grid-cols-2 gap-3 pt-3 border-t border-white/10 text-xs">
-                    <div class="bg-black/20 rounded-lg p-2.5">
-                        <div class="text-blue-200 text-[10px] uppercase font-semibold">Keamanan</div>
-                        <div class="font-bold text-white mt-0.5">Audit Trail Log</div>
+            <div class="card-3d-wrap" id="hero-3d-card">
+                <!-- Floating Node 1 (Top Left) -->
+                <div class="floating-node-1 bg-slate-900/90 backdrop-blur-md px-3 py-2 rounded-xl border border-blue-500/40 shadow-xl flex items-center gap-2">
+                    <div class="w-6 h-6 rounded-lg bg-blue-600/30 text-blue-400 flex items-center justify-center">
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
                     </div>
-                    <div class="bg-black/20 rounded-lg p-2.5">
-                        <div class="text-blue-200 text-[10px] uppercase font-semibold">Integritas</div>
-                        <div class="font-bold text-white mt-0.5">Selfie + TTD</div>
+                    <div>
+                        <div class="text-[9px] uppercase tracking-wider font-semibold text-slate-400">Verifikasi</div>
+                        <div class="text-[11px] font-bold text-white">Live WebRTC</div>
+                    </div>
+                </div>
+
+                <!-- Floating Node 2 (Bottom Right) -->
+                <div class="floating-node-2 bg-slate-900/90 backdrop-blur-md px-3 py-2 rounded-xl border border-emerald-500/40 shadow-xl flex items-center gap-2">
+                    <div class="w-6 h-6 rounded-lg bg-emerald-600/30 text-emerald-400 flex items-center justify-center">
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                    </div>
+                    <div>
+                        <div class="text-[9px] uppercase tracking-wider font-semibold text-slate-400">Keabsahan</div>
+                        <div class="text-[11px] font-bold text-emerald-300">TTD Digital</div>
+                    </div>
+                </div>
+
+                <!-- Main Holographic Card Body -->
+                <div class="card-3d-main text-white">
+                    <div class="flex items-center justify-between border-b border-slate-700/80 pb-3 mb-4">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                            <span class="text-xs font-semibold uppercase tracking-wider text-emerald-300">Presensi Kedinasan</span>
+                        </div>
+                        <span class="text-[10px] font-mono bg-blue-900/40 text-blue-300 px-2 py-0.5 rounded border border-blue-700/50">TERENKRIPSI</span>
+                    </div>
+
+                    <div class="space-y-2 mb-4">
+                        <div class="text-[11px] text-slate-400 font-mono">AUTENTIKASI MULTI-IDENTIFIER</div>
+                        <h3 class="text-base font-bold text-white tracking-tight">SIPERAPAT LLDIKTI</h3>
+                        <p class="text-xs text-slate-300 leading-relaxed">
+                            Pencatatan kehadiran rapat kedinasan dengan verifikasi kamera selfie wajah dan tanda tangan digital terenkripsi.
+                        </p>
+                    </div>
+
+                    <!-- Security Grid Graphic Indicator -->
+                    <div class="p-3 bg-slate-950/60 rounded-xl border border-slate-800 flex items-center justify-between gap-3 text-xs">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                            </div>
+                            <div>
+                                <div class="font-bold text-white text-[11px]">NIP & Username</div>
+                                <div class="text-[10px] text-slate-400 font-mono">18-Digit Smart Guard</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <span class="w-1 h-3 bg-blue-500 rounded-full"></span>
+                            <span class="w-1 h-5 bg-blue-400 rounded-full"></span>
+                            <span class="w-1 h-2 bg-blue-600 rounded-full"></span>
+                            <span class="w-1 h-4 bg-emerald-400 rounded-full"></span>
+                            <span class="w-1 h-3 bg-emerald-500 rounded-full"></span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -173,36 +215,6 @@
             </button>
         </form>
 
-        <!-- Quick Demo Credentials Picker -->
-        <div class="mt-8 pt-6 border-t border-slate-200/80">
-            <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center justify-between">
-                <span>Akun Uji Coba Cepat (Demo):</span>
-                <span class="text-[10px] font-mono lowercase text-slate-400">Password: Password123!</span>
-            </div>
-            <div class="grid grid-cols-3 gap-2">
-                <button type="button" onclick="fillDemo('superadmin', 'Password123!')" class="p-2 text-left bg-slate-100 hover:bg-blue-50 hover:border-blue-300 border border-slate-200 rounded-lg transition text-xs">
-                    <div class="font-bold text-slate-800 flex items-center gap-1">
-                        <span class="w-2 h-2 rounded-full bg-blue-600"></span> Superadmin
-                    </div>
-                    <div class="text-[10px] text-slate-500 font-mono mt-0.5 truncate">superadmin</div>
-                </button>
-
-                <button type="button" onclick="fillDemo('admin_akademik', 'Password123!')" class="p-2 text-left bg-slate-100 hover:bg-blue-50 hover:border-blue-300 border border-slate-200 rounded-lg transition text-xs">
-                    <div class="font-bold text-slate-800 flex items-center gap-1">
-                        <span class="w-2 h-2 rounded-full bg-indigo-600"></span> Admin Unit
-                    </div>
-                    <div class="text-[10px] text-slate-500 font-mono mt-0.5 truncate">admin_akademik</div>
-                </button>
-
-                <button type="button" onclick="fillDemo('199402142020121004', 'Password123!')" class="p-2 text-left bg-slate-100 hover:bg-blue-50 hover:border-blue-300 border border-slate-200 rounded-lg transition text-xs">
-                    <div class="font-bold text-slate-800 flex items-center gap-1">
-                        <span class="w-2 h-2 rounded-full bg-emerald-600"></span> Staff (NIP)
-                    </div>
-                    <div class="text-[10px] text-slate-500 font-mono mt-0.5 truncate">1994021420...</div>
-                </button>
-            </div>
-        </div>
-
         <div class="auth-footer">
             &copy; {{ date('Y') }} LLDIKTI — Sistem Kehadiran Rapat Kedinasan Terintegrasi.
         </div>
@@ -210,14 +222,23 @@
 </div>
 
 <script>
-function fillDemo(login, password) {
-    const loginInput = document.getElementById('login-input');
-    const passwordInput = document.getElementById('password-input');
-    if (loginInput && passwordInput) {
-        loginInput.value = login;
-        passwordInput.value = password;
-        loginInput.focus();
+document.addEventListener('DOMContentLoaded', () => {
+    const scene = document.getElementById('hero-3d-scene');
+    const card = document.getElementById('hero-3d-card');
+    if (scene && card && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        scene.addEventListener('mousemove', (e) => {
+            const rect = scene.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / rect.width - 0.5;
+            const y = (e.clientY - rect.top) / rect.height - 0.5;
+            card.style.animation = 'none';
+            card.style.transform = `rotateX(${-y * 20}deg) rotateY(${x * 20}deg) translateY(-4px)`;
+        });
+
+        scene.addEventListener('mouseleave', () => {
+            card.style.animation = '';
+            card.style.transform = '';
+        });
     }
-}
+});
 </script>
 @endsection

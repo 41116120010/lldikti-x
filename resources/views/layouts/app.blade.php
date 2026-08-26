@@ -4,72 +4,6 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-<<<<<<< HEAD
-    <title>SynCore — @yield('title')</title>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-</head>
-
-<body>
-    <div class="shell">
-        <aside class="sidebar">
-            <div class="brand">
-                <div class="brand-mark">▪▪</div>
-                <div>
-                    <div class="brand-name">SynCore</div>
-                    <small>Attendance System</small>
-                </div>
-            </div>
-
-            <div class="nav-group">
-                <div class="sidebar-label">MANAGEMENT</div>
-                <a class="nav-link {{ request()->routeIs('admin.units') ? 'active' : '' }}"
-                   href="{{ route('admin.units') }}">
-                    <span class="nav-icon">▦</span>Manage Units
-                </a>
-                <a class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"
-                   href="{{ route('admin.dashboard') }}">
-                    <span class="nav-icon">♧</span>User Management
-                </a>
-                <a class="nav-link {{ request()->routeIs('admin.notulen.create') ? 'active' : '' }}"
-                   href="{{ route('admin.notulen.create') }}">
-                    <span class="nav-icon">▣</span>Create Meeting
-                </a>
-                <a class="nav-link {{ request()->routeIs('admin.meetings') ? 'active' : '' }}"
-                   href="{{ route('admin.meetings') }}">
-                    <span class="nav-icon">▤</span>Meeting Management
-                </a>
-                <a class="nav-link {{ request()->routeIs('admin.notulen') ? 'active' : '' }}"
-                   href="{{ route('admin.notulen') }}">
-                    <span class="nav-icon">▧</span>Meeting Report
-                </a>
-            </div>
-
-            <div class="nav-group">
-                <div class="sidebar-label">GENERAL</div>
-                <a class="nav-link" href="{{ route('admin.dashboard') }}">
-                    <span class="nav-icon">⌂</span>My Dashboard
-                </a>
-                <button class="nav-link nav-button" type="button" data-toast="Settings will be available soon.">
-                    <span class="nav-icon">☼</span>Settings
-                </button>
-            </div>
-
-            <div class="sidebar-user">
-                <div class="avatar">SC</div>
-                <div>
-                    <b>Sarah Chen</b>
-                    <div class="user-meta">Administrator</div>
-                </div>
-                <form action="{{ route('logout') }}" method="POST">
-                    @csrf
-                    <button class="logout" title="Logout" type="submit">
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
-                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                            <polyline points="16 17 21 12 16 7"/>
-                            <line x1="21" y1="12" x2="9" y2="12"/>
-                        </svg>
-=======
     <title>{{ config('app.name', 'SIPERAPAT') }} — @yield('title', 'Dashboard')</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -187,58 +121,11 @@
                     @csrf
                     <button class="logout" title="Keluar dari sistem" type="submit">
                         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
->>>>>>> 466438b (Versi 1.0 - LLDIKTI X)
                     </button>
                 </form>
             </div>
         </aside>
 
-<<<<<<< HEAD
-        <section class="content">
-            <header class="topbar">
-                <div>
-                    <div class="page-title">@yield('heading')</div>
-                    <div class="subtitle">@yield('subtitle')</div>
-                </div>
-
-                <div class="top-actions">
-                    <button class="search-top" type="button" data-focus-search>
-                        ⌕ &nbsp; Search...　⌘K
-                    </button>
-                    <button class="icon-button" type="button" data-toast="No new notifications.">♧</button>
-
-                    <div class="profile-menu-wrap">
-                        <button class="top-profile" type="button" data-profile-toggle
-                                aria-haspopup="true" aria-expanded="false">
-                            <div class="avatar">SC</div>
-                            <div>
-                                <b>Sarah Chen</b>
-                                <div class="user-meta">Administrator</div>
-                            </div>
-                            <span class="muted">⌄</span>
-                        </button>
-
-                        <div class="profile-dropdown" data-profile-dropdown>
-                            <a class="profile-dropdown-item" href="{{ route('admin.dashboard') }}">
-                                My Dashboard
-                            </a>
-                            <button class="profile-dropdown-item" type="button"
-                                    data-toast="Settings will be available soon.">
-                                Settings
-                            </button>
-                            <form action="{{ route('logout') }}" method="POST">
-                                @csrf
-                                <button class="profile-dropdown-item profile-dropdown-danger" type="submit">
-                                    Log Out
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </header>
-
-            <main class="page">
-=======
         <!-- Main Content Area -->
         <section class="content">
             <!-- Topbar Header -->
@@ -287,34 +174,32 @@
                     </div>
                 @endif
 
->>>>>>> 466438b (Versi 1.0 - LLDIKTI X)
                 @yield('content')
             </main>
+
+            <!-- Content / Page Footer -->
+            <footer class="footer">
+                <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                    <span class="font-semibold text-slate-700">&copy; {{ date('Y') }} SIPERAPAT</span>
+                    <span class="hidden sm:inline text-slate-300">&bull;</span>
+                    <span class="text-slate-500">Lembaga Layanan Pendidikan Tinggi (LLDIKTI) Wilayah X</span>
+                </div>
+                <div class="text-[11px] text-slate-400 font-mono">
+                    <span>v1.0 LTS</span>
+                </div>
+            </footer>
         </section>
     </div>
 
-<<<<<<< HEAD
-    <div class="modal-backdrop" id="app-modal" aria-hidden="true">
-        <section class="modal" role="dialog" aria-modal="true">
-            <button class="modal-close" aria-label="Close">×</button>
-=======
     <!-- Global Modal Placeholder -->
     <div class="modal-backdrop" id="app-modal" aria-hidden="true">
         <section class="modal" role="dialog" aria-modal="true">
             <button class="modal-close" aria-label="Tutup">×</button>
->>>>>>> 466438b (Versi 1.0 - LLDIKTI X)
             <div id="modal-content"></div>
         </section>
     </div>
 
-<<<<<<< HEAD
-    <div class="toast" id="app-toast" role="status"></div>
-</body>
-
-</html>
-=======
     <!-- Toast Notification Container -->
     <div class="toast" id="app-toast" role="status" aria-live="polite"></div>
 </body>
 </html>
->>>>>>> 466438b (Versi 1.0 - LLDIKTI X)

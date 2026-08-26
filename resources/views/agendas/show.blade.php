@@ -7,17 +7,17 @@
 @section('content')
 <div class="space-y-6">
     <!-- Top Hero Banner -->
-    <div class="bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-950 text-white rounded-2xl p-6 sm:p-8 shadow-md border border-slate-800">
+    <div class="bg-slate-900 text-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-800">
         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div class="space-y-3">
                 <div class="flex flex-wrap items-center gap-2">
                     @php
                         $statusStyle = match($agenda->status) {
-                            'ongoing' => 'bg-amber-500 text-white font-bold animate-pulse',
-                            'completed' => 'bg-emerald-500 text-white font-bold',
-                            'draft' => 'bg-slate-700 text-slate-200',
-                            'cancelled' => 'bg-rose-600 text-white',
-                            default => 'bg-blue-600 text-white'
+                            'ongoing' => 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold',
+                            'completed' => 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold',
+                            'draft' => 'bg-slate-800 text-slate-300 border border-slate-700',
+                            'cancelled' => 'bg-rose-500/20 text-rose-300 border border-rose-500/40 font-bold',
+                            default => 'bg-blue-500/20 text-blue-300 border border-blue-500/40 font-bold'
                         };
                         $statusText = match($agenda->status) {
                             'ongoing' => 'Sedang Berlangsung (Presensi Dibuka)',
@@ -31,11 +31,11 @@
                         {{ $statusText }}
                     </span>
 
-                    <span class="text-xs uppercase font-mono px-2.5 py-1 bg-white/10 rounded-md text-blue-200">
+                    <span class="text-xs uppercase font-mono px-2.5 py-1 bg-slate-800 border border-slate-700 rounded-md text-slate-300">
                         {{ $agenda->tipe_rapat }}
                     </span>
 
-                    <span class="text-xs uppercase font-semibold px-2.5 py-1 bg-white/10 rounded-md text-blue-200">
+                    <span class="text-xs uppercase font-semibold px-2.5 py-1 bg-slate-800 border border-slate-700 rounded-md text-slate-300">
                         {{ $agenda->jenis_rapat }}
                     </span>
                 </div>

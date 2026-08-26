@@ -7,25 +7,32 @@
 @section('content')
 <div class="max-w-4xl mx-auto space-y-6">
     <!-- Meeting Summary Info Card -->
-    <div class="bg-gradient-to-r from-slate-900 to-blue-900 text-white rounded-2xl p-6 shadow-md border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="bg-slate-900 text-white rounded-2xl p-6 shadow-sm border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div class="space-y-1.5">
             <div class="flex items-center gap-2">
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-400 text-slate-950 animate-pulse">
-                    ● Sesi Presensi Aktif
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                    Sesi Presensi Aktif
                 </span>
-                <span class="text-xs font-mono uppercase text-blue-200">{{ $agenda->tipe_rapat }}</span>
+                <span class="text-xs font-mono uppercase text-slate-400 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">{{ $agenda->tipe_rapat }}</span>
             </div>
             <h2 class="text-lg font-bold text-white tracking-tight">{{ $agenda->judul_rapat }}</h2>
-            <div class="text-xs text-blue-100 flex flex-wrap items-center gap-3">
-                <span>🕒 {{ $agenda->waktu_mulai->translatedFormat('d M Y, H:i') }} WIB</span>
-                <span>📍 {{ $agenda->lokasi_ruang ?? 'Daring / Online Meeting' }}</span>
+            <div class="text-xs text-slate-300 flex flex-wrap items-center gap-3">
+                <span class="inline-flex items-center gap-1.5">
+                    <svg class="text-slate-400 shrink-0" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span>{{ $agenda->waktu_mulai->translatedFormat('d M Y, H:i') }} WIB</span>
+                </span>
+                <span class="inline-flex items-center gap-1.5">
+                    <svg class="text-slate-400 shrink-0" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                    <span>{{ $agenda->lokasi_ruang ?? 'Daring / Online Meeting' }}</span>
+                </span>
             </div>
         </div>
 
-        <div class="p-3 bg-white/10 rounded-xl border border-white/15 text-xs text-right shrink-0">
-            <div class="text-blue-200 text-[10px] uppercase font-semibold">Identitas Pegawai</div>
+        <div class="p-3 bg-slate-800/80 rounded-xl border border-slate-700 text-xs text-right shrink-0">
+            <div class="text-slate-400 text-[10px] uppercase font-semibold">Identitas Pegawai</div>
             <div class="font-bold text-white mt-0.5">{{ $user->name }}</div>
-            <div class="font-mono text-blue-100 text-[11px]">NIP: {{ $user->nip }}</div>
+            <div class="font-mono text-slate-300 text-[11px]">NIP: {{ $user->nip }}</div>
         </div>
     </div>
 
@@ -201,7 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btnCapture.classList.add('hidden');
         btnRetake.classList.remove('hidden');
 
-        selfieBadge.textContent = '✓ Foto Siap';
+        selfieBadge.textContent = 'Foto Terverifikasi';
         selfieBadge.className = 'text-[11px] font-bold text-emerald-600';
     });
 
@@ -245,7 +252,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 btnCapture.classList.add('hidden');
                 btnRetake.classList.remove('hidden');
 
-                selfieBadge.textContent = '✓ Foto Berkas Siap';
+                selfieBadge.textContent = 'Berkas Foto Siap';
                 selfieBadge.className = 'text-[11px] font-bold text-emerald-600';
             };
             img.src = event.target.result;
@@ -311,7 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
         isDrawing = false;
         // Export transparent PNG
         sigDataInput.value = sigCanvas.toDataURL('image/png');
-        sigBadge.textContent = '✓ TTD Siap';
+        sigBadge.textContent = 'Tanda Tangan Siap';
         sigBadge.className = 'text-[11px] font-bold text-emerald-600';
     }
 

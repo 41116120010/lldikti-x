@@ -7,30 +7,30 @@
 @section('content')
 <div class="space-y-6">
     <!-- Welcome Profile Banner -->
-    <div class="bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900 text-white rounded-2xl p-6 sm:p-7 shadow-lg border border-slate-800 relative overflow-hidden">
+    <div class="bg-slate-900 text-white rounded-2xl p-6 sm:p-7 shadow-sm border border-slate-800 relative overflow-hidden">
         <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
             <div class="flex items-start sm:items-center gap-4">
-                <div class="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-xl font-bold uppercase shadow-inner">
+                <div class="w-14 h-14 rounded-2xl bg-blue-600 border border-blue-500 flex items-center justify-center text-xl font-bold uppercase shadow-sm">
                     {{ substr($user->name, 0, 2) }}
                 </div>
                 <div>
                     <div class="flex flex-wrap items-center gap-2 mb-1">
                         <h2 class="text-xl font-bold text-white tracking-tight">{{ $user->name }}</h2>
                         @if($user->isAdministrator())
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/20 text-blue-200 border border-blue-400/30">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-900/60 text-blue-200 border border-blue-700">
                                 Administrator Instansi
                             </span>
                         @elseif($user->isAdmin())
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/20 text-indigo-200 border border-indigo-400/30">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-900/60 text-indigo-200 border border-indigo-700">
                                 Admin Unit: {{ $user->unit?->kode_unit ?? '-' }}
                             </span>
                         @else
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-200 border border-emerald-400/30">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-900/60 text-emerald-200 border border-emerald-700">
                                 Pegawai Unit: {{ $user->unit?->kode_unit ?? '-' }}
                             </span>
                         @endif
                     </div>
-                    <p class="text-xs text-blue-100/80">
+                    <p class="text-xs text-slate-300">
                         NIP: <span class="font-mono font-medium text-white">{{ $user->nip }}</span> &bull; 
                         Unit: <span class="text-white">{{ $user->unit?->nama_unit ?? 'Tingkat Lembaga (Universal)' }}</span>
                     </p>
@@ -39,7 +39,7 @@
 
             <div class="flex items-center gap-3">
                 <div class="text-right hidden sm:block">
-                    <div class="text-[11px] text-blue-200/80 uppercase font-semibold">Tanggal Hari Ini</div>
+                    <div class="text-[11px] text-slate-400 uppercase font-semibold">Tanggal Hari Ini</div>
                     <div class="text-xs font-bold text-white font-mono">{{ now()->translatedFormat('l, d F Y') }}</div>
                 </div>
             </div>
@@ -137,8 +137,14 @@
                                 </div>
                                 <h4 class="font-bold text-slate-900 text-sm hover:text-blue-600 transition">{{ $agenda->judul_rapat }}</h4>
                                 <div class="text-xs text-slate-500 flex flex-wrap items-center gap-3">
-                                    <span>🕒 {{ $agenda->waktu_mulai->translatedFormat('d M Y, H:i') }} WIB</span>
-                                    <span>📍 {{ $agenda->lokasi_ruang ?? 'Online Meeting' }}</span>
+                                    <span class="inline-flex items-center gap-1.5">
+                                        <svg class="text-slate-400 shrink-0" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                        <span>{{ $agenda->waktu_mulai->translatedFormat('d M Y, H:i') }} WIB</span>
+                                    </span>
+                                    <span class="inline-flex items-center gap-1.5">
+                                        <svg class="text-slate-400 shrink-0" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                                        <span>{{ $agenda->lokasi_ruang ?? 'Online Meeting' }}</span>
+                                    </span>
                                 </div>
                             </div>
 
