@@ -95,6 +95,31 @@ class AdminController extends Controller
         ];
     }
 
+        public function units()
+    {
+        $users = $this->users();
+        $units = [];
+        foreach ($users as $u) {
+            $unit = $u['unit'];
+            if (! isset($units[$unit])) {
+                $units[$unit] = ['name' => $unit, 'head' => null, 'members' => 0];
+            }
+            $units[$unit]['members']++;
+            if ($u['role'] === 'Admin' && ! $units[$unit]['head']) {
+                $units[$unit]['head'] = $u['name'];
+            }
+        }
+        $units = array_values($units);
+
+        return view('admin.units', [
+            'units' => $units,
+            'admins' => array_values(array_filter($users, fn ($u) => $u['role'] === 'Admin')),
+            'totalUnits' => count($units),
+            'totalMembers' => count($users),
+            'totalWithoutHead' => count(array_filter($units, fn ($u) => ! $u['head'])),
+        ]);
+    }
+    
     public function index()
     {
         return view('admin.dashboard', [

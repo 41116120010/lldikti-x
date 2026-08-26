@@ -17,6 +17,7 @@ Route::post('/logout', [AdminController::class, 'logout'])->name('logout');
 
 Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [AdminController::class, 'index'])->name('dashboard');
+    Route::get('/units', [AdminController::class, 'units'])->name('units');
     Route::get('/notulen/create', [AdminController::class, 'createNotulen'])->name('notulen.create');
     Route::get('/notulen/editor', [AdminController::class, 'editNotulen'])->name('notulen.editor');
     Route::post('/notulen', [AdminController::class, 'storeNotulen'])->name('notulen.store');

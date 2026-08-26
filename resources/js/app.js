@@ -182,3 +182,48 @@ document.querySelectorAll('[data-add-user]').forEach(button => button.addEventLi
         openModal(`<h2>${name}</h2><p>Preview is not available because this demo does not include uploaded files. Use Download after connecting this view to storage.</p><div class="modal-actions"><button class="button" data-close-modal>Close</button></div>`);
     }));
 });
+document.querySelectorAll('[data-add-unit]').forEach(button => button.addEventListener('click', () => {
+    const headOptions = document.querySelector('#unit-head-options')?.innerHTML || '<option value="">— No head assigned —</option>';
+    openModal(`<h2>Add Unit</h2><form data-unit-form><div class="field"><label>Unit Name</label><input class="input" type="text" name="name" required></div><div class="field"><label>Head of Unit</label><select class="input" name="head">${headOptions}</select></div><div class="modal-actions"><button class="button secondary" type="button" data-close-modal>Cancel</button><button class="button" type="submit">Add Unit</button></div></form>`);
+    modalContent.querySelector('[data-unit-form]').addEventListener('submit', event => {
+        event.preventDefault();
+        const form = event.target;
+        const name = form.name.value.trim();
+        const head = form.head.value;
+        if (!name) return;
+        const row = document.createElement('tr');
+        row.innerHTML = `<td><strong>${name}</strong></td><td>${head || '<span class="tiny">— No head assigned —</span>'}</td><td>0 members</td><td><div class="row-actions"><button class="action-btn action-icon action-edit" type="button" data-edit-unit aria-label="Edit ${name}" title="Edit"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13 7 4 4"/></svg></button><button class="action-btn action-icon action-delete" type="button" data-delete-unit aria-label="Delete ${name}" title="Delete"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v5m4-5v5M9 7l1-2h4l1 2m-9 0 1 13h10l1-13"/></svg></button></div></td>`;
+        document.querySelector('#units-table tbody').appendChild(row);
+        closeModal();
+        notify(`${name} added as a new unit.`);
+    });
+}));
+
+document.querySelector('#units-table')?.addEventListener('click', event => {
+    const editBtn = event.target.closest('[data-edit-unit]');
+    if (editBtn) {
+        const row = editBtn.closest('tr');
+        const currentName = row.children[0].textContent.trim();
+        const currentHead = row.children[1].textContent.trim();
+        const headOptions = document.querySelector('#unit-head-options')?.innerHTML || '<option value="">— No head assigned —</option>';
+        openModal(`<h2>Edit ${currentName}</h2><form data-unit-edit-form><div class="field"><label>Unit Name</label><input class="input" type="text" name="name" value="${currentName}" required></div><div class="field"><label>Head of Unit</label><select class="input" name="head">${headOptions}</select></div><div class="modal-actions"><button class="button secondary" type="button" data-close-modal>Cancel</button><button class="button" type="submit">Save changes</button></div></form>`);
+        const select = modalContent.querySelector('select[name="head"]');
+        [...select.options].forEach(opt => { if (opt.value === currentHead) opt.selected = true; });
+        modalContent.querySelector('[data-unit-edit-form]').addEventListener('submit', e => {
+            e.preventDefault();
+            const form = e.target;
+            row.children[0].innerHTML = `<strong>${form.name.value.trim()}</strong>`;
+            row.children[1].textContent = form.head.value || '— No head assigned —';
+            closeModal();
+            notify('Unit updated.');
+        });
+        return;
+    }
+    const deleteBtn = event.target.closest('[data-delete-unit]');
+    if (deleteBtn) {
+        const row = deleteBtn.closest('tr');
+        const name = row.children[0].textContent.trim();
+        openModal(`<h2>Delete unit?</h2><p>${name} will be removed from this list in the current browser session.</p><div class="modal-actions"><button class="button secondary" data-close-modal>Cancel</button><button class="button" data-confirm-delete>Delete unit</button></div>`);
+        modalContent.querySelector('[data-confirm-delete]').addEventListener('click', () => { row.remove(); closeModal(); notify(`${name} removed.`); });
+    }
+});

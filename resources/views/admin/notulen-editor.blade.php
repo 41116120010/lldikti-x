@@ -1,9 +1,134 @@
 @extends('layouts.app')
-@section('title','Meeting Minutes') @section('heading','Meeting Minutes') @section('subtitle','Write and finalize meeting notes')
+
+@section('title', 'Meeting Minutes')
+@section('heading', 'Meeting Minutes')
+@section('subtitle', 'Write and finalize meeting notes')
+
 @section('content')
-<style>.minutes-layout{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:16px}.minutes-editor{padding:25px}.minutes-editor .field textarea{min-height:170px}.meeting-summary{padding:20px}.meeting-summary h3{margin:0 0 15px;font-size:15px}.summary-item{padding:11px 0;border-bottom:1px solid #dbe4f1;color:#58708f;font-size:13px}.summary-item b{display:block;color:#071a3b;margin-bottom:3px}.minutes-footer{display:flex;justify-content:flex-end;gap:10px;padding-top:6px}@media(max-width:850px){.minutes-layout{grid-template-columns:1fr}}</style>
-<form action="{{ route('admin.notulen.store') }}" method="POST" class="minutes-layout">@csrf
-<section class="panel minutes-editor"><h2 class="section-title">Meeting Minutes</h2><div class="field"><label>Meeting Title</label><input class="input @error('title') input-error @enderror" required name="title" value="{{ old('title', $notulen['title'] ?? $meeting['title']) }}">@error('title')<span class="field-error">{{ $message }}</span>@enderror</div><div class="two-fields"><div class="field"><label>Date</label><input class="input @error('date') input-error @enderror" required type="date" name="date" value="{{ old('date', $notulen['date'] ?? $meeting['date']) }}">@error('date')<span class="field-error">{{ $message }}</span>@enderror</div><div class="field"><label>Location</label><input class="input @error('location') input-error @enderror" required name="location" value="{{ old('location', $notulen['location'] ?? $meeting['location']) }}">@error('location')<span class="field-error">{{ $message }}</span>@enderror</div></div><div class="field"><label>Discussion & Agenda</label><textarea required class="@error('agenda') input-error @enderror" name="agenda" placeholder="Write the discussion points, decisions, and action items...">{{ old('agenda', $notulen['agenda'] ?? '') }}</textarea>@error('agenda')<span class="field-error">{{ $message }}</span>@enderror</div><div class="field"><label>Conclusion / Follow-up</label><textarea class="@error('conclusion') input-error @enderror" name="conclusion" placeholder="Add conclusions and follow-up actions...">{{ old('conclusion', $notulen['conclusion'] ?? '') }}</textarea>@error('conclusion')<span class="field-error">{{ $message }}</span>@enderror</div><div class="minutes-footer"><a class="button secondary" href="{{ route('admin.meetings') }}">Cancel</a><button class="button" type="submit">Save Minutes</button></div></section>
-<aside class="panel meeting-summary"><h3>Meeting Information</h3><div class="summary-item"><b>{{ $meeting['title'] }}</b>Meeting currently in progress</div><div class="summary-item"><b>Date & Time</b>{{ $meeting['date'] }} | {{ $meeting['time'] }}</div><div class="summary-item"><b>Location</b>{{ $meeting['location'] }}</div><div class="summary-item"><b>Meeting Leader</b>{{ $meeting['host'] }}</div><div class="summary-item"><b>Attendance</b>{{ $meeting['participants'] }} of {{ $meeting['capacity'] }} participants</div></aside>
-</form>
+    <style>
+        .minutes-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 290px;
+            gap: 16px;
+        }
+        .minutes-editor {
+            padding: 25px;
+        }
+        .minutes-editor .field textarea {
+            min-height: 170px;
+        }
+        .meeting-summary {
+            padding: 20px;
+        }
+        .meeting-summary h3 {
+            margin: 0 0 15px;
+            font-size: 15px;
+        }
+        .summary-item {
+            padding: 11px 0;
+            border-bottom: 1px solid #dbe4f1;
+            color: #58708f;
+            font-size: 13px;
+        }
+        .summary-item b {
+            display: block;
+            color: #071a3b;
+            margin-bottom: 3px;
+        }
+        .minutes-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding-top: 6px;
+        }
+        @media (max-width: 850px) {
+            .minutes-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+
+    <form action="{{ route('admin.notulen.store') }}" method="POST" class="minutes-layout">
+        @csrf
+
+        <section class="panel minutes-editor">
+            <h2 class="section-title">Meeting Minutes</h2>
+
+            <div class="field">
+                <label>Meeting Title</label>
+                <input class="input @error('title') input-error @enderror" required
+                       name="title" value="{{ old('title', $notulen['title'] ?? $meeting['title']) }}">
+                @error('title')
+                    <span class="field-error">{{ $message }}</span>
+                @enderror
+            </div>
+
+            <div class="two-fields">
+                <div class="field">
+                    <label>Date</label>
+                    <input class="input @error('date') input-error @enderror" required
+                           type="date" name="date" value="{{ old('date', $notulen['date'] ?? $meeting['date']) }}">
+                    @error('date')
+                        <span class="field-error">{{ $message }}</span>
+                    @enderror
+                </div>
+                <div class="field">
+                    <label>Location</label>
+                    <input class="input @error('location') input-error @enderror" required
+                           name="location" value="{{ old('location', $notulen['location'] ?? $meeting['location']) }}">
+                    @error('location')
+                        <span class="field-error">{{ $message }}</span>
+                    @enderror
+                </div>
+            </div>
+
+            <div class="field">
+                <label>Discussion & Agenda</label>
+                <textarea required class="@error('agenda') input-error @enderror"
+                          name="agenda" placeholder="Write the discussion points, decisions, and action items...">{{ old('agenda', $notulen['agenda'] ?? '') }}</textarea>
+                @error('agenda')
+                    <span class="field-error">{{ $message }}</span>
+                @enderror
+            </div>
+
+            <div class="field">
+                <label>Conclusion / Follow-up</label>
+                <textarea class="@error('conclusion') input-error @enderror"
+                          name="conclusion" placeholder="Add conclusions and follow-up actions...">{{ old('conclusion', $notulen['conclusion'] ?? '') }}</textarea>
+                @error('conclusion')
+                    <span class="field-error">{{ $message }}</span>
+                @enderror
+            </div>
+
+            <div class="minutes-footer">
+                <a class="button secondary" href="{{ route('admin.meetings') }}">Cancel</a>
+                <button class="button" type="submit">Save Minutes</button>
+            </div>
+        </section>
+
+        <aside class="panel meeting-summary">
+            <h3>Meeting Information</h3>
+
+            <div class="summary-item">
+                <b>{{ $meeting['title'] }}</b>
+                Meeting currently in progress
+            </div>
+            <div class="summary-item">
+                <b>Date & Time</b>
+                {{ $meeting['date'] }} | {{ $meeting['time'] }}
+            </div>
+            <div class="summary-item">
+                <b>Location</b>
+                {{ $meeting['location'] }}
+            </div>
+            <div class="summary-item">
+                <b>Meeting Leader</b>
+                {{ $meeting['host'] }}
+            </div>
+            <div class="summary-item">
+                <b>Attendance</b>
+                {{ $meeting['participants'] }} of {{ $meeting['capacity'] }} participants
+            </div>
+        </aside>
+    </form>
 @endsection
