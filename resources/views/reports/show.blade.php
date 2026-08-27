@@ -49,7 +49,7 @@
         <div class="panel p-4 text-xs space-y-1">
             <div class="text-[10px] uppercase font-bold text-slate-400 font-mono">Format & Lokasi</div>
             <div class="font-bold text-slate-900 uppercase font-mono">{{ $agenda->tipe_rapat }}</div>
-            <div class="text-slate-500 truncate">{{ $agenda->lokasi_ruang ?? 'Online / Daring' }}</div>
+            <div class="text-slate-500 truncate">{{ $agenda->lokasi_ruang ?? 'Daring / Ruang Virtual' }}</div>
         </div>
 
         <div class="panel p-4 text-xs space-y-1">

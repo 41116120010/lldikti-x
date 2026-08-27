@@ -64,9 +64,9 @@
                 <label for="tipe">Format Rapat</label>
                 <select id="tipe" name="tipe" class="input w-full text-xs">
                     <option value="">Semua Format</option>
-                    <option value="offline" {{ request('tipe') === 'offline' ? 'selected' : '' }}>Offline</option>
-                    <option value="online" {{ request('tipe') === 'online' ? 'selected' : '' }}>Online</option>
-                    <option value="hybrid" {{ request('tipe') === 'hybrid' ? 'selected' : '' }}>Hybrid</option>
+                    <option value="offline" {{ request('tipe') === 'offline' ? 'selected' : '' }}>Tatap Muka (Luring)</option>
+                    <option value="online" {{ request('tipe') === 'online' ? 'selected' : '' }}>Daring (Virtual)</option>
+                    <option value="hybrid" {{ request('tipe') === 'hybrid' ? 'selected' : '' }}>Hibrida</option>
                 </select>
             </div>
 

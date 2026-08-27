@@ -1,229 +1,219 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Password Toggle Utility
     const eyeIcon = '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>';
     const eyeOffIcon = '<path d="M3 3l18 18M10.6 10.6a3 3 0 0 0 4.24 4.24M9.88 4.24A10.94 10.94 0 0 1 12 4c6.5 0 10 7 10 7a13.2 13.2 0 0 1-3.11 4.24M6.11 6.11A13.2 13.2 0 0 0 2 11s3.5 7 10 7a10.9 10.9 0 0 0 4.11-.8"/>';
-    document.querySelectorAll('[data-toggle-password]').forEach(button => button.addEventListener('click', () => {
-        const input = document.querySelector('#' + button.dataset.togglePassword);
-        if (!input) return;
-        const show = input.type === 'password';
-        input.type = show ? 'text' : 'password';
-        const svg = button.querySelector('svg');
-        if (svg) svg.innerHTML = show ? eyeOffIcon : eyeIcon;
-        else button.textContent = show ? 'Hide' : 'Show';
-        button.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
-    }));
-
-    document.querySelectorAll('[data-auth-tab]').forEach(tab => tab.addEventListener('click', () => {
-        const group = tab.closest('.auth-tabs');
-        const portal = tab.dataset.authTab;
-        group.querySelectorAll('[data-auth-tab]').forEach(item => {
-            item.classList.toggle('active', item === tab);
-            item.setAttribute('aria-selected', item === tab ? 'true' : 'false');
+    
+    document.querySelectorAll('[data-toggle-password]').forEach(button => {
+        button.addEventListener('click', () => {
+            const input = document.querySelector('#' + button.dataset.togglePassword);
+            if (!input) return;
+            const show = input.type === 'password';
+            input.type = show ? 'text' : 'password';
+            const svg = button.querySelector('svg');
+            if (svg) svg.innerHTML = show ? eyeOffIcon : eyeIcon;
+            button.setAttribute('aria-label', show ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi');
         });
-        const portalField = document.querySelector('#auth-portal');
-        if (portalField) portalField.value = portal;
-        if (portal === 'employee') notify('Employee portal is coming soon in this prototype.');
-    }));
+    });
 
-    document.querySelectorAll('form.auth-form').forEach(form => form.addEventListener('submit', () => {
-        const submit = form.querySelector('.auth-submit');
-        if (!submit || submit.disabled) return;
-        submit.disabled = true;
-        submit.dataset.originalLabel = submit.textContent;
-        submit.textContent = submit.dataset.loadingLabel || 'Please wait…';
-    }));
+    // Form Loading State
+    document.querySelectorAll('form.auth-form').forEach(form => {
+        form.addEventListener('submit', () => {
+            const submit = form.querySelector('.auth-submit');
+            if (!submit || submit.disabled) return;
+            submit.disabled = true;
+            submit.dataset.originalLabel = submit.textContent;
+            submit.textContent = submit.dataset.loadingLabel || 'Memproses...';
+        });
+    });
 
-    const modal = document.querySelector('#app-modal');
+    // Universal Modal System
+    const modalBackdrop = document.querySelector('#app-modal');
     const modalContent = document.querySelector('#modal-content');
     const toast = document.querySelector('#app-toast');
     let toastTimer;
 
-    const notify = message => {
+    window.showToast = (message, type = 'info') => {
         if (!toast) return;
         toast.textContent = message;
-        toast.classList.add('show');
+        toast.className = 'toast show';
+        if (type === 'success') toast.style.borderColor = '#059669';
+        else if (type === 'error') toast.style.borderColor = '#dc2626';
+        else if (type === 'warning') toast.style.borderColor = '#d97706';
+        else toast.style.borderColor = '#334155';
+
         clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
+        toastTimer = setTimeout(() => toast.classList.remove('show'), 3200);
     };
-    const closeModal = () => { modal?.classList.remove('open'); modal?.setAttribute('aria-hidden', 'true'); };
-    const openModal = html => { if (!modal || !modalContent) return; modalContent.innerHTML = html; modal.classList.add('open'); modal.setAttribute('aria-hidden', 'false'); };
-    if (modal) {
-        document.querySelector('.modal-close')?.addEventListener('click', closeModal);
-        modal.addEventListener('click', event => { if (event.target === modal) closeModal(); });
-        document.addEventListener('keydown', event => { if (event.key === 'Escape') closeModal(); });
-    }
 
-    document.querySelectorAll('[data-toast]').forEach(button => button.addEventListener('click', () => notify(button.dataset.toast)));
-    document.querySelectorAll('[data-role-select]').forEach(select => select.addEventListener('change', () => {
-        select.classList.toggle('admin', select.value === 'Admin');
-        select.classList.toggle('user', select.value === 'User');
-        notify(`Role changed to ${select.value}.`);
-    }));
-    document.querySelectorAll('[data-focus-search]').forEach(button => button.addEventListener('click', () => {
-    const target = document.querySelector('[data-table-search]');
-    if (target) target.focus();
-    else notify('No searchable list on this page.');
-}));
+    window.closeModal = () => {
+        if (!modalBackdrop) return;
+        modalBackdrop.classList.remove('open');
+        modalBackdrop.setAttribute('aria-hidden', 'true');
+    };
 
-document.querySelectorAll('[data-profile-toggle]').forEach(button => button.addEventListener('click', event => {
-    event.stopPropagation();
-    const dropdown = button.parentElement.querySelector('[data-profile-dropdown]');
-    const isOpen = dropdown.classList.contains('open');
-    document.querySelectorAll('[data-profile-dropdown]').forEach(d => d.classList.remove('open'));
-    dropdown.classList.toggle('open', !isOpen);
-    button.setAttribute('aria-expanded', String(!isOpen));
-}));
-document.addEventListener('click', () => document.querySelectorAll('[data-profile-dropdown]').forEach(d => d.classList.remove('open')));
+    window.showModal = ({
+        title = 'Pemberitahuan',
+        message = '',
+        type = 'info', // 'success', 'error', 'warning', 'confirm', 'info'
+        confirmText = 'Tutup',
+        cancelText = null,
+        onConfirm = null,
+        onCancel = null,
+        isHtml = true
+    }) => {
+        if (!modalBackdrop || !modalContent) return;
 
-    document.querySelectorAll('[data-table-search]').forEach(input => input.addEventListener('input', () => {
-        const rows = [...document.querySelectorAll(input.dataset.table + ' tbody tr')];
-        const query = input.value.toLowerCase().trim();
-        let visibleCount = 0;
-        rows.forEach(row => {
-            const match = row.textContent.toLowerCase().includes(query);
-            row.classList.toggle('hidden-row', !match);
-            if (match) visibleCount++;
+        let iconSvg = '';
+        let headerColor = 'text-blue-600';
+        let btnColor = 'bg-blue-600 hover:bg-blue-700 text-white';
+
+        if (type === 'success') {
+            iconSvg = '<div class="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center mx-auto mb-3 shadow-xs"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>';
+            headerColor = 'text-emerald-800';
+            btnColor = 'bg-emerald-600 hover:bg-emerald-700 text-white';
+        } else if (type === 'error') {
+            iconSvg = '<div class="w-12 h-12 rounded-full bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center mx-auto mb-3 shadow-xs"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div>';
+            headerColor = 'text-rose-800';
+            btnColor = 'bg-rose-600 hover:bg-rose-700 text-white';
+        } else if (type === 'warning') {
+            iconSvg = '<div class="w-12 h-12 rounded-full bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center mx-auto mb-3 shadow-xs"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>';
+            headerColor = 'text-amber-800';
+            btnColor = 'bg-amber-600 hover:bg-amber-700 text-white';
+        } else if (type === 'confirm') {
+            iconSvg = '<div class="w-12 h-12 rounded-full bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center mx-auto mb-3 shadow-xs"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>';
+            headerColor = 'text-slate-900';
+            btnColor = 'bg-blue-600 hover:bg-blue-700 text-white';
+        }
+
+        let actionsHtml = '';
+        if (cancelText) {
+            actionsHtml = `
+                <div class="modal-actions mt-5 flex items-center justify-end gap-2.5">
+                    <button type="button" class="button secondary text-xs px-4 py-2" id="modal-cancel-btn">${cancelText}</button>
+                    <button type="button" class="button ${btnColor} text-xs px-4 py-2 font-semibold" id="modal-confirm-btn">${confirmText}</button>
+                </div>
+            `;
+        } else {
+            actionsHtml = `
+                <div class="modal-actions mt-5 flex items-center justify-end">
+                    <button type="button" class="button ${btnColor} text-xs px-5 py-2.5 w-full sm:w-auto font-semibold" id="modal-confirm-btn">${confirmText}</button>
+                </div>
+            `;
+        }
+
+        modalContent.innerHTML = `
+            <div class="text-center sm:text-left">
+                ${iconSvg}
+                <h3 class="text-base font-bold ${headerColor} mb-2 text-center">${title}</h3>
+                <div class="text-xs text-slate-600 leading-relaxed text-center">${isHtml ? message : document.createTextNode(message).data}</div>
+                ${actionsHtml}
+            </div>
+        `;
+
+        const confirmBtn = modalContent.querySelector('#modal-confirm-btn');
+        const cancelBtn = modalContent.querySelector('#modal-cancel-btn');
+
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', () => {
+                window.closeModal();
+                if (typeof onConfirm === 'function') onConfirm();
+            });
+        }
+
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => {
+                window.closeModal();
+                if (typeof onCancel === 'function') onCancel();
+            });
+        }
+
+        modalBackdrop.classList.add('open');
+        modalBackdrop.setAttribute('aria-hidden', 'false');
+    };
+
+    if (modalBackdrop) {
+        document.querySelectorAll('[data-close-modal]').forEach(el => el.addEventListener('click', window.closeModal));
+        modalBackdrop.addEventListener('click', (event) => {
+            if (event.target === modalBackdrop) window.closeModal();
         });
-        const emptyState = document.querySelector(input.dataset.table + '-empty');
-        if (emptyState) emptyState.classList.toggle('hidden-row', visibleCount !== 0);
-    }));
-
-document.querySelector('#users-table')?.addEventListener('click', event => {
-    const editBtn = event.target.closest('[data-edit-user]');
-    if (editBtn) {
-        const row = editBtn.closest('tr');
-        const name = row.children[1].textContent.trim();
-        openModal(`<h2>Edit ${name}</h2><p>This prototype keeps user data static. The edit action is ready to be connected to the user API.</p><div class="modal-actions"><button class="button secondary" data-close-modal>Cancel</button><button class="button" data-close-modal>Save changes</button></div>`);
-        return;
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') window.closeModal();
+        });
     }
-    const deleteBtn = event.target.closest('[data-delete-user]');
-    if (deleteBtn) {
-        const row = deleteBtn.closest('tr');
-        const name = row.children[1].textContent.trim();
-        openModal(`<h2>Delete user?</h2><p>${name} will be removed from this list in the current browser session.</p><div class="modal-actions"><button class="button secondary" data-close-modal>Cancel</button><button class="button" data-confirm-delete>Delete user</button></div>`);
-        modalContent.querySelector('[data-confirm-delete]').addEventListener('click', () => { row.remove(); closeModal(); notify(`${name} removed from the list.`); });
+
+    // Process Server Flash Data on Page Load
+    const flashData = document.querySelector('#flash-modal-data');
+    if (flashData) {
+        const type = flashData.dataset.type || 'info';
+        const title = flashData.dataset.title || 'Pemberitahuan';
+        const message = flashData.dataset.message || '';
+        if (message) {
+            window.showModal({
+                title: title,
+                message: message,
+                type: type,
+                confirmText: 'Mengerti & Tutup'
+            });
+        }
     }
-});
 
-document.querySelector('#users-table')?.addEventListener('change', event => {
-    const select = event.target.closest('[data-role-select]');
-    if (!select) return;
-    select.classList.toggle('admin', select.value === 'Admin');
-    select.classList.toggle('user', select.value === 'User');
-    notify(`Role changed to ${select.value}.`);
-});
-
-document.querySelectorAll('[data-add-user]').forEach(button => button.addEventListener('click', () => {
-    openModal(`<h2>Add User</h2><form data-add-user-form><div class="field"><label>Full Name</label><input class="input" type="text" name="name" required></div><div class="field"><label>Email Address</label><input class="input" type="email" name="email" required></div><div class="field"><label>Unit / Department</label><input class="input" type="text" name="unit" required></div><div class="field"><label>Role</label><select class="input" name="role"><option value="User">User</option><option value="Admin">Admin</option></select></div><div class="modal-actions"><button class="button secondary" type="button" data-close-modal>Cancel</button><button class="button" type="submit">Add User</button></div></form>`);
-
-    modalContent.querySelector('[data-add-user-form]').addEventListener('submit', event => {
-        event.preventDefault();
-        const form = event.target;
-        const name = form.name.value.trim();
-        const email = form.email.value.trim();
-        const unit = form.unit.value.trim();
-        const role = form.role.value;
-        if (!name || !email || !unit) return;
-
-        const initials = name.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
-        const row = document.createElement('tr');
-        row.innerHTML = `<td><div class="user-avatar">${initials}</div></td><td><strong>${name}</strong></td><td class="tiny">${email}</td><td><span class="tag">${unit}</span></td><td><select class="role-select ${role.toLowerCase()}" data-role-select aria-label="Role for ${name}"><option value="User"${role === 'User' ? ' selected' : ''}>User</option><option value="Admin"${role === 'Admin' ? ' selected' : ''}>Admin</option></select></td><td><div class="row-actions"><button class="action-btn action-icon action-edit" type="button" data-edit-user aria-label="Edit ${name}" title="Edit"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13 7 4 4"/></svg></button><button class="action-btn action-icon action-delete" type="button" data-delete-user aria-label="Delete ${name}" title="Delete"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v5m4-5v5M9 7l1-2h4l1 2m-9 0 1 13h10l1-13"/></svg></button></div></td>`;
-        document.querySelector('#users-table tbody').appendChild(row);
-
-        closeModal();
-        notify(`${name} added to the list.`);
-    });
-}));
-    document.addEventListener('click', event => { if (event.target.closest('[data-close-modal]')) closeModal(); });
-
-    const selectAll = document.querySelector('[data-select-all]');
-    const checks = [...document.querySelectorAll('[data-participant]')];
-    const count = document.querySelector('[data-participant-count]');
-    const refreshCount = () => { const selected = checks.filter(check => check.checked).length; if (count) count.textContent = `${selected} of ${checks.length} selected`; if (selectAll) selectAll.checked = selected === checks.length; };
-    if (selectAll) selectAll.addEventListener('change', () => { checks.forEach(check => check.checked = selectAll.checked); refreshCount(); });
-    checks.forEach(check => check.addEventListener('change', refreshCount));
-
-    document.querySelectorAll('[data-tab-status]').forEach(tab => tab.addEventListener('click', () => {
-        document.querySelectorAll('[data-tab-status]').forEach(item => item.classList.remove('active')); tab.classList.add('active');
-        const status = tab.dataset.tabStatus;
-        document.querySelectorAll('[data-meeting-row]').forEach(row => row.classList.toggle('hidden-row', status !== 'All' && row.dataset.status !== status));
-    }));
-    document.addEventListener('click', event => {
-        const start = event.target.closest('[data-start-meeting]');
-        if (start) {
-            start.parentElement.innerHTML = '<button class="meeting-live" type="button" data-toast="Live attendance opened.">Live</button><a class="meeting-minutes" href="/admin/notulen/editor">Minutes</a><button class="meeting-end" type="button" data-end-meeting>End</button>';
-            const row = start.closest('[data-meeting-row]');
-            if (row) { row.dataset.status = 'Ongoing'; const badge = row.querySelector('.status'); if (badge) { badge.className = 'status ongoing'; badge.textContent = 'Ongoing'; } }
-            notify('Meeting started. Live attendance is now available.');
-        }
-        const live = event.target.closest('.meeting-live');
-        if (live && !start) notify('Live attendance opened.');
-        const end = event.target.closest('[data-end-meeting]');
-        if (end) {
-            const row = end.closest('[data-meeting-row]');
-            end.parentElement.innerHTML = '<a class="meeting-report" href="/admin/notulen">View Report</a><a class="meeting-minutes" href="/admin/notulen/editor">Edit Minutes</a>';
-            if (row) { row.dataset.status = 'Completed'; const badge = row.querySelector('.status'); if (badge) { badge.className = 'status completed'; badge.textContent = 'Completed'; } }
-            notify('Meeting completed. Report is now available.');
-        }
-    });
-    document.querySelectorAll('[data-report-action]').forEach(button => button.addEventListener('click', () => window.print()));
-    document.querySelectorAll('[data-report-word]').forEach(button => button.addEventListener('click', () => {
-        const title = document.querySelector('.report-hero h2')?.textContent.trim() || 'meeting-report';
-        const body = document.querySelector('.report-grid')?.innerText || 'Meeting report';
-        const file = new Blob(['\ufeff', `<html><head><meta charset="utf-8"><title>${title}</title></head><body><h1>${title}</h1><pre style="white-space:pre-wrap;font-family:Arial">${body}</pre></body></html>`], { type: 'application/msword' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(file);
-        link.download = `${title.toLowerCase().replace(/[^a-z0-9]+/gi, '-')}.doc`;
-        link.click();
-        URL.revokeObjectURL(link.href);
-        notify('Word report downloaded.');
-    }));
-    document.querySelectorAll('[data-file-preview]').forEach(button => button.addEventListener('click', () => {
-        const name = button.dataset.filePreview;
-        openModal(`<h2>${name}</h2><p>Preview is not available because this demo does not include uploaded files. Use Download after connecting this view to storage.</p><div class="modal-actions"><button class="button" data-close-modal>Close</button></div>`);
-    }));
-});
-document.querySelectorAll('[data-add-unit]').forEach(button => button.addEventListener('click', () => {
-    const headOptions = document.querySelector('#unit-head-options')?.innerHTML || '<option value="">— No head assigned —</option>';
-    openModal(`<h2>Add Unit</h2><form data-unit-form><div class="field"><label>Unit Name</label><input class="input" type="text" name="name" required></div><div class="field"><label>Head of Unit</label><select class="input" name="head">${headOptions}</select></div><div class="modal-actions"><button class="button secondary" type="button" data-close-modal>Cancel</button><button class="button" type="submit">Add Unit</button></div></form>`);
-    modalContent.querySelector('[data-unit-form]').addEventListener('submit', event => {
-        event.preventDefault();
-        const form = event.target;
-        const name = form.name.value.trim();
-        const head = form.head.value;
-        if (!name) return;
-        const row = document.createElement('tr');
-        row.innerHTML = `<td><strong>${name}</strong></td><td>${head || '<span class="tiny">— No head assigned —</span>'}</td><td>0 members</td><td><div class="row-actions"><button class="action-btn action-icon action-edit" type="button" data-edit-unit aria-label="Edit ${name}" title="Edit"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13 7 4 4"/></svg></button><button class="action-btn action-icon action-delete" type="button" data-delete-unit aria-label="Delete ${name}" title="Delete"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v5m4-5v5M9 7l1-2h4l1 2m-9 0 1 13h10l1-13"/></svg></button></div></td>`;
-        document.querySelector('#units-table tbody').appendChild(row);
-        closeModal();
-        notify(`${name} added as a new unit.`);
-    });
-}));
-
-document.querySelector('#units-table')?.addEventListener('click', event => {
-    const editBtn = event.target.closest('[data-edit-unit]');
-    if (editBtn) {
-        const row = editBtn.closest('tr');
-        const currentName = row.children[0].textContent.trim();
-        const currentHead = row.children[1].textContent.trim();
-        const headOptions = document.querySelector('#unit-head-options')?.innerHTML || '<option value="">— No head assigned —</option>';
-        openModal(`<h2>Edit ${currentName}</h2><form data-unit-edit-form><div class="field"><label>Unit Name</label><input class="input" type="text" name="name" value="${currentName}" required></div><div class="field"><label>Head of Unit</label><select class="input" name="head">${headOptions}</select></div><div class="modal-actions"><button class="button secondary" type="button" data-close-modal>Cancel</button><button class="button" type="submit">Save changes</button></div></form>`);
-        const select = modalContent.querySelector('select[name="head"]');
-        [...select.options].forEach(opt => { if (opt.value === currentHead) opt.selected = true; });
-        modalContent.querySelector('[data-unit-edit-form]').addEventListener('submit', e => {
+    // Intercept Forms with Custom Confirmation Modals
+    document.querySelectorAll('form[data-confirm]').forEach(form => {
+        form.addEventListener('submit', (e) => {
+            if (form.dataset.confirmed === 'true') return;
             e.preventDefault();
-            const form = e.target;
-            row.children[0].innerHTML = `<strong>${form.name.value.trim()}</strong>`;
-            row.children[1].textContent = form.head.value || '— No head assigned —';
-            closeModal();
-            notify('Unit updated.');
+
+            const message = form.dataset.confirm || 'Apakah Anda yakin ingin melanjutkan tindakan ini?';
+            const title = form.dataset.confirmTitle || 'Konfirmasi Tindakan';
+            const type = form.dataset.confirmType || 'confirm';
+            const confirmBtnText = form.dataset.confirmBtn || 'Ya, Lanjutkan';
+
+            window.showModal({
+                title: title,
+                message: message,
+                type: type,
+                confirmText: confirmBtnText,
+                cancelText: 'Batal',
+                onConfirm: () => {
+                    form.dataset.confirmed = 'true';
+                    form.submit();
+                }
+            });
         });
-        return;
-    }
-    const deleteBtn = event.target.closest('[data-delete-unit]');
-    if (deleteBtn) {
-        const row = deleteBtn.closest('tr');
-        const name = row.children[0].textContent.trim();
-        openModal(`<h2>Delete unit?</h2><p>${name} will be removed from this list in the current browser session.</p><div class="modal-actions"><button class="button secondary" data-close-modal>Cancel</button><button class="button" data-confirm-delete>Delete unit</button></div>`);
-        modalContent.querySelector('[data-confirm-delete]').addEventListener('click', () => { row.remove(); closeModal(); notify(`${name} removed.`); });
-    }
+    });
+
+    // Form Client-side Validation Interceptor (Ensure User Feedback on Missing Conditions)
+    document.querySelectorAll('form').forEach(form => {
+        form.addEventListener('invalid', (e) => {
+            // Only trigger modal on the first invalid field
+            const firstInvalid = form.querySelector(':invalid');
+            if (e.target === firstInvalid) {
+                const label = form.querySelector(`label[for="${e.target.id}"]`)?.textContent || e.target.getAttribute('placeholder') || e.target.name || 'Kolom isian';
+                window.showModal({
+                    title: 'Kondisi Belum Terpenuhi',
+                    message: `Mohon lengkapi data wajib pada formulir: <strong>${label}</strong> sebelum menyimpan data.`,
+                    type: 'warning',
+                    confirmText: 'Periksa Kembali'
+                });
+            }
+        }, true);
+    });
+
+    // Table Search Helper
+    document.querySelectorAll('[data-table-search]').forEach(input => {
+        input.addEventListener('input', () => {
+            const tableSelector = input.dataset.table;
+            if (!tableSelector) return;
+            const rows = [...document.querySelectorAll(tableSelector + ' tbody tr')];
+            const query = input.value.toLowerCase().trim();
+            let visibleCount = 0;
+            rows.forEach(row => {
+                const match = row.textContent.toLowerCase().includes(query);
+                row.style.display = match ? '' : 'none';
+                if (match) visibleCount++;
+            });
+            const emptyState = document.querySelector(tableSelector + '-empty');
+            if (emptyState) emptyState.style.display = visibleCount === 0 ? '' : 'none';
+        });
+    });
 });

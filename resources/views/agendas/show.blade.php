@@ -22,7 +22,7 @@
                         $statusText = match($agenda->status) {
                             'ongoing' => 'Sedang Berlangsung (Presensi Dibuka)',
                             'completed' => 'Selesai (Presensi Ditutup)',
-                            'draft' => 'Draft',
+                            'draft' => 'Konsep',
                             'cancelled' => 'Dibatalkan',
                             default => 'Terjadwal'
                         };
@@ -52,7 +52,7 @@
 
                     <div class="flex items-center gap-1.5">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-                        <span>{{ $agenda->lokasi_ruang ?? 'Daring / Online Meeting' }}</span>
+                        <span>{{ $agenda->lokasi_ruang ?? 'Daring / Ruang Virtual' }}</span>
                     </div>
 
                     <div class="flex items-center gap-1.5">
@@ -66,7 +66,15 @@
             <div class="flex flex-wrap items-center gap-2 self-start lg:self-auto shrink-0">
                 @can('manageStatus', $agenda)
                     @if($agenda->status === 'scheduled')
-                        <form action="{{ route('admin.agendas.update-status', $agenda) }}" method="POST" class="inline">
+                        <form 
+                            action="{{ route('admin.agendas.update-status', $agenda) }}" 
+                            method="POST" 
+                            class="inline"
+                            data-confirm="Buka sesi presensi rapat '{{ $agenda->judul_rapat }}' sekarang? Pegawai akan dapat langsung mengisi daftar hadir."
+                            data-confirm-title="Buka Sesi Presensi"
+                            data-confirm-type="confirm"
+                            data-confirm-btn="Ya, Mulai Sesi"
+                        >
                             @csrf
                             @method('PATCH')
                             <input type="hidden" name="status" value="ongoing">
@@ -76,7 +84,15 @@
                             </button>
                         </form>
                     @elseif($agenda->status === 'ongoing')
-                        <form action="{{ route('admin.agendas.update-status', $agenda) }}" method="POST" class="inline">
+                        <form 
+                            action="{{ route('admin.agendas.update-status', $agenda) }}" 
+                            method="POST" 
+                            class="inline"
+                            data-confirm="Selesaikan dan tutup sesi presensi rapat '{{ $agenda->judul_rapat }}'? Pegawai tidak dapat mengisi presensi lagi setelah sesi ditutup."
+                            data-confirm-title="Selesaikan Sesi Rapat"
+                            data-confirm-type="warning"
+                            data-confirm-btn="Ya, Selesaikan Rapat"
+                        >
                             @csrf
                             @method('PATCH')
                             <input type="hidden" name="status" value="completed">

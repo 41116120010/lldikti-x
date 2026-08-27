@@ -180,7 +180,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     btnCapture.addEventListener('click', () => {
         if (!video.videoWidth) {
-            alert('Kamera belum siap atau tidak tersedia. Silakan gunakan opsi unggah berkas.');
+            window.showModal({
+                title: 'Kamera Belum Siap',
+                message: 'Aliran kamera belum siap atau izin peramban dibatasi. Silakan gunakan opsi unggah berkas foto selfie di bawah.',
+                type: 'warning',
+                confirmText: 'Mengerti'
+            });
             return;
         }
 
@@ -195,7 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
 
-        // Convert to WebP or JPEG with 0.75 quality (< 150KB)
+        // Export compressed JPEG base64
         const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
         selfieDataInput.value = dataUrl;
 
@@ -300,29 +305,31 @@ document.addEventListener('DOMContentLoaded', () => {
         isDrawing = true;
         hasDrawn = true;
         sigPlaceholder.classList.add('hidden');
-        const pos = getCanvasCoordinates(e);
+        sigBadge.textContent = 'Tanda Tangan Terisi';
+        sigBadge.className = 'text-[11px] font-bold text-emerald-600';
+
+        const coords = getCanvasCoordinates(e);
         sCtx.beginPath();
-        sCtx.moveTo(pos.x, pos.y);
+        sCtx.moveTo(coords.x, coords.y);
+        if (e.touches) e.preventDefault();
     }
 
     function draw(e) {
         if (!isDrawing) return;
-        e.preventDefault();
-        const pos = getCanvasCoordinates(e);
-        sCtx.lineTo(pos.x, pos.y);
+        const coords = getCanvasCoordinates(e);
+        sCtx.lineTo(coords.x, coords.y);
         sCtx.stroke();
+        if (e.touches) e.preventDefault();
     }
 
     function stopDrawing() {
         if (!isDrawing) return;
         isDrawing = false;
-        // Export transparent PNG
+        // Save compressed signature PNG to hidden input
         sigDataInput.value = sigCanvas.toDataURL('image/png');
-        sigBadge.textContent = 'Tanda Tangan Siap';
-        sigBadge.className = 'text-[11px] font-bold text-emerald-600';
     }
 
-    // Pointer & Mouse Events
+    // Mouse Events
     sigCanvas.addEventListener('mousedown', startDrawing);
     sigCanvas.addEventListener('mousemove', draw);
     sigCanvas.addEventListener('mouseup', stopDrawing);
@@ -347,19 +354,29 @@ document.addEventListener('DOMContentLoaded', () => {
     form.addEventListener('submit', (e) => {
         if (!selfieDataInput.value && !fallbackFileInput.files.length) {
             e.preventDefault();
-            alert('Silakan ambil foto selfie wajah terlebih dahulu.');
+            window.showModal({
+                title: 'Kondisi Belum Terpenuhi',
+                message: 'Mohon ambil <strong>foto selfie wajah</strong> Anda terlebih dahulu menggunakan kamera atau unggah berkas foto.',
+                type: 'warning',
+                confirmText: 'Lengkapi Foto'
+            });
             return false;
         }
 
         if (!hasDrawn || !sigDataInput.value) {
             e.preventDefault();
-            alert('Silakan bubuhkan tanda tangan digital Anda pada area kanvas.');
+            window.showModal({
+                title: 'Kondisi Belum Terpenuhi',
+                message: 'Mohon bubuhkan <strong>tanda tangan digital</strong> Anda pada area kanvas yang tersedia.',
+                type: 'warning',
+                confirmText: 'Lengkapi Tanda Tangan'
+            });
             return false;
         }
 
         const btnSubmit = document.getElementById('btn-submit-attendance');
         btnSubmit.disabled = true;
-        btnSubmit.innerHTML = '<span>Memverifikasi & Menyimpan...</span>';
+        btnSubmit.innerHTML = '<span>Memverifikasi & Menyimpan Data...</span>';
     });
 });
 </script>

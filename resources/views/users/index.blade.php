@@ -136,7 +136,15 @@
                                 <div class="row-actions justify-end">
                                     <!-- Toggle Status Button -->
                                     @if($userItem->id !== Auth::id())
-                                        <form action="{{ route('admin.users.toggle-status', $userItem) }}" method="POST" class="inline">
+                                        <form 
+                                            action="{{ route('admin.users.toggle-status', $userItem) }}" 
+                                            method="POST" 
+                                            class="inline"
+                                            data-confirm="Apakah Anda yakin ingin {{ $userItem->is_active ? 'menonaktifkan' : 'mengaktifkan kembali' }} akun pegawai '{{ $userItem->name }}'?"
+                                            data-confirm-title="{{ $userItem->is_active ? 'Nonaktifkan Akun Pengguna' : 'Aktifkan Akun Pengguna' }}"
+                                            data-confirm-type="{{ $userItem->is_active ? 'warning' : 'confirm' }}"
+                                            data-confirm-btn="Ya, Lanjutkan"
+                                        >
                                             @csrf
                                             @method('PATCH')
                                             <button 
@@ -160,7 +168,15 @@
 
                                     <!-- Delete Button (Only for other accounts) -->
                                     @if($userItem->id !== Auth::id() && (!$userItem->isAdministrator() || $currentUser->isAdministrator()))
-                                        <form action="{{ route('admin.users.destroy', $userItem) }}" method="POST" class="inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus akun pengguna ini?')">
+                                        <form 
+                                            action="{{ route('admin.users.destroy', $userItem) }}" 
+                                            method="POST" 
+                                            class="inline"
+                                            data-confirm="Apakah Anda yakin ingin menghapus akun pegawai '{{ $userItem->name }}' (NIP: {{ $userItem->nip }}) secara permanen?"
+                                            data-confirm-title="Hapus Akun Pengguna"
+                                            data-confirm-type="warning"
+                                            data-confirm-btn="Ya, Hapus Pengguna"
+                                        >
                                             @csrf
                                             @method('DELETE')
                                             <button 

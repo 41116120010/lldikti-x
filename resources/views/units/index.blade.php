@@ -91,7 +91,15 @@
                             <td class="text-right">
                                 <div class="row-actions justify-end">
                                     <!-- Toggle Status Button -->
-                                    <form action="{{ route('admin.units.toggle-status', $unit) }}" method="POST" class="inline">
+                                    <form 
+                                        action="{{ route('admin.units.toggle-status', $unit) }}" 
+                                        method="POST" 
+                                        class="inline"
+                                        data-confirm="Apakah Anda yakin ingin {{ $unit->is_active ? 'menonaktifkan' : 'mengaktifkan kembali' }} unit kerja '{{ $unit->nama_unit }}'?"
+                                        data-confirm-title="{{ $unit->is_active ? 'Nonaktifkan Unit Kerja' : 'Aktifkan Unit Kerja' }}"
+                                        data-confirm-type="{{ $unit->is_active ? 'warning' : 'confirm' }}"
+                                        data-confirm-btn="Ya, Lanjutkan"
+                                    >
                                         @csrf
                                         @method('PATCH')
                                         <button 
@@ -114,7 +122,15 @@
 
                                     <!-- Delete Button (Only if 0 users) -->
                                     @if($unit->users_count === 0)
-                                        <form action="{{ route('admin.units.destroy', $unit) }}" method="POST" class="inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus unit kerja ini?')">
+                                        <form 
+                                            action="{{ route('admin.units.destroy', $unit) }}" 
+                                            method="POST" 
+                                            class="inline"
+                                            data-confirm="Apakah Anda yakin ingin menghapus unit kerja '{{ $unit->nama_unit }}' secara permanen?"
+                                            data-confirm-title="Hapus Unit Kerja"
+                                            data-confirm-type="warning"
+                                            data-confirm-btn="Ya, Hapus Unit"
+                                        >
                                             @csrf
                                             @method('DELETE')
                                             <button 

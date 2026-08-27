@@ -219,10 +219,23 @@
         </section>
     </div>
 
-    <!-- Global Modal Placeholder -->
+    <!-- Flash Session Data for Modal System -->
+    @if (session('success'))
+        <div id="flash-modal-data" data-type="success" data-title="Aksi Berhasil" data-message="{{ session('success') }}" class="hidden"></div>
+    @elseif (session('error'))
+        <div id="flash-modal-data" data-type="error" data-title="Kendala Sistem" data-message="{{ session('error') }}" class="hidden"></div>
+    @elseif (session('warning'))
+        <div id="flash-modal-data" data-type="warning" data-title="Pemberitahuan" data-message="{{ session('warning') }}" class="hidden"></div>
+    @elseif ($errors->any())
+        <div id="flash-modal-data" data-type="warning" data-title="Kondisi Belum Terpenuhi" data-message="{!! implode('<br>&bull; ', $errors->all()) !!}" class="hidden"></div>
+    @endif
+
+    <!-- Global Modal Structure -->
     <div class="modal-backdrop" id="app-modal" aria-hidden="true">
         <section class="modal" role="dialog" aria-modal="true">
-            <button class="modal-close" aria-label="Tutup">×</button>
+            <button class="modal-close" aria-label="Tutup" data-close-modal>
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
             <div id="modal-content"></div>
         </section>
     </div>
@@ -230,8 +243,4 @@
     <!-- Toast Notification Container -->
     <div class="toast" id="app-toast" role="status" aria-live="polite"></div>
 </body>
-<<<<<<< HEAD
 </html>
-=======
-</html>
->>>>>>> e38f0825f150743cb6dcf1c21fa2531dc1cd5d43

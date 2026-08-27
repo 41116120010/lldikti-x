@@ -21,7 +21,10 @@
                             action="{{ route('admin.agendas.delete-documentation', [$agenda, $doc]) }}" 
                             method="POST" 
                             class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition"
-                            onsubmit="return confirm('Hapus foto dokumentasi ini?')"
+                            data-confirm="Apakah Anda yakin ingin menghapus berkas foto dokumentasi ini?"
+                            data-confirm-title="Hapus Foto Dokumentasi"
+                            data-confirm-type="warning"
+                            data-confirm-btn="Ya, Hapus"
                         >
                             @csrf
                             @method('DELETE')

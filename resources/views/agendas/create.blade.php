@@ -52,9 +52,9 @@
                     <div class="field">
                         <label for="tipe_rapat">Format Pelaksanaan <span class="text-rose-500">*</span></label>
                         <select id="tipe_rapat" name="tipe_rapat" class="input w-full @error('tipe_rapat') input-error @enderror" onchange="toggleFormatFields(this.value)" required>
-                            <option value="offline" {{ old('tipe_rapat', 'offline') === 'offline' ? 'selected' : '' }}>Tatap Muka (Offline di Kantor)</option>
-                            <option value="online" {{ old('tipe_rapat') === 'online' ? 'selected' : '' }}>Daring (Online Meeting)</option>
-                            <option value="hybrid" {{ old('tipe_rapat') === 'hybrid' ? 'selected' : '' }}>Hybrid (Tatap Muka & Daring)</option>
+                            <option value="offline" {{ old('tipe_rapat', 'offline') === 'offline' ? 'selected' : '' }}>Tatap Muka (Luring di Kantor)</option>
+                            <option value="online" {{ old('tipe_rapat') === 'online' ? 'selected' : '' }}>Daring (Pertemuan Virtual)</option>
+                            <option value="hybrid" {{ old('tipe_rapat') === 'hybrid' ? 'selected' : '' }}>Hibrida (Luring & Daring)</option>
                         </select>
                         @error('tipe_rapat')
                             <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
