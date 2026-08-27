@@ -230,4 +230,8 @@
     <!-- Toast Notification Container -->
     <div class="toast" id="app-toast" role="status" aria-live="polite"></div>
 </body>
+<<<<<<< HEAD
 </html>
+=======
+</html>
+>>>>>>> e38f0825f150743cb6dcf1c21fa2531dc1cd5d43
