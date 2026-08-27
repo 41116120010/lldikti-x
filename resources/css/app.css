@@ -103,7 +103,7 @@
     .input { height: 38px; border: 1px solid var(--color-line); border-radius: 7px; padding: 0 12px; outline: none; color: var(--color-ink); background: #f9fbfe }
     .input:focus, textarea:focus { border-color: var(--color-blue); box-shadow: 0 0 0 2px #dbeafe }
 
-    .button { border: 0; border-radius: 8px; padding: 10px 15px; background: var(--color-blue); color: #fff; font-weight: 700; text-decoration: none; cursor: pointer }
+    .button { display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; border: 0; border-radius: 8px; padding: 10px 15px; background: var(--color-blue); color: #fff; font-weight: 700; text-decoration: none; cursor: pointer }
     .button.small { padding: 8px 13px }
     .button.secondary { background: #fff; color: #405474; border: 1px solid var(--color-line) }
 
