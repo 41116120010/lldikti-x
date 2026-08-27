@@ -5,8 +5,9 @@
 @section('subtitle', 'Perbarui informasi agenda: ' . $agenda->judul_rapat)
 
 @section('content')
-<div class="max-w-4xl mx-auto">
-    <div class="panel p-6 sm:p-8">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Main Form Panel (2 Cols) -->
+    <div class="lg:col-span-2 panel p-6 sm:p-8">
         <form method="POST" action="{{ route('admin.agendas.update', $agenda) }}" enctype="multipart/form-data" class="space-y-6">
             @csrf
             @method('PUT')
@@ -203,13 +204,17 @@
                             <span class="font-semibold">Berkas Surat Edaran Terlampir</span>
                         </div>
                         <a href="{{ Storage::disk('public')->url($agenda->surat_edaran_path) }}" target="_blank" class="font-bold text-blue-700 underline hover:text-blue-900">
-                            Buka / Unduh Berkas
-                        </a>
+                    <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2 text-slate-700">
+                            <svg class="text-blue-600" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            <span>Surat edaran saat ini terlampir</span>
+                        </div>
+                        <a href="{{ Storage::disk('public')->url($agenda->surat_edaran_path) }}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline font-semibold">Lihat Berkas &rarr;</a>
                     </div>
                 @endif
 
                 <div class="field">
-                    <label for="surat_edaran">{{ $agenda->surat_edaran_path ? 'Ganti Berkas Undangan (Opsional)' : 'Unggah Dokumen Undangan (PDF / Gambar)' }}</label>
+                    <label for="surat_edaran">Unggah Surat Undangan Baru (Kosongkan jika tidak diganti)</label>
                     <input 
                         type="file" 
                         id="surat_edaran" 
@@ -229,7 +234,7 @@
                 <div>
                     <label for="status" class="text-xs font-bold text-slate-700 block mb-1">Status Siklus Agenda</label>
                     <select id="status" name="status" class="input text-xs">
-                        <option value="draft" {{ old('status', $agenda->status) === 'draft' ? 'selected' : '' }}>Draft</option>
+                        <option value="draft" {{ old('status', $agenda->status) === 'draft' ? 'selected' : '' }}>Konsep</option>
                         <option value="scheduled" {{ old('status', $agenda->status) === 'scheduled' ? 'selected' : '' }}>Terjadwal</option>
                         <option value="ongoing" {{ old('status', $agenda->status) === 'ongoing' ? 'selected' : '' }}>Sedang Berlangsung</option>
                         <option value="completed" {{ old('status', $agenda->status) === 'completed' ? 'selected' : '' }}>Selesai</option>
@@ -246,6 +251,27 @@
                 </div>
             </div>
         </form>
+    </div>
+
+    <!-- Agenda Status & Quick Info (1 Col) -->
+    <div class="space-y-4">
+        <div class="panel p-6 bg-slate-900 text-white border-slate-800">
+            <h3 class="font-bold text-sm text-white mb-3 flex items-center gap-2">
+                <svg class="text-blue-400" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                <span>Statistik Agenda Rapat</span>
+            </h3>
+            <div class="space-y-2 text-xs text-slate-300">
+                <div>Total Presensi Tercatat: <strong class="text-white">{{ $agenda->attendances()->count() }} orang</strong></div>
+                <div>Dokumentasi Foto: <strong class="text-white">{{ $agenda->documentations()->count() }} berkas</strong></div>
+                <div>Notulensi: <strong class="{{ $agenda->notulen ? 'text-emerald-400' : 'text-slate-400' }}">{{ $agenda->notulen ? 'Tersedia' : 'Belum Diisi' }}</strong></div>
+                <div class="pt-2 border-t border-slate-800 text-[11px] text-slate-400">Dibuat oleh: {{ $agenda->creator?->name ?? 'Sistem' }}</div>
+            </div>
+        </div>
+
+        <div class="panel p-5 text-xs text-slate-600 bg-white border-slate-200">
+            <h4 class="font-bold text-slate-800 mb-1">Perubahan Status Selesai</h4>
+            <p class="leading-relaxed">Mengubah status menjadi <strong>Selesai</strong> akan menutup penerimaan presensi kehadiran baru dari pegawai secara otomatis.</p>
+        </div>
     </div>
 </div>
 

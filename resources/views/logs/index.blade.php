@@ -7,8 +7,8 @@
 @section('content')
 <div class="space-y-5">
     <!-- Filters & Search Form -->
-    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
-        <form method="GET" action="{{ route('admin.logs.index') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+        <form method="GET" action="{{ route('admin.logs.index') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-center">
             <!-- Keyword Search -->
             <div class="relative lg:col-span-2">
                 <input 
@@ -27,7 +27,7 @@
                     <option value="">Semua Tipe Aktivitas</option>
                     @foreach($activityTypes as $type)
                         <option value="{{ $type }}" {{ request('type') === $type ? 'selected' : '' }}>
-                            {{ $type }}
+                            {{ ucfirst($type) }}
                         </option>
                     @endforeach
                 </select>

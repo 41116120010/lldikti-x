@@ -7,15 +7,15 @@
 @section('content')
 <div class="space-y-5">
     <!-- Action Bar & Filters -->
-    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-        <form method="GET" action="{{ route('admin.users.index') }}" class="flex flex-wrap items-center gap-3 flex-1">
+    <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+        <form method="GET" action="{{ route('admin.users.index') }}" class="flex flex-wrap items-center gap-2.5 flex-1">
             <!-- Search -->
-            <div class="relative min-w-[220px] flex-1 max-w-sm">
+            <div class="relative flex-1 min-w-[200px] max-w-xs">
                 <input 
                     type="text" 
                     name="search" 
                     value="{{ request('search') }}" 
-                    placeholder="Cari nama, NIP, atau username..." 
+                    placeholder="Cari nama, NIP, username..." 
                     class="input w-full pl-9 text-xs"
                 >
                 <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
@@ -23,7 +23,7 @@
 
             <!-- Unit Filter (Superadmin Only) -->
             @if($currentUser->isAdministrator())
-                <select name="unit_id" onchange="this.form.submit()" class="input text-xs">
+                <select name="unit_id" onchange="this.form.submit()" class="input text-xs w-48">
                     <option value="">Semua Unit Kerja</option>
                     <option value="none" {{ request('unit_id') === 'none' ? 'selected' : '' }}>Tanpa Unit (Tingkat Lembaga)</option>
                     @foreach($units as $unit)
@@ -35,7 +35,7 @@
             @endif
 
             <!-- Role Filter -->
-            <select name="role" onchange="this.form.submit()" class="input text-xs">
+            <select name="role" onchange="this.form.submit()" class="input text-xs w-36">
                 <option value="">Semua Peran</option>
                 @if($currentUser->isAdministrator())
                     <option value="administrator" {{ request('role') === 'administrator' ? 'selected' : '' }}>Administrator</option>
@@ -45,19 +45,21 @@
             </select>
 
             <!-- Status Filter -->
-            <select name="status" onchange="this.form.submit()" class="input text-xs">
+            <select name="status" onchange="this.form.submit()" class="input text-xs w-32">
                 <option value="">Semua Status</option>
                 <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Aktif Saja</option>
                 <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Non-Aktif</option>
             </select>
 
-            <button type="submit" class="button small secondary text-xs">Filter</button>
-            @if(request()->hasAny(['search', 'unit_id', 'role', 'status']))
-                <a href="{{ route('admin.users.index') }}" class="text-xs text-slate-500 hover:text-slate-800">Reset</a>
-            @endif
+            <div class="flex items-center gap-2">
+                <button type="submit" class="button small secondary text-xs">Filter</button>
+                @if(request()->hasAny(['search', 'unit_id', 'role', 'status']))
+                    <a href="{{ route('admin.users.index') }}" class="text-xs text-slate-500 hover:text-slate-800">Reset</a>
+                @endif
+            </div>
         </form>
 
-        <a href="{{ route('admin.users.create') }}" class="button small flex items-center gap-2 text-xs self-start lg:self-auto shrink-0">
+        <a href="{{ route('admin.users.create') }}" class="button small flex items-center gap-2 text-xs self-start xl:self-auto shrink-0">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             <span>Tambah Pengguna</span>
         </a>

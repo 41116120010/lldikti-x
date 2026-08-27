@@ -38,19 +38,19 @@
         <form method="GET" action="{{ route('admin.reports.index') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
             <!-- Start Date -->
             <div class="field">
-                <label for="start_date">Dari Tanggal</label>
+                <label for="start_date" class="text-xs text-slate-600 font-semibold mb-1 block">Dari Tanggal</label>
                 <input type="date" id="start_date" name="start_date" value="{{ request('start_date') }}" class="input w-full text-xs">
             </div>
 
             <!-- End Date -->
             <div class="field">
-                <label for="end_date">Sampai Tanggal</label>
+                <label for="end_date" class="text-xs text-slate-600 font-semibold mb-1 block">Sampai Tanggal</label>
                 <input type="date" id="end_date" name="end_date" value="{{ request('end_date') }}" class="input w-full text-xs">
             </div>
 
             <!-- Status Filter -->
             <div class="field">
-                <label for="status">Status Rapat</label>
+                <label for="status" class="text-xs text-slate-600 font-semibold mb-1 block">Status Rapat</label>
                 <select id="status" name="status" class="input w-full text-xs">
                     <option value="all">Semua Status</option>
                     <option value="completed" {{ request('status') === 'completed' ? 'selected' : '' }}>Selesai</option>
@@ -61,7 +61,7 @@
 
             <!-- Format Filter -->
             <div class="field">
-                <label for="tipe">Format Rapat</label>
+                <label for="tipe" class="text-xs text-slate-600 font-semibold mb-1 block">Format Rapat</label>
                 <select id="tipe" name="tipe" class="input w-full text-xs">
                     <option value="">Semua Format</option>
                     <option value="offline" {{ request('tipe') === 'offline' ? 'selected' : '' }}>Tatap Muka (Luring)</option>
@@ -72,18 +72,18 @@
 
             <!-- Filter Buttons -->
             <div class="flex items-center gap-2">
-                <button type="submit" class="button small w-full text-xs">Filter</button>
+                <button type="submit" class="button small flex-1 text-xs">Terapkan Filter</button>
                 @if(request()->hasAny(['start_date', 'end_date', 'status', 'tipe']))
                     <a href="{{ route('admin.reports.index') }}" class="button small secondary text-xs">Reset</a>
                 @endif
             </div>
         </form>
 
-        <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+        <div class="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <span class="text-xs text-slate-500 font-medium">Ekspor Ringkasan Laporan Keseluruhan:</span>
             <a 
                 href="{{ route('admin.reports.summary.csv', request()->query()) }}" 
-                class="button small secondary flex items-center gap-1.5 text-xs text-emerald-800 border-emerald-300 hover:bg-emerald-50"
+                class="button small secondary flex items-center justify-center gap-1.5 text-xs text-emerald-800 border-emerald-300 hover:bg-emerald-50 self-start sm:self-auto"
             >
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 <span>Unduh Rekap CSV / Excel</span>

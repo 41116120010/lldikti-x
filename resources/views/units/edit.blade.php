@@ -5,8 +5,9 @@
 @section('subtitle', 'Perbarui data organisasi untuk ' . $unit->nama_unit)
 
 @section('content')
-<div class="max-w-2xl mx-auto">
-    <div class="panel p-6 sm:p-8">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Main Form Panel (2 Cols) -->
+    <div class="lg:col-span-2 panel p-6 sm:p-8">
         <form method="POST" action="{{ route('admin.units.update', $unit) }}" class="space-y-5">
             @csrf
             @method('PUT')
@@ -51,7 +52,7 @@
                 <textarea 
                     id="deskripsi" 
                     name="deskripsi" 
-                    rows="3" 
+                    rows="4" 
                     class="input w-full p-3 @error('deskripsi') input-error @enderror"
                 >{{ old('deskripsi', $unit->deskripsi) }}</textarea>
                 @error('deskripsi')
@@ -76,6 +77,26 @@
                 </button>
             </div>
         </form>
+    </div>
+
+    <!-- Metadata & Statistics Card (1 Col) -->
+    <div class="space-y-4">
+        <div class="panel p-6 bg-slate-900 text-white border-slate-800">
+            <h3 class="font-bold text-sm text-white mb-2 flex items-center gap-2">
+                <svg class="text-blue-400" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                <span>Ringkasan Unit Terdaftar</span>
+            </h3>
+            <div class="space-y-2 text-xs text-slate-300">
+                <div>Total Pegawai Terhubung: <strong class="text-white">{{ $unit->users()->count() }} orang</strong></div>
+                <div>Status Saat Ini: <strong class="{{ $unit->is_active ? 'text-emerald-400' : 'text-amber-400' }}">{{ $unit->is_active ? 'Aktif Beroperasi' : 'Non-Aktif' }}</strong></div>
+                <div class="pt-2 border-t border-slate-800 text-[11px] text-slate-400">Dibuat pada: {{ $unit->created_at->translatedFormat('d F Y') }}</div>
+            </div>
+        </div>
+
+        <div class="panel p-5 text-xs text-slate-600 bg-white border-slate-200">
+            <h4 class="font-bold text-slate-800 mb-1">Perubahan Kode Unit</h4>
+            <p class="leading-relaxed">Perubahan kode unit akan otomatis diperbarui pada seluruh riwayat agenda dan laporan berita acara rapat terkait.</p>
+        </div>
     </div>
 </div>
 @endsection

@@ -7,9 +7,9 @@
 @section('content')
 <div class="space-y-6">
     <!-- Status Tabs & Header Actions -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <!-- Status Filter Tabs -->
-        <div class="flex items-center gap-1.5 bg-slate-200/70 p-1 rounded-xl w-fit">
+        <div class="flex flex-wrap items-center gap-1.5 bg-slate-200/70 p-1.5 rounded-xl">
             <a 
                 href="{{ route('admin.agendas.index', ['status' => 'all'] + request()->except('status', 'page')) }}" 
                 class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition {{ !request('status') || request('status') === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900' }}"
@@ -37,7 +37,7 @@
         </div>
 
         @if($currentUser->isAdministrator() || $currentUser->isAdmin())
-            <a href="{{ route('admin.agendas.create') }}" class="button small flex items-center gap-2 text-xs self-start sm:self-auto shrink-0">
+            <a href="{{ route('admin.agendas.create') }}" class="button small flex items-center gap-2 text-xs self-start lg:self-auto shrink-0">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 <span>Buat Agenda Rapat</span>
             </a>
@@ -46,11 +46,11 @@
 
     <!-- Search & Filters Bar -->
     <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-        <form method="GET" action="{{ route('admin.agendas.index') }}" class="flex flex-wrap items-center gap-3">
+        <form method="GET" action="{{ route('admin.agendas.index') }}" class="flex flex-col sm:flex-row sm:items-center gap-3">
             <input type="hidden" name="status" value="{{ request('status', 'all') }}">
 
             <!-- Search Title / Location -->
-            <div class="relative min-w-[240px] flex-1 max-w-md">
+            <div class="relative flex-1 min-w-[200px]">
                 <input 
                     type="text" 
                     name="search" 
@@ -62,17 +62,19 @@
             </div>
 
             <!-- Tipe Rapat Filter -->
-            <select name="tipe" onchange="this.form.submit()" class="input text-xs">
+            <select name="tipe" onchange="this.form.submit()" class="input text-xs sm:w-56">
                 <option value="">Semua Format Pelaksanaan</option>
-                <option value="offline" {{ request('tipe') === 'offline' ? 'selected' : '' }}>Tatap Muka (Offline)</option>
-                <option value="online" {{ request('tipe') === 'online' ? 'selected' : '' }}>Daring (Online)</option>
-                <option value="hybrid" {{ request('tipe') === 'hybrid' ? 'selected' : '' }}>Hybrid (Kombinasi)</option>
+                <option value="offline" {{ request('tipe') === 'offline' ? 'selected' : '' }}>Tatap Muka (Luring)</option>
+                <option value="online" {{ request('tipe') === 'online' ? 'selected' : '' }}>Daring (Virtual)</option>
+                <option value="hybrid" {{ request('tipe') === 'hybrid' ? 'selected' : '' }}>Hibrida</option>
             </select>
 
-            <button type="submit" class="button small secondary text-xs">Cari</button>
-            @if(request()->hasAny(['search', 'tipe']))
-                <a href="{{ route('admin.agendas.index', ['status' => request('status', 'all')]) }}" class="text-xs text-slate-500 hover:text-slate-800">Reset</a>
-            @endif
+            <div class="flex items-center gap-2">
+                <button type="submit" class="button small secondary text-xs">Cari</button>
+                @if(request()->hasAny(['search', 'tipe']))
+                    <a href="{{ route('admin.agendas.index', ['status' => request('status', 'all')]) }}" class="text-xs text-slate-500 hover:text-slate-800">Reset</a>
+                @endif
+            </div>
         </form>
     </div>
 

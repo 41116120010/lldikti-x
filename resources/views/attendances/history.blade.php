@@ -8,8 +8,8 @@
 <div class="space-y-5">
     <!-- Action Bar & Search -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-        <form method="GET" action="{{ route('attendances.history') }}" class="flex flex-wrap items-center gap-3 flex-1">
-            <div class="relative min-w-[240px] flex-1 max-w-md">
+        <form method="GET" action="{{ route('attendances.history') }}" class="flex flex-col sm:flex-row sm:items-center gap-3 flex-1">
+            <div class="relative flex-1 min-w-[200px]">
                 <input 
                     type="text" 
                     name="search" 
@@ -20,10 +20,12 @@
                 <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
             </div>
 
-            <button type="submit" class="button small secondary text-xs">Cari</button>
-            @if(request('search'))
-                <a href="{{ route('attendances.history') }}" class="text-xs text-slate-500 hover:text-slate-800">Reset</a>
-            @endif
+            <div class="flex items-center gap-2">
+                <button type="submit" class="button small secondary text-xs">Cari</button>
+                @if(request('search'))
+                    <a href="{{ route('attendances.history') }}" class="text-xs text-slate-500 hover:text-slate-800">Reset</a>
+                @endif
+            </div>
         </form>
 
         <a href="{{ route('attendances.portal') }}" class="button small flex items-center gap-1.5 text-xs self-start sm:self-auto shrink-0 bg-blue-600 hover:bg-blue-700 text-white">

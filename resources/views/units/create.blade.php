@@ -5,8 +5,9 @@
 @section('subtitle', 'Daftarkan struktur organisasi / Pokja baru di lingkungan LLDIKTI')
 
 @section('content')
-<div class="max-w-2xl mx-auto">
-    <div class="panel p-6 sm:p-8">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Main Form Panel (2 Cols) -->
+    <div class="lg:col-span-2 panel p-6 sm:p-8">
         <form method="POST" action="{{ route('admin.units.store') }}" class="space-y-5">
             @csrf
 
@@ -52,9 +53,9 @@
                 <textarea 
                     id="deskripsi" 
                     name="deskripsi" 
-                    rows="3" 
+                    rows="4" 
                     class="input w-full p-3 @error('deskripsi') input-error @enderror" 
-                    placeholder="Uraian singkat peran unit kerja..."
+                    placeholder="Uraian singkat peran dan tanggung jawab unit kerja..."
                 >{{ old('deskripsi') }}</textarea>
                 @error('deskripsi')
                     <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
@@ -78,6 +79,26 @@
                 </button>
             </div>
         </form>
+    </div>
+
+    <!-- Informative Guidelines Card (1 Col) -->
+    <div class="space-y-4">
+        <div class="panel p-6 bg-slate-900 text-white border-slate-800">
+            <h3 class="font-bold text-sm text-white mb-2 flex items-center gap-2">
+                <svg class="text-blue-400" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                <span>Standar Penamaan Unit</span>
+            </h3>
+            <ul class="text-xs text-slate-300 space-y-2 leading-relaxed">
+                <li>&bull; <strong>Nama Unit:</strong> Gunakan nomenklatur resmi Pokja / Sub-bagian (misal: <em>Pokja Kelembagaan & Kerjasama</em>).</li>
+                <li>&bull; <strong>Kode Unit:</strong> Format ringkas 3-10 huruf kapital alfanumerik (misal: <code>POKJA-KLB</code>, <code>AKADEMIK</code>, <code>KEUANGAN</code>).</li>
+                <li>&bull; <strong>Status Aktif:</strong> Unit aktif akan otomatis muncul pada target scoping rapat dan pilihan registrasi pegawai.</li>
+            </ul>
+        </div>
+
+        <div class="panel p-5 text-xs text-slate-600 bg-white border-slate-200">
+            <h4 class="font-bold text-slate-800 mb-1">Integrasi Scoping Presensi</h4>
+            <p class="leading-relaxed">Setiap agenda rapat kedinasan dapat dikhususkan hanya untuk unit tertentu atau mencakup seluruh unit LLDIKTI Wilayah X.</p>
+        </div>
     </div>
 </div>
 @endsection

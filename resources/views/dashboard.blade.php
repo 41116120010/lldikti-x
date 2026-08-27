@@ -6,46 +6,6 @@
 
 @section('content')
 <div class="space-y-6">
-    <!-- Welcome Profile Banner -->
-    <div class="bg-slate-900 text-white rounded-2xl p-6 sm:p-7 shadow-sm border border-slate-800 relative overflow-hidden">
-        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
-            <div class="flex items-start sm:items-center gap-4">
-                <div class="w-14 h-14 rounded-2xl bg-blue-600 border border-blue-500 flex items-center justify-center text-xl font-bold uppercase shadow-sm">
-                    {{ substr($user->name, 0, 2) }}
-                </div>
-                <div>
-                    <div class="flex flex-wrap items-center gap-2 mb-1">
-                        <h2 class="text-xl font-bold text-white tracking-tight">{{ $user->name }}</h2>
-                        @if($user->isAdministrator())
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-900/60 text-blue-200 border border-blue-700">
-                                Administrator Instansi
-                            </span>
-                        @elseif($user->isAdmin())
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-900/60 text-indigo-200 border border-indigo-700">
-                                Admin Unit: {{ $user->unit?->kode_unit ?? '-' }}
-                            </span>
-                        @else
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-900/60 text-emerald-200 border border-emerald-700">
-                                Pegawai Unit: {{ $user->unit?->kode_unit ?? '-' }}
-                            </span>
-                        @endif
-                    </div>
-                    <p class="text-xs text-slate-300">
-                        NIP: <span class="font-mono font-medium text-white">{{ $user->nip }}</span> &bull; 
-                        Unit: <span class="text-white">{{ $user->unit?->nama_unit ?? 'Tingkat Lembaga (Universal)' }}</span>
-                    </p>
-                </div>
-            </div>
-
-            <div class="flex items-center gap-3">
-                <div class="text-right hidden sm:block">
-                    <div class="text-[11px] text-slate-400 uppercase font-semibold">Tanggal Hari Ini</div>
-                    <div class="text-xs font-bold text-white font-mono">{{ now()->translatedFormat('l, d F Y') }}</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Quick Stat Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="stat-card">

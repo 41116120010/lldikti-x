@@ -1,2 +1,12 @@
+# SIPERAPAT — LLDIKTI Wilayah X Robots Configuration
 User-agent: *
-Disallow:
+Allow: /
+Allow: /login
+Allow: /build/
+Allow: /storage/
+Disallow: /admin/logs/
+Disallow: /admin/export/
+
+# Sitemaps & Search Crawlers
+Host: https://lldikti10.kemdiktisaintek.go.id
+Sitemap: https://lldikti10.kemdiktisaintek.go.id/sitemap.xml

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Agenda;
 use App\Models\Attendance;
 use App\Models\Unit;
+use App\Services\ActivityLogger;
 use App\Services\PdfExportService;
 use App\Services\WordExportService;
 use Illuminate\Http\Request;
@@ -116,6 +117,13 @@ class ReportController extends Controller
     {
         Gate::authorize('view', $agenda);
 
+        ActivityLogger::log(
+            'export_pdf',
+            "Mengekspor Berita Acara & Daftar Hadir PDF untuk agenda: {$agenda->judul_rapat}",
+            Agenda::class,
+            $agenda->id
+        );
+
         return $pdfService->exportBeritaAcara($agenda);
     }
 
@@ -125,6 +133,13 @@ class ReportController extends Controller
     public function exportWord(Agenda $agenda, WordExportService $wordService): Response
     {
         Gate::authorize('view', $agenda);
+
+        ActivityLogger::log(
+            'export_word',
+            "Mengekspor Berita Acara & Daftar Hadir Microsoft Word (.doc) untuk agenda: {$agenda->judul_rapat}",
+            Agenda::class,
+            $agenda->id
+        );
 
         return $wordService->exportBeritaAcara($agenda);
     }
@@ -136,6 +151,12 @@ class ReportController extends Controller
     {
         $user = Auth::user();
         $query = Agenda::visibleTo($user)->with(['creator', 'attendances']);
+
+        ActivityLogger::log(
+            'export_csv',
+            "Mengekspor rekapitulasi data agenda rapat kedinasan ke format CSV / Excel",
+            Agenda::class
+        );
 
         if ($startDate = $request->input('start_date')) {
             $query->whereDate('waktu_mulai', '>=', $startDate);

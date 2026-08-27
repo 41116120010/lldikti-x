@@ -5,9 +5,25 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta name="robots" content="noindex, nofollow, noarchive, noimageindex">
-    <meta name="description" content="SIPERAPAT - Sistem Informasi Presensi Kehadiran Rapat Kedinasan LLDIKTI Wilayah X.">
+    
+    <!-- Primary SEO Metadata -->
+    <title>@yield('title', 'Dashboard') — {{ config('app.name', 'SIPERAPAT') }} LLDIKTI Wilayah X</title>
+    <meta name="title" content="@yield('title', 'Dashboard') — {{ config('app.name', 'SIPERAPAT') }} LLDIKTI Wilayah X">
+    <meta name="description" content="@yield('meta_description', 'SIPERAPAT - Sistem Informasi Presensi Kehadiran Rapat Kedinasan Terintegrasi Lembaga Layanan Pendidikan Tinggi Wilayah X Kemendiktisaintek.')">
+    <meta name="keywords" content="@yield('meta_keywords', 'siperapat, presensi rapat, rapat kedinasan, lldikti wilayah x, berita acara rapat, absensi digital, kemdiktisaintek')">
     <meta name="author" content="Lembaga Layanan Pendidikan Tinggi Wilayah X">
+    <meta name="publisher" content="LLDIKTI Wilayah X Kemendiktisaintek">
+    <meta name="robots" content="@yield('meta_robots', 'noindex, nofollow, noarchive')">
+    <link rel="canonical" href="{{ url()->current() }}">
+
+    <!-- Geo Location Metadata -->
+    <meta name="geo.region" content="ID-SB">
+    <meta name="geo.placename" content="Padang">
+    <meta name="geo.position" content="-0.9242;100.3628">
+    <meta name="ICBM" content="-0.9242, 100.3628">
+    <meta name="language" content="Indonesian">
+
+    <!-- Web Application & PWA Properties -->
     <meta name="application-name" content="SIPERAPAT">
     <meta name="theme-color" content="#0F172A">
     <meta name="color-scheme" content="light">
@@ -17,17 +33,46 @@
     <meta name="apple-mobile-web-app-title" content="SIPERAPAT">
     <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
 
-    <!-- Open Graph Metadata -->
+    <!-- Open Graph Protocol -->
     <meta property="og:type" content="website">
     <meta property="og:locale" content="id_ID">
     <meta property="og:site_name" content="SIPERAPAT LLDIKTI Wilayah X">
-    <meta property="og:title" content="@yield('title', 'Dashboard') — SIPERAPAT LLDIKTI">
-    <meta property="og:description" content="Sistem Informasi Presensi Kehadiran Rapat Kedinasan Terintegrasi.">
+    <meta property="og:url" content="{{ url()->current() }}">
+    <meta property="og:title" content="@yield('title', 'Dashboard') — SIPERAPAT LLDIKTI Wilayah X">
+    <meta property="og:description" content="@yield('meta_description', 'Sistem Informasi Presensi Kehadiran Rapat Kedinasan Terintegrasi Lembaga Layanan Pendidikan Tinggi Wilayah X.')">
+    <meta property="og:image" content="{{ asset('favicon.svg') }}">
+    <meta property="og:image:alt" content="Logo SIPERAPAT LLDIKTI Wilayah X">
+
+    <!-- Twitter Card Protocol -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="{{ url()->current() }}">
+    <meta name="twitter:title" content="@yield('title', 'Dashboard') — SIPERAPAT LLDIKTI Wilayah X">
+    <meta name="twitter:description" content="@yield('meta_description', 'Sistem Informasi Presensi Kehadiran Rapat Kedinasan Terintegrasi Lembaga Layanan Pendidikan Tinggi Wilayah X.')">
+    <meta name="twitter:image" content="{{ asset('favicon.svg') }}">
 
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%231d4ed8'%3E%3Cpath d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='9' cy='7' r='4'/%3E%3Cpath d='M22 21v-2a4 4 0 0 0-3-3.87'/%3E%3Cpath d='M16 3.13a4 4 0 0 1 0 7.75'/%3E%3C/svg%3E">
 
-    <title>{{ config('app.name', 'SIPERAPAT') }} — @yield('title', 'Dashboard')</title>
+    <!-- Schema.org JSON-LD Structured Data for Enterprise Gov-Tech -->
+    <script type="application/ld+json">
+    {
+        "@@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "SIPERAPAT",
+        "alternateName": "Sistem Presensi Rapat LLDIKTI",
+        "url": "{{ url('/') }}",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "All",
+        "description": "Sistem Pencatatan Kehadiran Rapat Kedinasan Berbasis Web dengan Verifikasi Wajah dan Tanda Tangan Digital.",
+        "provider": {
+            "@type": "GovernmentOrganization",
+            "name": "Lembaga Layanan Pendidikan Tinggi Wilayah X",
+            "alternateName": "LLDIKTI Wilayah X",
+            "url": "https://lldikti10.kemdiktisaintek.go.id"
+        }
+    }
+    </script>
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased font-sans">
@@ -36,23 +81,32 @@
         Lewati ke konten utama
     </a>
 
+    <!-- Mobile Sidebar Drawer Backdrop -->
+    <div id="sidebar-overlay" class="sidebar-overlay" aria-hidden="true"></div>
+
     <div class="shell">
         <!-- Sidebar Navigation -->
-        <aside class="sidebar" role="navigation" aria-label="Navigasi Utama">
-            <!-- Brand Logo -->
-            <div class="brand">
-                <div class="brand-mark bg-blue-700 text-white shadow-md">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                        <circle cx="9" cy="7" r="4"/>
-                        <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
-                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                    </svg>
+        <aside class="sidebar" id="app-sidebar" role="navigation" aria-label="Navigasi Utama">
+            <!-- Brand Logo & Mobile Close Button -->
+            <div class="brand justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="brand-mark bg-blue-700 text-white shadow-md">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                            <circle cx="9" cy="7" r="4"/>
+                            <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="brand-name tracking-tight font-bold text-slate-900">SIPERAPAT</div>
+                        <small class="text-[11px] text-slate-400 font-medium">LLDIKTI Wilayah X</small>
+                    </div>
                 </div>
-                <div>
-                    <div class="brand-name tracking-tight font-bold text-slate-900">SIPERAPAT</div>
-                    <small class="text-[11px] text-slate-400 font-medium">LLDIKTI Wilayah X</small>
-                </div>
+
+                <button id="mobile-sidebar-close" type="button" class="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200" aria-label="Tutup Menu">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
             </div>
 
             <!-- Navigation Links by Role -->
@@ -158,9 +212,14 @@
         <section class="content">
             <!-- Topbar Header -->
             <header class="topbar" role="banner">
-                <div>
-                    <h1 class="page-title">@yield('heading', 'Dashboard')</h1>
-                    <div class="subtitle text-xs">@yield('subtitle', 'Sistem Pencatatan Kehadiran Rapat Kedinasan')</div>
+                <div class="flex items-center gap-3">
+                    <button id="mobile-sidebar-toggle" type="button" class="lg:hidden w-9 h-9 flex items-center justify-center rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 shadow-xs" aria-label="Buka Menu Navigasi">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                    </button>
+                    <div>
+                        <h1 class="page-title">@yield('heading', 'Dashboard')</h1>
+                        <div class="subtitle text-xs">@yield('subtitle', 'Sistem Pencatatan Kehadiran Rapat Kedinasan')</div>
+                    </div>
                 </div>
 
                 <div class="top-actions">

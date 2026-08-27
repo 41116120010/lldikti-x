@@ -199,21 +199,39 @@ document.addEventListener('DOMContentLoaded', () => {
         }, true);
     });
 
-    // Table Search Helper
-    document.querySelectorAll('[data-table-search]').forEach(input => {
-        input.addEventListener('input', () => {
-            const tableSelector = input.dataset.table;
-            if (!tableSelector) return;
-            const rows = [...document.querySelectorAll(tableSelector + ' tbody tr')];
-            const query = input.value.toLowerCase().trim();
-            let visibleCount = 0;
-            rows.forEach(row => {
-                const match = row.textContent.toLowerCase().includes(query);
-                row.style.display = match ? '' : 'none';
-                if (match) visibleCount++;
-            });
-            const emptyState = document.querySelector(tableSelector + '-empty');
-            if (emptyState) emptyState.style.display = visibleCount === 0 ? '' : 'none';
+    // Mobile Sidebar Drawer Controller
+    const sidebar = document.querySelector('#app-sidebar');
+    const sidebarToggle = document.querySelector('#mobile-sidebar-toggle');
+    const sidebarClose = document.querySelector('#mobile-sidebar-close');
+    const sidebarOverlay = document.querySelector('#sidebar-overlay');
+
+    const openMobileSidebar = () => {
+        if (!sidebar) return;
+        sidebar.classList.add('open');
+        if (sidebarOverlay) sidebarOverlay.classList.add('open');
+        document.body.style.overflow = 'hidden';
+    };
+
+    const closeMobileSidebar = () => {
+        if (!sidebar) return;
+        sidebar.classList.remove('open');
+        if (sidebarOverlay) sidebarOverlay.classList.remove('open');
+        document.body.style.overflow = '';
+    };
+
+    if (sidebarToggle) sidebarToggle.addEventListener('click', openMobileSidebar);
+    if (sidebarClose) sidebarClose.addEventListener('click', closeMobileSidebar);
+    if (sidebarOverlay) sidebarOverlay.addEventListener('click', closeMobileSidebar);
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && sidebar && sidebar.classList.contains('open')) {
+            closeMobileSidebar();
+        }
+    });
+
+    document.querySelectorAll('#app-sidebar .nav-link').forEach(link => {
+        link.addEventListener('click', () => {
+            if (window.innerWidth <= 1024) closeMobileSidebar();
         });
     });
 });

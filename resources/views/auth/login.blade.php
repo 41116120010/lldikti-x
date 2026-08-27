@@ -178,7 +178,7 @@
             <div class="field">
                 <div class="auth-field-row">
                     <label for="password-input">Kata Sandi</label>
-                    <a href="#" class="auth-link text-xs" onclick="alert('Fitur reset password melalui email dapat dikonfigurasi pada pengaturan server SMTP kedinasan.'); return false;">Lupa Kata Sandi?</a>
+                    <a href="#" class="auth-link text-xs" onclick="window.showModal({ title: 'Bantuan Kata Sandi', message: 'Fitur pemulihan kata sandi dapat dikonfigurasi melalui Administrator Unit Kepegawaian LLDIKTI Wilayah X atau sistem email kedinasan.', type: 'info' }); return false;">Lupa Kata Sandi?</a>
                 </div>
                 <div class="auth-password-wrap">
                     <input 

@@ -5,8 +5,9 @@
 @section('subtitle', 'Daftarkan akun pegawai atau administrator baru ke dalam sistem')
 
 @section('content')
-<div class="max-w-3xl mx-auto">
-    <div class="panel p-6 sm:p-8">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Main Form Panel (2 Cols) -->
+    <div class="lg:col-span-2 panel p-6 sm:p-8">
         <form method="POST" action="{{ route('admin.users.store') }}" class="space-y-6">
             @csrf
 
@@ -169,6 +170,35 @@
                 </button>
             </div>
         </form>
+    </div>
+
+    <!-- Role Information & Guidance Card (1 Col) -->
+    <div class="space-y-4">
+        <div class="panel p-6 bg-slate-900 text-white border-slate-800">
+            <h3 class="font-bold text-sm text-white mb-3 flex items-center gap-2">
+                <svg class="text-blue-400" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <span>Tingkatan Hak Akses (Role)</span>
+            </h3>
+            <div class="space-y-3 text-xs text-slate-300 leading-relaxed">
+                <div>
+                    <strong class="text-blue-400 block">1. Administrator:</strong>
+                    Akses penuh ke master data unit, audit trail, rekapitulasi, dan agenda tingkat lembaga.
+                </div>
+                <div>
+                    <strong class="text-indigo-400 block">2. Admin Unit:</strong>
+                    Mengelola agenda dan pegawai yang berada di dalam unit kerjanya saja.
+                </div>
+                <div>
+                    <strong class="text-emerald-400 block">3. Staff Pegawai:</strong>
+                    Mengakses portal presensi, riwayat kehadiran pribadi, dan melihat agenda terkait.
+                </div>
+            </div>
+        </div>
+
+        <div class="panel p-5 text-xs text-slate-600 bg-white border-slate-200">
+            <h4 class="font-bold text-slate-800 mb-1">Multi-Identifier Login</h4>
+            <p class="leading-relaxed">Pegawai dapat masuk ke portal menggunakan <strong>18 digit NIP</strong> atau <strong>Username</strong> dengan kata sandi yang telah didaftarkan.</p>
+        </div>
     </div>
 </div>
 @endsection
