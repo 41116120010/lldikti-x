@@ -199,7 +199,15 @@
                         @endif
                     </div>
                 </div>
-                <form action="{{ route('logout') }}" method="POST" class="inline">
+                <form 
+                    action="{{ route('logout') }}" 
+                    method="POST" 
+                    class="inline"
+                    data-confirm="Apakah Anda yakin ingin keluar dari sistem SIPERAPAT?"
+                    data-confirm-title="Konfirmasi Keluar Akun"
+                    data-confirm-type="warning"
+                    data-confirm-btn="Ya, Keluar"
+                >
                     @csrf
                     <button class="logout" title="Keluar dari sistem" type="submit" aria-label="Keluar dari sistem">
                         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -213,7 +221,7 @@
             <!-- Topbar Header -->
             <header class="topbar" role="banner">
                 <div class="flex items-center gap-3">
-                    <button id="mobile-sidebar-toggle" type="button" class="lg:hidden w-9 h-9 flex items-center justify-center rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 shadow-xs" aria-label="Buka Menu Navigasi">
+                    <button id="mobile-sidebar-toggle" type="button" class="lg:hidden w-9 h-9 flex items-center justify-center rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 shadow-xs cursor-pointer" aria-label="Buka Menu Navigasi">
                         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
                     </button>
                     <div>
@@ -222,25 +230,120 @@
                     </div>
                 </div>
 
-                <div class="top-actions">
-                    <div class="text-right hidden sm:block">
-                        <div class="text-xs font-semibold text-slate-800">{{ Auth::user()->name }}</div>
-                        <div class="text-[11px] font-mono text-slate-500">NIP: {{ Auth::user()->nip }}</div>
-                    </div>
+                <!-- User Profile Dropdown Menu Area -->
+                <div class="relative" id="user-profile-dropdown-container">
+                    <button 
+                        type="button" 
+                        id="user-profile-dropdown-btn" 
+                        class="flex items-center gap-2.5 p-1 pl-2.5 rounded-xl hover:bg-slate-100/90 transition border border-transparent hover:border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer select-none"
+                        aria-expanded="false"
+                        aria-haspopup="true"
+                        aria-label="Menu Profil Pengguna"
+                    >
+                        <div class="text-right hidden sm:block leading-tight">
+                            <div class="text-xs font-semibold text-slate-800 truncate max-w-[160px]">{{ Auth::user()->name }}</div>
+                            <div class="text-[11px] text-slate-400 font-medium truncate max-w-[160px]">
+                                @if(Auth::user()->isAdministrator())
+                                    Administrator
+                                @elseif(Auth::user()->isAdmin())
+                                    Admin Unit: {{ Auth::user()->unit?->kode_unit ?? '-' }}
+                                @else
+                                    Pegawai: {{ Auth::user()->unit?->kode_unit ?? '-' }}
+                                @endif
+                            </div>
+                        </div>
 
-                    <div class="top-profile">
-                        <div class="avatar bg-blue-700 text-white font-bold text-xs uppercase" aria-hidden="true">
+                        <div class="avatar bg-blue-700 text-white font-bold text-xs uppercase shadow-xs" aria-hidden="true">
                             {{ substr(Auth::user()->name, 0, 2) }}
                         </div>
-                    </div>
 
-                    <form action="{{ route('logout') }}" method="POST" class="inline">
-                        @csrf
-                        <button type="submit" class="button small secondary flex items-center gap-1.5 text-xs text-rose-600 border-rose-200 hover:bg-rose-50" title="Keluar" aria-label="Keluar dari sistem">
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                            <span>Keluar</span>
-                        </button>
-                    </form>
+                        <svg class="text-slate-400 transition-transform duration-200" id="user-profile-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </button>
+
+                    <!-- Dropdown Menu Box -->
+                    <div 
+                        id="user-profile-dropdown-menu" 
+                        class="hidden absolute right-0 mt-2 w-72 bg-white rounded-2xl border border-slate-200 shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150"
+                        role="menu"
+                        aria-orientation="vertical"
+                        aria-labelledby="user-profile-dropdown-btn"
+                    >
+                        <!-- Dropdown Header Profile Info -->
+                        <div class="px-4 py-3 border-b border-slate-100">
+                            <div class="flex items-center gap-3">
+                                <div class="avatar bg-blue-700 text-white font-bold text-sm uppercase shrink-0">
+                                    {{ substr(Auth::user()->name, 0, 2) }}
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <b class="block text-xs text-slate-900 truncate font-bold">{{ Auth::user()->name }}</b>
+                                    <span class="block text-[11px] text-slate-500 truncate">{{ Auth::user()->email ?? ('@' . Auth::user()->username) }}</span>
+                                </div>
+                            </div>
+
+                            <div class="mt-3 pt-2.5 border-t border-slate-100 space-y-1.5 text-xs">
+                                <!-- Peran / Role -->
+                                <div class="flex items-center justify-between">
+                                    <span class="text-slate-400 text-[11px]">Peran Akun:</span>
+                                    @if(Auth::user()->isAdministrator())
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                            Administrator
+                                        </span>
+                                    @elseif(Auth::user()->isAdmin())
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                            Admin Unit
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                            Pegawai Unit
+                                        </span>
+                                    @endif
+                                </div>
+
+                                <!-- Unit Kerja -->
+                                <div class="flex items-center justify-between">
+                                    <span class="text-slate-400 text-[11px]">Unit Kerja:</span>
+                                    <span class="text-slate-700 font-medium text-right text-[11px] truncate max-w-[150px]" title="{{ Auth::user()->unit?->nama_unit ?? 'Tingkat Lembaga (Tanpa Unit)' }}">
+                                        {{ Auth::user()->unit?->nama_unit ?? 'Tingkat Lembaga' }}
+                                    </span>
+                                </div>
+
+                                <!-- NIP (Jika Ada) -->
+                                @if(Auth::user()->nip)
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-slate-400 text-[11px]">Nomor Induk (NIP):</span>
+                                        <span class="font-mono text-slate-800 text-[11px] font-semibold">{{ Auth::user()->nip }}</span>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+
+                        <!-- Dropdown Action Links -->
+                        <div class="py-1">
+                            <a href="{{ route('profile.edit') }}" class="flex items-center gap-2.5 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition font-medium" role="menuitem">
+                                <svg class="text-slate-400" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                <span>Pengaturan Profil Akun</span>
+                            </a>
+                        </div>
+
+                        <!-- Dropdown Logout Footer -->
+                        <div class="pt-1 border-t border-slate-100">
+                            <form 
+                                action="{{ route('logout') }}" 
+                                method="POST" 
+                                class="block"
+                                data-confirm="Apakah Anda yakin ingin keluar dari sistem SIPERAPAT?"
+                                data-confirm-title="Konfirmasi Keluar Akun"
+                                data-confirm-type="warning"
+                                data-confirm-btn="Ya, Keluar"
+                            >
+                                @csrf
+                                <button type="submit" class="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs text-rose-600 hover:bg-rose-50/70 transition text-left font-medium cursor-pointer" role="menuitem">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                                    <span>Keluar dari Sistem</span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </header>
 

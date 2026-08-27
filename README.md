@@ -17,7 +17,7 @@ Sistem ini mentransformasikan alur kerja rapat konvensional berbasis kertas (*pa
 Pengembangan sistem SIPERAPAT berpedoman pada standar rekayasa perangkat lunak enterprise:
 
 1. **Lightweight & High Concurrency (Ponytail / YAGNI Principle):**
-   * Memaksimalkan fitur native Laravel 12+ (Policies, Form Requests, Observers, Custom Casts, Service Container) tanpa menambahkan package pihak ketiga yang redundan.
+   * Memaksimalkan fitur native Laravel 13 (Policies, Form Requests, Observers, Custom Casts, Service Container) tanpa menambahkan package pihak ketiga yang redundan.
    * Dirancang untuk mampu menangani lonjakan akses simultan (*high concurrency*) dari ratusan pegawai pada jam pembukaan rapat tanpa degradasi performa.
 
 2. **Client-Side Media Compression:**
@@ -62,7 +62,7 @@ Sistem menerapkan pembagian hak akses granular berbasis 3 tingkatan peran:
 
 ## 4. Tech Stack & Environment Reference
 
-* **Backend Framework:** PHP 8.3+ / Laravel 12.x / LTS Framework
+* **Backend Framework:** PHP 8.3+ / Laravel 13.x / LTS Framework
 * **Frontend Layer:** Laravel Blade Component + Tailwind CSS v4 + Vite + Vanilla JS
 * **Iconography:** Pure Vector SVG Icons (Phosphor / Heroicons Standard)
 * **Database Engine:** MariaDB 10.11+ / MySQL 8.0+ (Didukung SQLite untuk local testing suite)
@@ -142,7 +142,7 @@ Siklus rapat dikontrol melalui transisi status ketat:
 
 1. **Clone Repositori:**
    ```bash
-   git clone https://github.com/daffiq/lldikti-x.git
+   git clone https://github.com/41116120010/lldikti-x.git
    cd lldikti-x
    ```
 

@@ -9,7 +9,7 @@ Dokumen ini adalah pedoman baku dan instruksi operasional untuk AI Agent dan Sof
 
 Sebagai Senior Software Engineer dengan standar Enterprise:
 * **Scalable & Lightweight:** Mengutamakan performa eksekusi cepat, konsumsi memori rendah, dan arsitektur yang mudah diskalakan tanpa ketergantungan *over-engineering*.
-* **YAGNI & Zero-Bloatware (Ponytail Principle):** Jangan membuat layer abstraksi yang tidak diminta. Maksimalkan fitur native Laravel 12+ (Policies, Form Requests, Observers, Custom Casts, Blade Components) sebelum memutuskan menambah package eksternal.
+* **YAGNI & Zero-Bloatware (Ponytail Principle):** Jangan membuat layer abstraksi yang tidak diminta. Maksimalkan fitur native Laravel 13 (Policies, Form Requests, Observers, Custom Casts, Blade Components) sebelum memutuskan menambah package eksternal.
 * **Durabilitas & Ketersediaan Tinggi:** Sistem harus tahan banting saat diakses bersamaan oleh ratusan pegawai pada jam pembukaan rapat.
 * **Keamanan Tingkat Pemerintahan:** Proteksi CSRF, sanitasi XSS, validasi MIME-type ketat, otorisasi berbasis Role & Unit Scoping yang ketat, dan audit trail transparan.
 
@@ -17,7 +17,7 @@ Sebagai Senior Software Engineer dengan standar Enterprise:
 
 ## 2. Tech Stack & Environment Reference
 
-* **Backend:** PHP 8.3+ / Laravel 12+ (Framework `^13.8` / LTS)
+* **Backend:** PHP 8.3+ / Laravel 13 (Framework `^13.8` / LTS)
 * **Frontend:** Laravel Blade + Tailwind CSS v4 + Vite + Alpine.js / Vanilla JS
 * **Icon Library:** Phosphor Icons / Heroicons (Format SVG murni). **Dilarang memakai emoji sebagai icon tombol/navigasi**.
 * **Database:** MySQL 8.0+ / PostgreSQL 15+ (Didukung SQLite untuk local test suite)
