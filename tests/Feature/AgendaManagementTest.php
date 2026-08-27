@@ -177,4 +177,43 @@ class AgendaManagementTest extends TestCase
         $response->assertRedirect();
         $this->assertDatabaseMissing('agenda_documentations', ['id' => $doc->id]);
     }
+
+    public function test_admin_unit_can_access_create_agenda_page(): void
+    {
+        $adminAkm = User::where('username', 'admin_akademik')->first();
+
+        $response = $this->actingAs($adminAkm)->get(route('admin.agendas.create'));
+
+        $response->assertStatus(200);
+        $response->assertSee('Buat Agenda Rapat Baru');
+        $response->assertSee($adminAkm->unit->nama_unit);
+    }
+
+    public function test_admin_unit_can_access_edit_agenda_page(): void
+    {
+        $adminAkm = User::where('username', 'admin_akademik')->first();
+        $agenda = Agenda::where('created_by', $adminAkm->id)->first();
+
+        if (!$agenda) {
+            $agenda = Agenda::create([
+                'created_by' => $adminAkm->id,
+                'judul_rapat' => 'Rapat Internal Bagian Akademik',
+                'slug' => 'rapat-internal-akademik-' . uniqid(),
+                'jenis_rapat' => 'internal',
+                'tipe_rapat' => 'offline',
+                'lokasi_ruang' => 'Ruang Rapat Pokja AKM',
+                'waktu_mulai' => now()->addDay(),
+                'waktu_selesai' => now()->addDay()->addHours(2),
+                'is_all_units' => false,
+                'status' => 'scheduled',
+            ]);
+            $agenda->units()->sync([$adminAkm->unit_id]);
+        }
+
+        $response = $this->actingAs($adminAkm)->get(route('admin.agendas.edit', $agenda));
+
+        $response->assertStatus(200);
+        $response->assertSee('Edit Agenda Rapat');
+        $response->assertSee($agenda->judul_rapat);
+    }
 }

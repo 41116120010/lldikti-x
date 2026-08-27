@@ -1,5 +1,8 @@
 @extends('layouts.app')
 
+@php
+    $currentUser = $currentUser ?? Auth::user();
+@endphp
 @section('title', 'Kelola Pengguna')
 @section('heading', $currentUser->isAdministrator() ? 'Kelola Seluruh Pengguna' : 'Pegawai Unit: ' . ($currentUser->unit?->nama_unit ?? ''))
 @section('subtitle', 'Daftar aparatur dan staf terdaftar di sistem presensi')

@@ -5,6 +5,9 @@
 @section('subtitle', 'Daftarkan akun pegawai atau administrator baru ke dalam sistem')
 
 @section('content')
+@php
+    $currentUser = $currentUser ?? Auth::user();
+@endphp
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <!-- Main Form Panel (2 Cols) -->
     <div class="lg:col-span-2 panel p-6 sm:p-8">

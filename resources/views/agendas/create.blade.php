@@ -5,6 +5,9 @@
 @section('subtitle', 'Jadwalkan pertemuan, tentukan target peserta, dan lampirkan surat edaran')
 
 @section('content')
+@php
+    $currentUser = $currentUser ?? Auth::user();
+@endphp
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <!-- Main Form Panel (2 Cols) -->
     <div class="lg:col-span-2 panel p-6 sm:p-8">
@@ -190,9 +193,9 @@
                                 <label class="flex items-center gap-2 p-2 bg-white border border-slate-200 rounded-lg cursor-pointer hover:bg-blue-50 text-xs">
                                     <input 
                                         type="checkbox" 
-                                        name="units[]" 
+                                        name="unit_ids[]" 
                                         value="{{ $unit->id }}" 
-                                        {{ in_array($unit->id, old('units', [])) ? 'checked' : '' }}
+                                        {{ in_array($unit->id, old('unit_ids', [])) ? 'checked' : '' }}
                                         class="w-4 h-4 accent-blue-600 rounded"
                                     >
                                     <span class="font-mono font-bold text-slate-900">{{ $unit->kode_unit }}</span>
@@ -200,7 +203,7 @@
                                 </label>
                             @endforeach
                         </div>
-                        @error('units')
+                        @error('unit_ids')
                             <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
                         @enderror
                     </div>
@@ -210,7 +213,7 @@
                         <span>Agenda ini otomatis ditugaskan untuk unit Anda: <strong>{{ $currentUser->unit?->nama_unit }}</strong>.</span>
                     </div>
                     <input type="hidden" name="is_all_units" value="0">
-                    <input type="hidden" name="units[]" value="{{ $currentUser->unit_id }}">
+                    <input type="hidden" name="unit_ids[]" value="{{ $currentUser->unit_id }}">
                 @endif
             </div>
 

@@ -71,9 +71,11 @@ class AgendaController extends Controller
     {
         Gate::authorize('create', Agenda::class);
 
+        $currentUser = Auth::user();
+        $currentUser->load('unit');
         $units = Unit::active()->orderBy('nama_unit')->get();
 
-        return view('agendas.create', compact('units'));
+        return view('agendas.create', compact('units', 'currentUser'));
     }
 
     /**
@@ -98,34 +100,41 @@ class AgendaController extends Controller
                 'waktu_mulai' => $validated['waktu_mulai'],
                 'waktu_selesai' => $validated['waktu_selesai'],
                 'is_all_units' => $isAllUnits,
-                'status' => $validated['status'] ?? 'scheduled',
+                'status' => 'scheduled',
             ];
 
-            // Handle Circular Letter Upload
             if ($request->hasFile('surat_edaran')) {
                 $file = $request->file('surat_edaran');
-                $filename = Str::random(32) . '.' . $file->getClientOriginalExtension();
-                $path = $file->storeAs('circulars', $filename, 'public');
+                $path = $file->store('surat_edaran', 'public');
                 $agendaData['surat_edaran_path'] = $path;
+                $agendaData['surat_edaran_name'] = $file->getClientOriginalName();
             }
 
-            $newAgenda = Agenda::create($agendaData);
+            $agenda = Agenda::create($agendaData);
 
-            // Sync Invited Units if not all units
-            if (!$isAllUnits && !empty($validated['unit_ids'])) {
-                $newAgenda->units()->sync($validated['unit_ids']);
+            // Sync units
+            if ($isAllUnits) {
+                // Attach all active units
+                $allUnitIds = Unit::active()->pluck('id')->toArray();
+                $agenda->units()->sync($allUnitIds);
+            } else {
+                $unitIds = $validated['unit_ids'] ?? ($validated['units'] ?? []);
+                if ($user->isAdmin() && empty($unitIds)) {
+                    $unitIds = [$user->unit_id];
+                }
+                $agenda->units()->sync($unitIds);
             }
 
-            ActivityLogger::log(
-                type: 'CREATE_AGENDA',
-                description: "Agenda rapat '{$newAgenda->judul_rapat}' ({$newAgenda->tipe_rapat}) berhasil dibuat.",
-                targetModel: Agenda::class,
-                targetId: $newAgenda->id,
-                properties: $newAgenda->toArray()
-            );
-
-            return $newAgenda;
+            return $agenda;
         });
+
+        ActivityLogger::log(
+            type: 'CREATE_AGENDA',
+            description: "Agenda rapat baru '{$agenda->judul_rapat}' ({$agenda->jenis_rapat}, {$agenda->tipe_rapat}) berhasil dibuat.",
+            targetModel: Agenda::class,
+            targetId: $agenda->id,
+            properties: $agenda->only(['judul_rapat', 'jenis_rapat', 'tipe_rapat', 'waktu_mulai', 'waktu_selesai', 'is_all_units'])
+        );
 
         return redirect()->route('admin.agendas.show', $agenda)
             ->with('success', "Agenda rapat '{$agenda->judul_rapat}' berhasil dibuat.");
@@ -158,9 +167,11 @@ class AgendaController extends Controller
         Gate::authorize('update', $agenda);
 
         $agenda->load('units');
+        $currentUser = Auth::user();
+        $currentUser->load('unit');
         $units = Unit::active()->orderBy('nama_unit')->get();
 
-        return view('agendas.edit', compact('agenda', 'units'));
+        return view('agendas.edit', compact('agenda', 'units', 'currentUser'));
     }
 
     /**

@@ -5,6 +5,9 @@
 @section('subtitle', 'Daftar pertemuan, rapat koordinasi, dan agenda kedinasan LLDIKTI')
 
 @section('content')
+@php
+    $currentUser = $currentUser ?? Auth::user();
+@endphp
 <div class="space-y-6">
     <!-- Status Tabs & Header Actions -->
     <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
