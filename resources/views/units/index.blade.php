@@ -159,10 +159,7 @@
         </div>
 
         @if($units->hasPages())
-            <div class="table-foot">
-                <div>Menampilkan {{ $units->firstItem() }} - {{ $units->lastItem() }} dari {{ $units->total() }} unit</div>
-                {{ $units->links() }}
-            </div>
+            {{ $units->links() }}
         @endif
     </div>
 </div>

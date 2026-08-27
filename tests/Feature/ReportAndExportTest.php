@@ -87,4 +87,25 @@ class ReportAndExportTest extends TestCase
         $response->assertSee('Rekapitulasi Kehadiran & Dokumen Rapat');
         $response->assertSee($agenda->judul_rapat);
     }
+
+    public function test_reports_filtering_with_date_and_format_parameters(): void
+    {
+        $superadmin = User::where('role', 'administrator')->first();
+
+        $response = $this->actingAs($superadmin)->get('/admin/reports?start_date=2026-01-01&end_date=2026-12-31&tipe=offline&status=all');
+
+        $response->assertStatus(200);
+        $response->assertSee('Daftar Rekapitulasi Rapat');
+    }
+
+    public function test_users_table_pagination_links_render(): void
+    {
+        $superadmin = User::where('role', 'administrator')->first();
+
+        $response = $this->actingAs($superadmin)->get('/admin/users');
+
+        $response->assertStatus(200);
+        $response->assertSee('Menampilkan');
+        $response->assertSee('data');
+    }
 }

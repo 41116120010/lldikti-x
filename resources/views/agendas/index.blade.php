@@ -217,8 +217,7 @@
     </div>
 
     @if($agendas->hasPages())
-        <div class="p-4 bg-white rounded-xl border border-slate-200 flex items-center justify-between text-xs text-slate-500">
-            <div>Menampilkan {{ $agendas->firstItem() }} - {{ $agendas->lastItem() }} dari {{ $agendas->total() }} agenda</div>
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
             {{ $agendas->links() }}
         </div>
     @endif

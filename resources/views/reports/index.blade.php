@@ -35,22 +35,22 @@
 
     <!-- Filter Bar & Export CSV -->
     <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-        <form method="GET" action="{{ route('admin.reports.index') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+        <form method="GET" action="{{ route('admin.reports.index') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 items-end">
             <!-- Start Date -->
-            <div class="field">
-                <label for="start_date" class="text-xs text-slate-600 font-semibold mb-1 block">Dari Tanggal</label>
+            <div class="space-y-1">
+                <label for="start_date" class="text-xs font-semibold text-slate-700 block">Dari Tanggal</label>
                 <input type="date" id="start_date" name="start_date" value="{{ request('start_date') }}" class="input w-full text-xs">
             </div>
 
             <!-- End Date -->
-            <div class="field">
-                <label for="end_date" class="text-xs text-slate-600 font-semibold mb-1 block">Sampai Tanggal</label>
+            <div class="space-y-1">
+                <label for="end_date" class="text-xs font-semibold text-slate-700 block">Sampai Tanggal</label>
                 <input type="date" id="end_date" name="end_date" value="{{ request('end_date') }}" class="input w-full text-xs">
             </div>
 
             <!-- Status Filter -->
-            <div class="field">
-                <label for="status" class="text-xs text-slate-600 font-semibold mb-1 block">Status Rapat</label>
+            <div class="space-y-1">
+                <label for="status" class="text-xs font-semibold text-slate-700 block">Status Rapat</label>
                 <select id="status" name="status" class="input w-full text-xs">
                     <option value="all">Semua Status</option>
                     <option value="completed" {{ request('status') === 'completed' ? 'selected' : '' }}>Selesai</option>
@@ -60,8 +60,8 @@
             </div>
 
             <!-- Format Filter -->
-            <div class="field">
-                <label for="tipe" class="text-xs text-slate-600 font-semibold mb-1 block">Format Rapat</label>
+            <div class="space-y-1">
+                <label for="tipe" class="text-xs font-semibold text-slate-700 block">Format Rapat</label>
                 <select id="tipe" name="tipe" class="input w-full text-xs">
                     <option value="">Semua Format</option>
                     <option value="offline" {{ request('tipe') === 'offline' ? 'selected' : '' }}>Tatap Muka (Luring)</option>
@@ -72,9 +72,9 @@
 
             <!-- Filter Buttons -->
             <div class="flex items-center gap-2">
-                <button type="submit" class="button small flex-1 text-xs">Terapkan Filter</button>
+                <button type="submit" class="button small flex-1 text-xs justify-center font-semibold">Terapkan Filter</button>
                 @if(request()->hasAny(['start_date', 'end_date', 'status', 'tipe']))
-                    <a href="{{ route('admin.reports.index') }}" class="button small secondary text-xs">Reset</a>
+                    <a href="{{ route('admin.reports.index') }}" class="button small secondary text-xs justify-center">Reset</a>
                 @endif
             </div>
         </form>
@@ -186,10 +186,7 @@
             </div>
 
             @if($agendas->hasPages())
-                <div class="table-foot">
-                    <div>Menampilkan {{ $agendas->firstItem() }} - {{ $agendas->lastItem() }} dari {{ $agendas->total() }} rapat</div>
-                    {{ $agendas->links() }}
-                </div>
+                {{ $agendas->links() }}
             @endif
         </div>
 

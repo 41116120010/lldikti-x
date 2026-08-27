@@ -104,10 +104,7 @@
         </div>
 
         @if($attendances->hasPages())
-            <div class="table-foot">
-                <div>Menampilkan {{ $attendances->firstItem() }} - {{ $attendances->lastItem() }} dari {{ $attendances->total() }} riwayat</div>
-                {{ $attendances->links() }}
-            </div>
+            {{ $attendances->links() }}
         @endif
     </div>
 </div>

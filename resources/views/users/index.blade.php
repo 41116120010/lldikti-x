@@ -208,10 +208,7 @@
         </div>
 
         @if($users->hasPages())
-            <div class="table-foot">
-                <div>Menampilkan {{ $users->firstItem() }} - {{ $users->lastItem() }} dari {{ $users->total() }} pengguna</div>
-                {{ $users->links() }}
-            </div>
+            {{ $users->links() }}
         @endif
     </div>
 </div>

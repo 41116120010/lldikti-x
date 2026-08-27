@@ -126,10 +126,7 @@
         </div>
 
         @if($logs->hasPages())
-            <div class="table-foot">
-                <div>Menampilkan {{ $logs->firstItem() }} - {{ $logs->lastItem() }} dari {{ $logs->total() }} aktivitas</div>
-                {{ $logs->links() }}
-            </div>
+            {{ $logs->links() }}
         @endif
     </div>
 </div>
