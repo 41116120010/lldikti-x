@@ -205,4 +205,25 @@ class AttendanceCheckInTest extends TestCase
         $response->assertHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
         $this->assertStringContainsString("default-src 'self'", $response->headers->get('Content-Security-Policy'));
     }
+
+    public function test_user_can_view_attendance_history_with_search_filter(): void
+    {
+        $staff = User::where('username', 'staff_nurul')->first();
+
+        $response = $this->actingAs($staff)->get(route('attendances.history', ['search' => 'Rapat']));
+
+        $response->assertStatus(200);
+        $response->assertSee('Riwayat Kehadiran Rapat');
+    }
+
+    public function test_attendance_history_shows_empty_state_when_search_not_found(): void
+    {
+        $staff = User::where('username', 'staff_nurul')->first();
+
+        $response = $this->actingAs($staff)->get(route('attendances.history', ['search' => 'NonExistentMeetingKeyword9999']));
+
+        $response->assertStatus(200);
+        $response->assertSee('Belum ada catatan kehadiran rapat yang ditemukan.');
+        $response->assertSee('Reset Pencarian');
+    }
 }

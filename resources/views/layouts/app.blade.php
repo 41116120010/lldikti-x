@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    
+
     <!-- Primary SEO Metadata -->
     <title>@yield('title', 'Dashboard') — {{ config('app.name', 'SIPERAPAT') }} LLDIKTI Wilayah X</title>
     <meta name="title" content="@yield('title', 'Dashboard') — {{ config('app.name', 'SIPERAPAT') }} LLDIKTI Wilayah X">
@@ -199,9 +199,9 @@
                         @endif
                     </div>
                 </div>
-                <form 
-                    action="{{ route('logout') }}" 
-                    method="POST" 
+                <form
+                    action="{{ route('logout') }}"
+                    method="POST"
                     class="inline"
                     data-confirm="Apakah Anda yakin ingin keluar dari sistem SIPERAPAT?"
                     data-confirm-title="Konfirmasi Keluar Akun"
@@ -232,9 +232,9 @@
 
                 <!-- User Profile Dropdown Menu Area -->
                 <div class="relative" id="user-profile-dropdown-container">
-                    <button 
-                        type="button" 
-                        id="user-profile-dropdown-btn" 
+                    <button
+                        type="button"
+                        id="user-profile-dropdown-btn"
                         class="flex items-center gap-2.5 p-1 pl-2.5 rounded-xl hover:bg-slate-100/90 transition border border-transparent hover:border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer select-none"
                         aria-expanded="false"
                         aria-haspopup="true"
@@ -261,8 +261,8 @@
                     </button>
 
                     <!-- Dropdown Menu Box -->
-                    <div 
-                        id="user-profile-dropdown-menu" 
+                    <div
+                        id="user-profile-dropdown-menu"
                         class="hidden absolute right-0 mt-2 w-72 bg-white rounded-2xl border border-slate-200 shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150"
                         role="menu"
                         aria-orientation="vertical"
@@ -327,9 +327,9 @@
 
                         <!-- Dropdown Logout Footer -->
                         <div class="pt-1 border-t border-slate-100">
-                            <form 
-                                action="{{ route('logout') }}" 
-                                method="POST" 
+                            <form
+                                action="{{ route('logout') }}"
+                                method="POST"
                                 class="block"
                                 data-confirm="Apakah Anda yakin ingin keluar dari sistem SIPERAPAT?"
                                 data-confirm-title="Konfirmasi Keluar Akun"
@@ -370,12 +370,10 @@
             <!-- Content / Page Footer -->
             <footer class="footer" role="contentinfo">
                 <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                    <span class="font-semibold text-slate-700">&copy; {{ date('Y') }} SIPERAPAT</span>
-                    <span class="hidden sm:inline text-slate-300">&bull;</span>
-                    <span class="text-slate-500">Lembaga Layanan Pendidikan Tinggi (LLDIKTI) Wilayah X</span>
+                    <span class="font-semibold text-slate-700">&copy; {{ date('Y') }} SIPERAPAT - Lembaga Layanan Pendidikan Tinggi (LLDIKTI) Wilayah X.</span>
                 </div>
                 <div class="text-[11px] text-slate-400 font-mono">
-                    <span>v1.0 LTS</span>
+                    <span>v2.2</span>
                 </div>
             </footer>
         </section>

@@ -21,14 +21,14 @@
             </div>
 
             <div class="flex items-center gap-2">
-                <button type="submit" class="button small secondary text-xs">Cari</button>
+                <button type="submit" class="button small secondary text-xs font-semibold">Cari</button>
                 @if(request('search'))
-                    <a href="{{ route('attendances.history') }}" class="text-xs text-slate-500 hover:text-slate-800">Reset</a>
+                    <a href="{{ route('attendances.history') }}" class="button small secondary text-xs text-slate-500 hover:text-slate-800">Reset</a>
                 @endif
             </div>
         </form>
 
-        <a href="{{ route('attendances.portal') }}" class="button small flex items-center gap-1.5 text-xs self-start sm:self-auto shrink-0 bg-blue-600 hover:bg-blue-700 text-white">
+        <a href="{{ route('attendances.portal') }}" class="button small flex items-center gap-1.5 text-xs self-start sm:self-auto shrink-0 bg-blue-600 hover:bg-blue-700 text-white font-semibold">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
             <span>Portal Presensi Aktif</span>
         </a>
@@ -75,27 +75,44 @@
                             </td>
                             <td class="text-center">
                                 <div class="inline-flex items-center gap-2">
-                                    <!-- Selfie Thumb -->
-                                    <div class="w-8 h-8 rounded-lg overflow-hidden border border-slate-300 shadow-xs" title="Foto Selfie Wajah">
+                                    <!-- Selfie Thumb (Clickable) -->
+                                    <button 
+                                        type="button" 
+                                        onclick="previewAttendanceMedia('{{ Storage::disk('public')->url($att->selfie_path) }}', 'Foto Selfie Wajah')"
+                                        class="w-8 h-8 rounded-lg overflow-hidden border border-slate-300 shadow-xs hover:border-blue-500 hover:ring-2 hover:ring-blue-200 transition cursor-pointer" 
+                                        title="Klik untuk memperbesar Foto Selfie"
+                                    >
                                         <img src="{{ Storage::disk('public')->url($att->selfie_path) }}" alt="Selfie" class="w-full h-full object-cover">
-                                    </div>
+                                    </button>
 
-                                    <!-- Signature Thumb -->
-                                    <div class="w-8 h-8 rounded-lg overflow-hidden border border-slate-300 bg-white shadow-xs p-0.5" title="Tanda Tangan Digital">
+                                    <!-- Signature Thumb (Clickable) -->
+                                    <button 
+                                        type="button" 
+                                        onclick="previewAttendanceMedia('{{ Storage::disk('public')->url($att->signature_path) }}', 'Tanda Tangan Digital')"
+                                        class="w-8 h-8 rounded-lg overflow-hidden border border-slate-300 bg-white shadow-xs p-0.5 hover:border-blue-500 hover:ring-2 hover:ring-blue-200 transition cursor-pointer" 
+                                        title="Klik untuk memperbesar Tanda Tangan"
+                                    >
                                         <img src="{{ Storage::disk('public')->url($att->signature_path) }}" alt="TTD" class="w-full h-full object-contain">
-                                    </div>
+                                    </button>
                                 </div>
                             </td>
                             <td class="text-right">
-                                <a href="{{ route('attendances.success', [$att->agenda, $att]) }}" class="button small secondary text-xs">
+                                <a href="{{ route('attendances.success', [$att->agenda, $att]) }}" class="button small secondary text-xs font-semibold">
                                     Bukti Sah
                                 </a>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="empty-search">
-                                Belum ada catatan kehadiran rapat yang ditemukan.
+                            <td colspan="6" class="empty-search py-10">
+                                <div class="space-y-2 text-center">
+                                    <p class="text-slate-500 font-medium text-xs">Belum ada catatan kehadiran rapat yang ditemukan.</p>
+                                    @if(request('search'))
+                                        <a href="{{ route('attendances.history') }}" class="button small secondary inline-flex text-xs">
+                                            Reset Pencarian
+                                        </a>
+                                    @endif
+                                </div>
                             </td>
                         </tr>
                     @endforelse
@@ -108,4 +125,21 @@
         @endif
     </div>
 </div>
+
+<script>
+function previewAttendanceMedia(mediaUrl, title) {
+    window.showModal({
+        title: title,
+        message: `
+            <div class="text-center p-2">
+                <div class="max-w-xs mx-auto rounded-xl overflow-hidden border border-slate-200 shadow-md bg-slate-50">
+                    <img src="${mediaUrl}" alt="${title}" class="w-full h-auto object-contain max-h-80">
+                </div>
+            </div>
+        `,
+        type: 'info',
+        confirmText: 'Tutup'
+    });
+}
+</script>
 @endsection
