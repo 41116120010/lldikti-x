@@ -98,4 +98,32 @@ class ProfileTest extends TestCase
         $staff->refresh();
         $this->assertTrue(Hash::check('Password123!', $staff->password));
     }
+
+    public function test_user_profile_update_normalizes_email_and_trims_whitespace(): void
+    {
+        $staff = User::where('username', 'staff_nurul')->first();
+        $originalEmail = $staff->email;
+        $originalName = $staff->name;
+
+        $uniqueEmail = 'NURUL.CAPS.' . uniqid() . '@LLDIKTI.KEMDIKBUD.GO.ID';
+
+        $response = $this->actingAs($staff)->put(route('profile.update'), [
+            'name' => '   Nurul Spasi   ',
+            'email' => '   ' . $uniqueEmail . '   ',
+            'phone' => '   081233334444   ',
+        ]);
+
+        $response->assertRedirect(route('profile.edit'));
+
+        $staff->refresh();
+        $this->assertEquals('Nurul Spasi', $staff->name);
+        $this->assertEquals(strtolower(trim($uniqueEmail)), $staff->email);
+        $this->assertEquals('081233334444', $staff->phone);
+
+        // Restore
+        $staff->update([
+            'name' => $originalName,
+            'email' => $originalEmail,
+        ]);
+    }
 }

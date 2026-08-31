@@ -58,7 +58,11 @@ class ProfileController extends Controller
                 type: 'UPDATE_PROFILE',
                 description: $description,
                 targetModel: User::class,
-                targetId: $user->id
+                targetId: $user->id,
+                properties: [
+                    'updated_fields' => array_keys($updateData),
+                    'password_changed' => $isPasswordChanged,
+                ]
             );
         });
 
