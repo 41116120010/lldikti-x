@@ -107,4 +107,27 @@ class MultiIdentifierAuthenticationTest extends TestCase
             'activity_type' => 'AUTH_LOGOUT',
         ]);
     }
+
+    public function test_users_can_authenticate_using_nip_with_whitespace(): void
+    {
+        $user = User::where('nip', '199402142020121004')->first();
+
+        // Simulate clipboard copy paste with spaces: " 19940214 202012 1 004 "
+        $response = $this->post('/login', [
+            'login' => ' 19940214 202012 1 004 ',
+            'password' => 'Password123!',
+        ]);
+
+        $this->assertAuthenticatedAs($user);
+        $response->assertRedirect('/dashboard');
+    }
+
+    public function test_authenticated_user_accessing_login_page_redirects_to_dashboard(): void
+    {
+        $user = User::where('username', 'superadmin')->first();
+
+        $response = $this->actingAs($user)->get('/login');
+
+        $response->assertRedirect('/dashboard');
+    }
 }

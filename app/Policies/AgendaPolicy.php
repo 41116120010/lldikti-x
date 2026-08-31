@@ -48,7 +48,12 @@ class AgendaPolicy
             return true;
         }
 
-        return $user->isAdmin() && $agenda->created_by === $user->id;
+        if ($user->isAdmin()) {
+            return $agenda->created_by === $user->id 
+                || ($user->unit_id !== null && $agenda->creator?->unit_id === $user->unit_id);
+        }
+
+        return false;
     }
 
     /**
@@ -60,7 +65,12 @@ class AgendaPolicy
             return true;
         }
 
-        return $user->isAdmin() && $agenda->created_by === $user->id;
+        if ($user->isAdmin()) {
+            return $agenda->created_by === $user->id 
+                || ($user->unit_id !== null && $agenda->creator?->unit_id === $user->unit_id);
+        }
+
+        return false;
     }
 
     /**
@@ -72,7 +82,13 @@ class AgendaPolicy
             return true;
         }
 
-        return $user->isAdmin() && $agenda->created_by === $user->id;
+        if ($user->isAdmin()) {
+            return $agenda->created_by === $user->id 
+                || ($user->unit_id !== null && $agenda->creator?->unit_id === $user->unit_id)
+                || ($user->unit_id !== null && $agenda->units()->where('units.id', $user->unit_id)->exists());
+        }
+
+        return false;
     }
 
     /**
@@ -84,6 +100,12 @@ class AgendaPolicy
             return true;
         }
 
-        return $user->isAdmin() && $agenda->created_by === $user->id;
+        if ($user->isAdmin()) {
+            return $agenda->created_by === $user->id 
+                || ($user->unit_id !== null && $agenda->creator?->unit_id === $user->unit_id)
+                || ($user->unit_id !== null && $agenda->units()->where('units.id', $user->unit_id)->exists());
+        }
+
+        return false;
     }
 }

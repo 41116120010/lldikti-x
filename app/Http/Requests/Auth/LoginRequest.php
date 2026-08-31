@@ -54,15 +54,22 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        $loginInput = trim($this->input('login'));
+        $rawInput = trim($this->input('login'));
         $password = $this->input('password');
         $remember = $this->boolean('remember');
 
-        // Identify if login is NIP (all digits, typical 18-digit NIP or numbers) or Username
-        $field = ctype_digit($loginInput) ? 'nip' : 'username';
+        // Check if raw input stripped of spaces consists solely of digits (NIP format)
+        $digitsOnly = preg_replace('/\s+/', '', $rawInput);
+        if ($digitsOnly !== '' && ctype_digit($digitsOnly)) {
+            $field = 'nip';
+            $loginValue = $digitsOnly;
+        } else {
+            $field = 'username';
+            $loginValue = $rawInput;
+        }
 
         // Check if user exists and is active
-        $user = User::where($field, $loginInput)->first();
+        $user = User::where($field, $loginValue)->first();
 
         if ($user && !$user->is_active) {
             RateLimiter::hit($this->throttleKey());
@@ -71,7 +78,7 @@ class LoginRequest extends FormRequest
             ]);
         }
 
-        if (! Auth::attempt([$field => $loginInput, 'password' => $password], $remember)) {
+        if (! Auth::attempt([$field => $loginValue, 'password' => $password], $remember)) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
@@ -110,6 +117,7 @@ class LoginRequest extends FormRequest
      */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->input('login')).'|'.$this->ip());
+        $cleaned = preg_replace('/\s+/', '', $this->input('login', ''));
+        return Str::transliterate(Str::lower($cleaned).'|'.$this->ip());
     }
 }
