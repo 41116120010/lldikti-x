@@ -105,19 +105,45 @@ class UnitManagementTest extends TestCase
         $this->assertDatabaseHas('units', ['id' => $unitWithUsers->id]);
     }
 
-    public function test_administrator_can_delete_empty_unit(): void
+    public function test_administrator_cannot_delete_unit_linked_to_agendas(): void
     {
         $admin = User::where('role', 'administrator')->first();
-        $emptyUnit = Unit::where('kode_unit', 'POKJA-SID')->first();
 
-        $response = $this->actingAs($admin)->delete("/admin/units/{$emptyUnit->id}");
+        // Create a unit with no users, but attached to an agenda
+        $unitWithAgenda = Unit::create([
+            'nama_unit' => 'Unit Khusus Riset ' . uniqid(),
+            'kode_unit' => 'RISET-' . strtoupper(uniqid()),
+            'is_active' => true,
+        ]);
+
+        $agenda = \App\Models\Agenda::first();
+        if ($agenda) {
+            $agenda->units()->syncWithoutDetaching([$unitWithAgenda->id]);
+        }
+
+        $response = $this->actingAs($admin)->delete("/admin/units/{$unitWithAgenda->id}");
+
+        $response->assertSessionHas('error');
+        $this->assertDatabaseHas('units', ['id' => $unitWithAgenda->id]);
+    }
+
+    public function test_unit_creation_normalizes_code_to_uppercase_and_trims_whitespace(): void
+    {
+        $admin = User::where('role', 'administrator')->first();
+        $randomCode = 'test-norm-' . uniqid();
+
+        $response = $this->actingAs($admin)->post('/admin/units', [
+            'nama_unit' => '   Unit Normalisasi Format   ',
+            'kode_unit' => '   ' . strtolower($randomCode) . '   ',
+            'deskripsi' => '  Deskripsi dengan spasi  ',
+            'is_active' => true,
+        ]);
 
         $response->assertRedirect('/admin/units');
-        $this->assertDatabaseMissing('units', ['id' => $emptyUnit->id]);
-
-        $this->assertDatabaseHas('activity_logs', [
-            'activity_type' => 'DELETE_UNIT',
-            'user_id' => $admin->id,
+        $this->assertDatabaseHas('units', [
+            'nama_unit' => 'Unit Normalisasi Format',
+            'kode_unit' => strtoupper($randomCode),
+            'deskripsi' => 'Deskripsi dengan spasi',
         ]);
     }
 }

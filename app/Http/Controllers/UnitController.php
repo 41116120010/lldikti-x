@@ -15,13 +15,13 @@ use Illuminate\View\View;
 class UnitController extends Controller
 {
     /**
-     * Display a listing of the units.
+     * Display a listing of the units with associated user and agenda statistics.
      */
     public function index(Request $request): View
     {
         Gate::authorize('viewAny', Unit::class);
 
-        $query = Unit::withCount('users');
+        $query = Unit::withCount(['users', 'agendas']);
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
@@ -87,6 +87,8 @@ class UnitController extends Controller
     {
         Gate::authorize('update', $unit);
 
+        $unit->loadCount(['users', 'agendas']);
+
         return view('units.edit', compact('unit'));
     }
 
@@ -117,13 +119,18 @@ class UnitController extends Controller
 
     /**
      * Remove the specified unit from storage.
+     * Prevents deletion if the unit has associated users or meeting agendas.
      */
     public function destroy(Unit $unit): RedirectResponse
     {
         Gate::authorize('delete', $unit);
 
         if ($unit->users()->count() > 0) {
-            return back()->with('error', "Tidak dapat menghapus unit '{$unit->nama_unit}' karena masih memiliki pegawai terdaftar.");
+            return back()->with('error', "Tidak dapat menghapus unit kerja '{$unit->nama_unit}' karena masih memiliki {$unit->users()->count()} pegawai terdaftar.");
+        }
+
+        if ($unit->agendas()->count() > 0) {
+            return back()->with('error', "Tidak dapat menghapus unit kerja '{$unit->nama_unit}' karena masih terhubung dengan riwayat agenda rapat kedinasan. Anda dapat menonaktifkan status unit ini.");
         }
 
         $namaUnit = $unit->nama_unit;

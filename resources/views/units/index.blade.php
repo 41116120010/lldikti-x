@@ -29,14 +29,14 @@
             </select>
 
             <div class="flex items-center gap-2">
-                <button type="submit" class="button small secondary text-xs">Cari</button>
+                <button type="submit" class="button small secondary text-xs font-semibold">Cari</button>
                 @if(request()->hasAny(['search', 'status']))
-                    <a href="{{ route('admin.units.index') }}" class="text-xs text-slate-500 hover:text-slate-800">Reset</a>
+                    <a href="{{ route('admin.units.index') }}" class="button small secondary text-xs">Reset</a>
                 @endif
             </div>
         </form>
 
-        <a href="{{ route('admin.units.create') }}" class="button small flex items-center gap-2 text-xs self-start lg:self-auto shrink-0">
+        <a href="{{ route('admin.units.create') }}" class="button small flex items-center gap-2 text-xs self-start lg:self-auto shrink-0 font-semibold">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             <span>Tambah Unit Kerja</span>
         </a>
@@ -53,6 +53,7 @@
                         <th>Nama Unit Kerja</th>
                         <th>Deskripsi</th>
                         <th class="text-center">Jumlah Pegawai</th>
+                        <th class="text-center">Agenda Rapat</th>
                         <th class="text-center">Status</th>
                         <th class="text-right">Aksi</th>
                     </tr>
@@ -77,6 +78,12 @@
                                 <span class="inline-flex items-center gap-1 font-bold text-xs text-slate-700 bg-slate-100 px-2.5 py-1 rounded-full">
                                     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                                     {{ $unit->users_count }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <span class="inline-flex items-center gap-1 font-bold text-xs text-indigo-700 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-full">
+                                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                                    {{ $unit->agendas_count }}
                                 </span>
                             </td>
                             <td class="text-center">
@@ -122,8 +129,8 @@
                                         <svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13 7 4 4"/></svg>
                                     </a>
 
-                                    <!-- Delete Button (Only if 0 users) -->
-                                    @if($unit->users_count === 0)
+                                    <!-- Delete Button (Only if 0 users and 0 agendas) -->
+                                    @if($unit->users_count === 0 && $unit->agendas_count === 0)
                                         <form 
                                             action="{{ route('admin.units.destroy', $unit) }}" 
                                             method="POST" 
@@ -149,8 +156,15 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="empty-search">
-                                Tidak ada data unit kerja yang sesuai dengan kriteria pencarian.
+                            <td colspan="8" class="empty-search py-10">
+                                <div class="space-y-2 text-center">
+                                    <p class="text-slate-500 font-medium text-xs">Tidak ada data unit kerja yang sesuai dengan kriteria pencarian.</p>
+                                    @if(request()->hasAny(['search', 'status']))
+                                        <a href="{{ route('admin.units.index') }}" class="button small secondary inline-flex text-xs">
+                                            Reset Pencarian & Filter
+                                        </a>
+                                    @endif
+                                </div>
                             </td>
                         </tr>
                     @endforelse

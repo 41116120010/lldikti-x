@@ -87,7 +87,8 @@
                 <span>Ringkasan Unit Terdaftar</span>
             </h3>
             <div class="space-y-2 text-xs text-slate-300">
-                <div>Total Pegawai Terhubung: <strong class="text-white">{{ $unit->users()->count() }} orang</strong></div>
+                <div>Total Pegawai Terhubung: <strong class="text-white">{{ $unit->users_count ?? $unit->users()->count() }} orang</strong></div>
+                <div>Agenda Rapat Terlibat: <strong class="text-white">{{ $unit->agendas_count ?? $unit->agendas()->count() }} agenda</strong></div>
                 <div>Status Saat Ini: <strong class="{{ $unit->is_active ? 'text-emerald-400' : 'text-amber-400' }}">{{ $unit->is_active ? 'Aktif Beroperasi' : 'Non-Aktif' }}</strong></div>
                 <div class="pt-2 border-t border-slate-800 text-[11px] text-slate-400">Dibuat pada: {{ $unit->created_at->translatedFormat('d F Y') }}</div>
             </div>

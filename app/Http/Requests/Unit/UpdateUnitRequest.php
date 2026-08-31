@@ -13,6 +13,15 @@ class UpdateUnitRequest extends FormRequest
         return $this->user()?->can('update', $unit) ?? false;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'kode_unit' => $this->kode_unit ? strtoupper(trim($this->kode_unit)) : null,
+            'nama_unit' => $this->nama_unit ? trim($this->nama_unit) : null,
+            'deskripsi' => $this->deskripsi ? trim($this->deskripsi) : null,
+        ]);
+    }
+
     public function rules(): array
     {
         $unit = $this->route('unit');
