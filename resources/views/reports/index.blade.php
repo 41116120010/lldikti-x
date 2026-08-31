@@ -35,7 +35,7 @@
 
     <!-- Filter Bar & Export CSV -->
     <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-        <form method="GET" action="{{ route('admin.reports.index') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 items-end">
+        <form method="GET" action="{{ route('admin.reports.index') }}" class="grid grid-cols-1 sm:grid-cols-2 {{ $user->isAdministrator() ? 'lg:grid-cols-6' : 'lg:grid-cols-5' }} gap-3.5 items-end">
             <!-- Start Date -->
             <div class="space-y-1">
                 <label for="start_date" class="text-xs font-semibold text-slate-700 block">Dari Tanggal</label>
@@ -70,10 +70,25 @@
                 </select>
             </div>
 
+            <!-- Unit Filter (For Administrator) -->
+            @if($user->isAdministrator())
+                <div class="space-y-1">
+                    <label for="unit_id" class="text-xs font-semibold text-slate-700 block">Unit Kerja</label>
+                    <select id="unit_id" name="unit_id" class="input w-full text-xs">
+                        <option value="">Semua Unit</option>
+                        @foreach($units as $u)
+                            <option value="{{ $u->id }}" {{ request('unit_id') == $u->id ? 'selected' : '' }}>
+                                {{ $u->kode_unit }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+            @endif
+
             <!-- Filter Buttons -->
             <div class="flex items-center gap-2">
                 <button type="submit" class="button small flex-1 text-xs justify-center font-semibold">Terapkan Filter</button>
-                @if(request()->hasAny(['start_date', 'end_date', 'status', 'tipe']))
+                @if(request()->hasAny(['start_date', 'end_date', 'status', 'tipe', 'unit_id']))
                     <a href="{{ route('admin.reports.index') }}" class="button small secondary text-xs justify-center">Reset</a>
                 @endif
             </div>
@@ -159,7 +174,7 @@
                                             class="button small secondary text-xs text-blue-700 border-blue-200 hover:bg-blue-50 p-1.5" 
                                             title="Unduh Dokumen Word (.doc)"
                                         >
-                                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
                                             <span>Word</span>
                                         </a>
 
@@ -176,8 +191,15 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="4" class="empty-search">
-                                    Tidak ada data rapat yang sesuai dengan kriteria filter.
+                                <td colspan="4" class="empty-search py-10">
+                                    <div class="space-y-2 text-center">
+                                        <p class="text-slate-500 font-medium text-xs">Tidak ada data rapat yang sesuai dengan kriteria filter.</p>
+                                        @if(request()->hasAny(['start_date', 'end_date', 'status', 'tipe', 'unit_id']))
+                                            <a href="{{ route('admin.reports.index') }}" class="button small secondary inline-flex text-xs">
+                                                Reset Kriteria Filter
+                                            </a>
+                                        @endif
+                                    </div>
                                 </td>
                             </tr>
                         @endforelse

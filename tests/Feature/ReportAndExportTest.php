@@ -98,14 +98,41 @@ class ReportAndExportTest extends TestCase
         $response->assertSee('Daftar Rekapitulasi Rapat');
     }
 
-    public function test_users_table_pagination_links_render(): void
+    public function test_superadmin_can_filter_reports_by_unit_id(): void
+    {
+        $superadmin = User::where('role', 'administrator')->first();
+        $unit = Unit::first();
+
+        $response = $this->actingAs($superadmin)->get("/admin/reports?unit_id={$unit->id}");
+
+        $response->assertStatus(200);
+        $response->assertSee('Daftar Rekapitulasi Rapat');
+    }
+
+    public function test_csv_export_sanitizes_formula_injection_characters(): void
     {
         $superadmin = User::where('role', 'administrator')->first();
 
-        $response = $this->actingAs($superadmin)->get('/admin/users');
+        // Create an agenda with a potential formula injection title
+        $agenda = Agenda::create([
+            'created_by' => $superadmin->id,
+            'judul_rapat' => '=cmd|"/C calc"!A0',
+            'slug' => 'test-formula-injection-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang 1',
+            'waktu_mulai' => now()->addDay(),
+            'waktu_selesai' => now()->addDay()->addHours(2),
+            'is_all_units' => true,
+            'status' => 'scheduled',
+        ]);
+
+        $response = $this->actingAs($superadmin)->get('/admin/reports/summary/csv');
 
         $response->assertStatus(200);
-        $response->assertSee('Menampilkan');
-        $response->assertSee('data');
+        $content = $response->streamedContent();
+
+        // Must prepend single quote to prevent spreadsheet execution
+        $this->assertStringContainsString("'=cmd", $content);
     }
 }

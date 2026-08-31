@@ -13,6 +13,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportController extends Controller
 {
@@ -41,14 +42,16 @@ class ReportController extends Controller
             }
         }
 
-        // Filter: Unit (Superadmin only or Admin's unit)
+        // Filter: Unit (Superadmin or Admin Unit filter)
         if ($unitId = $request->input('unit_id')) {
-            $query->where(function ($q) use ($unitId) {
-                $q->where('is_all_units', true)
-                  ->orWhereHas('units', function ($sub) use ($unitId) {
-                      $sub->where('units.id', $unitId);
-                  });
-            });
+            if ($user->isAdministrator()) {
+                $query->where(function ($q) use ($unitId) {
+                    $q->where('is_all_units', true)
+                      ->orWhereHas('units', function ($sub) use ($unitId) {
+                          $sub->where('units.id', $unitId);
+                      });
+                });
+            }
         }
 
         // Filter: Format
@@ -58,24 +61,27 @@ class ReportController extends Controller
 
         $agendas = $query->orderBy('waktu_mulai', 'desc')->paginate(10)->withQueryString();
 
-        // Aggregate Statistics (from filtered or overall scoped set)
-        $allScopedAgendas = Agenda::visibleTo($user)->with('attendances')->get();
-        $totalAgendas = $allScopedAgendas->count();
-        $completedAgendas = $allScopedAgendas->where('status', 'completed')->count();
-        $ongoingAgendas = $allScopedAgendas->where('status', 'ongoing')->count();
-        $totalPresensi = $allScopedAgendas->sum(fn ($a) => $a->attendances->count());
+        // Direct database aggregate calculations (O(1) memory footprint)
+        $baseScopedQuery = Agenda::visibleTo($user);
+        $totalAgendas = (clone $baseScopedQuery)->count();
+        $completedAgendas = (clone $baseScopedQuery)->where('status', 'completed')->count();
+        $ongoingAgendas = (clone $baseScopedQuery)->where('status', 'ongoing')->count();
+        $totalPresensi = Attendance::whereIn('agenda_id', (clone $baseScopedQuery)->select('id'))->count();
         $avgPresensi = $totalAgendas > 0 ? round($totalPresensi / $totalAgendas, 1) : 0;
 
-        // Unit breakdown statistics
-        $units = Unit::active()->withCount('users')->get();
-        $unitStats = $units->map(function ($unit) {
-            $unitAttendancesCount = Attendance::whereHas('user', function ($q) use ($unit) {
-                $q->where('unit_id', $unit->id);
-            })->count();
+        // Eliminate N+1 query: Fetch unit attendance stats with a single group-by aggregation
+        $attendanceCountsByUnit = Attendance::query()
+            ->join('users', 'attendances.user_id', '=', 'users.id')
+            ->whereNotNull('users.unit_id')
+            ->selectRaw('users.unit_id, count(*) as total')
+            ->groupBy('users.unit_id')
+            ->pluck('total', 'users.unit_id');
 
+        $units = Unit::active()->withCount('users')->orderBy('nama_unit')->get();
+        $unitStats = $units->map(function ($unit) use ($attendanceCountsByUnit) {
             return [
                 'unit' => $unit,
-                'attendances_count' => $unitAttendancesCount,
+                'attendances_count' => $attendanceCountsByUnit[$unit->id] ?? 0,
                 'total_users' => $unit->users_count,
             ];
         });
@@ -118,10 +124,10 @@ class ReportController extends Controller
         Gate::authorize('view', $agenda);
 
         ActivityLogger::log(
-            'export_pdf',
-            "Mengekspor Berita Acara & Daftar Hadir PDF untuk agenda: {$agenda->judul_rapat}",
-            Agenda::class,
-            $agenda->id
+            type: 'EXPORT_PDF',
+            description: "Mengekspor Berita Acara & Daftar Hadir PDF untuk agenda: {$agenda->judul_rapat}",
+            targetModel: Agenda::class,
+            targetId: $agenda->id
         );
 
         return $pdfService->exportBeritaAcara($agenda);
@@ -135,10 +141,10 @@ class ReportController extends Controller
         Gate::authorize('view', $agenda);
 
         ActivityLogger::log(
-            'export_word',
-            "Mengekspor Berita Acara & Daftar Hadir Microsoft Word (.doc) untuk agenda: {$agenda->judul_rapat}",
-            Agenda::class,
-            $agenda->id
+            type: 'EXPORT_WORD',
+            description: "Mengekspor Berita Acara & Daftar Hadir Microsoft Word (.doc) untuk agenda: {$agenda->judul_rapat}",
+            targetModel: Agenda::class,
+            targetId: $agenda->id
         );
 
         return $wordService->exportBeritaAcara($agenda);
@@ -147,15 +153,15 @@ class ReportController extends Controller
     /**
      * Export summary table of meetings to CSV / Excel spreadsheet.
      */
-    public function exportSummaryCsv(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
+    public function exportSummaryCsv(Request $request): StreamedResponse
     {
         $user = Auth::user();
         $query = Agenda::visibleTo($user)->with(['creator', 'attendances']);
 
         ActivityLogger::log(
-            'export_csv',
-            "Mengekspor rekapitulasi data agenda rapat kedinasan ke format CSV / Excel",
-            Agenda::class
+            type: 'EXPORT_CSV',
+            description: "Mengekspor rekapitulasi data agenda rapat kedinasan ke format CSV / Excel",
+            targetModel: Agenda::class
         );
 
         if ($startDate = $request->input('start_date')) {
@@ -169,15 +175,26 @@ class ReportController extends Controller
                 $query->where('status', $status);
             }
         }
-
-        $agendas = $query->orderBy('waktu_mulai', 'desc')->get();
+        if ($unitId = $request->input('unit_id')) {
+            if ($user->isAdministrator()) {
+                $query->where(function ($q) use ($unitId) {
+                    $q->where('is_all_units', true)
+                      ->orWhereHas('units', function ($sub) use ($unitId) {
+                          $sub->where('units.id', $unitId);
+                      });
+                });
+            }
+        }
+        if ($tipe = $request->input('tipe')) {
+            $query->where('tipe_rapat', $tipe);
+        }
 
         $headers = [
             'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => 'attachment; filename="Rekapitulasi_Agenda_LLDIKTI_' . date('Ymd_His') . '.csv"',
         ];
 
-        $callback = function () use ($agendas) {
+        $callback = function () use ($query) {
             $file = fopen('php://output', 'w');
             // Add UTF-8 BOM for Excel compatibility
             fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
@@ -196,18 +213,27 @@ class ReportController extends Controller
                 'Jumlah Peserta Hadir',
             ]);
 
-            foreach ($agendas as $index => $a) {
+            $index = 0;
+            // Use cursor() to stream records efficiently without memory bloat
+            foreach ($query->orderBy('waktu_mulai', 'desc')->cursor() as $agenda) {
+                $index++;
+
+                // Sanitize potential CSV Formula Injection characters (=, +, -, @, \t, \r)
+                $safeTitle = $this->sanitizeCsvValue($agenda->judul_rapat);
+                $safeLocation = $this->sanitizeCsvValue($agenda->lokasi_ruang ?? 'Daring / Online');
+                $safeCreator = $this->sanitizeCsvValue($agenda->creator?->name ?? 'Sistem');
+
                 fputcsv($file, [
-                    $index + 1,
-                    $a->judul_rapat,
-                    ucfirst($a->jenis_rapat),
-                    strtoupper($a->tipe_rapat),
-                    $a->lokasi_ruang ?? 'Daring / Online',
-                    $a->waktu_mulai->format('d/m/Y H:i'),
-                    $a->waktu_selesai->format('d/m/Y H:i'),
-                    ucfirst($a->status),
-                    $a->creator->name,
-                    $a->attendances->count(),
+                    $index,
+                    $safeTitle,
+                    ucfirst($agenda->jenis_rapat),
+                    strtoupper($agenda->tipe_rapat),
+                    $safeLocation,
+                    $agenda->waktu_mulai->format('d/m/Y H:i'),
+                    $agenda->waktu_selesai ? $agenda->waktu_selesai->format('d/m/Y H:i') : '-',
+                    ucfirst($agenda->status),
+                    $safeCreator,
+                    $agenda->attendances->count(),
                 ]);
             }
 
@@ -215,5 +241,22 @@ class ReportController extends Controller
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Sanitize string values to prevent CSV / Formula Injection (CWE-1236).
+     */
+    private function sanitizeCsvValue(?string $value): string
+    {
+        if ($value === null || $value === '') {
+            return '';
+        }
+
+        // If string starts with formula characters, prepend single quote
+        if (preg_match('/^[=\+\-@\t\r]/', $value)) {
+            return "'" . $value;
+        }
+
+        return $value;
     }
 }

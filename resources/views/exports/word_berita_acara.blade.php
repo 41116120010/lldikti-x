@@ -233,8 +233,8 @@
                     Padang, {{ now()->translatedFormat('d F Y') }}<br>
                     <strong>Notulis / Petugas Presensi</strong>
                     <div class="signature-space"></div>
-                    <strong><u>{{ Auth::user()->name }}</u></strong><br>
-                    NIP. {{ Auth::user()->nip }}
+                    <strong><u>{{ Auth::user()?->name ?? 'Petugas Presensi' }}</u></strong><br>
+                    NIP. {{ Auth::user()?->nip ?? '-' }}
                 </td>
             </tr>
         </table>
