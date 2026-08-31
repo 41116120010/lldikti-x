@@ -30,17 +30,18 @@ class UnitManagementTest extends TestCase
     public function test_administrator_can_create_new_unit(): void
     {
         $admin = User::where('role', 'administrator')->first();
+        $code = 'SID-' . strtoupper(uniqid());
 
         $response = $this->actingAs($admin)->post('/admin/units', [
             'nama_unit' => 'Pokja Sistem Informasi & Data',
-            'kode_unit' => 'POKJA-SID',
+            'kode_unit' => $code,
             'deskripsi' => 'Pengembangan sistem informasi dan tata kelola data pendidikan tinggi.',
             'is_active' => true,
         ]);
 
         $response->assertRedirect('/admin/units');
         $this->assertDatabaseHas('units', [
-            'kode_unit' => 'POKJA-SID',
+            'kode_unit' => $code,
             'nama_unit' => 'Pokja Sistem Informasi & Data',
         ]);
 
@@ -54,11 +55,18 @@ class UnitManagementTest extends TestCase
     public function test_administrator_can_update_unit(): void
     {
         $admin = User::where('role', 'administrator')->first();
-        $unit = Unit::where('kode_unit', 'POKJA-SID')->first();
+        $unit = Unit::where('kode_unit', 'LIKE', 'SID-%')->first();
+        if (!$unit) {
+            $unit = Unit::create([
+                'nama_unit' => 'Pokja SID',
+                'kode_unit' => 'SID-' . strtoupper(uniqid()),
+                'is_active' => true,
+            ]);
+        }
 
         $response = $this->actingAs($admin)->put("/admin/units/{$unit->id}", [
             'nama_unit' => 'Pokja Sistem Informasi & Transformasi Digital',
-            'kode_unit' => 'POKJA-SID',
+            'kode_unit' => $unit->kode_unit,
             'deskripsi' => 'Deskripsi yang diperbarui.',
             'is_active' => true,
         ]);
@@ -78,14 +86,23 @@ class UnitManagementTest extends TestCase
     public function test_administrator_can_toggle_unit_status(): void
     {
         $admin = User::where('role', 'administrator')->first();
-        $unit = Unit::where('kode_unit', 'POKJA-SID')->first();
+        $unit = Unit::where('kode_unit', 'LIKE', 'SID-%')->first();
+        if (!$unit) {
+            $unit = Unit::create([
+                'nama_unit' => 'Pokja SID',
+                'kode_unit' => 'SID-' . strtoupper(uniqid()),
+                'is_active' => true,
+            ]);
+        }
+
+        $initialStatus = $unit->is_active;
 
         $response = $this->actingAs($admin)->patch("/admin/units/{$unit->id}/toggle-status");
 
         $response->assertRedirect();
         $this->assertDatabaseHas('units', [
             'id' => $unit->id,
-            'is_active' => false,
+            'is_active' => !$initialStatus,
         ]);
 
         $this->assertDatabaseHas('activity_logs', [
