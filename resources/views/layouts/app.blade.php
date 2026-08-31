@@ -51,7 +51,7 @@
     <meta name="twitter:image" content="{{ asset('favicon.svg') }}">
 
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%231d4ed8'%3E%3Cpath d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='9' cy='7' r='4'/%3E%3Cpath d='M22 21v-2a4 4 0 0 0-3-3.87'/%3E%3Cpath d='M16 3.13a4 4 0 0 1 0 7.75'/%3E%3C/svg%3E">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230f172a'%3E%3Cpath d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='9' cy='7' r='4'/%3E%3Cpath d='M22 21v-2a4 4 0 0 0-3-3.87'/%3E%3Cpath d='M16 3.13a4 4 0 0 1 0 7.75'/%3E%3C/svg%3E">
 
     <!-- Schema.org JSON-LD Structured Data for Enterprise Gov-Tech -->
     <script type="application/ld+json">
@@ -75,9 +75,9 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="bg-slate-50 text-slate-800 antialiased font-sans">
+<body class="bg-slate-50 text-slate-900 antialiased font-sans">
     <!-- Skip to Main Content Accessibility Landmark -->
-    <a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-4 focus:py-2 focus:bg-blue-700 focus:text-white focus:rounded-lg focus:shadow-xl focus:outline-none">
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-4 focus:py-2 focus:bg-slate-950 focus:text-white focus:rounded-lg focus:shadow-xl focus:outline-none">
         Lewati ke konten utama
     </a>
 
@@ -90,7 +90,7 @@
             <!-- Brand Logo & Mobile Close Button -->
             <div class="brand justify-between">
                 <div class="flex items-center gap-3">
-                    <div class="brand-mark bg-blue-700 text-white shadow-md">
+                    <div class="brand-mark bg-slate-950 text-white shadow-xs">
                         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
                             <circle cx="9" cy="7" r="4"/>
@@ -99,12 +99,12 @@
                         </svg>
                     </div>
                     <div>
-                        <div class="brand-name tracking-tight font-bold text-slate-900">SIPERAPAT</div>
-                        <small class="text-[11px] text-slate-400 font-medium">LLDIKTI Wilayah X</small>
+                        <div class="brand-name tracking-tight font-extrabold text-slate-950">SIPERAPAT</div>
+                        <small class="text-[11px] text-slate-600 font-bold">LLDIKTI Wilayah X</small>
                     </div>
                 </div>
 
-                <button id="mobile-sidebar-close" type="button" class="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200" aria-label="Tutup Menu">
+                <button id="mobile-sidebar-close" type="button" class="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200" aria-label="Tutup Menu">
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
             </div>
@@ -144,7 +144,7 @@
 
                     <a class="nav-link {{ request()->routeIs('admin.reports*') ? 'active' : '' }}" href="{{ route('admin.reports.index') }}" {!! request()->routeIs('admin.reports*') ? 'aria-current="page"' : '' !!}>
                         <span class="nav-icon">
-                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
                         </span>
                         <span>Laporan & Rekap</span>
                     </a>
@@ -184,18 +184,18 @@
 
             <!-- User Session Footer -->
             <div class="sidebar-user">
-                <div class="avatar bg-blue-800 text-white font-bold text-xs uppercase">
+                <div class="avatar bg-slate-950 text-white font-bold text-xs uppercase">
                     {{ substr(Auth::user()->name, 0, 2) }}
                 </div>
                 <div class="min-w-0 flex-1">
-                    <b class="block truncate text-xs text-slate-800">{{ Auth::user()->name }}</b>
-                    <div class="user-meta text-[11px] truncate text-slate-400">
+                    <b class="block truncate text-xs text-slate-900 font-bold">{{ Auth::user()->name }}</b>
+                    <div class="user-meta text-[11px] truncate text-slate-600 font-bold">
                         @if(Auth::user()->isAdministrator())
-                            <span class="text-blue-600 font-semibold">Administrator</span>
+                            <span class="text-slate-900">Administrator</span>
                         @elseif(Auth::user()->isAdmin())
-                            <span class="text-indigo-600 font-semibold">{{ Auth::user()->unit?->kode_unit ?? 'Admin Unit' }}</span>
+                            <span class="text-slate-900">{{ Auth::user()->unit?->kode_unit ?? 'Admin Unit' }}</span>
                         @else
-                            <span class="text-emerald-600 font-semibold">{{ Auth::user()->unit?->kode_unit ?? 'Staff' }}</span>
+                            <span class="text-slate-900">{{ Auth::user()->unit?->kode_unit ?? 'Staff' }}</span>
                         @endif
                     </div>
                 </div>
@@ -221,12 +221,12 @@
             <!-- Topbar Header -->
             <header class="topbar" role="banner">
                 <div class="flex items-center gap-3">
-                    <button id="mobile-sidebar-toggle" type="button" class="lg:hidden w-9 h-9 flex items-center justify-center rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 shadow-xs cursor-pointer" aria-label="Buka Menu Navigasi">
+                    <button id="mobile-sidebar-toggle" type="button" class="lg:hidden w-9 h-9 flex items-center justify-center rounded-lg bg-slate-100 text-slate-900 hover:bg-slate-200 border border-slate-300 shadow-xs cursor-pointer" aria-label="Buka Menu Navigasi">
                         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
                     </button>
                     <div>
                         <h1 class="page-title">@yield('heading', 'Dashboard')</h1>
-                        <div class="subtitle text-xs">@yield('subtitle', 'Sistem Pencatatan Kehadiran Rapat Kedinasan')</div>
+                        <div class="subtitle text-xs text-slate-600 font-medium">@yield('subtitle', 'Sistem Pencatatan Kehadiran Rapat Kedinasan')</div>
                     </div>
                 </div>
 
@@ -235,14 +235,14 @@
                     <button
                         type="button"
                         id="user-profile-dropdown-btn"
-                        class="flex items-center gap-2.5 p-1 pl-2.5 rounded-xl hover:bg-slate-100/90 transition border border-transparent hover:border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer select-none"
+                        class="flex items-center gap-2.5 p-1 pl-2.5 rounded-xl hover:bg-slate-100 transition border border-transparent hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-950/20 cursor-pointer select-none"
                         aria-expanded="false"
                         aria-haspopup="true"
                         aria-label="Menu Profil Pengguna"
                     >
                         <div class="text-right hidden sm:block leading-tight">
-                            <div class="text-xs font-semibold text-slate-800 truncate max-w-[160px]">{{ Auth::user()->name }}</div>
-                            <div class="text-[11px] text-slate-400 font-medium truncate max-w-[160px]">
+                            <div class="text-xs font-bold text-slate-900 truncate max-w-[160px]">{{ Auth::user()->name }}</div>
+                            <div class="text-[11px] text-slate-600 font-bold truncate max-w-[160px]">
                                 @if(Auth::user()->isAdministrator())
                                     Administrator
                                 @elseif(Auth::user()->isAdmin())
@@ -253,47 +253,47 @@
                             </div>
                         </div>
 
-                        <div class="avatar bg-blue-700 text-white font-bold text-xs uppercase shadow-xs" aria-hidden="true">
+                        <div class="avatar bg-slate-950 text-white font-bold text-xs uppercase shadow-xs" aria-hidden="true">
                             {{ substr(Auth::user()->name, 0, 2) }}
                         </div>
 
-                        <svg class="text-slate-400 transition-transform duration-200" id="user-profile-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                        <svg class="text-slate-700 transition-transform duration-200" id="user-profile-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                     </button>
 
                     <!-- Dropdown Menu Box -->
                     <div
                         id="user-profile-dropdown-menu"
-                        class="hidden absolute right-0 mt-2 w-72 bg-white rounded-2xl border border-slate-200 shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150"
+                        class="hidden absolute right-0 mt-2 w-72 bg-white rounded-2xl border border-slate-300 shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150"
                         role="menu"
                         aria-orientation="vertical"
                         aria-labelledby="user-profile-dropdown-btn"
                     >
                         <!-- Dropdown Header Profile Info -->
-                        <div class="px-4 py-3 border-b border-slate-100">
+                        <div class="px-4 py-3 border-b border-slate-200">
                             <div class="flex items-center gap-3">
-                                <div class="avatar bg-blue-700 text-white font-bold text-sm uppercase shrink-0">
+                                <div class="avatar bg-slate-950 text-white font-bold text-sm uppercase shrink-0">
                                     {{ substr(Auth::user()->name, 0, 2) }}
                                 </div>
                                 <div class="min-w-0 flex-1">
-                                    <b class="block text-xs text-slate-900 truncate font-bold">{{ Auth::user()->name }}</b>
-                                    <span class="block text-[11px] text-slate-500 truncate">{{ Auth::user()->email ?? ('@' . Auth::user()->username) }}</span>
+                                    <b class="block text-xs text-slate-950 truncate font-extrabold">{{ Auth::user()->name }}</b>
+                                    <span class="block text-[11px] text-slate-600 font-medium truncate">{{ Auth::user()->email ?? ('@' . Auth::user()->username) }}</span>
                                 </div>
                             </div>
 
-                            <div class="mt-3 pt-2.5 border-t border-slate-100 space-y-1.5 text-xs">
+                            <div class="mt-3 pt-2.5 border-t border-slate-200 space-y-1.5 text-xs">
                                 <!-- Peran / Role -->
                                 <div class="flex items-center justify-between">
-                                    <span class="text-slate-400 text-[11px]">Peran Akun:</span>
+                                    <span class="text-slate-600 text-[11px] font-bold">Peran Akun:</span>
                                     @if(Auth::user()->isAdministrator())
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-900 border border-slate-300">
                                             Administrator
                                         </span>
                                     @elseif(Auth::user()->isAdmin())
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-900 border border-slate-300">
                                             Admin Unit
                                         </span>
                                     @else
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-900 border border-slate-300">
                                             Pegawai Unit
                                         </span>
                                     @endif
@@ -301,8 +301,8 @@
 
                                 <!-- Unit Kerja -->
                                 <div class="flex items-center justify-between">
-                                    <span class="text-slate-400 text-[11px]">Unit Kerja:</span>
-                                    <span class="text-slate-700 font-medium text-right text-[11px] truncate max-w-[150px]" title="{{ Auth::user()->unit?->nama_unit ?? 'Tingkat Lembaga (Tanpa Unit)' }}">
+                                    <span class="text-slate-600 text-[11px] font-bold">Unit Kerja:</span>
+                                    <span class="text-slate-900 font-bold text-right text-[11px] truncate max-w-[150px]" title="{{ Auth::user()->unit?->nama_unit ?? 'Tingkat Lembaga (Tanpa Unit)' }}">
                                         {{ Auth::user()->unit?->nama_unit ?? 'Tingkat Lembaga' }}
                                     </span>
                                 </div>
@@ -310,8 +310,8 @@
                                 <!-- NIP (Jika Ada) -->
                                 @if(Auth::user()->nip)
                                     <div class="flex items-center justify-between">
-                                        <span class="text-slate-400 text-[11px]">Nomor Induk (NIP):</span>
-                                        <span class="font-mono text-slate-800 text-[11px] font-semibold">{{ Auth::user()->nip }}</span>
+                                        <span class="text-slate-600 text-[11px] font-bold">Nomor Induk (NIP):</span>
+                                        <span class="font-mono text-slate-950 text-[11px] font-bold">{{ Auth::user()->nip }}</span>
                                     </div>
                                 @endif
                             </div>
@@ -319,14 +319,14 @@
 
                         <!-- Dropdown Action Links -->
                         <div class="py-1">
-                            <a href="{{ route('profile.edit') }}" class="flex items-center gap-2.5 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition font-medium" role="menuitem">
-                                <svg class="text-slate-400" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            <a href="{{ route('profile.edit') }}" class="flex items-center gap-2.5 px-4 py-2 text-xs text-slate-900 hover:bg-slate-100 transition font-bold" role="menuitem">
+                                <svg class="text-slate-700" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                                 <span>Pengaturan Profil Akun</span>
                             </a>
                         </div>
 
                         <!-- Dropdown Logout Footer -->
-                        <div class="pt-1 border-t border-slate-100">
+                        <div class="pt-1 border-t border-slate-200">
                             <form
                                 action="{{ route('logout') }}"
                                 method="POST"
@@ -337,7 +337,7 @@
                                 data-confirm-btn="Ya, Keluar"
                             >
                                 @csrf
-                                <button type="submit" class="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs text-rose-600 hover:bg-rose-50/70 transition text-left font-medium cursor-pointer" role="menuitem">
+                                <button type="submit" class="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs text-rose-700 hover:bg-rose-50 transition text-left font-bold cursor-pointer" role="menuitem">
                                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                                     <span>Keluar dari Sistem</span>
                                 </button>
@@ -351,15 +351,15 @@
             <main class="page" id="main-content" role="main" tabindex="-1">
                 {{-- Flash Notifications --}}
                 @if (session('success'))
-                    <div class="mb-5 bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl flex items-center gap-3 text-sm shadow-xs" role="alert">
-                        <svg class="shrink-0 text-emerald-600" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    <div class="mb-5 bg-emerald-50 border border-emerald-300 text-emerald-950 px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-semibold shadow-xs" role="alert">
+                        <svg class="shrink-0 text-emerald-700" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                         <div>{{ session('success') }}</div>
                     </div>
                 @endif
 
                 @if (session('error'))
-                    <div class="mb-5 bg-rose-50 border border-rose-200 text-rose-800 px-4 py-3 rounded-xl flex items-center gap-3 text-sm shadow-xs" role="alert">
-                        <svg class="shrink-0 text-rose-600" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                    <div class="mb-5 bg-rose-50 border border-rose-300 text-rose-950 px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-semibold shadow-xs" role="alert">
+                        <svg class="shrink-0 text-rose-700" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                         <div>{{ session('error') }}</div>
                     </div>
                 @endif
@@ -370,9 +370,9 @@
             <!-- Content / Page Footer -->
             <footer class="footer" role="contentinfo">
                 <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                    <span class="font-semibold text-slate-700">&copy; {{ date('Y') }} SIPERAPAT - Lembaga Layanan Pendidikan Tinggi (LLDIKTI) Wilayah X.</span>
+                    <span class="font-bold text-slate-800">&copy; {{ date('Y') }} SIPERAPAT - Lembaga Layanan Pendidikan Tinggi (LLDIKTI) Wilayah X.</span>
                 </div>
-                <div class="text-[11px] text-slate-400 font-mono">
+                <div class="text-[11px] text-slate-600 font-mono font-bold">
                     <span>v2.2</span>
                 </div>
             </footer>
@@ -387,11 +387,7 @@
     @elseif (session('warning'))
         <div id="flash-modal-data" data-type="warning" data-title="Pemberitahuan" data-message="{{ session('warning') }}" class="hidden"></div>
     @elseif ($errors->any())
-        @php
-            $escapedErrors = array_map(fn($err) => e($err), $errors->all());
-            $bulletErrors = '&bull; ' . implode('<br>&bull; ', $escapedErrors);
-        @endphp
-        <div id="flash-modal-data" data-type="warning" data-title="Kondisi Belum Terpenuhi" data-message="{{ $bulletErrors }}" class="hidden"></div>
+        <div id="flash-modal-data" data-type="warning" data-title="Kondisi Belum Terpenuhi" data-message="&bull; {{ implode('<br>&bull; ', array_map('e', $errors->all())) }}" class="hidden"></div>
     @endif
 
     <!-- Global Modal Structure -->

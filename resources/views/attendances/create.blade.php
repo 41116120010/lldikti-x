@@ -17,23 +17,23 @@
                 <!-- Step 1: Face Selfie Capture (WebRTC + Auto Compression) -->
                 <div class="panel p-6 flex flex-col justify-between space-y-4">
                     <div>
-                        <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                        <div class="flex items-center justify-between border-b border-slate-200 pb-3 mb-4">
                             <div class="flex items-center gap-2">
-                                <span class="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center">1</span>
-                                <h3 class="font-bold text-slate-800 text-sm">Foto Selfie Wajah</h3>
+                                <span class="w-6 h-6 rounded-full bg-slate-950 text-white font-bold text-xs flex items-center justify-center">1</span>
+                                <h3 class="font-bold text-slate-950 text-sm">Foto Selfie Wajah</h3>
                             </div>
-                            <span id="selfie-status-badge" class="text-[11px] font-semibold text-slate-400">Belum Diambil</span>
+                            <span id="selfie-status-badge" class="text-[11px] font-bold text-slate-600">Belum Diambil</span>
                         </div>
 
                         <!-- Camera Viewport with Oval Frame Guide -->
-                        <div class="relative bg-slate-900 rounded-2xl overflow-hidden aspect-[4/3] flex items-center justify-center border border-slate-800 shadow-inner">
+                        <div class="relative bg-slate-950 rounded-2xl overflow-hidden aspect-[4/3] flex items-center justify-center border border-slate-800 shadow-inner">
                             <!-- Live Video Stream -->
                             <video id="camera-stream" autoplay playsinline muted class="w-full h-full object-cover"></video>
 
                             <!-- Oval Face Overlay Guide -->
                             <div id="camera-guide" class="absolute inset-0 pointer-events-none flex items-center justify-center">
-                                <div class="w-44 h-56 border-2 border-dashed border-white/70 rounded-[50%] shadow-2xl"></div>
-                                <div class="absolute bottom-3 text-center text-white/80 text-[11px] font-medium bg-black/40 px-3 py-1 rounded-full backdrop-blur-xs">
+                                <div class="w-44 h-56 border-2 border-dashed border-white/80 rounded-[50%] shadow-2xl"></div>
+                                <div class="absolute bottom-3 text-center text-white text-[11px] font-bold bg-slate-950/80 px-3 py-1 rounded-full backdrop-blur-xs">
                                     Posisikan wajah di dalam bingkai oval
                                 </div>
                             </div>
@@ -48,18 +48,18 @@
 
                     <!-- Camera Controls & Fallback -->
                     <div class="space-y-2.5 pt-2">
-                        <button type="button" id="btn-capture-selfie" class="button w-full flex items-center justify-center gap-2 text-xs font-bold bg-blue-700 hover:bg-blue-800 h-11">
+                        <button type="button" id="btn-capture-selfie" class="button w-full flex items-center justify-center gap-2 text-xs font-bold bg-slate-950 hover:bg-slate-800 text-white h-11 cursor-pointer">
                             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
                             <span>Ambil Foto Wajah</span>
                         </button>
 
-                        <button type="button" id="btn-retake-selfie" class="hidden button secondary w-full text-xs font-semibold h-10">
+                        <button type="button" id="btn-retake-selfie" class="hidden button secondary w-full text-xs font-bold h-10 cursor-pointer">
                             Ambil Ulang Foto
                         </button>
 
                         <!-- Fallback Upload Button -->
-                        <div class="pt-2 border-t border-slate-100 text-center">
-                            <label class="text-[11px] text-blue-600 hover:underline cursor-pointer">
+                        <div class="pt-2 border-t border-slate-200 text-center">
+                            <label class="text-[11px] text-slate-900 font-bold hover:underline cursor-pointer">
                                 <span>Bermasalah dengan kamera? Unggah berkas foto</span>
                                 <input type="file" id="fallback-selfie-file" name="selfie_file" accept="image/*" capture="user" class="hidden">
                             </label>
@@ -70,20 +70,20 @@
                 <!-- Step 2: Digital Signature Pad -->
                 <div class="panel p-6 flex flex-col justify-between space-y-4">
                     <div>
-                        <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                        <div class="flex items-center justify-between border-b border-slate-200 pb-3 mb-4">
                             <div class="flex items-center gap-2">
-                                <span class="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center">2</span>
-                                <h3 class="font-bold text-slate-800 text-sm">Tanda Tangan Digital</h3>
+                                <span class="w-6 h-6 rounded-full bg-slate-950 text-white font-bold text-xs flex items-center justify-center">2</span>
+                                <h3 class="font-bold text-slate-950 text-sm">Tanda Tangan Digital</h3>
                             </div>
-                            <span id="signature-status-badge" class="text-[11px] font-semibold text-slate-400">Belum Ditandatangani</span>
+                            <span id="signature-status-badge" class="text-[11px] font-bold text-slate-600">Belum Ditandatangani</span>
                         </div>
 
                         <!-- Canvas Signature Pad -->
-                        <div class="relative bg-slate-50 rounded-2xl border-2 border-dashed border-slate-300 aspect-[4/3] flex items-center justify-center overflow-hidden">
+                        <div class="relative bg-slate-50 rounded-2xl border-2 border-dashed border-slate-400 aspect-[4/3] flex items-center justify-center overflow-hidden">
                             <canvas id="signature-canvas" class="w-full h-full cursor-crosshair touch-none bg-white"></canvas>
 
-                            <div id="signature-placeholder" class="absolute pointer-events-none text-center text-slate-300 text-xs select-none">
-                                <svg class="mx-auto mb-1 opacity-50" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                            <div id="signature-placeholder" class="absolute pointer-events-none text-center text-slate-400 text-xs select-none font-medium">
+                                <svg class="mx-auto mb-1 opacity-60" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                                 Goreskan tanda tangan Anda di area ini
                             </div>
                         </div>
@@ -91,24 +91,24 @@
 
                     <!-- Signature Controls -->
                     <div class="space-y-2.5 pt-2">
-                        <button type="button" id="btn-clear-signature" class="button secondary w-full text-xs font-semibold h-11 flex items-center justify-center gap-2">
+                        <button type="button" id="btn-clear-signature" class="button secondary w-full text-xs font-bold h-11 flex items-center justify-center gap-2 cursor-pointer">
                             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                             <span>Bersihkan / Ulangi TTD</span>
                         </button>
-                        <p class="text-[11px] text-slate-400 text-center">Gunakan jari tangan pada layar sentuh atau mouse pada komputer.</p>
+                        <p class="text-[11px] text-slate-600 text-center font-medium">Gunakan jari tangan pada layar sentuh atau mouse pada komputer.</p>
                     </div>
                 </div>
             </div>
 
             <!-- Step 3: Confirmation and Submit -->
-            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div class="text-xs text-slate-500">
-                    <div class="font-bold text-slate-800">Pernyataan Kehadiran:</div>
-                    <p>Dengan menekan tombol di samping, saya menyatakan hadir secara sah pada agenda rapat kedinasan ini.</p>
+            <div class="bg-white p-6 rounded-2xl border border-slate-300 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div class="text-xs text-slate-700">
+                    <div class="font-bold text-slate-950 text-sm">Pernyataan Kehadiran:</div>
+                    <p class="font-medium">Dengan menekan tombol di samping, saya menyatakan hadir secara sah pada agenda rapat kedinasan ini.</p>
                 </div>
 
-                <button type="submit" id="btn-submit-attendance" class="button flex items-center justify-center gap-2 text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-8 h-12 shadow-md shrink-0">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                <button type="submit" id="btn-submit-attendance" class="button flex items-center justify-center gap-2 text-sm font-bold bg-emerald-700 hover:bg-emerald-800 text-white px-8 h-12 shadow-md shrink-0 cursor-pointer">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                     <span>Konfirmasi & Kirim Presensi</span>
                 </button>
             </div>
@@ -120,48 +120,48 @@
         <!-- Meeting Info Card -->
         <div class="panel p-5 space-y-3">
             <div class="flex items-center justify-between">
-                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-300">
-                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-300">
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse"></span>
                     Sesi Presensi Dibuka
                 </span>
-                <span class="text-[11px] font-mono uppercase text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{{ $agenda->tipe_rapat }}</span>
+                <span class="text-[11px] font-mono font-bold uppercase text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">{{ $agenda->tipe_rapat }}</span>
             </div>
 
-            <h3 class="font-bold text-slate-900 text-sm leading-snug">{{ $agenda->judul_rapat }}</h3>
+            <h3 class="font-bold text-slate-950 text-sm leading-snug">{{ $agenda->judul_rapat }}</h3>
 
-            <div class="space-y-2 text-xs text-slate-600 pt-2 border-t border-slate-100">
+            <div class="space-y-2 text-xs text-slate-800 pt-2 border-t border-slate-200 font-medium">
                 <div class="flex items-center gap-2">
-                    <svg class="text-slate-400 shrink-0" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    <span>{{ $agenda->waktu_mulai->translatedFormat('d M Y, H:i') }} - {{ $agenda->waktu_selesai->format('H:i') }} WIB</span>
+                    <svg class="text-slate-600 shrink-0" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span class="font-bold text-slate-900">{{ $agenda->waktu_mulai->translatedFormat('d M Y, H:i') }} - {{ $agenda->waktu_selesai->format('H:i') }} WIB</span>
                 </div>
 
                 <div class="flex items-center gap-2">
-                    <svg class="text-slate-400 shrink-0" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                    <svg class="text-slate-600 shrink-0" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
                     <span>{{ $agenda->lokasi_ruang ?? 'Daring / Ruang Virtual' }}</span>
                 </div>
 
                 <div class="flex items-center gap-2">
-                    <svg class="text-slate-400 shrink-0" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                    <span>Penyelenggara: {{ $agenda->creator->name }}</span>
+                    <svg class="text-slate-600 shrink-0" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                    <span>Penyelenggara: <b class="text-slate-950">{{ $agenda->creator->name }}</b></span>
                 </div>
             </div>
         </div>
 
         <!-- Verification Guide Card -->
         <div class="panel p-5 space-y-3">
-            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Ketentuan Presensi Sah</h4>
-            <ul class="text-xs text-slate-600 space-y-2 leading-relaxed">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700">Ketentuan Presensi Sah</h4>
+            <ul class="text-xs text-slate-800 space-y-2 leading-relaxed font-medium">
                 <li class="flex items-start gap-2">
-                    <span class="text-emerald-600 font-bold mt-0.5">&bull;</span>
-                    <span><strong>Selfie Wajah:</strong> Wajah tampak lurus menghadap kamera dan berada dalam bingkai oval panduan.</span>
+                    <span class="text-slate-900 font-bold mt-0.5">&bull;</span>
+                    <span><strong class="text-slate-950">Selfie Wajah:</strong> Wajah tampak lurus menghadap kamera dan berada dalam bingkai oval panduan.</span>
                 </li>
                 <li class="flex items-start gap-2">
-                    <span class="text-emerald-600 font-bold mt-0.5">&bull;</span>
-                    <span><strong>Tanda Tangan:</strong> Buat paraf atau tanda tangan asli Anda pada kotak canvas digital.</span>
+                    <span class="text-slate-900 font-bold mt-0.5">&bull;</span>
+                    <span><strong class="text-slate-950">Tanda Tangan:</strong> Buat paraf atau tanda tangan asli Anda pada kotak canvas digital.</span>
                 </li>
                 <li class="flex items-start gap-2">
-                    <span class="text-emerald-600 font-bold mt-0.5">&bull;</span>
-                    <span><strong>Integritas Data:</strong> Presensi tersimpan bersama stempel waktu (timestamp) dan alamat IP jaringan.</span>
+                    <span class="text-slate-900 font-bold mt-0.5">&bull;</span>
+                    <span><strong class="text-slate-950">Integritas Data:</strong> Presensi tersimpan bersama stempel waktu (timestamp) dan alamat IP jaringan.</span>
                 </li>
             </ul>
         </div>

@@ -10,7 +10,7 @@
 @section('content')
 <div class="space-y-5">
     <!-- Action Bar & Filters -->
-    <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+    <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-300 shadow-xs">
         <form method="GET" action="{{ route('admin.users.index') }}" class="flex flex-wrap items-center gap-2.5 flex-1">
             <!-- Search -->
             <div class="relative flex-1 min-w-[200px] max-w-xs">
@@ -19,14 +19,14 @@
                     name="search" 
                     value="{{ request('search') }}" 
                     placeholder="Cari nama, NIP, username..." 
-                    class="input w-full pl-9 text-xs"
+                    class="input w-full pl-9 text-xs font-medium"
                 >
-                <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
             </div>
 
             <!-- Unit Filter (Superadmin Only) -->
             @if($currentUser->isAdministrator())
-                <select name="unit_id" onchange="this.form.submit()" class="input text-xs w-48">
+                <select name="unit_id" onchange="this.form.submit()" class="input text-xs w-48 font-semibold">
                     <option value="">Semua Unit Kerja</option>
                     <option value="none" {{ request('unit_id') === 'none' ? 'selected' : '' }}>Tanpa Unit (Tingkat Lembaga)</option>
                     @foreach($units as $unit)
@@ -38,7 +38,7 @@
             @endif
 
             <!-- Role Filter -->
-            <select name="role" onchange="this.form.submit()" class="input text-xs w-36">
+            <select name="role" onchange="this.form.submit()" class="input text-xs w-36 font-semibold">
                 <option value="">Semua Peran</option>
                 @if($currentUser->isAdministrator())
                     <option value="administrator" {{ request('role') === 'administrator' ? 'selected' : '' }}>Administrator</option>
@@ -48,22 +48,22 @@
             </select>
 
             <!-- Status Filter -->
-            <select name="status" onchange="this.form.submit()" class="input text-xs w-32">
+            <select name="status" onchange="this.form.submit()" class="input text-xs w-32 font-semibold">
                 <option value="">Semua Status</option>
                 <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Aktif Saja</option>
                 <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Non-Aktif</option>
             </select>
 
             <div class="flex items-center gap-2">
-                <button type="submit" class="button small secondary text-xs">Filter</button>
+                <button type="submit" class="button small secondary text-xs font-bold">Filter</button>
                 @if(request()->hasAny(['search', 'unit_id', 'role', 'status']))
-                    <a href="{{ route('admin.users.index') }}" class="text-xs text-slate-500 hover:text-slate-800">Reset</a>
+                    <a href="{{ route('admin.users.index') }}" class="button small secondary text-xs font-bold">Reset</a>
                 @endif
             </div>
         </form>
 
-        <a href="{{ route('admin.users.create') }}" class="button small flex items-center gap-2 text-xs self-start xl:self-auto shrink-0">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <a href="{{ route('admin.users.create') }}" class="button small flex items-center gap-2 text-xs self-start xl:self-auto shrink-0 font-bold">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             <span>Tambah Pengguna</span>
         </a>
     </div>
@@ -85,54 +85,54 @@
                 </thead>
                 <tbody>
                     @forelse($users as $index => $userItem)
-                        <tr class="hover:bg-slate-50/60 transition">
-                            <td class="text-center text-xs text-slate-400 font-mono">{{ $users->firstItem() + $index }}</td>
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="text-center text-xs text-slate-900 font-mono font-bold">{{ $users->firstItem() + $index }}</td>
                             <td>
                                 <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-800 flex items-center justify-center font-bold text-xs shrink-0 border border-blue-200">
+                                    <div class="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs shrink-0">
                                         {{ substr($userItem->name, 0, 2) }}
                                     </div>
                                     <div>
                                         <div class="font-bold text-slate-900 text-sm">{{ $userItem->name }}</div>
-                                        <div class="text-[11px] text-slate-400">{{ $userItem->email }}</div>
+                                        <div class="text-[11px] text-slate-600 font-medium">{{ $userItem->email }}</div>
                                     </div>
                                 </div>
                             </td>
                             <td>
-                                <div class="font-mono text-xs text-slate-800 font-semibold">{{ $userItem->nip }}</div>
-                                <div class="text-[11px] font-mono text-slate-400">@<span>{{ $userItem->username }}</span></div>
+                                <div class="font-mono text-xs text-slate-950 font-bold">{{ $userItem->nip }}</div>
+                                <div class="text-[11px] font-mono text-slate-600 font-medium">@<span>{{ $userItem->username }}</span></div>
                             </td>
                             <td>
                                 @if($userItem->unit)
-                                    <span class="inline-flex items-center gap-1 font-semibold text-xs text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                                    <span class="inline-flex items-center gap-1 font-bold text-xs text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">
                                         {{ $userItem->unit->kode_unit }}
                                     </span>
                                 @else
-                                    <span class="text-xs text-slate-400 italic">Pusat / Lembaga</span>
+                                    <span class="text-xs text-slate-600 italic font-medium">Pusat / Lembaga</span>
                                 @endif
                             </td>
                             <td class="text-center">
                                 @if($userItem->isAdministrator())
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-900 text-white">
                                         Administrator
                                     </span>
                                 @elseif($userItem->isAdmin())
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-900 border border-slate-300">
                                         Admin Unit
                                     </span>
                                 @else
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
                                         Staff
                                     </span>
                                 @endif
                             </td>
                             <td class="text-center">
                                 @if($userItem->is_active)
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">
                                         Aktif
                                     </span>
                                 @else
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-500 border border-slate-200">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-800 border border-slate-300">
                                         Non-Aktif
                                     </span>
                                 @endif
@@ -154,7 +154,7 @@
                                             @method('PATCH')
                                             <button 
                                                 type="submit" 
-                                                class="action-btn text-xs {{ $userItem->is_active ? 'text-amber-600 hover:bg-amber-50' : 'text-emerald-600 hover:bg-emerald-50' }}"
+                                                class="action-btn text-xs font-bold {{ $userItem->is_active ? 'text-amber-800 hover:bg-amber-50' : 'text-emerald-800 hover:bg-emerald-50' }}"
                                                 title="{{ $userItem->is_active ? 'Non-aktifkan Akun' : 'Aktifkan Akun' }}"
                                             >
                                                 {{ $userItem->is_active ? 'Nonaktifkan' : 'Aktifkan' }}
@@ -198,8 +198,8 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="empty-search">
-                                Tidak ada data pengguna yang sesuai dengan filter pencarian.
+                            <td colspan="7" class="empty-search py-10">
+                                <p class="text-slate-700 font-bold text-xs">Tidak ada data pengguna yang sesuai dengan filter pencarian.</p>
                             </td>
                         </tr>
                     @endforelse

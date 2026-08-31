@@ -4,10 +4,11 @@
 
 @section('content')
 <div class="auth-split">
-    <!-- Left Hero / Brand Identity Section -->
+    <!-- Left Hero / Institutional Brand Identity Section (Gov-Tech Standard) -->
     <div class="auth-illustration">
-        <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center font-bold text-white tracking-wider">
+        <!-- Top Institutional Brand Header -->
+        <div class="flex items-center gap-3.5">
+            <div class="w-11 h-11 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center font-bold text-white shadow-sm shrink-0">
                 <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
                     <circle cx="9" cy="7" r="4"/>
@@ -16,94 +17,70 @@
                 </svg>
             </div>
             <div>
-                <h1 class="text-lg font-bold text-white tracking-wide">SIPERAPAT</h1>
-                <p class="text-xs text-blue-200">LLDIKTI Wilayah X</p>
+                <h1 class="text-base font-bold text-white tracking-wide">SIPERAPAT</h1>
+                <p class="text-xs text-blue-200/90 font-medium">LLDIKTI Wilayah X Kemendiktisaintek</p>
             </div>
         </div>
 
-        <!-- 3D Interactive Hero Scene -->
-        <div class="scene-3d my-auto" id="hero-3d-scene">
-            <!-- Orbital Gyroscope Background Rings -->
-            <div class="orbit-ring-1"></div>
-            <div class="orbit-ring-2"></div>
+        <!-- Center Value Proposition & Institutional Service Pillars -->
+        <div class="my-auto py-8 space-y-6 max-w-md">
+            <div class="space-y-2">
+                <h2 class="text-2xl sm:text-3xl font-bold text-white tracking-tight leading-tight">
+                    Pencatatan Kehadiran & Notulensi Rapat Terintegrasi
+                </h2>
+                <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                    Sistem digitalisasi presensi berbasis verifikasi wajah dan tanda tangan digital untuk seluruh unit kerja di lingkungan LLDIKTI Wilayah X.
+                </p>
+            </div>
 
-            <div class="card-3d-wrap" id="hero-3d-card">
-                <!-- Floating Node 1 (Top Left) -->
-                <div class="floating-node-1 bg-slate-900/90 backdrop-blur-md px-3 py-2 rounded-xl border border-blue-500/40 shadow-xl flex items-center gap-2">
-                    <div class="w-6 h-6 rounded-lg bg-blue-600/30 text-blue-400 flex items-center justify-center">
-                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+            <!-- Key Gov-Tech Service Capabilities -->
+            <div class="space-y-3 pt-2">
+                <div class="p-3.5 rounded-xl bg-slate-900/70 border border-slate-800 flex items-start gap-3 text-xs">
+                    <div class="w-8 h-8 rounded-lg bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                     </div>
                     <div>
-                        <div class="text-[9px] uppercase tracking-wider font-semibold text-slate-400">Verifikasi</div>
-                        <div class="text-[11px] font-bold text-white">Live WebRTC</div>
+                        <div class="font-bold text-white text-xs mb-0.5">Autentikasi Multi-Identifier</div>
+                        <div class="text-slate-400 text-[11px] leading-relaxed">Masuk cepat dan aman menggunakan NIP 18 Digit atau Username resmi terdaftar.</div>
                     </div>
                 </div>
 
-                <!-- Floating Node 2 (Bottom Right) -->
-                <div class="floating-node-2 bg-slate-900/90 backdrop-blur-md px-3 py-2 rounded-xl border border-emerald-500/40 shadow-xl flex items-center gap-2">
-                    <div class="w-6 h-6 rounded-lg bg-emerald-600/30 text-emerald-400 flex items-center justify-center">
-                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                <div class="p-3.5 rounded-xl bg-slate-900/70 border border-slate-800 flex items-start gap-3 text-xs">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
                     </div>
                     <div>
-                        <div class="text-[9px] uppercase tracking-wider font-semibold text-slate-400">Keabsahan</div>
-                        <div class="text-[11px] font-bold text-emerald-300">TTD Digital</div>
+                        <div class="font-bold text-white text-xs mb-0.5">Presensi Sah & Terverifikasi</div>
+                        <div class="text-slate-400 text-[11px] leading-relaxed">Perekaman foto selfie wajah dan tanda tangan digital dengan stempel waktu jaringan.</div>
                     </div>
                 </div>
 
-                <!-- Main Holographic Card Body -->
-                <div class="card-3d-main text-white">
-                    <div class="flex items-center justify-between border-b border-slate-700/80 pb-3 mb-4">
-                        <div class="flex items-center gap-2">
-                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                            <span class="text-xs font-semibold uppercase tracking-wider text-emerald-300">Presensi Kedinasan</span>
-                        </div>
-                        <span class="text-[10px] font-mono bg-blue-900/40 text-blue-300 px-2 py-0.5 rounded border border-blue-700/50">TERENKRIPSI</span>
+                <div class="p-3.5 rounded-xl bg-slate-900/70 border border-slate-800 flex items-start gap-3 text-xs">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                     </div>
-
-                    <div class="space-y-2 mb-4">
-                        <div class="text-[11px] text-slate-400 font-mono">AUTENTIKASI MULTI-IDENTIFIER</div>
-                        <h3 class="text-base font-bold text-white tracking-tight">SIPERAPAT LLDIKTI</h3>
-                        <p class="text-xs text-slate-300 leading-relaxed">
-                            Pencatatan kehadiran rapat kedinasan dengan verifikasi kamera selfie wajah dan tanda tangan digital terenkripsi.
-                        </p>
-                    </div>
-
-                    <!-- Security Grid Graphic Indicator -->
-                    <div class="p-3 bg-slate-950/60 rounded-xl border border-slate-800 flex items-center justify-between gap-3 text-xs">
-                        <div class="flex items-center gap-2.5">
-                            <div class="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                            </div>
-                            <div>
-                                <div class="font-bold text-white text-[11px]">NIP & Username</div>
-                                <div class="text-[10px] text-slate-400 font-mono">18-Digit Smart Guard</div>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-1">
-                            <span class="w-1 h-3 bg-blue-500 rounded-full"></span>
-                            <span class="w-1 h-5 bg-blue-400 rounded-full"></span>
-                            <span class="w-1 h-2 bg-blue-600 rounded-full"></span>
-                            <span class="w-1 h-4 bg-emerald-400 rounded-full"></span>
-                            <span class="w-1 h-3 bg-emerald-500 rounded-full"></span>
-                        </div>
+                    <div>
+                        <div class="font-bold text-white text-xs mb-0.5">Rekapitulasi Berita Acara Otomatis</div>
+                        <div class="text-slate-400 text-[11px] leading-relaxed">Ekspor daftar hadir dan notulensi rapat ke dalam format standar resmi (PDF & Word).</div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="auth-copy">
-            <div class="auth-stats">
-                <div class="auth-stat">
-                    <b>100%</b>
-                    <span>Nirkertas & Akurat</span>
+        <!-- Institutional Metrics Footer -->
+        <div class="pt-4 border-t border-slate-800">
+            <div class="grid grid-cols-3 gap-4 text-center">
+                <div>
+                    <div class="text-base font-bold text-white font-mono">100%</div>
+                    <div class="text-[10px] text-slate-400 uppercase tracking-wider">Nirkertas</div>
                 </div>
-                <div class="auth-stat">
-                    <b>Multi-ID</b>
-                    <span>NIP atau Username</span>
+                <div>
+                    <div class="text-base font-bold text-white font-mono">Real-Time</div>
+                    <div class="text-[10px] text-slate-400 uppercase tracking-wider">Rekapitulasi</div>
                 </div>
-                <div class="auth-stat">
-                    <b>Seketika</b>
-                    <span>Rekap & Laporan</span>
+                <div>
+                    <div class="text-base font-bold text-white font-mono">Multi-Unit</div>
+                    <div class="text-[10px] text-slate-400 uppercase tracking-wider">Terintegrasi</div>
                 </div>
             </div>
         </div>
@@ -161,15 +138,15 @@
             <!-- NIP or Username Input -->
             <div class="field">
                 <label for="login-input">NIP atau Username</label>
-                <input 
-                    id="login-input" 
-                    class="input @error('login') input-error @enderror" 
-                    type="text" 
-                    name="login" 
-                    value="{{ old('login') }}" 
-                    placeholder="Contoh: 198501152000031001 atau superadmin" 
-                    required 
-                    autocomplete="username" 
+                <input
+                    id="login-input"
+                    class="input @error('login') input-error @enderror"
+                    type="text"
+                    name="login"
+                    value="{{ old('login') }}"
+                    placeholder="Contoh: 198501152000031001 atau superadmin"
+                    required
+                    autocomplete="username"
                     autofocus
                 >
             </div>
@@ -181,13 +158,13 @@
                     <a href="#" class="auth-link text-xs" onclick="window.showModal({ title: 'Bantuan Kata Sandi', message: 'Fitur pemulihan kata sandi dapat dikonfigurasi melalui Administrator Unit Kepegawaian LLDIKTI Wilayah X atau sistem email kedinasan.', type: 'info' }); return false;">Lupa Kata Sandi?</a>
                 </div>
                 <div class="auth-password-wrap">
-                    <input 
-                        id="password-input" 
-                        class="input @error('password') input-error @enderror" 
-                        type="password" 
-                        name="password" 
-                        placeholder="••••••••••••" 
-                        required 
+                    <input
+                        id="password-input"
+                        class="input @error('password') input-error @enderror"
+                        type="password"
+                        name="password"
+                        placeholder="••••••••••••"
+                        required
                         autocomplete="current-password"
                     >
                     <button type="button" class="auth-password-toggle" data-toggle-password="password-input" aria-label="Tampilkan kata sandi" title="Tampilkan/Sembunyikan">
@@ -216,29 +193,8 @@
         </form>
 
         <div class="auth-footer">
-            &copy; {{ date('Y') }} LLDIKTI — Sistem Kehadiran Rapat Kedinasan Terintegrasi.
+            &copy; {{ date('Y') }} SIPERAPAT - Lembaga Layanan Pendidikan Tinggi (LLDIKTI) Wilayah X.
         </div>
     </div>
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    const scene = document.getElementById('hero-3d-scene');
-    const card = document.getElementById('hero-3d-card');
-    if (scene && card && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        scene.addEventListener('mousemove', (e) => {
-            const rect = scene.getBoundingClientRect();
-            const x = (e.clientX - rect.left) / rect.width - 0.5;
-            const y = (e.clientY - rect.top) / rect.height - 0.5;
-            card.style.animation = 'none';
-            card.style.transform = `rotateX(${-y * 20}deg) rotateY(${x * 20}deg) translateY(-4px)`;
-        });
-
-        scene.addEventListener('mouseleave', () => {
-            card.style.animation = '';
-            card.style.transform = '';
-        });
-    }
-});
-</script>
 @endsection

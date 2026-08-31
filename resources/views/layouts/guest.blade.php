@@ -92,11 +92,7 @@
     @elseif (session('warning'))
         <div id="flash-modal-data" data-type="warning" data-title="Pemberitahuan" data-message="{{ session('warning') }}" class="hidden"></div>
     @elseif ($errors->any())
-        @php
-            $escapedErrors = array_map(fn($err) => e($err), $errors->all());
-            $bulletErrors = '&bull; ' . implode('<br>&bull; ', $escapedErrors);
-        @endphp
-        <div id="flash-modal-data" data-type="warning" data-title="Kondisi Belum Terpenuhi" data-message="{{ $bulletErrors }}" class="hidden"></div>
+        <div id="flash-modal-data" data-type="warning" data-title="Kondisi Belum Terpenuhi" data-message="&bull; {{ implode('<br>&bull; ', array_map('e', $errors->all())) }}" class="hidden"></div>
     @endif
 
     <!-- Global Modal Structure -->

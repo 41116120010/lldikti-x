@@ -7,7 +7,7 @@
 @section('content')
 <div class="space-y-5">
     <!-- Action Bar & Filters -->
-    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-300 shadow-xs">
         <form method="GET" action="{{ route('admin.units.index') }}" class="flex flex-col sm:flex-row sm:items-center gap-3 flex-1">
             <!-- Search Input -->
             <div class="relative flex-1 min-w-[200px]">
@@ -16,28 +16,28 @@
                     name="search" 
                     value="{{ request('search') }}" 
                     placeholder="Cari nama atau kode unit..." 
-                    class="input w-full pl-9 text-xs"
+                    class="input w-full pl-9 text-xs font-medium"
                 >
-                <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
             </div>
 
             <!-- Status Filter -->
-            <select name="status" onchange="this.form.submit()" class="input text-xs sm:w-44">
+            <select name="status" onchange="this.form.submit()" class="input text-xs sm:w-44 font-semibold">
                 <option value="">Semua Status</option>
                 <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Aktif Saja</option>
                 <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Non-Aktif</option>
             </select>
 
             <div class="flex items-center gap-2">
-                <button type="submit" class="button small secondary text-xs font-semibold">Cari</button>
+                <button type="submit" class="button small secondary text-xs font-bold">Cari</button>
                 @if(request()->hasAny(['search', 'status']))
-                    <a href="{{ route('admin.units.index') }}" class="button small secondary text-xs">Reset</a>
+                    <a href="{{ route('admin.units.index') }}" class="button small secondary text-xs font-bold">Reset</a>
                 @endif
             </div>
         </form>
 
-        <a href="{{ route('admin.units.create') }}" class="button small flex items-center gap-2 text-xs self-start lg:self-auto shrink-0 font-semibold">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <a href="{{ route('admin.units.create') }}" class="button small flex items-center gap-2 text-xs self-start lg:self-auto shrink-0 font-bold">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             <span>Tambah Unit Kerja</span>
         </a>
     </div>
@@ -60,39 +60,39 @@
                 </thead>
                 <tbody>
                     @forelse($units as $index => $unit)
-                        <tr class="hover:bg-slate-50/60 transition">
-                            <td class="text-center text-xs text-slate-400 font-mono">{{ $units->firstItem() + $index }}</td>
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="text-center text-xs text-slate-900 font-mono font-bold">{{ $units->firstItem() + $index }}</td>
                             <td>
-                                <span class="font-mono font-bold text-xs px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-200">
+                                <span class="font-mono font-bold text-xs px-2.5 py-1 rounded-md bg-slate-100 text-slate-900 border border-slate-300">
                                     {{ $unit->kode_unit }}
                                 </span>
                             </td>
                             <td>
-                                <div class="font-bold text-slate-800 text-sm">{{ $unit->nama_unit }}</div>
-                                <div class="text-[11px] text-slate-400 font-mono">Dibuat: {{ $unit->created_at->format('d/m/Y') }}</div>
+                                <div class="font-bold text-slate-900 text-sm">{{ $unit->nama_unit }}</div>
+                                <div class="text-[11px] text-slate-600 font-mono font-medium">Dibuat: {{ $unit->created_at->format('d/m/Y') }}</div>
                             </td>
-                            <td class="max-w-xs text-xs text-slate-600 leading-relaxed">
+                            <td class="max-w-xs text-xs text-slate-800 leading-relaxed font-medium">
                                 {{ $unit->deskripsi ?? '-' }}
                             </td>
                             <td class="text-center">
-                                <span class="inline-flex items-center gap-1 font-bold text-xs text-slate-700 bg-slate-100 px-2.5 py-1 rounded-full">
+                                <span class="inline-flex items-center gap-1 font-bold text-xs text-slate-900 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200">
                                     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                                     {{ $unit->users_count }}
                                 </span>
                             </td>
                             <td class="text-center">
-                                <span class="inline-flex items-center gap-1 font-bold text-xs text-indigo-700 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-full">
+                                <span class="inline-flex items-center gap-1 font-bold text-xs text-slate-900 bg-slate-100 border border-slate-300 px-2.5 py-1 rounded-full">
                                     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
                                     {{ $unit->agendas_count }}
                                 </span>
                             </td>
                             <td class="text-center">
                                 @if($unit->is_active)
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">
                                         Aktif
                                     </span>
                                 @else
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-500 border border-slate-200">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-800 border border-slate-300">
                                         Non-Aktif
                                     </span>
                                 @endif
@@ -113,7 +113,7 @@
                                         @method('PATCH')
                                         <button 
                                             type="submit" 
-                                            class="action-btn text-xs {{ $unit->is_active ? 'text-amber-600 hover:bg-amber-50' : 'text-emerald-600 hover:bg-emerald-50' }}"
+                                            class="action-btn text-xs font-bold {{ $unit->is_active ? 'text-amber-800 hover:bg-amber-50' : 'text-emerald-800 hover:bg-emerald-50' }}"
                                             title="{{ $unit->is_active ? 'Non-aktifkan Unit' : 'Aktifkan Unit' }}"
                                         >
                                             {{ $unit->is_active ? 'Nonaktifkan' : 'Aktifkan' }}
@@ -158,9 +158,9 @@
                         <tr>
                             <td colspan="8" class="empty-search py-10">
                                 <div class="space-y-2 text-center">
-                                    <p class="text-slate-500 font-medium text-xs">Tidak ada data unit kerja yang sesuai dengan kriteria pencarian.</p>
+                                    <p class="text-slate-700 font-bold text-xs">Tidak ada data unit kerja yang sesuai dengan kriteria pencarian.</p>
                                     @if(request()->hasAny(['search', 'status']))
-                                        <a href="{{ route('admin.units.index') }}" class="button small secondary inline-flex text-xs">
+                                        <a href="{{ route('admin.units.index') }}" class="button small secondary inline-flex text-xs font-bold">
                                             Reset Pencarian & Filter
                                         </a>
                                     @endif

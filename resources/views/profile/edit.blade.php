@@ -9,15 +9,15 @@
     <!-- Left / Main Form Area (2 cols) -->
     <div class="lg:col-span-2 space-y-6">
         <!-- Card 1: Personal Profile Information -->
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-            <div class="p-5 sm:p-6 border-b border-slate-100 flex items-center justify-between">
+        <div class="bg-white rounded-2xl border border-slate-300 shadow-xs overflow-hidden">
+            <div class="p-5 sm:p-6 border-b border-slate-200 flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 border border-blue-100 flex items-center justify-center shrink-0">
+                    <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-900 border border-slate-300 flex items-center justify-center shrink-0">
                         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                     </div>
                     <div>
-                        <h2 class="text-sm sm:text-base font-bold text-slate-900">Informasi Data Diri</h2>
-                        <p class="text-xs text-slate-500">Perbarui nama lengkap, email kedinasan, dan nomor kontak aktif</p>
+                        <h2 class="text-sm sm:text-base font-bold text-slate-950">Informasi Data Diri</h2>
+                        <p class="text-xs text-slate-600 font-medium">Perbarui nama lengkap, email kedinasan, dan nomor kontak aktif</p>
                     </div>
                 </div>
             </div>
@@ -28,8 +28,8 @@
 
                 <!-- Nama Lengkap -->
                 <div class="field">
-                    <label for="name" class="text-xs font-semibold text-slate-700 block mb-1.5">
-                        Nama Lengkap <span class="text-rose-500">*</span>
+                    <label for="name" class="text-xs font-bold text-slate-900 block mb-1.5">
+                        Nama Lengkap <span class="text-rose-600">*</span>
                     </label>
                     <input 
                         type="text" 
@@ -37,18 +37,18 @@
                         name="name" 
                         value="{{ old('name', $user->name) }}" 
                         required 
-                        class="input w-full text-xs @error('name') border-rose-500 @enderror"
+                        class="input w-full text-xs font-medium @error('name') border-rose-500 @enderror"
                         placeholder="Masukkan nama lengkap beserta gelar..."
                     >
                     @error('name')
-                        <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
+                        <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <!-- Username & NIP (Read-Only Info) -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="field">
-                        <label for="username" class="text-xs font-semibold text-slate-500 block mb-1.5">
+                        <label for="username" class="text-xs font-bold text-slate-700 block mb-1.5">
                             Nama Pengguna (Username)
                         </label>
                         <div class="relative">
@@ -57,15 +57,15 @@
                                 id="username" 
                                 value="{{ $user->username }}" 
                                 disabled 
-                                class="input w-full text-xs bg-slate-100 text-slate-500 cursor-not-allowed font-mono pr-8"
+                                class="input w-full text-xs bg-slate-100 text-slate-900 cursor-not-allowed font-mono font-bold pr-8"
                             >
-                            <svg class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            <svg class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                         </div>
-                        <p class="text-[11px] text-slate-400 mt-1">Username ditetapkan oleh Administrator sistem.</p>
+                        <p class="text-[11px] text-slate-600 font-medium mt-1">Username ditetapkan oleh Administrator sistem.</p>
                     </div>
 
                     <div class="field">
-                        <label for="nip" class="text-xs font-semibold text-slate-500 block mb-1.5">
+                        <label for="nip" class="text-xs font-bold text-slate-700 block mb-1.5">
                             Nomor Induk Pegawai (NIP)
                         </label>
                         <div class="relative">
@@ -74,19 +74,19 @@
                                 id="nip" 
                                 value="{{ $user->nip ?? 'Tidak tercatat' }}" 
                                 disabled 
-                                class="input w-full text-xs bg-slate-100 text-slate-500 cursor-not-allowed font-mono pr-8"
+                                class="input w-full text-xs bg-slate-100 text-slate-900 cursor-not-allowed font-mono font-bold pr-8"
                             >
-                            <svg class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            <svg class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                         </div>
-                        <p class="text-[11px] text-slate-400 mt-1">Perubahan NIP hanya dapat dilakukan melalui Administrator.</p>
+                        <p class="text-[11px] text-slate-600 font-medium mt-1">Perubahan NIP hanya dapat dilakukan melalui Administrator.</p>
                     </div>
                 </div>
 
                 <!-- Email & Nomor Telepon -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="field">
-                        <label for="email" class="text-xs font-semibold text-slate-700 block mb-1.5">
-                            Alamat Email <span class="text-rose-500">*</span>
+                        <label for="email" class="text-xs font-bold text-slate-900 block mb-1.5">
+                            Alamat Email <span class="text-rose-600">*</span>
                         </label>
                         <input 
                             type="email" 
@@ -94,16 +94,16 @@
                             name="email" 
                             value="{{ old('email', $user->email) }}" 
                             required 
-                            class="input w-full text-xs @error('email') border-rose-500 @enderror"
+                            class="input w-full text-xs font-medium @error('email') border-rose-500 @enderror"
                             placeholder="nama@lldikti.kemdikbud.go.id"
                         >
                         @error('email')
-                            <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
+                            <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>
                         @enderror
                     </div>
 
                     <div class="field">
-                        <label for="phone" class="text-xs font-semibold text-slate-700 block mb-1.5">
+                        <label for="phone" class="text-xs font-bold text-slate-900 block mb-1.5">
                             Nomor Telepon / WhatsApp
                         </label>
                         <input 
@@ -111,18 +111,18 @@
                             id="phone" 
                             name="phone" 
                             value="{{ old('phone', $user->phone) }}" 
-                            class="input w-full text-xs font-mono @error('phone') border-rose-500 @enderror"
+                            class="input w-full text-xs font-mono font-medium @error('phone') border-rose-500 @enderror"
                             placeholder="081234567890"
                         >
                         @error('phone')
-                            <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
+                            <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>
                         @enderror
                     </div>
                 </div>
 
                 <!-- Unit Kerja (Read-Only) -->
                 <div class="field">
-                    <label for="unit_name" class="text-xs font-semibold text-slate-500 block mb-1.5">
+                    <label for="unit_name" class="text-xs font-bold text-slate-700 block mb-1.5">
                         Unit Kerja Organisasi
                     </label>
                     <div class="relative">
@@ -131,14 +131,14 @@
                             id="unit_name" 
                             value="{{ $user->unit ? ($user->unit->kode_unit . ' — ' . $user->unit->nama_unit) : 'Tingkat Lembaga (Tanpa Unit Kerja Terikat)' }}" 
                             disabled 
-                            class="input w-full text-xs bg-slate-100 text-slate-500 cursor-not-allowed pr-8"
+                            class="input w-full text-xs bg-slate-100 text-slate-900 cursor-not-allowed font-medium pr-8"
                         >
-                        <svg class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        <svg class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                     </div>
                 </div>
 
-                <div class="pt-3 border-t border-slate-100 flex items-center justify-end">
-                    <button type="submit" class="button small flex items-center gap-2 text-xs">
+                <div class="pt-3 border-t border-slate-200 flex items-center justify-end">
+                    <button type="submit" class="button small flex items-center gap-2 text-xs font-bold">
                         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                         <span>Simpan Perubahan Data Diri</span>
                     </button>
@@ -147,15 +147,15 @@
         </div>
 
         <!-- Card 2: Password Security Update -->
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-            <div class="p-5 sm:p-6 border-b border-slate-100 flex items-center justify-between">
+        <div class="bg-white rounded-2xl border border-slate-300 shadow-xs overflow-hidden">
+            <div class="p-5 sm:p-6 border-b border-slate-200 flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 border border-amber-100 flex items-center justify-center shrink-0">
+                    <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-900 border border-slate-300 flex items-center justify-center shrink-0">
                         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                     </div>
                     <div>
-                        <h2 class="text-sm sm:text-base font-bold text-slate-900">Perbarui Kata Sandi Akun</h2>
-                        <p class="text-xs text-slate-500">Pastikan menggunakan kombinasi kata sandi yang kuat dan aman</p>
+                        <h2 class="text-sm sm:text-base font-bold text-slate-950">Perbarui Kata Sandi Akun</h2>
+                        <p class="text-xs text-slate-600 font-medium">Pastikan menggunakan kombinasi kata sandi yang kuat dan aman</p>
                     </div>
                 </div>
             </div>
@@ -170,8 +170,8 @@
 
                 <!-- Kata Sandi Saat Ini -->
                 <div class="field">
-                    <label for="current_password" class="text-xs font-semibold text-slate-700 block mb-1.5">
-                        Kata Sandi Saat Ini <span class="text-rose-500">*</span>
+                    <label for="current_password" class="text-xs font-bold text-slate-900 block mb-1.5">
+                        Kata Sandi Saat Ini <span class="text-rose-600">*</span>
                     </label>
                     <div class="relative">
                         <input 
@@ -185,22 +185,22 @@
                         <button 
                             type="button" 
                             data-toggle-password="current_password" 
-                            class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                            class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-900 p-1 cursor-pointer"
                             aria-label="Tampilkan kata sandi"
                         >
                             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                         </button>
                     </div>
                     @error('current_password')
-                        <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
+                        <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <!-- Kata Sandi Baru & Konfirmasi -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="field">
-                        <label for="password" class="text-xs font-semibold text-slate-700 block mb-1.5">
-                            Kata Sandi Baru <span class="text-rose-500">*</span>
+                        <label for="password" class="text-xs font-bold text-slate-900 block mb-1.5">
+                            Kata Sandi Baru <span class="text-rose-600">*</span>
                         </label>
                         <div class="relative">
                             <input 
@@ -214,20 +214,20 @@
                             <button 
                                 type="button" 
                                 data-toggle-password="password" 
-                                class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                                class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-900 p-1 cursor-pointer"
                                 aria-label="Tampilkan kata sandi"
                             >
                                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                             </button>
                         </div>
                         @error('password')
-                            <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
+                            <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>
                         @enderror
                     </div>
 
                     <div class="field">
-                        <label for="password_confirmation" class="text-xs font-semibold text-slate-700 block mb-1.5">
-                            Konfirmasi Kata Sandi Baru <span class="text-rose-500">*</span>
+                        <label for="password_confirmation" class="text-xs font-bold text-slate-900 block mb-1.5">
+                            Konfirmasi Kata Sandi Baru <span class="text-rose-600">*</span>
                         </label>
                         <div class="relative">
                             <input 
@@ -241,7 +241,7 @@
                             <button 
                                 type="button" 
                                 data-toggle-password="password_confirmation" 
-                                class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                                class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-900 p-1 cursor-pointer"
                                 aria-label="Tampilkan kata sandi"
                             >
                                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -250,8 +250,8 @@
                     </div>
                 </div>
 
-                <div class="pt-3 border-t border-slate-100 flex items-center justify-end">
-                    <button type="submit" class="button small flex items-center gap-2 text-xs bg-amber-600 hover:bg-amber-700 text-white">
+                <div class="pt-3 border-t border-slate-200 flex items-center justify-end">
+                    <button type="submit" class="button small flex items-center gap-2 text-xs font-bold bg-slate-950 hover:bg-slate-800 text-white cursor-pointer">
                         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                         <span>Perbarui Kata Sandi</span>
                     </button>
@@ -264,59 +264,59 @@
     <div class="lg:col-span-1 space-y-6">
         <!-- Profile Summary Panel -->
         <div class="panel p-6 text-center space-y-4">
-            <div class="avatar bg-blue-700 text-white font-bold text-lg uppercase w-16 h-16 rounded-2xl mx-auto flex items-center justify-center shadow-md">
+            <div class="avatar bg-slate-950 text-white font-bold text-lg uppercase w-16 h-16 rounded-2xl mx-auto flex items-center justify-center shadow-md">
                 {{ substr($user->name, 0, 2) }}
             </div>
 
             <div>
-                <h3 class="text-sm font-bold text-slate-900">{{ $user->name }}</h3>
-                <p class="text-xs text-slate-500 font-mono">{{ $user->email }}</p>
+                <h3 class="text-sm font-extrabold text-slate-950">{{ $user->name }}</h3>
+                <p class="text-xs text-slate-600 font-mono font-medium">{{ $user->email }}</p>
             </div>
 
-            <div class="pt-3 border-t border-slate-100 space-y-2.5 text-xs text-left">
+            <div class="pt-3 border-t border-slate-200 space-y-2.5 text-xs text-left">
                 <div class="flex items-center justify-between">
-                    <span class="text-slate-400">Hak Akses:</span>
+                    <span class="text-slate-600 font-bold">Hak Akses:</span>
                     @if($user->isAdministrator())
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-900 text-white">
                             Administrator
                         </span>
                     @elseif($user->isAdmin())
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-900 border border-slate-300">
                             Admin Unit
                         </span>
                     @else
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-900 border border-slate-300">
                             Pegawai Unit
                         </span>
                     @endif
                 </div>
 
                 <div class="flex items-center justify-between">
-                    <span class="text-slate-400">Status Akun:</span>
+                    <span class="text-slate-600 font-bold">Status Akun:</span>
                     <span class="status completed font-bold">Aktif</span>
                 </div>
 
                 @if($user->nip)
                     <div class="flex items-center justify-between">
-                        <span class="text-slate-400">Nomor Induk:</span>
-                        <span class="font-mono font-semibold text-slate-800">{{ $user->nip }}</span>
+                        <span class="text-slate-600 font-bold">Nomor Induk:</span>
+                        <span class="font-mono font-bold text-slate-950">{{ $user->nip }}</span>
                     </div>
                 @endif
 
                 <div class="flex items-center justify-between">
-                    <span class="text-slate-400">Terdaftar Sejak:</span>
-                    <span class="text-slate-700 font-medium">{{ $user->created_at->translatedFormat('d F Y') }}</span>
+                    <span class="text-slate-600 font-bold">Terdaftar Sejak:</span>
+                    <span class="text-slate-900 font-bold">{{ $user->created_at->translatedFormat('d F Y') }}</span>
                 </div>
             </div>
         </div>
 
         <!-- Security Guide Panel -->
         <div class="panel p-5 space-y-3">
-            <div class="flex items-center gap-2 text-slate-900 font-bold text-xs">
-                <svg class="text-blue-600" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <div class="flex items-center gap-2 text-slate-950 font-bold text-xs">
+                <svg class="text-slate-900" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                 <span>Ketentuan Keamanan Akun</span>
             </div>
-            <ul class="text-xs text-slate-500 space-y-2 list-disc list-inside leading-relaxed">
+            <ul class="text-xs text-slate-700 space-y-2 list-disc list-inside leading-relaxed font-medium">
                 <li>Gunakan kata sandi unik yang tidak digunakan pada layanan lain.</li>
                 <li>Kata sandi minimal terdiri dari 8 karakter dengan kombinasi huruf dan angka.</li>
                 <li>Setiap pembaruan profil atau kata sandi akan otomatis tercatat pada log audit sistem.</li>
