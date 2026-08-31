@@ -8,6 +8,7 @@ use App\Models\Unit;
 use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
@@ -61,15 +62,19 @@ class UnitController extends Controller
         $validated = $request->validated();
         $validated['is_active'] = $request->boolean('is_active', true);
 
-        $unit = Unit::create($validated);
+        $unit = DB::transaction(function () use ($validated) {
+            $unit = Unit::create($validated);
 
-        ActivityLogger::log(
-            type: 'CREATE_UNIT',
-            description: "Unit kerja baru '{$unit->nama_unit}' ({$unit->kode_unit}) berhasil ditambahkan.",
-            targetModel: Unit::class,
-            targetId: $unit->id,
-            properties: $unit->toArray()
-        );
+            ActivityLogger::log(
+                type: 'CREATE_UNIT',
+                description: "Unit kerja baru '{$unit->nama_unit}' ({$unit->kode_unit}) berhasil ditambahkan.",
+                targetModel: Unit::class,
+                targetId: $unit->id,
+                properties: $unit->toArray()
+            );
+
+            return $unit;
+        });
 
         return redirect()->route('admin.units.index')
             ->with('success', "Unit kerja '{$unit->nama_unit}' berhasil ditambahkan.");
@@ -94,15 +99,17 @@ class UnitController extends Controller
         $validated = $request->validated();
         $validated['is_active'] = $request->boolean('is_active', true);
 
-        $unit->update($validated);
+        DB::transaction(function () use ($unit, $validated, $oldData) {
+            $unit->update($validated);
 
-        ActivityLogger::log(
-            type: 'UPDATE_UNIT',
-            description: "Data unit kerja '{$unit->nama_unit}' ({$unit->kode_unit}) diperbarui.",
-            targetModel: Unit::class,
-            targetId: $unit->id,
-            properties: ['old' => $oldData, 'new' => $unit->toArray()]
-        );
+            ActivityLogger::log(
+                type: 'UPDATE_UNIT',
+                description: "Data unit kerja '{$unit->nama_unit}' ({$unit->kode_unit}) diperbarui.",
+                targetModel: Unit::class,
+                targetId: $unit->id,
+                properties: ['old' => $oldData, 'new' => $unit->toArray()]
+            );
+        });
 
         return redirect()->route('admin.units.index')
             ->with('success', "Unit kerja '{$unit->nama_unit}' berhasil diperbarui.");
@@ -121,14 +128,17 @@ class UnitController extends Controller
 
         $namaUnit = $unit->nama_unit;
         $unitId = $unit->id;
-        $unit->delete();
 
-        ActivityLogger::log(
-            type: 'DELETE_UNIT',
-            description: "Unit kerja '{$namaUnit}' (ID: {$unitId}) dihapus.",
-            targetModel: Unit::class,
-            targetId: $unitId
-        );
+        DB::transaction(function () use ($unit, $namaUnit, $unitId) {
+            $unit->delete();
+
+            ActivityLogger::log(
+                type: 'DELETE_UNIT',
+                description: "Unit kerja '{$namaUnit}' (ID: {$unitId}) dihapus.",
+                targetModel: Unit::class,
+                targetId: $unitId
+            );
+        });
 
         return redirect()->route('admin.units.index')
             ->with('success', "Unit kerja '{$namaUnit}' berhasil dihapus.");
@@ -141,18 +151,22 @@ class UnitController extends Controller
     {
         Gate::authorize('update', $unit);
 
-        $unit->is_active = !$unit->is_active;
-        $unit->save();
+        $statusLabel = DB::transaction(function () use ($unit) {
+            $unit->is_active = !$unit->is_active;
+            $unit->save();
 
-        $statusLabel = $unit->is_active ? 'diaktifkan' : 'dinonaktifkan';
+            $label = $unit->is_active ? 'diaktifkan' : 'dinonaktifkan';
 
-        ActivityLogger::log(
-            type: 'TOGGLE_UNIT_STATUS',
-            description: "Status unit kerja '{$unit->nama_unit}' diubah menjadi {$statusLabel}.",
-            targetModel: Unit::class,
-            targetId: $unit->id,
-            properties: ['is_active' => $unit->is_active]
-        );
+            ActivityLogger::log(
+                type: 'TOGGLE_UNIT_STATUS',
+                description: "Status unit kerja '{$unit->nama_unit}' diubah menjadi {$label}.",
+                targetModel: Unit::class,
+                targetId: $unit->id,
+                properties: ['is_active' => $unit->is_active]
+            );
+
+            return $label;
+        });
 
         return back()->with('success', "Unit kerja '{$unit->nama_unit}' berhasil {$statusLabel}.");
     }

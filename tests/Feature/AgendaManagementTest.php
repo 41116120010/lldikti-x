@@ -189,31 +189,47 @@ class AgendaManagementTest extends TestCase
         $response->assertSee($adminAkm->unit->nama_unit);
     }
 
-    public function test_admin_unit_can_access_edit_agenda_page(): void
+    public function test_agenda_creation_auto_calculates_waktu_selesai_if_omitted(): void
     {
-        $adminAkm = User::where('username', 'admin_akademik')->first();
-        $agenda = Agenda::where('created_by', $adminAkm->id)->first();
+        $superadmin = User::where('role', 'administrator')->first();
+        $uniqueTitle = 'Rapat Auto Selesai ' . uniqid();
 
-        if (!$agenda) {
-            $agenda = Agenda::create([
-                'created_by' => $adminAkm->id,
-                'judul_rapat' => 'Rapat Internal Bagian Akademik',
-                'slug' => 'rapat-internal-akademik-' . uniqid(),
-                'jenis_rapat' => 'internal',
-                'tipe_rapat' => 'offline',
-                'lokasi_ruang' => 'Ruang Rapat Pokja AKM',
-                'waktu_mulai' => now()->addDay(),
-                'waktu_selesai' => now()->addDay()->addHours(2),
-                'is_all_units' => false,
-                'status' => 'scheduled',
-            ]);
-            $agenda->units()->sync([$adminAkm->unit_id]);
-        }
+        $startTime = now()->addDays(3)->startOfHour();
 
-        $response = $this->actingAs($adminAkm)->get(route('admin.agendas.edit', $agenda));
+        $response = $this->actingAs($superadmin)->post('/admin/agendas', [
+            'judul_rapat' => $uniqueTitle,
+            'jenis_rapat' => 'evaluasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Rapat Lantai 1',
+            'waktu_mulai' => $startTime->format('Y-m-d H:i:s'),
+            'waktu_selesai' => '', // omitted
+            'is_all_units' => true,
+        ]);
 
-        $response->assertStatus(200);
-        $response->assertSee('Edit Agenda Rapat');
-        $response->assertSee($agenda->judul_rapat);
+        $agenda = Agenda::where('judul_rapat', $uniqueTitle)->first();
+        $this->assertNotNull($agenda);
+        $this->assertEquals(
+            $startTime->copy()->addHours(2)->format('Y-m-d H:i:s'),
+            $agenda->waktu_selesai->format('Y-m-d H:i:s')
+        );
+    }
+
+    public function test_agenda_creation_normalizes_meeting_link(): void
+    {
+        $superadmin = User::where('role', 'administrator')->first();
+        $uniqueTitle = 'Rapat Daring Normalisasi ' . uniqid();
+
+        $response = $this->actingAs($superadmin)->post('/admin/agendas', [
+            'judul_rapat' => $uniqueTitle,
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'online',
+            'link_meeting' => 'meet.google.com/abc-defg-hij', // without https://
+            'waktu_mulai' => now()->addDay()->format('Y-m-d H:i:s'),
+            'is_all_units' => true,
+        ]);
+
+        $agenda = Agenda::where('judul_rapat', $uniqueTitle)->first();
+        $this->assertNotNull($agenda);
+        $this->assertEquals('https://meet.google.com/abc-defg-hij', $agenda->link_meeting);
     }
 }

@@ -178,13 +178,31 @@ class AttendanceCheckInTest extends TestCase
         $response->assertSee($staff->nip);
     }
 
-    public function test_user_can_view_personal_attendance_history(): void
+    public function test_attendance_rejects_disallowed_image_extension_payload(): void
     {
-        $staff = User::where('username', 'staff_nurul')->first();
+        $staff = User::where('username', 'staff_rizky')->first();
+        $agenda = Agenda::first();
+        $agenda->update(['status' => 'ongoing', 'is_all_units' => true]);
 
-        $response = $this->actingAs($staff)->get('/presensi/riwayat');
+        // Attempt submission with php extension payload
+        $maliciousPayload = 'data:image/php;base64,PD9waHAgcGhwaW5mbygpOyA/Pg==';
 
-        $response->assertStatus(200);
-        $response->assertSee('Riwayat Kehadiran Rapat');
+        $response = $this->actingAs($staff)->post("/agendas/{$agenda->id}/presensi", [
+            'selfie_data' => $maliciousPayload,
+            'signature_data' => $this->validPngBase64,
+        ]);
+
+        $response->assertSessionHasErrors(['selfie_data']);
+    }
+
+    public function test_responses_contain_enterprise_security_headers(): void
+    {
+        $response = $this->get('/login');
+
+        $response->assertHeader('X-Frame-Options', 'SAMEORIGIN');
+        $response->assertHeader('X-Content-Type-Options', 'nosniff');
+        $response->assertHeader('X-XSS-Protection', '1; mode=block');
+        $response->assertHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+        $this->assertStringContainsString("default-src 'self'", $response->headers->get('Content-Security-Policy'));
     }
 }

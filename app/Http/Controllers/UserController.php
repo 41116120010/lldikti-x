@@ -10,6 +10,7 @@ use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
@@ -29,29 +30,6 @@ class UserController extends Controller
         // Scoping: Admin Unit is restricted to their own unit only
         if ($currentUser->isAdmin()) {
             $query->where('unit_id', $currentUser->unit_id);
-        } elseif ($currentUser->isAdministrator()) {
-            // Superadmin can filter by unit
-            if ($unitFilter = $request->input('unit_id')) {
-                if ($unitFilter === 'none') {
-                    $query->whereNull('unit_id');
-                } else {
-                    $query->where('unit_id', $unitFilter);
-                }
-            }
-        }
-
-        // Role Filter
-        if ($roleFilter = $request->input('role')) {
-            $query->where('role', $roleFilter);
-        }
-
-        // Status Filter
-        if ($status = $request->input('status')) {
-            if ($status === 'active') {
-                $query->where('is_active', true);
-            } elseif ($status === 'inactive') {
-                $query->where('is_active', false);
-            }
         }
 
         // Search by Name, NIP, Username, or Email
@@ -62,6 +40,26 @@ class UserController extends Controller
                   ->orWhere('username', 'like', "%{$search}%")
                   ->orWhere('email', 'like', "%{$search}%");
             });
+        }
+
+        if ($unitId = $request->input('unit_id')) {
+            if ($currentUser->isAdministrator()) {
+                $query->where('unit_id', $unitId);
+            }
+        }
+
+        // Role Filter
+        if ($role = $request->input('role')) {
+            $query->where('role', $role);
+        }
+
+        // Status Filter
+        if ($status = $request->input('status')) {
+            if ($status === 'active') {
+                $query->where('is_active', true);
+            } elseif ($status === 'inactive') {
+                $query->where('is_active', false);
+            }
         }
 
         $users = $query->orderBy('name', 'asc')->paginate(10)->withQueryString();
@@ -104,15 +102,19 @@ class UserController extends Controller
         $validated['password'] = Hash::make($validated['password']);
         $validated['is_active'] = $request->boolean('is_active', true);
 
-        $user = User::create($validated);
+        $user = DB::transaction(function () use ($validated) {
+            $user = User::create($validated);
 
-        ActivityLogger::log(
-            type: 'CREATE_USER',
-            description: "Pengguna baru '{$user->name}' (NIP: {$user->nip}, Role: {$user->role}) berhasil didaftarkan.",
-            targetModel: User::class,
-            targetId: $user->id,
-            properties: $user->only(['name', 'nip', 'username', 'email', 'role', 'unit_id', 'is_active'])
-        );
+            ActivityLogger::log(
+                type: 'CREATE_USER',
+                description: "Pengguna baru '{$user->name}' (NIP: {$user->nip}, Role: {$user->role}) berhasil didaftarkan.",
+                targetModel: User::class,
+                targetId: $user->id,
+                properties: $user->only(['name', 'nip', 'username', 'email', 'role', 'unit_id', 'is_active'])
+            );
+
+            return $user;
+        });
 
         return redirect()->route('admin.users.index')
             ->with('success', "Pengguna '{$user->name}' berhasil ditambahkan.");
@@ -138,6 +140,8 @@ class UserController extends Controller
      */
     public function update(UpdateUserRequest $request, User $user): RedirectResponse
     {
+        Gate::authorize('update', $user);
+
         $currentUser = Auth::user();
         $oldData = $user->only(['name', 'nip', 'username', 'email', 'role', 'unit_id', 'is_active', 'phone']);
         $validated = $request->validated();
@@ -152,22 +156,21 @@ class UserController extends Controller
         // Scoping for Admin Unit
         if ($currentUser->isAdmin()) {
             $validated['unit_id'] = $currentUser->unit_id;
-            if ($user->isAdministrator()) {
-                abort(403, 'Anda tidak memiliki hak akses mengubah akun Administrator.');
-            }
         }
 
         $validated['is_active'] = $request->boolean('is_active', true);
 
-        $user->update($validated);
+        DB::transaction(function () use ($user, $validated, $oldData) {
+            $user->update($validated);
 
-        ActivityLogger::log(
-            type: 'UPDATE_USER',
-            description: "Data pengguna '{$user->name}' (NIP: {$user->nip}) diperbarui.",
-            targetModel: User::class,
-            targetId: $user->id,
-            properties: ['old' => $oldData, 'new' => $user->only(array_keys($oldData))]
-        );
+            ActivityLogger::log(
+                type: 'UPDATE_USER',
+                description: "Data pengguna '{$user->name}' (NIP: {$user->nip}) diperbarui.",
+                targetModel: User::class,
+                targetId: $user->id,
+                properties: ['old' => $oldData, 'new' => $user->only(array_keys($oldData))]
+            );
+        });
 
         return redirect()->route('admin.users.index')
             ->with('success', "Data pengguna '{$user->name}' berhasil diperbarui.");
@@ -188,14 +191,17 @@ class UserController extends Controller
         $name = $user->name;
         $nip = $user->nip;
         $userId = $user->id;
-        $user->delete();
 
-        ActivityLogger::log(
-            type: 'DELETE_USER',
-            description: "Pengguna '{$name}' (NIP: {$nip}, ID: {$userId}) dihapus dari sistem.",
-            targetModel: User::class,
-            targetId: $userId
-        );
+        DB::transaction(function () use ($user, $name, $nip, $userId) {
+            $user->delete();
+
+            ActivityLogger::log(
+                type: 'DELETE_USER',
+                description: "Pengguna '{$name}' (NIP: {$nip}, ID: {$userId}) dihapus dari sistem.",
+                targetModel: User::class,
+                targetId: $userId
+            );
+        });
 
         return redirect()->route('admin.users.index')
             ->with('success', "Pengguna '{$name}' berhasil dihapus.");
@@ -212,18 +218,22 @@ class UserController extends Controller
             return back()->with('error', 'Anda tidak dapat menonaktifkan akun Anda sendiri.');
         }
 
-        $user->is_active = !$user->is_active;
-        $user->save();
+        $statusLabel = DB::transaction(function () use ($user) {
+            $user->is_active = !$user->is_active;
+            $user->save();
 
-        $statusLabel = $user->is_active ? 'diaktifkan' : 'dinonaktifkan';
+            $label = $user->is_active ? 'diaktifkan' : 'dinonaktifkan';
 
-        ActivityLogger::log(
-            type: 'TOGGLE_USER_STATUS',
-            description: "Akun pengguna '{$user->name}' {$statusLabel}.",
-            targetModel: User::class,
-            targetId: $user->id,
-            properties: ['is_active' => $user->is_active]
-        );
+            ActivityLogger::log(
+                type: 'TOGGLE_USER_STATUS',
+                description: "Akun pengguna '{$user->name}' {$label}.",
+                targetModel: User::class,
+                targetId: $user->id,
+                properties: ['is_active' => $user->is_active]
+            );
+
+            return $label;
+        });
 
         return back()->with('success', "Akun '{$user->name}' berhasil {$statusLabel}.");
     }

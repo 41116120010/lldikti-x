@@ -188,7 +188,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Only trigger modal on the first invalid field
             const firstInvalid = form.querySelector(':invalid');
             if (e.target === firstInvalid) {
-                const label = form.querySelector(`label[for="${e.target.id}"]`)?.textContent || e.target.getAttribute('placeholder') || e.target.name || 'Kolom isian';
+                let label = form.querySelector(`label[for="${e.target.id}"]`)?.textContent || e.target.getAttribute('placeholder') || e.target.name || 'Kolom isian';
+                label = label.replace(/[\*•]/g, '').trim();
+
                 window.showModal({
                     title: 'Kondisi Belum Terpenuhi',
                     message: `Mohon lengkapi data wajib pada formulir: <strong>${label}</strong> sebelum menyimpan data.`,

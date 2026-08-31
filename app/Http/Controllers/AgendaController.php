@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Agenda\StoreAgendaRequest;
 use App\Http\Requests\Agenda\UpdateAgendaRequest;
+use App\Http\Requests\Agenda\UpdateAgendaStatusRequest;
 use App\Http\Requests\Agenda\UpdateMinutesRequest;
 use App\Models\Agenda;
 use App\Models\AgendaDocumentation;
@@ -88,6 +89,10 @@ class AgendaController extends Controller
 
         $agenda = DB::transaction(function () use ($request, $validated, $user) {
             $isAllUnits = $request->boolean('is_all_units', true);
+            $waktuMulai = $validated['waktu_mulai'];
+            $waktuSelesai = !empty($validated['waktu_selesai']) 
+                ? $validated['waktu_selesai'] 
+                : \Carbon\Carbon::parse($waktuMulai)->addHours(2)->toDateTimeString();
 
             $agendaData = [
                 'created_by' => $user->id,
@@ -97,10 +102,10 @@ class AgendaController extends Controller
                 'tipe_rapat' => $validated['tipe_rapat'],
                 'lokasi_ruang' => $validated['lokasi_ruang'] ?? null,
                 'link_meeting' => $validated['link_meeting'] ?? null,
-                'waktu_mulai' => $validated['waktu_mulai'],
-                'waktu_selesai' => $validated['waktu_selesai'],
+                'waktu_mulai' => $waktuMulai,
+                'waktu_selesai' => $waktuSelesai,
                 'is_all_units' => $isAllUnits,
-                'status' => 'scheduled',
+                'status' => $validated['status'] ?? 'scheduled',
             ];
 
             if ($request->hasFile('surat_edaran')) {
@@ -184,6 +189,10 @@ class AgendaController extends Controller
 
         DB::transaction(function () use ($request, $validated, $agenda, $oldData) {
             $isAllUnits = $request->boolean('is_all_units', true);
+            $waktuMulai = $validated['waktu_mulai'];
+            $waktuSelesai = !empty($validated['waktu_selesai']) 
+                ? $validated['waktu_selesai'] 
+                : \Carbon\Carbon::parse($waktuMulai)->addHours(2)->toDateTimeString();
 
             $updateData = [
                 'judul_rapat' => $validated['judul_rapat'],
@@ -191,8 +200,8 @@ class AgendaController extends Controller
                 'tipe_rapat' => $validated['tipe_rapat'],
                 'lokasi_ruang' => $validated['lokasi_ruang'] ?? null,
                 'link_meeting' => $validated['link_meeting'] ?? null,
-                'waktu_mulai' => $validated['waktu_mulai'],
-                'waktu_selesai' => $validated['waktu_selesai'],
+                'waktu_mulai' => $waktuMulai,
+                'waktu_selesai' => $waktuSelesai,
                 'is_all_units' => $isAllUnits,
                 'status' => $validated['status'] ?? $agenda->status,
             ];
@@ -270,17 +279,12 @@ class AgendaController extends Controller
     /**
      * Update status of the agenda (e.g. start meeting, complete meeting).
      */
-    public function updateStatus(Request $request, Agenda $agenda): RedirectResponse
+    public function updateStatus(UpdateAgendaStatusRequest $request, Agenda $agenda): RedirectResponse
     {
         Gate::authorize('manageStatus', $agenda);
 
-        $request->validate([
-            'status' => ['required', 'string', 'in:draft,scheduled,ongoing,completed,cancelled'],
-        ]);
-
-        $newStatus = $request->input('status');
-        $agenda->status = $newStatus;
-        $agenda->save();
+        $validated = $request->validated();
+        $newStatus = $validated['status'];
 
         $statusLabels = [
             'draft' => 'Draft',
@@ -292,13 +296,18 @@ class AgendaController extends Controller
 
         $statusText = $statusLabels[$newStatus] ?? $newStatus;
 
-        ActivityLogger::log(
-            type: 'UPDATE_AGENDA_STATUS',
-            description: "Status agenda rapat '{$agenda->judul_rapat}' diubah menjadi {$statusText}.",
-            targetModel: Agenda::class,
-            targetId: $agenda->id,
-            properties: ['status' => $newStatus]
-        );
+        DB::transaction(function () use ($agenda, $newStatus, $statusText) {
+            $agenda->status = $newStatus;
+            $agenda->save();
+
+            ActivityLogger::log(
+                type: 'UPDATE_AGENDA_STATUS',
+                description: "Status agenda rapat '{$agenda->judul_rapat}' diubah menjadi {$statusText}.",
+                targetModel: Agenda::class,
+                targetId: $agenda->id,
+                properties: ['status' => $newStatus]
+            );
+        });
 
         return back()->with('success', "Status agenda rapat berhasil diubah menjadi {$statusText}.");
     }
@@ -367,18 +376,20 @@ class AgendaController extends Controller
             abort(404);
         }
 
-        if (Storage::disk('public')->exists($documentation->file_path)) {
-            Storage::disk('public')->delete($documentation->file_path);
-        }
+        DB::transaction(function () use ($agenda, $documentation) {
+            if (Storage::disk('public')->exists($documentation->file_path)) {
+                Storage::disk('public')->delete($documentation->file_path);
+            }
 
-        $documentation->delete();
+            $documentation->delete();
 
-        ActivityLogger::log(
-            type: 'DELETE_AGENDA_DOCUMENTATION',
-            description: "Foto dokumentasi pada agenda rapat '{$agenda->judul_rapat}' dihapus.",
-            targetModel: AgendaDocumentation::class,
-            targetId: $documentation->id
-        );
+            ActivityLogger::log(
+                type: 'DELETE_AGENDA_DOCUMENTATION',
+                description: "Foto dokumentasi pada agenda rapat '{$agenda->judul_rapat}' dihapus.",
+                targetModel: AgendaDocumentation::class,
+                targetId: $documentation->id
+            );
+        });
 
         return back()->with('success', "Foto dokumentasi berhasil dihapus.");
     }

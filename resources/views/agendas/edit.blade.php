@@ -69,7 +69,7 @@
                 <!-- Ruangan & Tautan Link -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div class="field" id="wrap-lokasi">
-                        <label for="lokasi_ruang">Lokasi / Nama Ruang Rapat</label>
+                        <label for="lokasi_ruang">Lokasi / Nama Ruang Rapat <span id="req-lokasi" class="text-rose-500">*</span></label>
                         <input 
                             type="text" 
                             id="lokasi_ruang" 
@@ -84,14 +84,14 @@
                     </div>
 
                     <div class="field" id="wrap-link">
-                        <label for="link_meeting">Tautan Daring (Zoom / GMeet)</label>
+                        <label for="link_meeting">Tautan Daring (Zoom / GMeet) <span id="req-link" class="text-rose-500 hidden">*</span></label>
                         <input 
-                            type="url" 
+                            type="text" 
                             id="link_meeting" 
                             name="link_meeting" 
                             value="{{ old('link_meeting', $agenda->link_meeting) }}" 
-                            class="input w-full @error('link_meeting') input-error @enderror" 
-                            placeholder="https://zoom.us/j/..."
+                            class="input w-full font-mono text-xs @error('link_meeting') input-error @enderror" 
+                            placeholder="https://zoom.us/j/... atau meet.google.com/..."
                         >
                         @error('link_meeting')
                             <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
@@ -117,15 +117,15 @@
                     </div>
 
                     <div class="field">
-                        <label for="waktu_selesai">Waktu Selesai <span class="text-rose-500">*</span></label>
+                        <label for="waktu_selesai">Waktu Selesai (Opsional)</label>
                         <input 
                             type="datetime-local" 
                             id="waktu_selesai" 
                             name="waktu_selesai" 
-                            value="{{ old('waktu_selesai', $agenda->waktu_selesai->format('Y-m-d\TH:i')) }}" 
-                            class="input w-full @error('waktu_selesai') input-error @enderror" 
-                            required
+                            value="{{ old('waktu_selesai', $agenda->waktu_selesai ? $agenda->waktu_selesai->format('Y-m-d\TH:i') : '') }}" 
+                            class="input w-full @error('waktu_selesai') input-error @enderror"
                         >
+                        <p class="text-[11px] text-slate-400 mt-1">Kosongkan jika rapat berlangsung hingga selesai.</p>
                         @error('waktu_selesai')
                             <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
                         @enderror
@@ -201,18 +201,15 @@
                 <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400">3. Berkas Surat Edaran / Undangan Rapat</h3>
 
                 @if($agenda->surat_edaran_path)
-                    <div class="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between gap-3 text-xs">
-                        <div class="flex items-center gap-2 text-blue-900">
+                    <div class="p-3.5 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between gap-3 text-xs">
+                        <div class="flex items-center gap-2.5 text-blue-950">
                             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                            <span class="font-semibold">Berkas Surat Edaran Terlampir</span>
+                            <span>Surat edaran resmi saat ini terlampir</span>
                         </div>
-                        <a href="{{ Storage::disk('public')->url($agenda->surat_edaran_path) }}" target="_blank" class="font-bold text-blue-700 underline hover:text-blue-900">
-                    <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
-                        <div class="flex items-center gap-2 text-slate-700">
-                            <svg class="text-blue-600" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
-                            <span>Surat edaran saat ini terlampir</span>
-                        </div>
-                        <a href="{{ Storage::disk('public')->url($agenda->surat_edaran_path) }}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline font-semibold">Lihat Berkas &rarr;</a>
+                        <a href="{{ Storage::disk('public')->url($agenda->surat_edaran_path) }}" target="_blank" rel="noopener noreferrer" class="button small secondary text-xs flex items-center gap-1.5">
+                            <span>Lihat Dokumen</span>
+                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+                        </a>
                     </div>
                 @endif
 
@@ -232,8 +229,8 @@
                 </div>
             </div>
 
-            <!-- Status Rapat -->
-            <div class="pt-4 border-t border-slate-100 flex items-center justify-between">
+            <!-- Status Rapat & Action Buttons -->
+            <div class="pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <label for="status" class="text-xs font-bold text-slate-700 block mb-1">Status Siklus Agenda</label>
                     <select id="status" name="status" class="input text-xs">
@@ -266,7 +263,7 @@
             <div class="space-y-2 text-xs text-slate-300">
                 <div>Total Presensi Tercatat: <strong class="text-white">{{ $agenda->attendances()->count() }} orang</strong></div>
                 <div>Dokumentasi Foto: <strong class="text-white">{{ $agenda->documentations()->count() }} berkas</strong></div>
-                <div>Notulensi: <strong class="{{ $agenda->notulen ? 'text-emerald-400' : 'text-slate-400' }}">{{ $agenda->notulen ? 'Tersedia' : 'Belum Diisi' }}</strong></div>
+                <div>Notulensi: <strong class="{{ $agenda->notulensi ? 'text-emerald-400' : 'text-slate-400' }}">{{ $agenda->notulensi ? 'Tersedia' : 'Belum Diisi' }}</strong></div>
                 <div class="pt-2 border-t border-slate-800 text-[11px] text-slate-400">Dibuat oleh: {{ $agenda->creator?->name ?? 'Sistem' }}</div>
             </div>
         </div>
@@ -282,29 +279,43 @@
 function toggleFormatFields(format) {
     const wrapLokasi = document.getElementById('wrap-lokasi');
     const wrapLink = document.getElementById('wrap-link');
+    const reqLokasi = document.getElementById('req-lokasi');
+    const reqLink = document.getElementById('req-link');
+
     if (format === 'offline') {
         wrapLokasi.style.display = 'block';
         wrapLink.style.display = 'none';
+        if (reqLokasi) reqLokasi.classList.remove('hidden');
+        if (reqLink) reqLink.classList.add('hidden');
     } else if (format === 'online') {
         wrapLokasi.style.display = 'none';
         wrapLink.style.display = 'block';
+        if (reqLokasi) reqLokasi.classList.add('hidden');
+        if (reqLink) reqLink.classList.remove('hidden');
     } else {
         wrapLokasi.style.display = 'block';
         wrapLink.style.display = 'block';
+        if (reqLokasi) reqLokasi.classList.remove('hidden');
+        if (reqLink) reqLink.classList.remove('hidden');
     }
 }
 
 function toggleUnitList(show) {
     const wrap = document.getElementById('unit-selection-wrap');
-    if (show) {
-        wrap.classList.remove('hidden');
-    } else {
-        wrap.classList.add('hidden');
+    if (wrap) {
+        if (show) {
+            wrap.classList.remove('hidden');
+        } else {
+            wrap.classList.add('hidden');
+        }
     }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    toggleFormatFields(document.getElementById('tipe_rapat').value);
+    const tipeRapat = document.getElementById('tipe_rapat');
+    if (tipeRapat) {
+        toggleFormatFields(tipeRapat.value);
+    }
 });
 </script>
 @endsection

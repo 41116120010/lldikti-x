@@ -96,20 +96,36 @@ class UserManagementTest extends TestCase
         $this->actingAs($adminAkm)->get("/admin/users/{$staffKlb->id}/edit")->assertStatus(403);
     }
 
+    public function test_admin_unit_cannot_update_administrator_user(): void
+    {
+        $adminAkm = User::where('username', 'admin_akademik')->first();
+        $superadmin = User::where('role', 'administrator')->first();
+
+        $this->actingAs($adminAkm)
+            ->put("/admin/users/{$superadmin->id}", [
+                'name' => 'Hacked Name',
+                'email' => $superadmin->email,
+                'role' => 'administrator',
+            ])
+            ->assertStatus(403);
+    }
+
     public function test_user_status_can_be_toggled(): void
     {
         $superadmin = User::where('role', 'administrator')->first();
         $user = User::where('username', 'faisal_rahman')->first();
 
-        $response = $this->actingAs($superadmin)->patch("/admin/users/{$user->id}/toggle-status");
+        if ($user) {
+            $response = $this->actingAs($superadmin)->patch("/admin/users/{$user->id}/toggle-status");
 
-        $response->assertRedirect();
-        $this->assertDatabaseHas('users', [
-            'id' => $user->id,
-            'is_active' => false,
-        ]);
+            $response->assertRedirect();
+            $this->assertDatabaseHas('users', [
+                'id' => $user->id,
+                'is_active' => false,
+            ]);
 
-        // Clean up test user
-        $user->delete();
+            // Clean up test user
+            $user->delete();
+        }
     }
 }

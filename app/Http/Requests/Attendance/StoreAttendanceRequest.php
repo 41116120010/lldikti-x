@@ -16,9 +16,9 @@ class StoreAttendanceRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'selfie_data' => ['required_without:selfie_file', 'nullable', 'string'],
+            'selfie_data' => ['required_without:selfie_file', 'nullable', 'string', 'regex:/^data:image\/(jpeg|jpg|png|webp);base64,/i'],
             'selfie_file' => ['required_without:selfie_data', 'nullable', 'file', 'mimes:jpeg,jpg,png,webp', 'max:1024'],
-            'signature_data' => ['required_without:signature_file', 'nullable', 'string'],
+            'signature_data' => ['required_without:signature_file', 'nullable', 'string', 'regex:/^data:image\/(png|jpeg|jpg|webp);base64,/i'],
             'signature_file' => ['required_without:signature_data', 'nullable', 'file', 'mimes:png,jpg,jpeg,webp', 'max:512'],
         ];
     }

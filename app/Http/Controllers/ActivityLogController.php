@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
 class ActivityLogController extends Controller
@@ -15,12 +16,9 @@ class ActivityLogController extends Controller
      */
     public function index(Request $request): View
     {
+        Gate::authorize('viewAny', ActivityLog::class);
+
         $currentUser = Auth::user();
-
-        if (!$currentUser->isAdministrator()) {
-            abort(403, 'Akses ditolak. Hanya Administrator yang dapat melihat log aktivitas.');
-        }
-
         $query = ActivityLog::with('user.unit')->latest('id');
 
         // Filter by Activity Type

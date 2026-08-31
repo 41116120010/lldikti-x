@@ -13,6 +13,17 @@ class UpdateAgendaRequest extends FormRequest
         return $this->user()?->can('update', $agenda) ?? false;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('link_meeting') && filled($this->input('link_meeting'))) {
+            $link = trim($this->input('link_meeting'));
+            if (!preg_match('~^(?:f|ht)tps?://~i', $link)) {
+                $link = 'https://' . $link;
+            }
+            $this->merge(['link_meeting' => $link]);
+        }
+    }
+
     public function rules(): array
     {
         return [
@@ -22,7 +33,7 @@ class UpdateAgendaRequest extends FormRequest
             'lokasi_ruang' => ['nullable', 'string', 'max:150', Rule::requiredIf(fn () => in_array($this->input('tipe_rapat'), ['offline', 'hybrid']))],
             'link_meeting' => ['nullable', 'string', 'max:500', Rule::requiredIf(fn () => in_array($this->input('tipe_rapat'), ['online', 'hybrid']))],
             'waktu_mulai' => ['required', 'date'],
-            'waktu_selesai' => ['required', 'date', 'after:waktu_mulai'],
+            'waktu_selesai' => ['nullable', 'date', 'after:waktu_mulai'],
             'is_all_units' => ['nullable', 'boolean'],
             'unit_ids' => ['nullable', 'array', Rule::requiredIf(fn () => !$this->boolean('is_all_units', true))],
             'unit_ids.*' => ['exists:units,id'],

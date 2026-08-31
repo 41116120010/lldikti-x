@@ -95,14 +95,14 @@
             <div class="auth-stats">
                 <div class="auth-stat">
                     <b>100%</b>
-                    <span>Paperless & Akurat</span>
+                    <span>Nirkertas & Akurat</span>
                 </div>
                 <div class="auth-stat">
                     <b>Multi-ID</b>
                     <span>NIP atau Username</span>
                 </div>
                 <div class="auth-stat">
-                    <b>Realtime</b>
+                    <b>Seketika</b>
                     <span>Rekap & Laporan</span>
                 </div>
             </div>

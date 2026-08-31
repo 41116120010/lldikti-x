@@ -301,6 +301,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let hasDrawn = false;
 
     function resizeSigCanvas() {
+        const existingData = sigDataInput.value;
         const rect = sigCanvas.getBoundingClientRect();
         const dpr = window.devicePixelRatio || 1;
         sigCanvas.width = rect.width * dpr;
@@ -310,6 +311,14 @@ document.addEventListener('DOMContentLoaded', () => {
         sCtx.lineCap = 'round';
         sCtx.lineJoin = 'round';
         sCtx.strokeStyle = '#0f172a'; // Deep Navy Ink
+
+        if (existingData) {
+            const img = new Image();
+            img.onload = () => {
+                sCtx.drawImage(img, 0, 0, rect.width, rect.height);
+            };
+            img.src = existingData;
+        }
     }
 
     window.addEventListener('resize', resizeSigCanvas);

@@ -2,11 +2,13 @@
 
 @section('title', 'Buat Agenda Rapat')
 @section('heading', 'Buat Agenda Rapat Baru')
-@section('subtitle', 'Jadwalkan pertemuan, tentukan target peserta, dan lampirkan surat edaran')
+@section('subtitle', 'Jadwalkan pertemuan kedinasan, tentukan sasaran unit kerja, dan lampirkan surat edaran')
 
 @section('content')
 @php
     $currentUser = $currentUser ?? Auth::user();
+    $defaultMulai = date('Y-m-d\TH:i', strtotime('+1 hour'));
+    $defaultSelesai = date('Y-m-d\TH:i', strtotime('+3 hours'));
 @endphp
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <!-- Main Form Panel (2 Cols) -->
@@ -15,7 +17,7 @@
             @csrf
 
             <div class="space-y-5">
-                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-2">1. Informasi Utama Rapat</h3>
+                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-2">1. Informasi Utama Pertemuan</h3>
 
                 <!-- Judul Rapat -->
                 <div class="field">
@@ -40,41 +42,74 @@
                     <div class="field">
                         <label for="jenis_rapat">Jenis Pertemuan <span class="text-rose-500">*</span></label>
                         <select id="jenis_rapat" name="jenis_rapat" class="input w-full @error('jenis_rapat') input-error @enderror" required>
-                            <option value="koordinasi" {{ old('jenis_rapat') === 'koordinasi' ? 'selected' : '' }}>Rapat Koordinasi</option>
+                            <option value="koordinasi" {{ old('jenis_rapat', 'koordinasi') === 'koordinasi' ? 'selected' : '' }}>Rapat Koordinasi</option>
                             <option value="pleno" {{ old('jenis_rapat') === 'pleno' ? 'selected' : '' }}>Rapat Pleno</option>
-                            <option value="sosialisasi" {{ old('jenis_rapat') === 'sosialisasi' ? 'selected' : '' }}>Sosialisasi / Bimtek</option>
-                            <option value="evaluasi" {{ old('jenis_rapat') === 'evaluasi' ? 'selected' : '' }}>Rapat Evaluasi</option>
-                            <option value="lainnya" {{ old('jenis_rapat') === 'lainnya' ? 'selected' : '' }}>Lain-lain</option>
+                            <option value="evaluasi" {{ old('jenis_rapat') === 'evaluasi' ? 'selected' : '' }}>Rapat Evaluasi & Monev</option>
+                            <option value="konsinyasi" {{ old('jenis_rapat') === 'konsinyasi' ? 'selected' : '' }}>Konsinyasi / FGD</option>
+                            <option value="terbatas" {{ old('jenis_rapat') === 'terbatas' ? 'selected' : '' }}>Rapat Terbatas / Pimpinan</option>
+                            <option value="lainnya" {{ old('jenis_rapat') === 'lainnya' ? 'selected' : '' }}>Pertemuan Lainnya</option>
                         </select>
                         @error('jenis_rapat')
                             <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
                         @enderror
                     </div>
 
-                    <!-- Tanggal Pelaksanaan -->
+                    <!-- Format Penyelenggaraan -->
                     <div class="field">
-                        <label for="tanggal_rapat">Tanggal Pelaksanaan <span class="text-rose-500">*</span></label>
+                        <label for="tipe_rapat">Format Pelaksanaan <span class="text-rose-500">*</span></label>
+                        <select id="tipe_rapat" name="tipe_rapat" class="input w-full @error('tipe_rapat') input-error @enderror" onchange="toggleFormatFields(this.value)" required>
+                            <option value="offline" {{ old('tipe_rapat', 'offline') === 'offline' ? 'selected' : '' }}>Tatap Muka (Luring di Kantor)</option>
+                            <option value="online" {{ old('tipe_rapat') === 'online' ? 'selected' : '' }}>Daring (Pertemuan Virtual)</option>
+                            <option value="hybrid" {{ old('tipe_rapat') === 'hybrid' ? 'selected' : '' }}>Hibrida (Luring & Daring)</option>
+                        </select>
+                        @error('tipe_rapat')
+                            <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
+                        @enderror
+                    </div>
+                </div>
+
+                <!-- Lokasi Ruang & Tautan Daring -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div class="field" id="wrap-lokasi">
+                        <label for="lokasi_ruang">Lokasi / Nama Ruang Rapat <span id="req-lokasi" class="text-rose-500">*</span></label>
                         <input 
-                            type="date" 
-                            id="tanggal_rapat" 
-                            name="tanggal_rapat" 
-                            value="{{ old('tanggal_rapat', date('Y-m-d')) }}" 
-                            class="input w-full @error('tanggal_rapat') input-error @enderror" 
-                            required
+                            type="text" 
+                            id="lokasi_ruang" 
+                            name="lokasi_ruang" 
+                            value="{{ old('lokasi_ruang') }}" 
+                            class="input w-full @error('lokasi_ruang') input-error @enderror" 
+                            placeholder="Contoh: Ruang Sidang Utama Lantai 2"
                         >
-                        @error('tanggal_rapat')
+                        @error('lokasi_ruang')
                             <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
                         @enderror
                     </div>
 
-                    <!-- Waktu Mulai -->
+                    <div class="field" id="wrap-link">
+                        <label for="link_meeting">Tautan Daring (Zoom / GMeet) <span id="req-link" class="text-rose-500 hidden">*</span></label>
+                        <input 
+                            type="text" 
+                            id="link_meeting" 
+                            name="link_meeting" 
+                            value="{{ old('link_meeting') }}" 
+                            class="input w-full font-mono text-xs @error('link_meeting') input-error @enderror" 
+                            placeholder="https://zoom.us/j/... atau meet.google.com/..."
+                        >
+                        @error('link_meeting')
+                            <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
+                        @enderror
+                    </div>
+                </div>
+
+                <!-- Waktu Pelaksanaan -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div class="field">
                         <label for="waktu_mulai">Waktu Mulai <span class="text-rose-500">*</span></label>
                         <input 
-                            type="time" 
+                            type="datetime-local" 
                             id="waktu_mulai" 
                             name="waktu_mulai" 
-                            value="{{ old('waktu_mulai', '09:00') }}" 
+                            value="{{ old('waktu_mulai', $defaultMulai) }}" 
                             class="input w-full @error('waktu_mulai') input-error @enderror" 
                             required
                         >
@@ -83,14 +118,13 @@
                         @enderror
                     </div>
 
-                    <!-- Waktu Selesai -->
                     <div class="field">
                         <label for="waktu_selesai">Waktu Selesai (Opsional)</label>
                         <input 
-                            type="time" 
+                            type="datetime-local" 
                             id="waktu_selesai" 
                             name="waktu_selesai" 
-                            value="{{ old('waktu_selesai') }}" 
+                            value="{{ old('waktu_selesai', $defaultSelesai) }}" 
                             class="input w-full @error('waktu_selesai') input-error @enderror"
                         >
                         <p class="text-[11px] text-slate-400 mt-1">Kosongkan jika rapat berlangsung hingga selesai.</p>
@@ -99,90 +133,43 @@
                         @enderror
                     </div>
                 </div>
-
-                <!-- Deskripsi Rapat -->
-                <div class="field">
-                    <label for="deskripsi">Uraian / Ringkasan Pembahasan Rapat</label>
-                    <textarea 
-                        id="deskripsi" 
-                        name="deskripsi" 
-                        rows="3" 
-                        class="input w-full p-3 @error('deskripsi') input-error @enderror" 
-                        placeholder="Uraikan poin pokok agenda pertemuan kedinasan..."
-                    >{{ old('deskripsi') }}</textarea>
-                    @error('deskripsi')
-                        <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
-                    @enderror
-                </div>
             </div>
 
-            <!-- 2. Format & Lokasi Pertemuan -->
-            <div class="space-y-5 pt-4 border-t border-slate-100">
-                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-2">2. Format & Lokasi Pertemuan</h3>
-
-                <!-- Format Rapat -->
-                <div class="field">
-                    <label for="tipe_rapat">Format Pelaksanaan <span class="text-rose-500">*</span></label>
-                    <select id="tipe_rapat" name="tipe_rapat" class="input w-full @error('tipe_rapat') input-error @enderror" onchange="toggleFormatFields(this.value)" required>
-                        <option value="offline" {{ old('tipe_rapat') === 'offline' ? 'selected' : '' }}>Tatap Muka (Luring di Kantor)</option>
-                        <option value="online" {{ old('tipe_rapat') === 'online' ? 'selected' : '' }}>Daring (Pertemuan Virtual)</option>
-                        <option value="hybrid" {{ old('tipe_rapat', 'hybrid') === 'hybrid' ? 'selected' : '' }}>Hibrida (Luring & Daring)</option>
-                    </select>
-                    @error('tipe_rapat')
-                        <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <!-- Ruangan Fisik -->
-                <div class="field" id="wrap-lokasi">
-                    <label for="lokasi">Ruang Rapat Fisik / Tempat Pelaksanaan</label>
-                    <input 
-                        type="text" 
-                        id="lokasi" 
-                        name="lokasi" 
-                        value="{{ old('lokasi') }}" 
-                        class="input w-full @error('lokasi') input-error @enderror" 
-                        placeholder="Contoh: Ruang Sidang Utama Lantai 2 Gedung LLDIKTI X"
-                    >
-                    @error('lokasi')
-                        <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <!-- Tautan Rapat Daring -->
-                <div class="field" id="wrap-link">
-                    <label for="link_meeting">Tautan Pertemuan Virtual (Zoom / Google Meet)</label>
-                    <input 
-                        type="url" 
-                        id="link_meeting" 
-                        name="link_meeting" 
-                        value="{{ old('link_meeting') }}" 
-                        class="input w-full font-mono text-xs @error('link_meeting') input-error @enderror" 
-                        placeholder="https://zoom.us/j/... atau https://meet.google.com/..."
-                    >
-                    @error('link_meeting')
-                        <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
-                    @enderror
-                </div>
-            </div>
-
-            <!-- 3. Target Peserta & Scoping Unit -->
-            <div class="space-y-5 pt-4 border-t border-slate-100">
-                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-2">3. Sasaran Peserta & Scoping Unit</h3>
+            <!-- 2. Target Peserta & Scoping Unit -->
+            <div class="space-y-4 pt-4 border-t border-slate-100">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400">2. Sasaran Peserta & Unit Kerja</h3>
 
                 @if($currentUser->isAdministrator())
                     <div class="space-y-3">
-                        <label class="text-xs font-semibold text-slate-700 block">Cakupan Kehadiran Pegawai <span class="text-rose-500">*</span></label>
-                        <div class="flex items-center gap-6">
-                            <label class="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-700">
-                                <input type="radio" name="is_all_units" value="1" {{ old('is_all_units', '1') === '1' ? 'checked' : '' }} onchange="toggleUnitList(false)" class="accent-blue-600">
-                                <span>Seluruh Unit LLDIKTI (Terbuka untuk Semua Pegawai)</span>
-                            </label>
-                            <label class="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-700">
-                                <input type="radio" name="is_all_units" value="0" {{ old('is_all_units') === '0' ? 'checked' : '' }} onchange="toggleUnitList(true)" class="accent-blue-600">
-                                <span>Unit Khusus Tertentu</span>
-                            </label>
-                        </div>
+                        <label class="flex items-center gap-3 p-3.5 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-blue-50/50 transition">
+                            <input 
+                                type="radio" 
+                                name="is_all_units" 
+                                value="1" 
+                                {{ old('is_all_units', '1') == '1' ? 'checked' : '' }} 
+                                onchange="toggleUnitList(false)"
+                                class="w-4 h-4 accent-blue-600"
+                            >
+                            <div>
+                                <span class="font-bold text-slate-900 text-xs block">Terbuka untuk Seluruh Unit Kerja (Pleno / Universal)</span>
+                                <span class="text-[11px] text-slate-500">Seluruh pegawai dari semua bagian/Pokja LLDIKTI berhak mengikuti rapat.</span>
+                            </div>
+                        </label>
+
+                        <label class="flex items-center gap-3 p-3.5 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-blue-50/50 transition">
+                            <input 
+                                type="radio" 
+                                name="is_all_units" 
+                                value="0" 
+                                {{ old('is_all_units') === '0' ? 'checked' : '' }} 
+                                onchange="toggleUnitList(true)"
+                                class="w-4 h-4 accent-blue-600"
+                            >
+                            <div>
+                                <span class="font-bold text-slate-900 text-xs block">Terbatas untuk Unit Kerja Tertentu</span>
+                                <span class="text-[11px] text-slate-500">Hanya pegawai dari unit kerja terpilih yang dapat mengisi presensi.</span>
+                            </div>
+                        </label>
                     </div>
 
                     <!-- Checklist Unit Kerja -->
@@ -217,9 +204,9 @@
                 @endif
             </div>
 
-            <!-- 4. Berkas Surat Edaran -->
-            <div class="space-y-5 pt-4 border-t border-slate-100">
-                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-2">4. Lampiran Surat Undangan / Edaran Resmi</h3>
+            <!-- 3. Berkas Surat Edaran -->
+            <div class="space-y-4 pt-4 border-t border-slate-100">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400">3. Surat Undangan / Edaran Resmi</h3>
 
                 <div class="field">
                     <label for="surat_edaran">Unggah Dokumen Undangan Resmi (PDF / Gambar)</label>
@@ -237,12 +224,12 @@
                 </div>
             </div>
 
-            <!-- Status Rapat Awal -->
-            <div class="pt-4 border-t border-slate-100 flex items-center justify-between">
+            <!-- Status Rapat & Action Buttons -->
+            <div class="pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <label for="status" class="text-xs font-bold text-slate-700 block mb-1">Status Publikasi Awal</label>
                     <select id="status" name="status" class="input text-xs">
-                        <option value="scheduled" {{ old('status') === 'scheduled' ? 'selected' : '' }}>Terjadwal (Langsung Aktif)</option>
+                        <option value="scheduled" {{ old('status', 'scheduled') === 'scheduled' ? 'selected' : '' }}>Terjadwal (Langsung Aktif)</option>
                         <option value="draft" {{ old('status') === 'draft' ? 'selected' : '' }}>Konsep (Simpan Sementara)</option>
                     </select>
                 </div>
@@ -292,29 +279,43 @@
 function toggleFormatFields(format) {
     const wrapLokasi = document.getElementById('wrap-lokasi');
     const wrapLink = document.getElementById('wrap-link');
+    const reqLokasi = document.getElementById('req-lokasi');
+    const reqLink = document.getElementById('req-link');
+
     if (format === 'offline') {
         wrapLokasi.style.display = 'block';
         wrapLink.style.display = 'none';
+        if (reqLokasi) reqLokasi.classList.remove('hidden');
+        if (reqLink) reqLink.classList.add('hidden');
     } else if (format === 'online') {
         wrapLokasi.style.display = 'none';
         wrapLink.style.display = 'block';
+        if (reqLokasi) reqLokasi.classList.add('hidden');
+        if (reqLink) reqLink.classList.remove('hidden');
     } else {
         wrapLokasi.style.display = 'block';
         wrapLink.style.display = 'block';
+        if (reqLokasi) reqLokasi.classList.remove('hidden');
+        if (reqLink) reqLink.classList.remove('hidden');
     }
 }
 
 function toggleUnitList(show) {
     const wrap = document.getElementById('unit-selection-wrap');
-    if (show) {
-        wrap.classList.remove('hidden');
-    } else {
-        wrap.classList.add('hidden');
+    if (wrap) {
+        if (show) {
+            wrap.classList.remove('hidden');
+        } else {
+            wrap.classList.add('hidden');
+        }
     }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    toggleFormatFields(document.getElementById('tipe_rapat').value);
+    const tipeRapat = document.getElementById('tipe_rapat');
+    if (tipeRapat) {
+        toggleFormatFields(tipeRapat.value);
+    }
 });
 </script>
 @endsection

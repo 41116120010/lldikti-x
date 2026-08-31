@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
 
@@ -45,19 +46,21 @@ class ProfileController extends Controller
             $isPasswordChanged = true;
         }
 
-        $user->update($updateData);
+        DB::transaction(function () use ($user, $updateData, $isPasswordChanged) {
+            $user->update($updateData);
 
-        // Activity log audit trail
-        $description = $isPasswordChanged
-            ? "Pengguna {$user->name} memperbarui profil dan kata sandi akun"
-            : "Pengguna {$user->name} memperbarui informasi profil akun";
+            // Activity log audit trail
+            $description = $isPasswordChanged
+                ? "Pengguna {$user->name} memperbarui profil dan kata sandi akun"
+                : "Pengguna {$user->name} memperbarui informasi profil akun";
 
-        ActivityLogger::log(
-            'update_profile',
-            $description,
-            User::class,
-            $user->id
-        );
+            ActivityLogger::log(
+                type: 'UPDATE_PROFILE',
+                description: $description,
+                targetModel: User::class,
+                targetId: $user->id
+            );
+        });
 
         return redirect()->route('profile.edit')->with('success', 'Profil akun Anda berhasil diperbarui.');
     }
