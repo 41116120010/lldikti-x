@@ -48,45 +48,45 @@
             <table>
                 <thead>
                     <tr>
-                        <th class="w-16 text-center">No</th>
-                        <th>Kode Unit</th>
-                        <th>Nama Unit Kerja</th>
+                        <th class="w-12 text-center whitespace-nowrap">No</th>
+                        <th class="whitespace-nowrap min-w-[130px]">Kode Unit</th>
+                        <th class="min-w-[240px]">Nama Unit Kerja</th>
                         <th>Deskripsi</th>
-                        <th class="text-center">Jumlah Pegawai</th>
-                        <th class="text-center">Agenda Rapat</th>
-                        <th class="text-center">Status</th>
-                        <th class="text-right">Aksi</th>
+                        <th class="text-center whitespace-nowrap">Jumlah Pegawai</th>
+                        <th class="text-center whitespace-nowrap">Agenda Rapat</th>
+                        <th class="text-center whitespace-nowrap">Status</th>
+                        <th class="text-right whitespace-nowrap">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($units as $index => $unit)
                         <tr class="hover:bg-slate-50 transition">
-                            <td class="text-center text-xs text-slate-900 font-mono font-bold">{{ $units->firstItem() + $index }}</td>
-                            <td>
-                                <span class="font-mono font-bold text-xs px-2.5 py-1 rounded-md bg-slate-100 text-slate-900 border border-slate-300">
+                            <td class="text-center text-xs text-slate-900 font-mono font-bold whitespace-nowrap">{{ $units->firstItem() + $index }}</td>
+                            <td class="whitespace-nowrap">
+                                <span class="inline-block whitespace-nowrap font-mono font-bold text-xs px-2.5 py-1 rounded-md bg-slate-100 text-slate-950 border border-slate-300">
                                     {{ $unit->kode_unit }}
                                 </span>
                             </td>
-                            <td>
-                                <div class="font-bold text-slate-900 text-sm">{{ $unit->nama_unit }}</div>
-                                <div class="text-[11px] text-slate-600 font-mono font-medium">Dibuat: {{ $unit->created_at->format('d/m/Y') }}</div>
+                            <td class="min-w-[240px]">
+                                <div class="font-bold text-slate-900 text-sm leading-snug">{{ $unit->nama_unit }}</div>
+                                <div class="text-[11px] text-slate-600 font-mono font-medium mt-0.5">Dibuat: {{ $unit->created_at->format('d/m/Y') }}</div>
                             </td>
                             <td class="max-w-xs text-xs text-slate-800 leading-relaxed font-medium">
                                 {{ $unit->deskripsi ?? '-' }}
                             </td>
-                            <td class="text-center">
+                            <td class="text-center whitespace-nowrap">
                                 <span class="inline-flex items-center gap-1 font-bold text-xs text-slate-900 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200">
                                     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                                     {{ $unit->users_count }}
                                 </span>
                             </td>
-                            <td class="text-center">
+                            <td class="text-center whitespace-nowrap">
                                 <span class="inline-flex items-center gap-1 font-bold text-xs text-slate-900 bg-slate-100 border border-slate-300 px-2.5 py-1 rounded-full">
                                     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
                                     {{ $unit->agendas_count }}
                                 </span>
                             </td>
-                            <td class="text-center">
+                            <td class="text-center whitespace-nowrap">
                                 @if($unit->is_active)
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">
                                         Aktif
@@ -97,7 +97,7 @@
                                     </span>
                                 @endif
                             </td>
-                            <td class="text-right">
+                            <td class="text-right whitespace-nowrap">
                                 <div class="row-actions justify-end">
                                     <!-- Toggle Status Button -->
                                     <form 

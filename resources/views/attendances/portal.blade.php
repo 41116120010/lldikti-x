@@ -12,7 +12,7 @@
             <div class="flex items-center gap-2">
                 <span class="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse"></span>
                 <h3 class="font-extrabold text-slate-950 text-sm">Sesi Rapat Sedang Berlangsung (Buka Presensi)</h3>
-                <span class="text-xs text-slate-700 font-mono font-bold hidden sm:inline">&bull; {{ $ongoingAgendas->count() }} Rapat Aktif</span>
+                <span class="text-xs text-slate-700 font-mono font-bold hidden sm:inline">&bull; {{ $ongoingAgendas->total() }} Rapat Aktif</span>
             </div>
             <a href="{{ route('attendances.history') }}" class="button small secondary flex items-center gap-1.5 text-xs shrink-0 font-bold">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -79,67 +79,89 @@
                 </div>
             @endforelse
         </div>
+
+        @if($ongoingAgendas->hasPages())
+            <div class="bg-white rounded-2xl border border-slate-300 overflow-hidden">
+                {{ $ongoingAgendas->links('vendor.pagination.compact') }}
+            </div>
+        @endif
     </div>
 
     <!-- Section 2: Upcoming Meetings & Personal Attendance History -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-4">
         <!-- Upcoming Scheduled Meetings -->
-        <div class="panel">
-            <div class="toolbar">
-                <div class="flex items-center gap-2">
-                    <svg class="text-slate-900" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-                    <h3 class="font-bold text-slate-900 text-sm">Agenda Rapat Mendatang</h3>
+        <div class="panel flex flex-col justify-between">
+            <div>
+                <div class="toolbar">
+                    <div class="flex items-center gap-2">
+                        <svg class="text-slate-900" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                        <h3 class="font-bold text-slate-900 text-sm">Agenda Rapat Mendatang</h3>
+                    </div>
+                </div>
+
+                <div class="p-4 divide-y divide-slate-200">
+                    @forelse($scheduledAgendas as $agenda)
+                        <div class="py-3 first:pt-0 last:pb-0 space-y-1 text-xs">
+                            <div class="flex items-center justify-between">
+                                <span class="font-bold text-slate-950">{{ $agenda->judul_rapat }}</span>
+                                <span class="text-slate-900 font-mono text-[11px] font-bold">{{ $agenda->waktu_mulai->format('d/m/Y') }}</span>
+                            </div>
+                            <div class="text-slate-700 text-[11px] flex items-center gap-2 font-medium">
+                                <span class="font-bold text-slate-900">{{ $agenda->waktu_mulai->format('H:i') }} WIB</span>
+                                <span>&bull;</span>
+                                <span>{{ $agenda->lokasi_ruang ?? 'Daring' }}</span>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="text-center py-6 text-xs text-slate-600 font-medium">
+                            Belum ada agenda rapat terjadwal berikutnya.
+                        </div>
+                    @endforelse
                 </div>
             </div>
 
-            <div class="p-4 divide-y divide-slate-200">
-                @forelse($scheduledAgendas as $agenda)
-                    <div class="py-3 first:pt-0 last:pb-0 space-y-1 text-xs">
-                        <div class="flex items-center justify-between">
-                            <span class="font-bold text-slate-950">{{ $agenda->judul_rapat }}</span>
-                            <span class="text-slate-900 font-mono text-[11px] font-bold">{{ $agenda->waktu_mulai->format('d/m/Y') }}</span>
-                        </div>
-                        <div class="text-slate-700 text-[11px] flex items-center gap-2 font-medium">
-                            <span class="font-bold text-slate-900">{{ $agenda->waktu_mulai->format('H:i') }} WIB</span>
-                            <span>&bull;</span>
-                            <span>{{ $agenda->lokasi_ruang ?? 'Daring' }}</span>
-                        </div>
-                    </div>
-                @empty
-                    <div class="text-center py-6 text-xs text-slate-600 font-medium">
-                        Belum ada agenda rapat terjadwal berikutnya.
-                    </div>
-                @endforelse
-            </div>
+            @if($scheduledAgendas->hasPages())
+                <div class="mt-auto">
+                    {{ $scheduledAgendas->links('vendor.pagination.compact') }}
+                </div>
+            @endif
         </div>
 
         <!-- Recent Personal Attendances -->
-        <div class="panel">
-            <div class="toolbar">
-                <div class="flex items-center gap-2">
-                    <svg class="text-slate-900" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-                    <h3 class="font-bold text-slate-900 text-sm">Riwayat Kehadiran Terakhir Anda</h3>
+        <div class="panel flex flex-col justify-between">
+            <div>
+                <div class="toolbar">
+                    <div class="flex items-center gap-2">
+                        <svg class="text-slate-900" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                        <h3 class="font-bold text-slate-900 text-sm">Riwayat Kehadiran Terakhir Anda</h3>
+                    </div>
+                    <a href="{{ route('attendances.history') }}" class="text-xs text-slate-900 hover:text-slate-950 font-bold underline">Lihat Semua</a>
                 </div>
-                <a href="{{ route('attendances.history') }}" class="text-xs text-slate-900 hover:text-slate-950 font-bold underline">Lihat Semua</a>
+
+                <div class="p-4 divide-y divide-slate-200">
+                    @forelse($recentAttendances as $att)
+                        <div class="py-3 first:pt-0 last:pb-0 flex items-center justify-between gap-3 text-xs">
+                            <div class="min-w-0">
+                                <div class="font-bold text-slate-950 truncate">{{ $att->agenda->judul_rapat }}</div>
+                                <div class="text-[11px] text-slate-600 font-mono font-medium">Hadir: {{ $att->signed_at->translatedFormat('d M Y, H:i') }} WIB</div>
+                            </div>
+                            <a href="{{ route('attendances.success', [$att->agenda, $att]) }}" class="button small secondary text-xs shrink-0 font-bold">
+                                Bukti
+                            </a>
+                        </div>
+                    @empty
+                        <div class="text-center py-6 text-xs text-slate-600 font-medium">
+                            Anda belum memiliki riwayat presensi rapat.
+                        </div>
+                    @endforelse
+                </div>
             </div>
 
-            <div class="p-4 divide-y divide-slate-200">
-                @forelse($recentAttendances as $att)
-                    <div class="py-3 first:pt-0 last:pb-0 flex items-center justify-between gap-3 text-xs">
-                        <div class="min-w-0">
-                            <div class="font-bold text-slate-950 truncate">{{ $att->agenda->judul_rapat }}</div>
-                            <div class="text-[11px] text-slate-600 font-mono font-medium">Hadir: {{ $att->signed_at->translatedFormat('d M Y, H:i') }} WIB</div>
-                        </div>
-                        <a href="{{ route('attendances.success', [$att->agenda, $att]) }}" class="button small secondary text-xs shrink-0 font-bold">
-                            Bukti
-                        </a>
-                    </div>
-                @empty
-                    <div class="text-center py-6 text-xs text-slate-600 font-medium">
-                        Anda belum memiliki riwayat presensi rapat.
-                    </div>
-                @endforelse
-            </div>
+            @if($recentAttendances->hasPages())
+                <div class="mt-auto">
+                    {{ $recentAttendances->links('vendor.pagination.compact') }}
+                </div>
+            @endif
         </div>
     </div>
 </div>

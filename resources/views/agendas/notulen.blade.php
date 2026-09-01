@@ -107,41 +107,49 @@
         </div>
 
         <!-- Existing Photos Gallery (with Delete Action) -->
-        <div class="panel p-5">
-            <div class="flex items-center justify-between mb-3">
-                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900">Dokumentasi Tersimpan</h3>
-                <span class="text-xs font-mono font-bold text-slate-900">{{ $agenda->documentations->count() }} Foto</span>
+        <div class="panel flex flex-col justify-between overflow-hidden">
+            <div class="p-5">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900">Dokumentasi Tersimpan</h3>
+                    <span class="text-xs font-mono font-bold text-slate-900">{{ $documentations->total() }} Foto</span>
+                </div>
+
+                @if($documentations->count() > 0)
+                    <div class="grid grid-cols-2 gap-3">
+                        @foreach($documentations as $doc)
+                            <div class="relative group bg-slate-100 rounded-xl overflow-hidden border border-slate-300">
+                                <img src="{{ Storage::disk('public')->url($doc->file_path) }}" alt="Foto Dokumentasi" class="w-full h-24 object-cover">
+                                <div class="p-1.5 bg-white text-[10px] text-slate-900 font-bold truncate border-t border-slate-200">
+                                    {{ $doc->caption ?? 'Dokumentasi' }}
+                                </div>
+                                <form 
+                                    action="{{ route('admin.agendas.delete-documentation', [$agenda, $doc]) }}" 
+                                    method="POST" 
+                                    class="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition"
+                                    data-confirm="Apakah Anda yakin ingin menghapus berkas foto dokumentasi ini?"
+                                    data-confirm-title="Hapus Foto Dokumentasi"
+                                    data-confirm-type="warning"
+                                    data-confirm-btn="Ya, Hapus"
+                                >
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="w-6 h-6 rounded-full bg-rose-700 text-white flex items-center justify-center shadow-md hover:bg-rose-800 cursor-pointer" title="Hapus Foto">
+                                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                    </button>
+                                </form>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="p-6 text-center bg-slate-50 rounded-xl border border-dashed border-slate-300 text-xs text-slate-600 font-medium">
+                        Belum ada foto dokumentasi diunggah.
+                    </div>
+                @endif
             </div>
 
-            @if($agenda->documentations->count() > 0)
-                <div class="grid grid-cols-2 gap-3">
-                    @foreach($agenda->documentations as $doc)
-                        <div class="relative group bg-slate-100 rounded-xl overflow-hidden border border-slate-300">
-                            <img src="{{ Storage::disk('public')->url($doc->file_path) }}" alt="Foto Dokumentasi" class="w-full h-24 object-cover">
-                            <div class="p-1.5 bg-white text-[10px] text-slate-900 font-bold truncate border-t border-slate-200">
-                                {{ $doc->caption ?? 'Dokumentasi' }}
-                            </div>
-                            <form 
-                                action="{{ route('admin.agendas.delete-documentation', [$agenda, $doc]) }}" 
-                                method="POST" 
-                                class="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition"
-                                data-confirm="Apakah Anda yakin ingin menghapus berkas foto dokumentasi ini?"
-                                data-confirm-title="Hapus Foto Dokumentasi"
-                                data-confirm-type="warning"
-                                data-confirm-btn="Ya, Hapus"
-                            >
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="w-6 h-6 rounded-full bg-rose-700 text-white flex items-center justify-center shadow-md hover:bg-rose-800 cursor-pointer" title="Hapus Foto">
-                                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                                </button>
-                            </form>
-                        </div>
-                    @endforeach
-                </div>
-            @else
-                <div class="p-6 text-center bg-slate-50 rounded-xl border border-dashed border-slate-300 text-xs text-slate-600 font-medium">
-                    Belum ada foto dokumentasi diunggah.
+            @if($documentations->hasPages())
+                <div class="mt-auto">
+                    {{ $documentations->links('vendor.pagination.compact') }}
                 </div>
             @endif
         </div>

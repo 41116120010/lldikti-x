@@ -169,7 +169,7 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
+function initAttendanceCheckIn() {
     // --- 1. WebRTC CAMERA & COMPRESSION MODULE ---
     const video = document.getElementById('camera-stream');
     const canvas = document.getElementById('selfie-canvas');
@@ -180,6 +180,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const selfieDataInput = document.getElementById('selfie_data');
     const selfieBadge = document.getElementById('selfie-status-badge');
     const fallbackFileInput = document.getElementById('fallback-selfie-file');
+
+    if (!video || !canvas || !btnCapture) return;
+
+    // Release any previously opened camera stream before re-initializing
+    if (window.__siperapatCameraStream) {
+        try {
+            window.__siperapatCameraStream.getTracks().forEach(t => t.stop());
+        } catch (e) {
+            console.warn('Error releasing existing stream:', e);
+        }
+        window.__siperapatCameraStream = null;
+    }
 
     let stream = null;
 
@@ -193,10 +205,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 audio: false
             });
+            window.__siperapatCameraStream = stream;
             video.srcObject = stream;
         } catch (err) {
             console.warn('WebRTC camera stream not available:', err);
-            guide.innerHTML = '<div class="text-center text-white p-4 text-xs">Akses kamera tidak diizinkan atau tidak didukung.<br>Silakan gunakan opsi unggah foto di bawah.</div>';
+            if (guide) {
+                guide.innerHTML = '<div class="text-center text-white p-4 text-xs">Akses kamera tidak diizinkan atau tidak didukung.<br>Silakan gunakan opsi unggah foto di bawah.</div>';
+            }
         }
     }
 
@@ -232,7 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
         preview.src = dataUrl;
         preview.classList.remove('hidden');
         video.classList.add('hidden');
-        guide.classList.add('hidden');
+        if (guide) guide.classList.add('hidden');
 
         btnCapture.classList.add('hidden');
         btnRetake.classList.remove('hidden');
@@ -245,7 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
         selfieDataInput.value = '';
         preview.classList.add('hidden');
         video.classList.remove('hidden');
-        guide.classList.remove('hidden');
+        if (guide) guide.classList.remove('hidden');
 
         btnCapture.classList.remove('hidden');
         btnRetake.classList.add('hidden');
@@ -255,39 +270,41 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Fallback file input handler
-    fallbackFileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
+    if (fallbackFileInput) {
+        fallbackFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
 
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const img = new Image();
-            img.onload = () => {
-                const maxWidth = 600;
-                const scale = maxWidth / img.width;
-                canvas.width = maxWidth;
-                canvas.height = img.height * scale;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const maxWidth = 600;
+                    const scale = maxWidth / img.width;
+                    canvas.width = maxWidth;
+                    canvas.height = img.height * scale;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
-                selfieDataInput.value = dataUrl;
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+                    selfieDataInput.value = dataUrl;
 
-                preview.src = dataUrl;
-                preview.classList.remove('hidden');
-                video.classList.add('hidden');
-                guide.classList.add('hidden');
+                    preview.src = dataUrl;
+                    preview.classList.remove('hidden');
+                    video.classList.add('hidden');
+                    if (guide) guide.classList.add('hidden');
 
-                btnCapture.classList.add('hidden');
-                btnRetake.classList.remove('hidden');
+                    btnCapture.classList.add('hidden');
+                    btnRetake.classList.remove('hidden');
 
-                selfieBadge.textContent = 'Berkas Foto Siap';
-                selfieBadge.className = 'text-[11px] font-bold text-emerald-600';
+                    selfieBadge.textContent = 'Berkas Foto Siap';
+                    selfieBadge.className = 'text-[11px] font-bold text-emerald-600';
+                };
+                img.src = event.target.result;
             };
-            img.src = event.target.result;
-        };
-        reader.readAsDataURL(file);
-    });
+            reader.readAsDataURL(file);
+        });
+    }
 
     // --- 2. HTML5 CANVAS SIGNATURE PAD MODULE ---
     const sigCanvas = document.getElementById('signature-canvas');
@@ -296,13 +313,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const sigDataInput = document.getElementById('signature_data');
     const sigBadge = document.getElementById('signature-status-badge');
 
+    if (!sigCanvas) return;
+
     const sCtx = sigCanvas.getContext('2d');
     let isDrawing = false;
     let hasDrawn = false;
 
     function resizeSigCanvas() {
+        if (!sigCanvas) return;
         const existingData = sigDataInput.value;
         const rect = sigCanvas.getBoundingClientRect();
+        if (rect.width === 0) return;
         const dpr = window.devicePixelRatio || 1;
         sigCanvas.width = rect.width * dpr;
         sigCanvas.height = rect.height * dpr;
@@ -322,7 +343,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.addEventListener('resize', resizeSigCanvas);
-    resizeSigCanvas();
+    setTimeout(resizeSigCanvas, 50);
 
     function getCanvasCoordinates(e) {
         const rect = sigCanvas.getBoundingClientRect();
@@ -337,9 +358,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function startDrawing(e) {
         isDrawing = true;
         hasDrawn = true;
-        sigPlaceholder.classList.add('hidden');
-        sigBadge.textContent = 'Tanda Tangan Terisi';
-        sigBadge.className = 'text-[11px] font-bold text-emerald-600';
+        if (sigPlaceholder) sigPlaceholder.classList.add('hidden');
+        if (sigBadge) {
+            sigBadge.textContent = 'Tanda Tangan Terisi';
+            sigBadge.className = 'text-[11px] font-bold text-emerald-600';
+        }
 
         const coords = getCanvasCoordinates(e);
         sCtx.beginPath();
@@ -373,44 +396,60 @@ document.addEventListener('DOMContentLoaded', () => {
     sigCanvas.addEventListener('touchmove', draw, { passive: false });
     sigCanvas.addEventListener('touchend', stopDrawing);
 
-    btnClearSig.addEventListener('click', () => {
-        sCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
-        sigDataInput.value = '';
-        hasDrawn = false;
-        sigPlaceholder.classList.remove('hidden');
-        sigBadge.textContent = 'Belum Ditandatangani';
-        sigBadge.className = 'text-[11px] font-semibold text-slate-400';
-    });
+    if (btnClearSig) {
+        btnClearSig.addEventListener('click', () => {
+            sCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+            sigDataInput.value = '';
+            hasDrawn = false;
+            if (sigPlaceholder) sigPlaceholder.classList.remove('hidden');
+            if (sigBadge) {
+                sigBadge.textContent = 'Belum Ditandatangani';
+                sigBadge.className = 'text-[11px] font-semibold text-slate-400';
+            }
+        });
+    }
 
     // --- 3. FORM VALIDATION BEFORE SUBMIT ---
     const form = document.getElementById('attendance-form');
-    form.addEventListener('submit', (e) => {
-        if (!selfieDataInput.value && !fallbackFileInput.files.length) {
-            e.preventDefault();
-            window.showModal({
-                title: 'Kondisi Belum Terpenuhi',
-                message: 'Mohon ambil <strong>foto selfie wajah</strong> Anda terlebih dahulu menggunakan kamera atau unggah berkas foto.',
-                type: 'warning',
-                confirmText: 'Lengkapi Foto'
-            });
-            return false;
-        }
+    if (form) {
+        form.addEventListener('submit', (e) => {
+            if (!selfieDataInput.value && (!fallbackFileInput || !fallbackFileInput.files.length)) {
+                e.preventDefault();
+                window.showModal({
+                    title: 'Kondisi Belum Terpenuhi',
+                    message: 'Mohon ambil <strong>foto selfie wajah</strong> Anda terlebih dahulu menggunakan kamera atau unggah berkas foto.',
+                    type: 'warning',
+                    confirmText: 'Lengkapi Foto'
+                });
+                return false;
+            }
 
-        if (!hasDrawn || !sigDataInput.value) {
-            e.preventDefault();
-            window.showModal({
-                title: 'Kondisi Belum Terpenuhi',
-                message: 'Mohon bubuhkan <strong>tanda tangan digital</strong> Anda pada area kanvas yang tersedia.',
-                type: 'warning',
-                confirmText: 'Lengkapi Tanda Tangan'
-            });
-            return false;
-        }
+            if (!hasDrawn || !sigDataInput.value) {
+                e.preventDefault();
+                window.showModal({
+                    title: 'Kondisi Belum Terpenuhi',
+                    message: 'Mohon bubuhkan <strong>tanda tangan digital</strong> Anda pada area kanvas yang tersedia.',
+                    type: 'warning',
+                    confirmText: 'Lengkapi Tanda Tangan'
+                });
+                return false;
+            }
 
-        const btnSubmit = document.getElementById('btn-submit-attendance');
-        btnSubmit.disabled = true;
-        btnSubmit.innerHTML = '<span>Memverifikasi & Menyimpan Data...</span>';
-    });
-});
+            const btnSubmit = document.getElementById('btn-submit-attendance');
+            if (btnSubmit) {
+                btnSubmit.disabled = true;
+                btnSubmit.innerHTML = '<span>Memverifikasi & Menyimpan Data...</span>';
+            }
+        });
+    }
+}
+
+// Auto-run on direct load and on dynamic seamless navigation swap
+if (document.readyState !== 'loading') {
+    initAttendanceCheckIn();
+} else {
+    document.addEventListener('DOMContentLoaded', initAttendanceCheckIn);
+}
+window.addEventListener('page:loaded', initAttendanceCheckIn);
 </script>
 @endsection

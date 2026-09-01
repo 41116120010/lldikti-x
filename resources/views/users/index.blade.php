@@ -102,13 +102,13 @@
                                 <div class="font-mono text-xs text-slate-950 font-bold">{{ $userItem->nip }}</div>
                                 <div class="text-[11px] font-mono text-slate-600 font-medium">@<span>{{ $userItem->username }}</span></div>
                             </td>
-                            <td>
+                            <td class="whitespace-nowrap">
                                 @if($userItem->unit)
-                                    <span class="inline-flex items-center gap-1 font-bold text-xs text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">
+                                    <span class="inline-flex items-center gap-1 font-bold text-xs text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-300 whitespace-nowrap">
                                         {{ $userItem->unit->kode_unit }}
                                     </span>
                                 @else
-                                    <span class="text-xs text-slate-600 italic font-medium">Pusat / Lembaga</span>
+                                    <span class="text-xs text-slate-600 italic font-medium whitespace-nowrap">Pusat / Lembaga</span>
                                 @endif
                             </td>
                             <td class="text-center">

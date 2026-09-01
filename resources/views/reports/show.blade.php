@@ -87,9 +87,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($agenda->attendances as $index => $att)
+                    @forelse($attendances as $index => $att)
                         <tr class="hover:bg-slate-50 transition">
-                            <td class="text-center text-xs text-slate-900 font-mono font-bold">{{ $index + 1 }}</td>
+                            <td class="text-center text-xs text-slate-900 font-mono font-bold">{{ $attendances->firstItem() + $index }}</td>
                             <td>
                                 <div class="font-bold text-slate-950 text-xs">{{ $att->user->name }}</div>
                                 <div class="text-[10px] text-slate-600 font-mono font-medium">NIP: {{ $att->user->nip }}</div>
@@ -124,6 +124,10 @@
                 </tbody>
             </table>
         </div>
+
+        @if($attendances->hasPages())
+            {{ $attendances->links() }}
+        @endif
     </div>
 
     <!-- Notulensi & Conclusions Section -->

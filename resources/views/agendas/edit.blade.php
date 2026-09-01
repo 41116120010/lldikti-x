@@ -311,11 +311,18 @@ function toggleUnitList(show) {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+function initAgendaEditForm() {
     const tipeRapat = document.getElementById('tipe_rapat');
     if (tipeRapat) {
         toggleFormatFields(tipeRapat.value);
     }
-});
+}
+
+if (document.readyState !== 'loading') {
+    initAgendaEditForm();
+} else {
+    document.addEventListener('DOMContentLoaded', initAgendaEditForm);
+}
+window.addEventListener('page:loaded', initAgendaEditForm);
 </script>
 @endsection

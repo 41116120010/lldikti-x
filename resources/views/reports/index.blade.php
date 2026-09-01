@@ -212,32 +212,93 @@
             @endif
         </div>
 
-        <!-- Unit Participation Breakdown (1 col) -->
-        <div class="panel">
-            <div class="toolbar">
-                <div class="flex items-center gap-2">
-                    <svg class="text-slate-900" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
-                    <h3 class="font-bold text-slate-900 text-sm">Partisipasi Per Unit Kerja</h3>
-                </div>
-            </div>
-
-            <div class="p-5 space-y-4">
-                @foreach($unitStats as $item)
-                    @php
-                        $maxPresensi = max(1, $totalPresensi);
-                        $percent = min(100, round(($item['attendances_count'] / $maxPresensi) * 100));
-                    @endphp
-                    <div class="space-y-1.5 text-xs">
-                        <div class="flex items-center justify-between">
-                            <span class="font-bold text-slate-900">{{ $item['unit']->kode_unit }} &bull; {{ $item['unit']->nama_unit }}</span>
-                            <span class="font-mono text-slate-900 font-bold">{{ $item['attendances_count'] }} Hadir</span>
-                        </div>
-                        <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
-                            <div class="h-full bg-slate-900 rounded-full" style="width: {{ $percent }}%;"></div>
+        <!-- Unit / Member Participation Breakdown (1 col) -->
+        <div class="panel flex flex-col justify-between">
+            @if($unitStats)
+                <div>
+                    <div class="toolbar">
+                        <div class="flex items-center gap-2">
+                            <svg class="text-slate-900" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+                            <h3 class="font-bold text-slate-900 text-sm">Partisipasi Per Unit Kerja</h3>
                         </div>
                     </div>
-                @endforeach
-            </div>
+
+                    <div class="p-5 space-y-4">
+                        @forelse($unitStats as $item)
+                            @php
+                                $maxPresensi = max(1, $totalPresensi);
+                                $percent = min(100, round(($item['attendances_count'] / $maxPresensi) * 100));
+                            @endphp
+                            <div class="space-y-1.5 text-xs">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-bold text-slate-900">{{ $item['unit']->kode_unit }} &bull; {{ $item['unit']->nama_unit }}</span>
+                                    <span class="font-mono text-slate-900 font-bold">{{ $item['attendances_count'] }} Hadir</span>
+                                </div>
+                                <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                                    <div class="h-full bg-slate-900 rounded-full" style="width: {{ $percent }}%;"></div>
+                                </div>
+                            </div>
+                        @empty
+                            <div class="text-center py-6 text-xs text-slate-600 font-medium">
+                                Belum ada data partisipasi unit kerja.
+                            </div>
+                        @endforelse
+                    </div>
+                </div>
+
+                @if($unitStats->hasPages())
+                    <div class="mt-auto">
+                        {{ $unitStats->links('vendor.pagination.compact') }}
+                    </div>
+                @endif
+            @elseif($memberStats)
+                <div>
+                    <div class="toolbar">
+                        <div class="flex items-center gap-2">
+                            <svg class="text-slate-900" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                            <h3 class="font-bold text-slate-900 text-sm">Partisipasi Pegawai di Unit</h3>
+                        </div>
+                        <span class="text-xs font-mono font-bold text-slate-900">{{ $user->unit?->kode_unit }}</span>
+                    </div>
+
+                    <div class="p-5 space-y-4">
+                        @forelse($memberStats as $item)
+                            @php
+                                $maxPresensi = max(1, $totalPresensi);
+                                $percent = min(100, round(($item['attendances_count'] / $maxPresensi) * 100));
+                            @endphp
+                            <div class="space-y-1.5 text-xs">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-bold text-slate-900">{{ $item['user']->name }}</span>
+                                    <span class="font-mono text-slate-900 font-bold">{{ $item['attendances_count'] }} Hadir</span>
+                                </div>
+                                <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                                    <div class="h-full bg-slate-900 rounded-full" style="width: {{ $percent }}%;"></div>
+                                </div>
+                            </div>
+                        @empty
+                            <div class="text-center py-6 text-xs text-slate-600 font-medium">
+                                Belum ada data pegawai di unit ini.
+                            </div>
+                        @endforelse
+                    </div>
+                </div>
+
+                @if($memberStats->hasPages())
+                    <div class="mt-auto">
+                        {{ $memberStats->links('vendor.pagination.compact') }}
+                    </div>
+                @endif
+            @else
+                <div>
+                    <div class="toolbar">
+                        <h3 class="font-bold text-slate-900 text-sm">Ringkasan Partisipasi</h3>
+                    </div>
+                    <div class="p-5 text-center text-xs text-slate-600 font-medium">
+                        Rekapitulasi kehadiran kedinasan Anda tercatat pada tabel sebelah kiri.
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
 </div>

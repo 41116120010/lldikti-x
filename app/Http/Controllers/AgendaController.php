@@ -155,13 +155,22 @@ class AgendaController extends Controller
         $agenda->load([
             'creator.unit',
             'units',
-            'attendances.user.unit',
-            'documentations',
         ]);
+
+        $attendances = $agenda->attendances()
+            ->with('user.unit')
+            ->orderBy('signed_at', 'desc')
+            ->paginate(8, ['*'], 'page_attendees')
+            ->withQueryString();
+
+        $documentations = $agenda->documentations()
+            ->latest('id')
+            ->paginate(6, ['*'], 'page_docs')
+            ->withQueryString();
 
         $currentUser = Auth::user();
 
-        return view('agendas.show', compact('agenda', 'currentUser'));
+        return view('agendas.show', compact('agenda', 'attendances', 'documentations', 'currentUser'));
     }
 
     /**
@@ -319,9 +328,12 @@ class AgendaController extends Controller
     {
         Gate::authorize('manageMinutes', $agenda);
 
-        $agenda->load('documentations');
+        $documentations = $agenda->documentations()
+            ->latest('id')
+            ->paginate(6, ['*'], 'page_docs')
+            ->withQueryString();
 
-        return view('agendas.notulen', compact('agenda'));
+        return view('agendas.notulen', compact('agenda', 'documentations'));
     }
 
     /**

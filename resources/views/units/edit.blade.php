@@ -87,11 +87,47 @@
                 <span>Ringkasan Unit Terdaftar</span>
             </h3>
             <div class="space-y-2 text-xs text-slate-200 font-medium">
-                <div>Total Pegawai Terhubung: <strong class="text-white">{{ $unit->users_count ?? $unit->users()->count() }} orang</strong></div>
+                <div>Total Pegawai Terhubung: <strong class="text-white">{{ $unitUsers->total() }} orang</strong></div>
                 <div>Agenda Rapat Terlibat: <strong class="text-white">{{ $unit->agendas_count ?? $unit->agendas()->count() }} agenda</strong></div>
                 <div>Status Saat Ini: <strong class="{{ $unit->is_active ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold' }}">{{ $unit->is_active ? 'Aktif Beroperasi' : 'Non-Aktif' }}</strong></div>
                 <div class="pt-2 border-t border-slate-800 text-[11px] text-slate-400">Dibuat pada: {{ $unit->created_at->translatedFormat('d F Y') }}</div>
             </div>
+        </div>
+
+        <!-- Paginated List of Employees in Unit -->
+        <div class="panel flex flex-col justify-between overflow-hidden">
+            <div>
+                <div class="toolbar">
+                    <div class="flex items-center gap-2">
+                        <svg class="text-slate-900" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        <h4 class="font-bold text-slate-900 text-xs">Pegawai di Unit Ini ({{ $unitUsers->total() }})</h4>
+                    </div>
+                </div>
+
+                <div class="p-4 divide-y divide-slate-200 text-xs">
+                    @forelse($unitUsers as $userItem)
+                        <div class="py-2 first:pt-0 last:pb-0 flex items-center justify-between gap-2">
+                            <div class="min-w-0">
+                                <div class="font-bold text-slate-950 truncate">{{ $userItem->name }}</div>
+                                <div class="text-[10px] text-slate-600 font-mono font-medium">NIP: {{ $userItem->nip }}</div>
+                            </div>
+                            <span class="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-slate-100 font-bold text-slate-800 border border-slate-300 shrink-0">
+                                {{ $userItem->role }}
+                            </span>
+                        </div>
+                    @empty
+                        <div class="text-center py-4 text-xs text-slate-500 font-medium">
+                            Belum ada pegawai terhubung pada unit ini.
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+
+            @if($unitUsers->hasPages())
+                <div class="mt-auto">
+                    {{ $unitUsers->links('vendor.pagination.compact') }}
+                </div>
+            @endif
         </div>
 
         <div class="panel p-5 text-xs text-slate-800 bg-white border-slate-300">

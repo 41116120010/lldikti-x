@@ -89,7 +89,12 @@ class UnitController extends Controller
 
         $unit->loadCount(['users', 'agendas']);
 
-        return view('units.edit', compact('unit'));
+        $unitUsers = $unit->users()
+            ->orderBy('name', 'asc')
+            ->paginate(5, ['*'], 'page_users')
+            ->withQueryString();
+
+        return view('units.edit', compact('unit', 'unitUsers'));
     }
 
     /**

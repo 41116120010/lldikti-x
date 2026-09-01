@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Agenda;
 use App\Models\Attendance;
 use App\Models\Unit;
+use App\Models\User;
 use App\Services\ActivityLogger;
 use App\Services\PdfExportService;
 use App\Services\WordExportService;
@@ -77,14 +78,45 @@ class ReportController extends Controller
             ->groupBy('users.unit_id')
             ->pluck('total', 'users.unit_id');
 
-        $units = Unit::active()->withCount('users')->orderBy('nama_unit')->get();
-        $unitStats = $units->map(function ($unit) use ($attendanceCountsByUnit) {
-            return [
-                'unit' => $unit,
-                'attendances_count' => $attendanceCountsByUnit[$unit->id] ?? 0,
-                'total_users' => $unit->users_count,
-            ];
-        });
+        $units = $user->isAdministrator() ? Unit::active()->orderBy('nama_unit')->get() : collect();
+        $unitStats = null;
+        $memberStats = null;
+
+        if ($user->isAdministrator()) {
+            // Paginate unit participation stats (5 per page) for Administrator
+            $unitStats = Unit::active()
+                ->withCount('users')
+                ->orderBy('nama_unit')
+                ->paginate(5, ['*'], 'page_units')
+                ->withQueryString()
+                ->through(function ($unit) use ($attendanceCountsByUnit) {
+                    return [
+                        'unit' => $unit,
+                        'attendances_count' => $attendanceCountsByUnit[$unit->id] ?? 0,
+                        'total_users' => $unit->users_count,
+                    ];
+                });
+        } elseif ($user->isAdmin() && $user->unit_id) {
+            // Paginate unit member participation stats (5 per page) for Admin Unit
+            $memberAttendanceCounts = Attendance::query()
+                ->whereHas('user', function ($q) use ($user) {
+                    $q->where('unit_id', $user->unit_id);
+                })
+                ->selectRaw('user_id, count(*) as total')
+                ->groupBy('user_id')
+                ->pluck('total', 'user_id');
+
+            $memberStats = User::forUnit($user->unit_id)
+                ->orderBy('name')
+                ->paginate(5, ['*'], 'page_members')
+                ->withQueryString()
+                ->through(function ($member) use ($memberAttendanceCounts) {
+                    return [
+                        'user' => $member,
+                        'attendances_count' => $memberAttendanceCounts[$member->id] ?? 0,
+                    ];
+                });
+        }
 
         return view('reports.index', compact(
             'agendas',
@@ -95,6 +127,7 @@ class ReportController extends Controller
             'totalPresensi',
             'avgPresensi',
             'unitStats',
+            'memberStats',
             'user'
         ));
     }
@@ -109,11 +142,16 @@ class ReportController extends Controller
         $agenda->load([
             'creator.unit',
             'units',
-            'attendances.user.unit',
             'documentations',
         ]);
 
-        return view('reports.show', compact('agenda'));
+        $attendances = $agenda->attendances()
+            ->with('user.unit')
+            ->orderBy('signed_at', 'asc')
+            ->paginate(10)
+            ->withQueryString();
+
+        return view('reports.show', compact('agenda', 'attendances'));
     }
 
     /**

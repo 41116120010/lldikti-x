@@ -29,23 +29,24 @@ class AttendanceController extends Controller
         $ongoingAgendas = Agenda::visibleTo($user)
             ->where('status', 'ongoing')
             ->with(['creator', 'units', 'attendances'])
-            ->orderBy('waktu_mulai', 'asc')
-            ->get();
+            ->orderBy('waktu_mulai', 'desc')
+            ->paginate(6, ['*'], 'page_ongoing')
+            ->withQueryString();
 
         // Upcoming scheduled meetings
         $scheduledAgendas = Agenda::visibleTo($user)
             ->where('status', 'scheduled')
             ->with(['creator', 'units'])
             ->orderBy('waktu_mulai', 'asc')
-            ->limit(6)
-            ->get();
+            ->paginate(4, ['*'], 'page_scheduled')
+            ->withQueryString();
 
         // Personal recent attendances
         $recentAttendances = Attendance::where('user_id', $user->id)
             ->with('agenda')
             ->latest('signed_at')
-            ->limit(5)
-            ->get();
+            ->paginate(4, ['*'], 'page_recent')
+            ->withQueryString();
 
         return view('attendances.portal', compact('user', 'ongoingAgendas', 'scheduledAgendas', 'recentAttendances'));
     }

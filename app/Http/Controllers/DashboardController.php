@@ -32,7 +32,10 @@ class DashboardController extends Controller
             $stats['total_users'] = User::count();
             $stats['total_units'] = Unit::count();
             $stats['total_attendances'] = Attendance::count();
-            $recentLogs = ActivityLog::with('user.unit')->latest('id')->limit(8)->get();
+            $recentLogs = ActivityLog::with('user.unit')
+                ->latest('id')
+                ->paginate(5, ['*'], 'page_logs')
+                ->withQueryString();
         } elseif ($user->isAdmin()) {
             $stats['total_users'] = User::forUnit($user->unit_id)->count();
             $stats['total_attendances'] = Attendance::whereHas('user', function ($q) use ($user) {
@@ -40,20 +43,25 @@ class DashboardController extends Controller
             })->count();
             $recentLogs = ActivityLog::whereHas('user', function ($q) use ($user) {
                 $q->where('unit_id', $user->unit_id);
-            })->latest('id')->limit(8)->get();
+            })->latest('id')
+                ->paginate(5, ['*'], 'page_logs')
+                ->withQueryString();
         } else {
             // Staff
             $stats['my_attendances'] = Attendance::where('user_id', $user->id)->count();
-            $recentLogs = ActivityLog::where('user_id', $user->id)->latest('id')->limit(5)->get();
+            $recentLogs = ActivityLog::where('user_id', $user->id)
+                ->latest('id')
+                ->paginate(5, ['*'], 'page_logs')
+                ->withQueryString();
         }
 
-        // Active / Ongoing Agendas available right now
+        // Active / Ongoing Agendas available right now with pagination
         $activeAgendas = Agenda::visibleTo($user)
             ->with(['creator', 'units', 'attendances'])
             ->whereIn('status', ['ongoing', 'scheduled'])
             ->orderBy('waktu_mulai', 'asc')
-            ->limit(5)
-            ->get();
+            ->paginate(5, ['*'], 'page_agendas')
+            ->withQueryString();
 
         return view('dashboard', compact('user', 'stats', 'recentLogs', 'activeAgendas'));
     }

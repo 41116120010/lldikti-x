@@ -76,6 +76,9 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="bg-slate-50 text-slate-900 antialiased font-sans">
+    <!-- Top Progress Bar for Seamless Page Transitions -->
+    <div id="app-progress-bar" aria-hidden="true"></div>
+
     <!-- Skip to Main Content Accessibility Landmark -->
     <a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-4 focus:py-2 focus:bg-slate-950 focus:text-white focus:rounded-lg focus:shadow-xl focus:outline-none">
         Lewati ke konten utama
@@ -158,17 +161,17 @@
                     @if(Auth::user()->isAdministrator())
                         <a class="nav-link {{ request()->routeIs('admin.units.*') ? 'active' : '' }}" href="{{ route('admin.units.index') }}" {!! request()->routeIs('admin.units.*') ? 'aria-current="page"' : '' !!}>
                             <span class="nav-icon">
-                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
                             </span>
-                            <span>Kelola Unit Kerja</span>
+                            <span>Unit Kerja</span>
                         </a>
                     @endif
 
                     <a class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}" href="{{ route('admin.users.index') }}" {!! request()->routeIs('admin.users.*') ? 'aria-current="page"' : '' !!}>
                         <span class="nav-icon">
-                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                         </span>
-                        <span>{{ Auth::user()->isAdministrator() ? 'Kelola Pengguna' : 'Pegawai Unit' }}</span>
+                        <span>Pengguna</span>
                     </a>
 
                     @if(Auth::user()->isAdministrator())
@@ -181,46 +184,13 @@
                     @endif
                 </div>
             @endif
-
-            <!-- User Session Footer -->
-            <div class="sidebar-user">
-                <div class="avatar bg-slate-950 text-white font-bold text-xs uppercase">
-                    {{ substr(Auth::user()->name, 0, 2) }}
-                </div>
-                <div class="min-w-0 flex-1">
-                    <b class="block truncate text-xs text-slate-900 font-bold">{{ Auth::user()->name }}</b>
-                    <div class="user-meta text-[11px] truncate text-slate-600 font-bold">
-                        @if(Auth::user()->isAdministrator())
-                            <span class="text-slate-900">Administrator</span>
-                        @elseif(Auth::user()->isAdmin())
-                            <span class="text-slate-900">{{ Auth::user()->unit?->kode_unit ?? 'Admin Unit' }}</span>
-                        @else
-                            <span class="text-slate-900">{{ Auth::user()->unit?->kode_unit ?? 'Staff' }}</span>
-                        @endif
-                    </div>
-                </div>
-                <form
-                    action="{{ route('logout') }}"
-                    method="POST"
-                    class="inline"
-                    data-confirm="Apakah Anda yakin ingin keluar dari sistem SIPERAPAT?"
-                    data-confirm-title="Konfirmasi Keluar Akun"
-                    data-confirm-type="warning"
-                    data-confirm-btn="Ya, Keluar"
-                >
-                    @csrf
-                    <button class="logout" title="Keluar dari sistem" type="submit" aria-label="Keluar dari sistem">
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                    </button>
-                </form>
-            </div>
         </aside>
 
         <!-- Main Content Area -->
         <section class="content">
             <!-- Topbar Header -->
-            <header class="topbar" role="banner">
-                <div class="flex items-center gap-3">
+            <header class="topbar" id="app-topbar" role="banner">
+                <div class="flex items-center gap-3" id="topbar-heading-container">
                     <button id="mobile-sidebar-toggle" type="button" class="lg:hidden w-9 h-9 flex items-center justify-center rounded-lg bg-slate-100 text-slate-900 hover:bg-slate-200 border border-slate-300 shadow-xs cursor-pointer" aria-label="Buka Menu Navigasi">
                         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
                     </button>

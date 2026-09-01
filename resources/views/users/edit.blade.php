@@ -196,9 +196,47 @@
                 <div>Unit: <strong class="text-white">{{ $user->unit?->nama_unit ?? 'Tingkat Lembaga' }}</strong></div>
                 <div>Peran: <span class="uppercase font-mono text-slate-100 font-bold bg-slate-800 px-2 py-0.5 rounded">{{ $user->role }}</span></div>
                 <div>Status Akun: <strong class="{{ $user->is_active ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold' }}">{{ $user->is_active ? 'Aktif' : 'Non-Aktif' }}</strong></div>
-                <div>Total Hadir Rapat: <strong class="text-white">{{ $user->attendances()->count() }} kali</strong></div>
+                <div>Total Hadir Rapat: <strong class="text-white">{{ $recentAttendances->total() }} kali</strong></div>
                 <div class="pt-2 border-t border-slate-800 text-[11px] text-slate-400">Terdaftar sejak: {{ $user->created_at->translatedFormat('d F Y') }}</div>
             </div>
+        </div>
+
+        <!-- Paginated Attendance History for this User -->
+        <div class="panel flex flex-col justify-between overflow-hidden">
+            <div>
+                <div class="toolbar">
+                    <div class="flex items-center gap-2">
+                        <svg class="text-slate-900" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                        <h4 class="font-bold text-slate-900 text-xs">Riwayat Presensi ({{ $recentAttendances->total() }})</h4>
+                    </div>
+                </div>
+
+                <div class="p-4 divide-y divide-slate-200 text-xs">
+                    @forelse($recentAttendances as $att)
+                        <div class="py-2.5 first:pt-0 last:pb-0 space-y-1">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="font-bold text-slate-950 truncate">{{ $att->agenda->judul_rapat }}</span>
+                                <span class="text-[10px] font-mono text-slate-800 font-bold bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 shrink-0">
+                                    {{ $att->signed_at->format('d/m/Y') }}
+                                </span>
+                            </div>
+                            <div class="text-[11px] text-slate-600 font-mono font-medium">
+                                Waktu: {{ $att->signed_at->format('H:i') }} WIB &bull; IP: {{ $att->ip_address ?? '127.0.0.1' }}
+                            </div>
+                        </div>
+                    @empty
+                        <div class="text-center py-4 text-xs text-slate-500 font-medium">
+                            Pegawai ini belum memiliki riwayat presensi.
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+
+            @if($recentAttendances->hasPages())
+                <div class="mt-auto">
+                    {{ $recentAttendances->links('vendor.pagination.compact') }}
+                </div>
+            @endif
         </div>
 
         <div class="panel p-5 text-xs text-slate-800 bg-white border-slate-300">

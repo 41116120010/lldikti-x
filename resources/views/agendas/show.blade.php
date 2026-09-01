@@ -188,38 +188,46 @@
             </div>
 
             <!-- Dokumentasi Foto Kegiatan -->
-            <div class="panel">
-                <div class="toolbar">
-                    <div class="flex items-center gap-2">
-                        <svg class="text-slate-900" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
-                        <h3 class="font-bold text-slate-900 text-sm">Dokumentasi Foto Rapat ({{ $agenda->documentations->count() }})</h3>
+            <div class="panel flex flex-col justify-between">
+                <div>
+                    <div class="toolbar">
+                        <div class="flex items-center gap-2">
+                            <svg class="text-slate-900" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                            <h3 class="font-bold text-slate-900 text-sm">Dokumentasi Foto Rapat ({{ $documentations->total() }})</h3>
+                        </div>
+                    </div>
+
+                    <div class="p-6">
+                        @if($documentations->count() > 0)
+                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                @foreach($documentations as $doc)
+                                    <div class="group relative bg-slate-100 rounded-xl overflow-hidden border border-slate-300">
+                                        <img 
+                                            src="{{ Storage::disk('public')->url($doc->file_path) }}" 
+                                            alt="{{ $doc->caption ?? 'Dokumentasi Rapat' }}" 
+                                            class="w-full h-36 object-cover group-hover:scale-105 transition duration-300"
+                                        >
+                                        @if($doc->caption)
+                                            <div class="p-2 text-[11px] text-slate-800 font-semibold bg-white border-t border-slate-200 truncate" title="{{ $doc->caption }}">
+                                                {{ $doc->caption }}
+                                            </div>
+                                        @endif
+                                    </div>
+                                @endforeach
+                            </div>
+                        @else
+                            <p class="text-xs text-slate-500 italic text-center py-6">
+                                Belum ada foto dokumentasi yang diunggah untuk agenda ini.
+                            </p>
+                        @endif
                     </div>
                 </div>
 
-                <div class="p-6">
-                    @if($agenda->documentations->count() > 0)
-                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                            @foreach($agenda->documentations as $doc)
-                                <div class="group relative bg-slate-100 rounded-xl overflow-hidden border border-slate-300">
-                                    <img 
-                                        src="{{ Storage::disk('public')->url($doc->file_path) }}" 
-                                        alt="{{ $doc->caption ?? 'Dokumentasi Rapat' }}" 
-                                        class="w-full h-36 object-cover group-hover:scale-105 transition duration-300"
-                                    >
-                                    @if($doc->caption)
-                                        <div class="p-2 text-[11px] text-slate-800 font-semibold bg-white border-t border-slate-200 truncate" title="{{ $doc->caption }}">
-                                            {{ $doc->caption }}
-                                        </div>
-                                    @endif
-                                </div>
-                            @endforeach
-                        </div>
-                    @else
-                        <p class="text-xs text-slate-500 italic text-center py-6">
-                            Belum ada foto dokumentasi yang diunggah untuk agenda ini.
-                        </p>
-                    @endif
-                </div>
+                @if($documentations->hasPages())
+                    <div class="mt-auto">
+                        {{ $documentations->links('vendor.pagination.compact') }}
+                    </div>
+                @endif
             </div>
         </div>
 
@@ -288,36 +296,44 @@
             </div>
 
             <!-- Rekapitulasi Presensi Peserta -->
-            <div class="panel">
-                <div class="toolbar">
-                    <div class="flex items-center gap-2">
-                        <svg class="text-slate-900" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                        <h3 class="font-bold text-slate-900 text-sm">Peserta Hadir ({{ $agenda->attendances->count() }})</h3>
+            <div class="panel flex flex-col justify-between">
+                <div>
+                    <div class="toolbar">
+                        <div class="flex items-center gap-2">
+                            <svg class="text-slate-900" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                            <h3 class="font-bold text-slate-900 text-sm">Peserta Hadir ({{ $attendances->total() }})</h3>
+                        </div>
+                    </div>
+
+                    <div class="p-4 divide-y divide-slate-200">
+                        @forelse($attendances as $attendance)
+                            <div class="py-2.5 first:pt-0 last:pb-0 flex items-center justify-between gap-3 text-xs">
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-7 h-7 rounded-full bg-slate-900 text-white font-bold flex items-center justify-center text-[10px] shrink-0">
+                                        {{ substr($attendance->user->name, 0, 2) }}
+                                    </div>
+                                    <div>
+                                        <div class="font-bold text-slate-900">{{ $attendance->user->name }}</div>
+                                        <div class="text-[10px] text-slate-600 font-mono font-medium">{{ $attendance->user->nip }}</div>
+                                    </div>
+                                </div>
+                                <span class="font-mono font-bold text-[11px] text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                                    {{ $attendance->signed_at->format('H:i') }} WIB
+                                </span>
+                            </div>
+                        @empty
+                            <div class="text-center py-6 text-xs text-slate-500 font-medium">
+                                Belum ada peserta yang melakukan presensi.
+                            </div>
+                        @endforelse
                     </div>
                 </div>
 
-                <div class="p-4 divide-y divide-slate-200 max-h-80 overflow-y-auto">
-                    @forelse($agenda->attendances as $attendance)
-                        <div class="py-2.5 first:pt-0 last:pb-0 flex items-center justify-between gap-3 text-xs">
-                            <div class="flex items-center gap-2.5">
-                                <div class="w-7 h-7 rounded-full bg-slate-900 text-white font-bold flex items-center justify-center text-[10px] shrink-0">
-                                    {{ substr($attendance->user->name, 0, 2) }}
-                                </div>
-                                <div>
-                                    <div class="font-bold text-slate-900">{{ $attendance->user->name }}</div>
-                                    <div class="text-[10px] text-slate-600 font-mono font-medium">{{ $attendance->user->nip }}</div>
-                                </div>
-                            </div>
-                            <span class="font-mono font-bold text-[11px] text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                                {{ $attendance->signed_at->format('H:i') }} WIB
-                            </span>
-                        </div>
-                    @empty
-                        <div class="text-center py-6 text-xs text-slate-500 font-medium">
-                            Belum ada peserta yang melakukan presensi.
-                        </div>
-                    @endforelse
-                </div>
+                @if($attendances->hasPages())
+                    <div class="mt-auto">
+                        {{ $attendances->links('vendor.pagination.compact') }}
+                    </div>
+                @endif
             </div>
         </div>
     </div>

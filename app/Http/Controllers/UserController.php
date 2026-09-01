@@ -132,7 +132,13 @@ class UserController extends Controller
             ? Unit::active()->orderBy('nama_unit')->get() 
             : Unit::where('id', $currentUser->unit_id)->get();
 
-        return view('users.edit', compact('user', 'units', 'currentUser'));
+        $recentAttendances = $user->attendances()
+            ->with('agenda')
+            ->latest('signed_at')
+            ->paginate(5, ['*'], 'page_attendances')
+            ->withQueryString();
+
+        return view('users.edit', compact('user', 'units', 'currentUser', 'recentAttendances'));
     }
 
     /**
