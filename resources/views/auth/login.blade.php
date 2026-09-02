@@ -6,84 +6,60 @@
 <div class="auth-split">
     <!-- Left Hero / Institutional Brand Identity Section (Gov-Tech Standard) -->
     <div class="auth-illustration">
-        <!-- Top Institutional Brand Header -->
-        <div class="flex items-center gap-3.5">
-            <div class="w-11 h-11 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center font-bold text-white shadow-sm shrink-0">
-                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                    <circle cx="9" cy="7" r="4"/>
-                    <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                </svg>
+        <!-- Top Institutional Brand Header + Value Proposition -->
+        <div class="space-y-6 max-w-md">
+            <div class="flex items-center gap-3.5">
+                <img src="{{ asset('images/tut-wuri-handayani.png') }}" alt="Logo Tut Wuri Handayani" class="w-14 h-14 object-contain shrink-0">
+                <div>
+                    <h1 class="text-4xl font-bold text-white tracking-wide">SIPERAPAT</h1>
+                    <p class="text-xs text-blue-200/90 font-medium">LLDIKTI Wilayah X Kemendiktisaintek</p>
+                </div>
             </div>
-            <div>
-                <h1 class="text-base font-bold text-white tracking-wide">SIPERAPAT</h1>
-                <p class="text-xs text-blue-200/90 font-medium">LLDIKTI Wilayah X Kemendiktisaintek</p>
-            </div>
-        </div>
 
-        <!-- Center Value Proposition & Institutional Service Pillars -->
-        <div class="my-auto py-8 space-y-6 max-w-md">
+            <!-- Center Value Proposition & Institutional Service Pillars -->
             <div class="space-y-2">
-                <h2 class="text-2xl sm:text-3xl font-bold text-white tracking-tight leading-tight">
+                <h2 class="text-xl sm:text-2xl font-semibold text-white tracking-tight leading-snug">
                     Pencatatan Kehadiran & Notulensi Rapat Terintegrasi
                 </h2>
-                <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                <p class="text-[11px] sm:text-xs text-slate-300 leading-relaxed">
                     Sistem digitalisasi presensi berbasis verifikasi wajah dan tanda tangan digital untuk seluruh unit kerja di lingkungan LLDIKTI Wilayah X.
                 </p>
             </div>
 
             <!-- Key Gov-Tech Service Capabilities -->
-            <div class="space-y-3 pt-2">
-                <div class="p-3.5 rounded-xl bg-slate-900/70 border border-slate-800 flex items-start gap-3 text-xs">
+            <div class="space-y-4 pt-4">
+                <div class="pl-4 flex items-start gap-3 text-xs">
                     <div class="w-8 h-8 rounded-lg bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center shrink-0 mt-0.5">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                     </div>
                     <div>
                         <div class="font-bold text-white text-xs mb-0.5">Autentikasi Multi-Identifier</div>
-                        <div class="text-slate-400 text-[11px] leading-relaxed">Masuk cepat dan aman menggunakan NIP 18 Digit atau Username resmi terdaftar.</div>
+                        <div class="text-white/80 text-[11px] leading-relaxed drop-shadow-sm">Masuk cepat dan aman menggunakan NIP 18 Digit atau Username resmi terdaftar.</div>
                     </div>
                 </div>
 
-                <div class="p-3.5 rounded-xl bg-slate-900/70 border border-slate-800 flex items-start gap-3 text-xs">
+                <div class="pl-4 flex items-start gap-3 text-xs">
                     <div class="w-8 h-8 rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0 mt-0.5">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
                     </div>
                     <div>
                         <div class="font-bold text-white text-xs mb-0.5">Presensi Sah & Terverifikasi</div>
-                        <div class="text-slate-400 text-[11px] leading-relaxed">Perekaman foto selfie wajah dan tanda tangan digital dengan stempel waktu jaringan.</div>
+                        <div class="text-white/80 text-[11px] leading-relaxed drop-shadow-sm">Perekaman foto selfie wajah dan tanda tangan digital dengan stempel waktu jaringan.</div>
                     </div>
                 </div>
 
-                <div class="p-3.5 rounded-xl bg-slate-900/70 border border-slate-800 flex items-start gap-3 text-xs">
+                <div class="pl-4 flex items-start gap-3 text-xs">
                     <div class="w-8 h-8 rounded-lg bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center shrink-0 mt-0.5">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                     </div>
                     <div>
                         <div class="font-bold text-white text-xs mb-0.5">Rekapitulasi Berita Acara Otomatis</div>
-                        <div class="text-slate-400 text-[11px] leading-relaxed">Ekspor daftar hadir dan notulensi rapat ke dalam format standar resmi (PDF & Word).</div>
+                        <div class="text-white/80 text-[11px] leading-relaxed drop-shadow-sm">Ekspor daftar hadir dan notulensi rapat ke dalam format standar resmi (PDF & Word).</div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Institutional Metrics Footer -->
-        <div class="pt-4 border-t border-slate-800">
-            <div class="grid grid-cols-3 gap-4 text-center">
-                <div>
-                    <div class="text-base font-bold text-white font-mono">100%</div>
-                    <div class="text-[10px] text-slate-400 uppercase tracking-wider">Nirkertas</div>
-                </div>
-                <div>
-                    <div class="text-base font-bold text-white font-mono">Real-Time</div>
-                    <div class="text-[10px] text-slate-400 uppercase tracking-wider">Rekapitulasi</div>
-                </div>
-                <div>
-                    <div class="text-base font-bold text-white font-mono">Multi-Unit</div>
-                    <div class="text-[10px] text-slate-400 uppercase tracking-wider">Terintegrasi</div>
-                </div>
-            </div>
-        </div>
+    </div>
     </div>
 
     <!-- Right Login Form Section -->
