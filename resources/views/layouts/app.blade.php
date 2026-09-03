@@ -40,7 +40,7 @@
     <meta property="og:url" content="{{ url()->current() }}">
     <meta property="og:title" content="@yield('title', 'Dashboard') — SIPERAPAT LLDIKTI Wilayah X">
     <meta property="og:description" content="@yield('meta_description', 'Sistem Informasi Presensi Kehadiran Rapat Kedinasan Terintegrasi Lembaga Layanan Pendidikan Tinggi Wilayah X.')">
-    <meta property="og:image" content="{{ asset('favicon.svg') }}">
+    <meta property="og:image" content="{{ asset('images/tut-wuri-handayani.png') }}">
     <meta property="og:image:alt" content="Logo SIPERAPAT LLDIKTI Wilayah X">
 
     <!-- Twitter Card Protocol -->
@@ -48,10 +48,11 @@
     <meta name="twitter:url" content="{{ url()->current() }}">
     <meta name="twitter:title" content="@yield('title', 'Dashboard') — SIPERAPAT LLDIKTI Wilayah X">
     <meta name="twitter:description" content="@yield('meta_description', 'Sistem Informasi Presensi Kehadiran Rapat Kedinasan Terintegrasi Lembaga Layanan Pendidikan Tinggi Wilayah X.')">
-    <meta name="twitter:image" content="{{ asset('favicon.svg') }}">
+    <meta name="twitter:image" content="{{ asset('images/tut-wuri-handayani.png') }}">
 
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230f172a'%3E%3Cpath d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='9' cy='7' r='4'/%3E%3Cpath d='M22 21v-2a4 4 0 0 0-3-3.87'/%3E%3Cpath d='M16 3.13a4 4 0 0 1 0 7.75'/%3E%3C/svg%3E">
+    <link rel="icon" type="image/png" href="{{ asset('images/tut-wuri-handayani.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/tut-wuri-handayani.png') }}">
 
     <!-- Schema.org JSON-LD Structured Data for Enterprise Gov-Tech -->
     <script type="application/ld+json">
@@ -93,14 +94,7 @@
             <!-- Brand Logo & Mobile Close Button -->
             <div class="brand justify-between">
                 <div class="flex items-center gap-3">
-                    <div class="brand-mark bg-slate-950 text-white shadow-xs">
-                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                            <circle cx="9" cy="7" r="4"/>
-                            <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
-                            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                        </svg>
-                    </div>
+                    <img src="{{ asset('images/tut-wuri-handayani.png') }}" alt="Logo Tut Wuri Handayani" class="w-9 h-9 object-contain shrink-0">
                     <div>
                         <div class="brand-name tracking-tight font-extrabold text-slate-950">SIPERAPAT</div>
                         <small class="text-[11px] text-slate-600 font-bold">LLDIKTI Wilayah X</small>
