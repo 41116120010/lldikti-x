@@ -343,4 +343,56 @@ class AgendaManagementTest extends TestCase
         $response->assertSee('Edit Notulensi');
         $response->assertSee('Unggah Foto');
     }
+
+    public function test_admin_can_create_and_update_agenda_with_custom_meeting_type(): void
+    {
+        $superadmin = User::where('role', 'administrator')->first();
+
+        // 1. Create agenda with custom free-text meeting type
+        $customTitle = 'Sosialisasi BKD LLDIKTI ' . uniqid();
+        $customType = 'Sosialisasi & Workshop BKD 2026';
+
+        $createResponse = $this->actingAs($superadmin)->post('/admin/agendas', [
+            'judul_rapat' => $customTitle,
+            'jenis_rapat' => $customType,
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Aula Gedung A Lantai 3',
+            'waktu_mulai' => now()->addDays(2)->format('Y-m-d H:i:s'),
+            'waktu_selesai' => now()->addDays(2)->addHours(4)->format('Y-m-d H:i:s'),
+            'is_all_units' => true,
+        ]);
+
+        $agenda = Agenda::where('judul_rapat', $customTitle)->first();
+        $this->assertNotNull($agenda);
+        $createResponse->assertRedirect(route('admin.agendas.show', $agenda));
+        $this->assertEquals($customType, $agenda->jenis_rapat);
+
+        // 2. View create form and assert input text and datalist exist
+        $createFormRes = $this->actingAs($superadmin)->get('/admin/agendas/create');
+        $createFormRes->assertStatus(200);
+        $createFormRes->assertSee('id="jenis_rapat"', false);
+        $createFormRes->assertSee('list="jenis_rapat_suggestions"', false);
+        $createFormRes->assertSee('<datalist id="jenis_rapat_suggestions">', false);
+
+        // 3. Update agenda with another custom free-text meeting type
+        $updatedType = 'Bimbingan Teknis Akreditasi Mandiri';
+        $updateResponse = $this->actingAs($superadmin)->put("/admin/agendas/{$agenda->id}", [
+            'judul_rapat' => $customTitle,
+            'jenis_rapat' => $updatedType,
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Sidang Utama',
+            'waktu_mulai' => now()->addDays(2)->format('Y-m-d H:i:s'),
+            'waktu_selesai' => now()->addDays(2)->addHours(4)->format('Y-m-d H:i:s'),
+            'is_all_units' => true,
+        ]);
+
+        $updateResponse->assertRedirect(route('admin.agendas.show', $agenda));
+        $agenda->refresh();
+        $this->assertEquals($updatedType, $agenda->jenis_rapat);
+
+        // 4. Detail page displays the custom meeting type
+        $detailResponse = $this->actingAs($superadmin)->get("/admin/agendas/{$agenda->id}");
+        $detailResponse->assertStatus(200);
+        $detailResponse->assertSee($updatedType);
+    }
 }

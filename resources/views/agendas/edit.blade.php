@@ -39,14 +39,28 @@
                     <!-- Jenis Rapat -->
                     <div class="field">
                         <label for="jenis_rapat" class="text-xs font-bold text-slate-900 block mb-1">Jenis Pertemuan <span class="text-rose-600">*</span></label>
-                        <select id="jenis_rapat" name="jenis_rapat" class="input w-full font-semibold @error('jenis_rapat') input-error @enderror" required>
-                            <option value="koordinasi" {{ old('jenis_rapat', $agenda->jenis_rapat) === 'koordinasi' ? 'selected' : '' }}>Rapat Koordinasi</option>
-                            <option value="pleno" {{ old('jenis_rapat', $agenda->jenis_rapat) === 'pleno' ? 'selected' : '' }}>Rapat Pleno</option>
-                            <option value="evaluasi" {{ old('jenis_rapat', $agenda->jenis_rapat) === 'evaluasi' ? 'selected' : '' }}>Rapat Evaluasi & Monev</option>
-                            <option value="konsinyasi" {{ old('jenis_rapat', $agenda->jenis_rapat) === 'konsinyasi' ? 'selected' : '' }}>Konsinyasi / FGD</option>
-                            <option value="terbatas" {{ old('jenis_rapat', $agenda->jenis_rapat) === 'terbatas' ? 'selected' : '' }}>Rapat Terbatas / Pimpinan</option>
-                            <option value="lainnya" {{ old('jenis_rapat', $agenda->jenis_rapat) === 'lainnya' ? 'selected' : '' }}>Pertemuan Lainnya</option>
-                        </select>
+                        <input 
+                            type="text" 
+                            id="jenis_rapat" 
+                            name="jenis_rapat" 
+                            list="jenis_rapat_suggestions"
+                            value="{{ old('jenis_rapat', $agenda->jenis_rapat) }}" 
+                            class="input w-full font-semibold @error('jenis_rapat') input-error @enderror" 
+                            placeholder="Contoh: Rapat Koordinasi, Workshop, Rapat Pleno, dsb."
+                            maxlength="100"
+                            required
+                        >
+                        <datalist id="jenis_rapat_suggestions">
+                            <option value="Rapat Koordinasi">
+                            <option value="Rapat Pleno">
+                            <option value="Rapat Evaluasi & Monev">
+                            <option value="Konsinyasi / FGD">
+                            <option value="Rapat Terbatas / Pimpinan">
+                            <option value="Sosialisasi / Bimtek">
+                            <option value="Workshop / Lokakarya">
+                            <option value="Pertemuan Lainnya">
+                        </datalist>
+                        <p class="text-[11px] text-slate-500 mt-1 font-medium">Ketik jenis pertemuan bebas atau pilih dari daftar saran.</p>
                         @error('jenis_rapat')
                             <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>
                         @enderror

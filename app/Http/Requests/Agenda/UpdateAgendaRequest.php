@@ -28,7 +28,7 @@ class UpdateAgendaRequest extends FormRequest
     {
         return [
             'judul_rapat' => ['required', 'string', 'max:255'],
-            'jenis_rapat' => ['required', 'string', Rule::in(['koordinasi', 'pleno', 'evaluasi', 'konsinyasi', 'terbatas', 'lainnya'])],
+            'jenis_rapat' => ['required', 'string', 'max:100'],
             'tipe_rapat' => ['required', 'string', Rule::in(['offline', 'online', 'hybrid'])],
             'lokasi_ruang' => ['nullable', 'string', 'max:150', Rule::requiredIf(fn () => in_array($this->input('tipe_rapat'), ['offline', 'hybrid']))],
             'link_meeting' => ['nullable', 'string', 'max:500', Rule::requiredIf(fn () => in_array($this->input('tipe_rapat'), ['online', 'hybrid']))],

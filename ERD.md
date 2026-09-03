@@ -51,7 +51,7 @@ erDiagram
         bigint created_by FK "users.id"
         string judul_rapat
         string slug UK
-        enum jenis_rapat "koordinasi, pleno, evaluasi, konsinyasi, terbatas, lainnya"
+        string jenis_rapat "jenis rapat kedinasan (VARCHAR 100)"
         enum tipe_rapat "offline, online, hybrid"
         string lokasi_ruang "nama ruangan / gedung"
         text link_meeting "URL Zoom/GMeet/Teams"
@@ -157,7 +157,7 @@ Menyimpan metadata agenda rapat, surat edaran, notulensi, dan kesimpulan.
 | `created_by` | `BIGINT UNSIGNED` | No | - | Foreign Key ke `users.id` pembuat agenda |
 | `judul_rapat` | `VARCHAR(255)` | No | - | Judul atau perihal pertemuan rapat |
 | `slug` | `VARCHAR(255)` | No | - | Slug URL unik ramah SEO/routing, **UNIQUE INDEX** |
-| `jenis_rapat` | `ENUM` | No | `'koordinasi'` | `'koordinasi'`, `'pleno'`, `'evaluasi'`, `'konsinyasi'`, `'terbatas'`, `'lainnya'` |
+| `jenis_rapat` | `VARCHAR(100)` | No | `'Rapat Koordinasi'` | Jenis rapat kedinasan kustom bebas (disertai opsi saran) |
 | `tipe_rapat` | `ENUM` | No | `'offline'` | `'offline'`, `'online'`, `'hybrid'` |
 | `lokasi_ruang` | `VARCHAR(150)` | Yes | NULL | Nama ruang rapat / gedung (wajib jika offline/hybrid) |
 | `link_meeting` | `TEXT` | Yes | NULL | URL tautan daring (Zoom/GMeet/Teams) |
