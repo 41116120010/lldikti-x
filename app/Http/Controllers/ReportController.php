@@ -142,16 +142,20 @@ class ReportController extends Controller
         $agenda->load([
             'creator.unit',
             'units',
-            'documentations',
         ]);
 
         $attendances = $agenda->attendances()
             ->with('user.unit')
             ->orderBy('signed_at', 'asc')
-            ->paginate(10)
+            ->paginate(10, ['*'], 'page_attendees')
             ->withQueryString();
 
-        return view('reports.show', compact('agenda', 'attendances'));
+        $documentations = $agenda->documentations()
+            ->latest('id')
+            ->paginate(6, ['*'], 'page_docs')
+            ->withQueryString();
+
+        return view('reports.show', compact('agenda', 'attendances', 'documentations'));
     }
 
     /**

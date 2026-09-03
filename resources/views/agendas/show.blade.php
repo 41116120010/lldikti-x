@@ -202,7 +202,7 @@
                     <div class="toolbar">
                         <div class="flex items-center gap-2">
                             <svg class="text-slate-900" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                            <h3 class="font-bold text-slate-900 text-sm">Rekapitulasi Kehadiran</h3>
+                            <h3 class="font-bold text-slate-900 text-sm">Peserta Hadir</h3>
                         </div>
                         <span class="text-xs font-bold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
                             {{ $attendances->total() }} / {{ $attendances->total() }}

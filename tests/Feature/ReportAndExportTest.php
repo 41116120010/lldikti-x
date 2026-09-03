@@ -86,6 +86,13 @@ class ReportAndExportTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Rekapitulasi Kehadiran & Dokumen Rapat');
         $response->assertSee($agenda->judul_rapat);
+        $response->assertSee('Daftar Rekapitulasi');
+        $response->assertSee('Cetak Berita Acara (PDF)');
+        $response->assertSee('Unduh Format Word (.doc)');
+        $response->assertSee('Kelola Agenda');
+        $response->assertSee('Notulensi Rapat');
+        $response->assertSee('Dokumentasi Foto');
+        $response->assertSee('Surat Edaran');
     }
 
     public function test_reports_filtering_with_date_and_format_parameters(): void
