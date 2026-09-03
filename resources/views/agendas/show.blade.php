@@ -121,124 +121,114 @@
         </div>
     </div>
 
-    <!-- Main 2-Column Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Left: Agenda Details, Notulensi, Documentations (2 cols) -->
-        <div class="lg:col-span-2 space-y-6">
-            <!-- Online Meeting Link (if available) -->
-            @if($agenda->link_meeting)
-                <div class="p-4 bg-white border border-slate-300 rounded-xl flex items-center justify-between gap-4 shadow-xs">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-lg bg-slate-900 text-white flex items-center justify-center shrink-0">
-                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2"/></svg>
-                        </div>
-                        <div>
-                            <div class="font-bold text-xs text-slate-900">Tautan Pertemuan Daring</div>
-                            <div class="text-xs text-slate-700 font-medium truncate max-w-sm">{{ $agenda->link_meeting }}</div>
-                        </div>
-                    </div>
-                    <a href="{{ $agenda->link_meeting }}" target="_blank" class="button small text-xs shrink-0 font-bold">
-                        Buka Zoom / GMeet
-                    </a>
+    <!-- Metadata Info Bar -->
+    <div class="bg-white border border-slate-300 rounded-2xl shadow-xs">
+        <div class="flex flex-wrap items-center divide-x divide-slate-200">
+            <div class="px-5 py-3 text-xs">
+                <div class="text-[10px] uppercase font-bold text-slate-500 font-mono">MPI No.</div>
+                <div class="font-bold text-slate-900">{{ $agenda->slug }}</div>
+            </div>
+            <div class="px-5 py-3 text-xs">
+                <div class="text-[10px] uppercase font-bold text-slate-500 font-mono">Notulis</div>
+                <div class="font-bold text-slate-900">{{ $agenda->creator->name }}</div>
+            </div>
+            <div class="px-5 py-3 text-xs">
+                <div class="text-[10px] uppercase font-bold text-slate-500 font-mono">Moderator</div>
+                <div class="font-bold text-slate-900">{{ $agenda->creator->unit?->kode_unit ?? 'Pusat' }}</div>
+            </div>
+            <div class="px-5 py-3 text-xs">
+                <div class="text-[10px] uppercase font-bold text-slate-500 font-mono">Pimpinan</div>
+                <div class="font-bold text-slate-900">{{ $agenda->jenis_rapat }}</div>
+            </div>
+            <div class="px-5 py-3 text-xs">
+                <div class="text-[10px] uppercase font-bold text-slate-500 font-mono">Pimp. vi.</div>
+                <div class="font-bold text-slate-900">{{ $attendances->total() }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Online Meeting Link (if available) -->
+    @if($agenda->link_meeting)
+        <div class="p-4 bg-white border border-slate-300 rounded-xl flex items-center justify-between gap-4 shadow-xs">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-slate-900 text-white flex items-center justify-center shrink-0">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2"/></svg>
                 </div>
-            @endif
-
-            <!-- Notulensi & Kesimpulan Section -->
-            <div class="panel">
-                <div class="toolbar">
-                    <div class="flex items-center gap-2">
-                        <svg class="text-slate-900" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
-                        <h3 class="font-bold text-slate-900 text-sm">Notulensi & Kesimpulan Rapat</h3>
-                    </div>
-
-                    @can('manageMinutes', $agenda)
-                        <a href="{{ route('admin.agendas.notulen', $agenda) }}" class="text-xs font-bold text-slate-900 hover:underline">
-                            Edit Notulensi
-                        </a>
-                    @endcan
-                </div>
-
-                <div class="p-6 space-y-5">
-                    <div>
-                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-900 mb-2">Poin-Poin Pembahasan (Notulensi):</h4>
-                        @if($agenda->notulensi)
-                            <div class="text-xs text-slate-900 font-medium leading-relaxed whitespace-pre-line bg-slate-50 p-4 rounded-xl border border-slate-200">
-                                {{ $agenda->notulensi }}
-                            </div>
-                        @else
-                            <p class="text-xs text-slate-600 italic bg-slate-50 p-4 rounded-xl border border-slate-200">
-                                Notulensi jalannya rapat belum diinput oleh pengelola rapat.
-                            </p>
-                        @endif
-                    </div>
-
-                    <div>
-                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-900 mb-2">Kesimpulan & Rencana Tindak Lanjut (RTL):</h4>
-                        @if($agenda->kesimpulan)
-                            <div class="text-xs text-slate-900 font-medium leading-relaxed whitespace-pre-line bg-emerald-50/70 p-4 rounded-xl border border-emerald-300">
-                                {{ $agenda->kesimpulan }}
-                            </div>
-                        @else
-                            <p class="text-xs text-slate-600 italic bg-slate-50 p-4 rounded-xl border border-slate-200">
-                                Kesimpulan rapat belum diinput.
-                            </p>
-                        @endif
-                    </div>
+                <div>
+                    <div class="font-bold text-xs text-slate-900">Tautan Pertemuan Daring</div>
+                    <div class="text-xs text-slate-700 font-medium truncate max-w-sm">{{ $agenda->link_meeting }}</div>
                 </div>
             </div>
+            <a href="{{ $agenda->link_meeting }}" target="_blank" class="button small text-xs shrink-0 font-bold">
+                Buka Zoom / GMeet
+            </a>
+        </div>
+    @endif
 
-            <!-- Dokumentasi Foto Kegiatan -->
+    <!-- Main 2-Column Grid: Kehadiran (left) + Notulensi (right) -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+        <!-- Left: Rekapitulasi Kehadiran (1 col) -->
+        <div class="space-y-6">
+            <!-- Rekapitulasi Kehadiran Panel -->
             <div class="panel flex flex-col justify-between">
                 <div>
                     <div class="toolbar">
                         <div class="flex items-center gap-2">
-                            <svg class="text-slate-900" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
-                            <h3 class="font-bold text-slate-900 text-sm">Dokumentasi Foto Rapat ({{ $documentations->total() }})</h3>
+                            <svg class="text-slate-900" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                            <h3 class="font-bold text-slate-900 text-sm">Rekapitulasi Kehadiran</h3>
+                        </div>
+                        <span class="text-xs font-bold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
+                            {{ $attendances->total() }} / {{ $attendances->total() }}
+                        </span>
+                    </div>
+
+                    <!-- Attendance Summary Stats -->
+                    <div class="px-4 pt-4">
+                        <div class="flex items-center gap-2">
+                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold bg-slate-900 text-white">
+                                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                Hadir: {{ $attendances->total() }}
+                            </span>
+                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                                Absen: 0
+                            </span>
                         </div>
                     </div>
 
-                    <div class="p-6">
-                        @if($documentations->count() > 0)
-                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                                @foreach($documentations as $doc)
-                                    <div class="group relative bg-slate-100 rounded-xl overflow-hidden border border-slate-300">
-                                        <img 
-                                            src="{{ Storage::disk('public')->url($doc->file_path) }}" 
-                                            alt="{{ $doc->caption ?? 'Dokumentasi Rapat' }}" 
-                                            class="w-full h-36 object-cover group-hover:scale-105 transition duration-300"
-                                        >
-                                        @if($doc->caption)
-                                            <div class="p-2 text-[11px] text-slate-800 font-semibold bg-white border-t border-slate-200 truncate" title="{{ $doc->caption }}">
-                                                {{ $doc->caption }}
-                                            </div>
-                                        @endif
-                                    </div>
-                                @endforeach
+                    <!-- Attendee List -->
+                    <div class="p-4 divide-y divide-slate-200">
+                        @forelse($attendances as $attendance)
+                            <div class="py-2.5 first:pt-0 last:pb-0 flex items-center gap-2.5 text-xs">
+                                <div class="w-7 h-7 rounded-full bg-slate-900 text-white font-bold flex items-center justify-center text-[10px] shrink-0">
+                                    {{ substr($attendance->user->name, 0, 2) }}
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="font-bold text-slate-900 truncate">{{ $attendance->user->name }}</div>
+                                    <div class="text-[10px] text-slate-500 font-medium">{{ $attendance->user->unit?->kode_unit ?? 'Pusat' }}</div>
+                                </div>
                             </div>
-                        @else
-                            <p class="text-xs text-slate-500 italic text-center py-6">
-                                Belum ada foto dokumentasi yang diunggah untuk agenda ini.
-                            </p>
-                        @endif
+                        @empty
+                            <div class="text-center py-6 text-xs text-slate-500 font-medium">
+                                Belum ada peserta yang melakukan presensi.
+                            </div>
+                        @endforelse
                     </div>
                 </div>
 
-                @if($documentations->hasPages())
+                @if($attendances->hasPages())
                     <div class="mt-auto">
-                        {{ $documentations->links('vendor.pagination.compact') }}
+                        {{ $attendances->links('vendor.pagination.compact') }}
                     </div>
                 @endif
             </div>
-        </div>
 
-        <!-- Right: Surat Edaran & Rekap Kehadiran (1 col) -->
-        <div class="space-y-6">
             <!-- Surat Edaran Card -->
             <div class="panel">
                 <div class="toolbar">
                     <div class="flex items-center gap-2">
                         <svg class="text-slate-900" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                        <h3 class="font-bold text-slate-900 text-sm">Surat Edaran / Undangan</h3>
+                        <h3 class="font-bold text-slate-900 text-sm">Surat Edaran</h3>
                     </div>
                 </div>
 
@@ -294,47 +284,204 @@
                     @endif
                 </div>
             </div>
+        </div>
 
-            <!-- Rekapitulasi Presensi Peserta -->
-            <div class="panel flex flex-col justify-between">
-                <div>
-                    <div class="toolbar">
-                        <div class="flex items-center gap-2">
-                            <svg class="text-slate-900" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                            <h3 class="font-bold text-slate-900 text-sm">Peserta Hadir ({{ $attendances->total() }})</h3>
-                        </div>
+        <!-- Right: Notulensi Rapat (3 cols) -->
+        <div class="lg:col-span-3 space-y-6">
+            <!-- Notulensi Rapat Section -->
+            <div class="panel">
+                <div class="toolbar">
+                    <div class="flex items-center gap-2">
+                        <svg class="text-slate-900" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
+                        <h3 class="font-bold text-slate-900 text-sm">Notulensi Rapat</h3>
                     </div>
 
-                    <div class="p-4 divide-y divide-slate-200">
-                        @forelse($attendances as $attendance)
-                            <div class="py-2.5 first:pt-0 last:pb-0 flex items-center justify-between gap-3 text-xs">
-                                <div class="flex items-center gap-2.5">
-                                    <div class="w-7 h-7 rounded-full bg-slate-900 text-white font-bold flex items-center justify-center text-[10px] shrink-0">
-                                        {{ substr($attendance->user->name, 0, 2) }}
-                                    </div>
-                                    <div>
-                                        <div class="font-bold text-slate-900">{{ $attendance->user->name }}</div>
-                                        <div class="text-[10px] text-slate-600 font-mono font-medium">{{ $attendance->user->nip }}</div>
-                                    </div>
-                                </div>
-                                <span class="font-mono font-bold text-[11px] text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                                    {{ $attendance->signed_at->format('H:i') }} WIB
-                                </span>
+                    @can('manageMinutes', $agenda)
+                        <a href="{{ route('admin.agendas.notulen', $agenda) }}" class="text-xs font-bold text-slate-900 hover:underline">
+                            Edit Notulensi
+                        </a>
+                    @endcan
+                </div>
+
+                <div class="p-6 space-y-5">
+                    <!-- Pembahasan -->
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-900 mb-2 flex items-center gap-2">
+                            <span class="w-5 h-5 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-bold shrink-0">P</span>
+                            Pembahasan
+                        </h4>
+                        @if($agenda->notulensi)
+                            <div class="text-xs text-slate-900 font-medium leading-relaxed whitespace-pre-line pl-7">
+                                {{ $agenda->notulensi }}
                             </div>
-                        @empty
-                            <div class="text-center py-6 text-xs text-slate-500 font-medium">
-                                Belum ada peserta yang melakukan presensi.
+                        @else
+                            <p class="text-xs text-slate-600 italic pl-7">
+                                Notulensi jalannya rapat belum diinput oleh pengelola rapat.
+                            </p>
+                        @endif
+                    </div>
+
+                    @if($agenda->notulensi)
+                        <div class="border-t border-slate-200"></div>
+                    @endif
+
+                    <!-- Kesimpulan & Tindak Lanjut -->
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-900 mb-2 flex items-center gap-2">
+                            <span class="w-5 h-5 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-bold shrink-0">K</span>
+                            Keputusan & Tindak Lanjut
+                        </h4>
+                        @if($agenda->kesimpulan)
+                            <div class="text-xs text-slate-900 font-medium leading-relaxed whitespace-pre-line pl-7">
+                                {{ $agenda->kesimpulan }}
                             </div>
-                        @endforelse
+                        @else
+                            <p class="text-xs text-slate-600 italic pl-7">
+                                Kesimpulan rapat belum diinput.
+                            </p>
+                        @endif
+                    </div>
+
+                    <div class="border-t border-slate-200"></div>
+
+                    <!-- Penutup -->
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-900 mb-2 flex items-center gap-2">
+                            <span class="w-5 h-5 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-bold shrink-0">✓</span>
+                            Penutup
+                        </h4>
+                        <p class="text-xs text-slate-700 font-medium leading-relaxed pl-7">
+                            Rapat ditutup pada pukul {{ $agenda->waktu_selesai->format('H:i') }} WIB. Notulen ini disusun oleh Sekretaris/PJ dan telah diverifikasi oleh pihak terkait.
+                        </p>
                     </div>
                 </div>
 
-                @if($attendances->hasPages())
-                    <div class="mt-auto">
-                        {{ $attendances->links('vendor.pagination.compact') }}
+                <!-- Signature Section -->
+                <div class="border-t border-slate-200 px-6 py-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                        <div class="text-center space-y-8">
+                            <div class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Pemimpin Rapat</div>
+                            <div class="h-14 flex items-center justify-center">
+                                <svg viewBox="0 0 100 40" width="80" height="32" class="text-slate-300"><path d="M10 30 Q 25 5 40 25 T 70 20 T 90 25" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+                            </div>
+                            <div class="text-xs font-bold text-slate-900 border-t border-slate-300 pt-2">{{ $agenda->creator->name }}</div>
+                        </div>
+
+                        <div class="text-center space-y-8">
+                            <div class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Notulis</div>
+                            <div class="h-14 flex items-center justify-center">
+                                <svg viewBox="0 0 100 40" width="80" height="32" class="text-slate-300"><path d="M10 30 Q 25 5 40 25 T 70 20 T 90 25" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+                            </div>
+                            <div class="text-xs font-bold text-slate-900 border-t border-slate-300 pt-2">{{ $agenda->creator->name }}</div>
+                        </div>
+
+                        <div class="text-center space-y-8">
+                            <div class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Direktur/PJ</div>
+                            <div class="h-14 flex items-center justify-center">
+                                <svg viewBox="0 0 100 40" width="80" height="32" class="text-slate-300"><path d="M10 30 Q 25 5 40 25 T 70 20 T 90 25" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+                            </div>
+                            <div class="text-xs font-bold text-slate-900 border-t border-slate-300 pt-2">Direktur/PJ</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dokumentasi Foto & Lampiran (Full Width Bottom Section) -->
+    <div class="panel">
+        <div class="toolbar">
+            <div class="flex items-center gap-2">
+                <svg class="text-slate-900" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                <h3 class="font-bold text-slate-900 text-sm">Dokumentasi Foto & Lampiran</h3>
+            </div>
+
+            <div class="flex items-center gap-2">
+                @if($documentations->hasPages())
+                    <div class="flex items-center gap-1 text-xs">
+                        {{ $documentations->links('vendor.pagination.compact') }}
                     </div>
                 @endif
+                <span class="text-xs font-bold text-slate-500">{{ $documentations->total() }} File</span>
             </div>
+        </div>
+
+        <div class="p-6">
+            @if($documentations->count() > 0)
+                <div class="flex gap-4 overflow-x-auto pb-2">
+                    @foreach($documentations as $doc)
+                        <div class="shrink-0 w-40 group">
+                            <div class="relative bg-slate-100 rounded-xl overflow-hidden border border-slate-300">
+                                @php
+                                    $ext = strtolower(pathinfo($doc->file_path, PATHINFO_EXTENSION));
+                                    $isImage = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']);
+                                    $isPdf = $ext === 'pdf';
+                                    $isVideo = in_array($ext, ['mp4', 'mov', 'avi', 'webm']);
+                                @endphp
+
+                                @if($isImage)
+                                    <img 
+                                        src="{{ Storage::disk('public')->url($doc->file_path) }}" 
+                                        alt="{{ $doc->caption ?? 'Dokumentasi Rapat' }}" 
+                                        class="w-full h-28 object-cover group-hover:scale-105 transition duration-300"
+                                    >
+                                @elseif($isPdf)
+                                    <div class="w-full h-28 flex items-center justify-center bg-slate-50">
+                                        <div class="text-center">
+                                            <span class="inline-block px-2 py-0.5 bg-rose-500 text-white text-[10px] font-bold rounded mb-1">PDF</span>
+                                            <div class="text-[10px] text-slate-500 font-medium px-2 truncate">{{ basename($doc->file_path) }}</div>
+                                        </div>
+                                    </div>
+                                @elseif($isVideo)
+                                    <div class="w-full h-28 flex items-center justify-center bg-slate-900">
+                                        <div class="text-center">
+                                            <span class="inline-block px-2 py-0.5 bg-rose-500 text-white text-[10px] font-bold rounded mb-1">VID</span>
+                                            <div class="text-[10px] text-slate-400 font-medium px-2 truncate">{{ basename($doc->file_path) }}</div>
+                                        </div>
+                                    </div>
+                                @else
+                                    <div class="w-full h-28 flex items-center justify-center bg-slate-50">
+                                        <div class="text-center">
+                                            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-400 mx-auto"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                            <div class="text-[10px] text-slate-500 font-medium px-2 mt-1 truncate">{{ basename($doc->file_path) }}</div>
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
+
+                            <div class="mt-2 px-0.5">
+                                <div class="text-[11px] text-slate-800 font-semibold truncate" title="{{ $doc->caption ?? basename($doc->file_path) }}">
+                                    {{ $doc->caption ?? basename($doc->file_path) }}
+                                </div>
+                                @if($doc->created_at)
+                                    <div class="text-[10px] text-slate-400 font-medium">{{ $doc->created_at->diffForHumans() }}</div>
+                                @endif
+                            </div>
+
+                            <div class="mt-1.5 flex items-center gap-1">
+                                <a 
+                                    href="{{ Storage::disk('public')->url($doc->file_path) }}" 
+                                    target="_blank" 
+                                    class="flex-1 text-center px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold rounded border border-slate-200 transition"
+                                >
+                                    Preview
+                                </a>
+                                <a 
+                                    href="{{ Storage::disk('public')->url($doc->file_path) }}" 
+                                    download 
+                                    class="px-1.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded border border-slate-200 transition"
+                                >
+                                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                </a>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @else
+                <p class="text-xs text-slate-500 italic text-center py-6">
+                    Belum ada foto dokumentasi yang diunggah untuk agenda ini.
+                </p>
+            @endif
         </div>
     </div>
 </div>
