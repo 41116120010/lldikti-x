@@ -250,4 +250,55 @@ class AttendanceCheckInTest extends TestCase
         $response->assertSee('Belum ada catatan kehadiran rapat yang ditemukan.');
         $response->assertSee('Reset Pencarian');
     }
+
+    public function test_administrator_can_check_in_to_any_unit_scoped_meeting(): void
+    {
+        Storage::fake('public');
+
+        $unitKlb = Unit::where('kode_unit', 'POKJA-KLB')->first();
+        $superadmin = User::where('role', 'administrator')->first();
+
+        // Meeting is strictly scoped to KLB unit (Superadmin has unit_id = null)
+        $agendaKlb = Agenda::create([
+            'created_by' => $superadmin->id,
+            'judul_rapat' => 'Rapat Koordinasi Khusus KLB ' . uniqid(),
+            'slug' => 'rapat-klb-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Rapat KLB',
+            'waktu_mulai' => now()->subMinutes(15),
+            'waktu_selesai' => now()->addHours(2),
+            'is_all_units' => false,
+            'status' => 'ongoing',
+        ]);
+        $agendaKlb->units()->sync([$unitKlb->id]);
+
+        // 1. Superadmin can access check-in page without 403
+        $pageResponse = $this->actingAs($superadmin)->get("/agendas/{$agendaKlb->id}/presensi");
+        $pageResponse->assertStatus(200);
+        $pageResponse->assertSee('Formulir Presensi Rapat Kedinasan');
+
+        // 2. Admin agenda detail page shows "Isi Presensi Saya"
+        $detailResponse = $this->actingAs($superadmin)->get("/admin/agendas/{$agendaKlb->id}");
+        $detailResponse->assertStatus(200);
+        $detailResponse->assertSee('Isi Presensi Saya');
+
+        // 3. Superadmin can submit attendance check-in
+        $submitResponse = $this->actingAs($superadmin)->post("/agendas/{$agendaKlb->id}/presensi", [
+            'selfie_data' => $this->validJpegBase64,
+            'signature_data' => $this->validPngBase64,
+        ]);
+
+        $attendance = Attendance::where('agenda_id', $agendaKlb->id)
+            ->where('user_id', $superadmin->id)
+            ->first();
+
+        $this->assertNotNull($attendance);
+        $submitResponse->assertRedirect(route('attendances.success', [$agendaKlb, $attendance]));
+
+        // 4. Admin agenda detail page now shows "Anda Sudah Hadir"
+        $detailAfterResponse = $this->actingAs($superadmin)->get("/admin/agendas/{$agendaKlb->id}");
+        $detailAfterResponse->assertStatus(200);
+        $detailAfterResponse->assertSee('Anda Sudah Hadir');
+    }
 }

@@ -44,7 +44,11 @@ class UserController extends Controller
 
         if ($unitId = $request->input('unit_id')) {
             if ($currentUser->isAdministrator()) {
-                $query->where('unit_id', $unitId);
+                if ($unitId === 'none') {
+                    $query->whereNull('unit_id');
+                } else {
+                    $query->where('unit_id', $unitId);
+                }
             }
         }
 

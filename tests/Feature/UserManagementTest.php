@@ -140,4 +140,19 @@ class UserManagementTest extends TestCase
             $user->delete();
         }
     }
+
+    public function test_administrator_can_filter_users_without_unit(): void
+    {
+        $superadmin = User::where('role', 'administrator')->first();
+
+        // 1. Filter by unit_id=none should show users with unit_id null (e.g. superadmin)
+        $response = $this->actingAs($superadmin)->get('/admin/users?unit_id=none');
+        $response->assertStatus(200);
+        $response->assertSee($superadmin->name);
+
+        $users = $response->viewData('users');
+        foreach ($users as $u) {
+            $this->assertNull($u->unit_id);
+        }
+    }
 }

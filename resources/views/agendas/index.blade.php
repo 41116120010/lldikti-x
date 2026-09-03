@@ -72,9 +72,22 @@
                 <option value="hybrid" {{ request('tipe') === 'hybrid' ? 'selected' : '' }}>Hibrida</option>
             </select>
 
+            @if($currentUser->isAdministrator() && isset($units) && $units->isNotEmpty())
+                <!-- Unit Kerja Filter (Khusus Administrator) -->
+                <select name="unit_id" onchange="this.form.submit()" class="input text-xs sm:w-56 font-semibold">
+                    <option value="">Semua Sasaran Unit Kerja</option>
+                    <option value="all_units" {{ request('unit_id') === 'all_units' ? 'selected' : '' }}>Seluruh Unit (Pleno / Universal)</option>
+                    @foreach($units as $u)
+                        <option value="{{ $u->id }}" {{ request('unit_id') == $u->id ? 'selected' : '' }}>
+                            {{ $u->kode_unit }} — {{ $u->nama_unit }}
+                        </option>
+                    @endforeach
+                </select>
+            @endif
+
             <div class="flex items-center gap-2">
                 <button type="submit" class="button small secondary text-xs font-bold">Cari</button>
-                @if(request()->hasAny(['search', 'tipe']))
+                @if(request()->hasAny(['search', 'tipe', 'unit_id']))
                     <a href="{{ route('admin.agendas.index', ['status' => request('status', 'all')]) }}" class="text-xs text-slate-700 hover:text-slate-900 font-bold underline">Reset</a>
                 @endif
             </div>

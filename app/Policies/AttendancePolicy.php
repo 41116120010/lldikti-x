@@ -42,8 +42,8 @@ class AttendancePolicy
             return false;
         }
 
-        // 2. User must be eligible based on unit
-        if (!$agenda->isUserEligible($user)) {
+        // 2. User must be eligible based on unit (Administrator has global attendance authority)
+        if (!$user->isAdministrator() && !$agenda->isUserEligible($user)) {
             return false;
         }
 

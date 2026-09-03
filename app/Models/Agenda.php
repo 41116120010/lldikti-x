@@ -135,6 +135,11 @@ class Agenda extends Model
      */
     public function isUserEligible(User $user): bool
     {
+        // Administrator has global oversight and can attend any agenda across all units
+        if ($user->isAdministrator()) {
+            return true;
+        }
+
         if ($this->is_all_units) {
             return true;
         }

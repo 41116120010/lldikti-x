@@ -44,6 +44,19 @@ class AgendaController extends Controller
             $query->where('tipe_rapat', $type);
         }
 
+        // Unit Filter (Administrator can filter by specific target unit or universal)
+        if ($unitId = $request->input('unit_id')) {
+            if ($currentUser->isAdministrator()) {
+                if ($unitId === 'all_units') {
+                    $query->where('is_all_units', true);
+                } else {
+                    $query->whereHas('units', function ($sub) use ($unitId) {
+                        $sub->where('units.id', $unitId);
+                    });
+                }
+            }
+        }
+
         // Search Filter
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
@@ -53,6 +66,7 @@ class AgendaController extends Controller
         }
 
         $agendas = $query->orderBy('waktu_mulai', 'desc')->paginate(9)->withQueryString();
+        $units = $currentUser->isAdministrator() ? Unit::active()->orderBy('nama_unit')->get() : collect();
 
         // Stat counts
         $statusCounts = [
@@ -62,7 +76,7 @@ class AgendaController extends Controller
             'completed' => Agenda::visibleTo($currentUser)->where('status', 'completed')->count(),
         ];
 
-        return view('agendas.index', compact('agendas', 'currentUser', 'statusCounts'));
+        return view('agendas.index', compact('agendas', 'currentUser', 'statusCounts', 'units'));
     }
 
     /**
@@ -169,8 +183,9 @@ class AgendaController extends Controller
             ->withQueryString();
 
         $currentUser = Auth::user();
+        $myAttendance = $agenda->attendances()->where('user_id', $currentUser->id)->first();
 
-        return view('agendas.show', compact('agenda', 'attendances', 'documentations', 'currentUser'));
+        return view('agendas.show', compact('agenda', 'attendances', 'documentations', 'currentUser', 'myAttendance'));
     }
 
     /**
@@ -254,7 +269,8 @@ class AgendaController extends Controller
             $agenda->update($updateData);
 
             if ($isAllUnits) {
-                $agenda->units()->detach();
+                $allUnitIds = Unit::active()->pluck('id')->toArray();
+                $agenda->units()->sync($allUnitIds);
             } elseif (!empty($validated['unit_ids'])) {
                 $agenda->units()->sync($validated['unit_ids']);
             }

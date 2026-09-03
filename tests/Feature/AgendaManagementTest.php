@@ -395,4 +395,57 @@ class AgendaManagementTest extends TestCase
         $detailResponse->assertStatus(200);
         $detailResponse->assertSee($updatedType);
     }
+
+    public function test_administrator_can_filter_agendas_by_unit(): void
+    {
+        $superadmin = User::where('role', 'administrator')->first();
+        $unitKlb = Unit::where('kode_unit', 'POKJA-KLB')->first();
+        $unitTu = Unit::where('kode_unit', 'BAG-TU')->first();
+
+        $agendaKlb = Agenda::create([
+            'created_by' => $superadmin->id,
+            'judul_rapat' => 'Rapat Internal KLB Filter Test ' . uniqid(),
+            'slug' => 'rapat-klb-filter-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang KLB',
+            'waktu_mulai' => now()->addDays(3),
+            'waktu_selesai' => now()->addDays(3)->addHours(2),
+            'is_all_units' => false,
+            'status' => 'scheduled',
+        ]);
+        $agendaKlb->units()->sync([$unitKlb->id]);
+
+        $agendaTu = Agenda::create([
+            'created_by' => $superadmin->id,
+            'judul_rapat' => 'Rapat Internal TU Filter Test ' . uniqid(),
+            'slug' => 'rapat-tu-filter-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang TU',
+            'waktu_mulai' => now()->addDays(4),
+            'waktu_selesai' => now()->addDays(4)->addHours(2),
+            'is_all_units' => false,
+            'status' => 'scheduled',
+        ]);
+        $agendaTu->units()->sync([$unitTu->id]);
+
+        // 1. Agenda index shows unit filter dropdown for Administrator
+        $indexResponse = $this->actingAs($superadmin)->get('/admin/agendas');
+        $indexResponse->assertStatus(200);
+        $indexResponse->assertSee('name="unit_id"', false);
+        $indexResponse->assertSee('Semua Sasaran Unit Kerja');
+
+        // 2. Filter by unit KLB
+        $filterKlbResponse = $this->actingAs($superadmin)->get("/admin/agendas?unit_id={$unitKlb->id}");
+        $filterKlbResponse->assertStatus(200);
+        $filterKlbResponse->assertSee($agendaKlb->judul_rapat);
+        $filterKlbResponse->assertDontSee($agendaTu->judul_rapat);
+
+        // 3. Filter by unit TU
+        $filterTuResponse = $this->actingAs($superadmin)->get("/admin/agendas?unit_id={$unitTu->id}");
+        $filterTuResponse->assertStatus(200);
+        $filterTuResponse->assertSee($agendaTu->judul_rapat);
+        $filterTuResponse->assertDontSee($agendaKlb->judul_rapat);
+    }
 }

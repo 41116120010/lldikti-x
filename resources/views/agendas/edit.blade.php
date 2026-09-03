@@ -151,63 +151,72 @@
             <div class="space-y-4 pt-4 border-t border-slate-200">
                 <h3 class="text-sm font-extrabold uppercase tracking-wider text-slate-900">2. Target Peserta & Unit Kerja</h3>
 
-                <div class="space-y-3">
-                    <label class="flex items-center gap-3 p-3.5 bg-slate-50 border border-slate-300 rounded-xl cursor-pointer hover:bg-slate-100 transition">
-                        <input 
-                            type="radio" 
-                            name="is_all_units" 
-                            value="1" 
-                            {{ old('is_all_units', $agenda->is_all_units ? '1' : '0') == '1' ? 'checked' : '' }} 
-                            onchange="toggleUnitList(false)"
-                            class="w-4 h-4 accent-slate-950"
-                        >
-                        <div>
-                            <span class="font-bold text-slate-950 text-xs block">Terbuka untuk Seluruh Unit Kerja (Pleno / Universal)</span>
-                            <span class="text-[11px] text-slate-600 font-medium">Seluruh pegawai dari semua bagian/Pokja LLDIKTI berhak mengikuti rapat.</span>
-                        </div>
-                    </label>
+                @if($currentUser->isAdministrator())
+                    <div class="space-y-3">
+                        <label class="flex items-center gap-3 p-3.5 bg-slate-50 border border-slate-300 rounded-xl cursor-pointer hover:bg-slate-100 transition">
+                            <input 
+                                type="radio" 
+                                name="is_all_units" 
+                                value="1" 
+                                {{ old('is_all_units', $agenda->is_all_units ? '1' : '0') == '1' ? 'checked' : '' }} 
+                                onchange="toggleUnitList(false)"
+                                class="w-4 h-4 accent-slate-950"
+                            >
+                            <div>
+                                <span class="font-bold text-slate-950 text-xs block">Terbuka untuk Seluruh Unit Kerja (Pleno / Universal)</span>
+                                <span class="text-[11px] text-slate-600 font-medium">Seluruh pegawai dari semua bagian/Pokja LLDIKTI berhak mengikuti rapat.</span>
+                            </div>
+                        </label>
 
-                    <label class="flex items-center gap-3 p-3.5 bg-slate-50 border border-slate-300 rounded-xl cursor-pointer hover:bg-slate-100 transition">
-                        <input 
-                            type="radio" 
-                            name="is_all_units" 
-                            value="0" 
-                            {{ old('is_all_units', $agenda->is_all_units ? '1' : '0') == '0' ? 'checked' : '' }} 
-                            onchange="toggleUnitList(true)"
-                            class="w-4 h-4 accent-slate-950"
-                        >
-                        <div>
-                            <span class="font-bold text-slate-950 text-xs block">Pilih Unit Kerja Tertentu (Lintas Unit / Terbatas)</span>
-                            <span class="text-[11px] text-slate-600 font-medium">Hanya pegawai dari Pokja/Bagian yang dipilih yang dapat melihat & melakukan presensi.</span>
-                        </div>
-                    </label>
-                </div>
-
-                <!-- Unit Checkboxes -->
-                @php
-                    $selectedUnitIds = old('unit_ids', $agenda->units->pluck('id')->toArray());
-                @endphp
-                <div id="unit-selection-wrap" class="{{ old('is_all_units', $agenda->is_all_units ? '1' : '0') == '1' ? 'hidden' : '' }} p-4 bg-slate-50 border border-slate-300 rounded-xl space-y-2">
-                    <div class="text-xs font-bold text-slate-900 mb-2">Pilih Unit yang Diundang:</div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        @foreach($units as $unit)
-                            <label class="flex items-center gap-2.5 p-2 bg-white rounded-lg border border-slate-300 text-xs font-medium cursor-pointer hover:border-slate-900">
-                                <input 
-                                    type="checkbox" 
-                                    name="unit_ids[]" 
-                                    value="{{ $unit->id }}" 
-                                    {{ in_array($unit->id, $selectedUnitIds) ? 'checked' : '' }}
-                                    class="w-4 h-4 accent-slate-950 rounded"
-                                >
-                                <span class="font-mono font-bold text-slate-950">{{ $unit->kode_unit }}</span>
-                                <span class="text-slate-700 truncate">- {{ $unit->nama_unit }}</span>
-                            </label>
-                        @endforeach
+                        <label class="flex items-center gap-3 p-3.5 bg-slate-50 border border-slate-300 rounded-xl cursor-pointer hover:bg-slate-100 transition">
+                            <input 
+                                type="radio" 
+                                name="is_all_units" 
+                                value="0" 
+                                {{ old('is_all_units', $agenda->is_all_units ? '1' : '0') == '0' ? 'checked' : '' }} 
+                                onchange="toggleUnitList(true)"
+                                class="w-4 h-4 accent-slate-950"
+                            >
+                            <div>
+                                <span class="font-bold text-slate-950 text-xs block">Pilih Unit Kerja Tertentu (Lintas Unit / Terbatas)</span>
+                                <span class="text-[11px] text-slate-600 font-medium">Hanya pegawai dari Pokja/Bagian yang dipilih yang dapat melihat & melakukan presensi.</span>
+                            </div>
+                        </label>
                     </div>
-                    @error('unit_ids')
-                        <p class="text-xs text-rose-700 font-bold mt-2">{{ $message }}</p>
-                    @enderror
-                </div>
+
+                    <!-- Unit Checkboxes -->
+                    @php
+                        $selectedUnitIds = old('unit_ids', $agenda->units->pluck('id')->toArray());
+                    @endphp
+                    <div id="unit-selection-wrap" class="{{ old('is_all_units', $agenda->is_all_units ? '1' : '0') == '1' ? 'hidden' : '' }} p-4 bg-slate-50 border border-slate-300 rounded-xl space-y-2">
+                        <div class="text-xs font-bold text-slate-900 mb-2">Pilih Unit yang Diundang:</div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            @foreach($units as $unit)
+                                <label class="flex items-center gap-2.5 p-2 bg-white rounded-lg border border-slate-300 text-xs font-medium cursor-pointer hover:border-slate-900">
+                                    <input 
+                                        type="checkbox" 
+                                        name="unit_ids[]" 
+                                        value="{{ $unit->id }}" 
+                                        {{ in_array($unit->id, $selectedUnitIds) ? 'checked' : '' }}
+                                        class="w-4 h-4 accent-slate-950 rounded"
+                                    >
+                                    <span class="font-mono font-bold text-slate-950">{{ $unit->kode_unit }}</span>
+                                    <span class="text-slate-700 truncate">- {{ $unit->nama_unit }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                        @error('unit_ids')
+                            <p class="text-xs text-rose-700 font-bold mt-2">{{ $message }}</p>
+                        @enderror
+                    </div>
+                @else
+                    <div class="p-3.5 bg-slate-100 border border-slate-300 rounded-xl text-xs text-slate-900 flex items-center gap-2">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        <span>Agenda ini otomatis ditugaskan untuk unit Anda: <strong class="text-slate-950">{{ $currentUser->unit?->nama_unit }}</strong>.</span>
+                    </div>
+                    <input type="hidden" name="is_all_units" value="0">
+                    <input type="hidden" name="unit_ids[]" value="{{ $currentUser->unit_id }}">
+                @endif
             </div>
 
             <!-- Berkas Surat Edaran Section -->

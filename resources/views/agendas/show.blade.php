@@ -137,12 +137,18 @@
                     </a>
                 @endcan
 
-                @can('update', $agenda)
-                    <a href="{{ route('admin.agendas.edit', $agenda) }}" class="button secondary flex items-center gap-2 text-xs bg-white/10 hover:bg-white/20 text-white border-white/30 font-bold">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13 7 4 4"/></svg>
-                        <span>Edit</span>
+                {{-- Personal Attendance Action for Current User --}}
+                @if(isset($myAttendance) && $myAttendance)
+                    <a href="{{ route('attendances.success', [$agenda, $myAttendance]) }}" class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold text-emerald-950 bg-emerald-400 hover:bg-emerald-300 border border-emerald-300 shadow-sm transition" title="Lihat Bukti Kehadiran Anda">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                        <span>Anda Sudah Hadir</span>
                     </a>
-                @endcan
+                @elseif($agenda->status === 'ongoing')
+                    <a href="{{ route('attendances.create', $agenda) }}" class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 border border-emerald-500 shadow-sm transition" title="Isi Presensi Kehadiran Anda pada Rapat Ini">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                        <span>Isi Presensi Saya</span>
+                    </a>
+                @endif
             </div>
         </div>
     </div>
