@@ -65,7 +65,18 @@ class UserController extends Controller
         $users = $query->orderBy('name', 'asc')->paginate(10)->withQueryString();
         $units = $currentUser->isAdministrator() ? Unit::active()->orderBy('nama_unit')->get() : collect();
 
-        return view('users.index', compact('users', 'units', 'currentUser'));
+        // Statistics (scoped by current user role/unit)
+        $statsQuery = User::query();
+        if ($currentUser->isAdmin()) {
+            $statsQuery->where('unit_id', $currentUser->unit_id);
+        }
+        $userStats = $statsQuery->selectRaw('
+            COUNT(*) as total,
+            COALESCE(SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END), 0) as active,
+            COALESCE(SUM(CASE WHEN is_active = 0 THEN 1 ELSE 0 END), 0) as inactive
+        ')->first();
+
+        return view('users.index', compact('users', 'units', 'currentUser', 'userStats'));
     }
 
     /**

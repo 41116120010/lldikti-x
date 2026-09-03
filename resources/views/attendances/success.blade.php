@@ -30,7 +30,7 @@
                     <div class="text-xs text-slate-700 flex flex-wrap items-center gap-3 pt-1 font-medium">
                         <span class="inline-flex items-center gap-1.5">
                             <svg class="text-slate-600 shrink-0 print:hidden" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                            <span class="font-bold text-slate-900">{{ $agenda->waktu_mulai->translatedFormat('l, d F Y &bull; H:i') }} WIB</span>
+                            <span class="font-bold text-slate-900">{{ $agenda->waktu_mulai->translatedFormat('l, d F Y') }} &bull; {{ $agenda->waktu_mulai->format('H:i') }} - {{ $agenda->waktu_selesai->format('H:i') }} WIB</span>
                         </span>
                         <span class="inline-flex items-center gap-1.5">
                             <svg class="text-slate-600 shrink-0 print:hidden" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -55,7 +55,7 @@
                     </div>
                     <div>
                         <span class="text-slate-600 block text-[11px] font-bold">Waktu Presensi Tercatat:</span>
-                        <strong class="font-mono text-slate-950 font-bold">{{ $attendance->signed_at->translatedFormat('d/m/Y &bull; H:i:s') }} WIB</strong>
+                        <strong class="font-mono text-slate-950 font-bold">{{ $attendance->signed_at->translatedFormat('d F Y') }} &bull; {{ $attendance->signed_at->format('H:i:s') }} WIB</strong>
                     </div>
                 </div>
 
@@ -90,12 +90,17 @@
 
             <!-- Receipt Actions (Hidden on print) -->
             <div class="p-5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 print:hidden">
-                <a href="{{ route('attendances.portal') }}" class="button small secondary w-full sm:w-auto text-xs text-center font-bold">
-                    &larr; Kembali ke Portal Presensi
+                <a href="{{ route('dashboard') }}" class="button small secondary w-full sm:w-auto text-xs text-center font-bold">
+                    &larr; Kembali ke Dashboard
                 </a>
 
                 <div class="flex items-center gap-2 w-full sm:w-auto">
-                    <a href="{{ route('admin.agendas.show', $agenda) }}" class="button small secondary flex-1 sm:flex-initial text-xs text-center font-bold">
+                    @php
+                        $detailRoute = (Auth::user()->isAdministrator() || Auth::user()->isAdmin()) 
+                            ? route('admin.agendas.show', $agenda) 
+                            : route('agendas.show', $agenda);
+                    @endphp
+                    <a href="{{ $detailRoute }}" class="button small secondary flex-1 sm:flex-initial text-xs text-center font-bold">
                         Detail Agenda
                     </a>
                     <button type="button" onclick="window.print()" class="button small flex-1 sm:flex-initial flex items-center justify-center gap-1.5 text-xs bg-slate-950 hover:bg-slate-800 text-white font-bold cursor-pointer">
@@ -121,10 +126,12 @@
                     <span class="text-slate-700 font-medium">Metode Verifikasi:</span>
                     <span class="text-slate-950 font-bold">Selfie + TTD Digital</span>
                 </div>
-                <div class="flex items-center justify-between">
-                    <span class="text-slate-700 font-medium">Total Hadir Rapat:</span>
-                    <span class="font-mono font-bold text-slate-950">{{ $agenda->attendances->count() }} Pegawai</span>
-                </div>
+                @if(Auth::user()->isAdministrator() || Auth::user()->isAdmin())
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-700 font-medium">Total Hadir Rapat:</span>
+                        <span class="font-mono font-bold text-slate-950">{{ $agenda->attendances->count() }} Pegawai</span>
+                    </div>
+                @endif
             </div>
         </div>
 
@@ -132,12 +139,12 @@
         <div class="panel p-5 space-y-3">
             <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700">Navigasi Lainnya</h4>
             <div class="space-y-2">
-                <a href="{{ route('attendances.history') }}" class="button small secondary w-full flex items-center justify-between text-xs font-bold">
-                    <span>Lihat Riwayat Presensi Saya</span>
+                <a href="{{ route('dashboard') }}" class="button small secondary w-full flex items-center justify-between text-xs font-bold">
+                    <span>Kembali ke Dashboard Utama</span>
                     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
                 </a>
-                <a href="{{ route('attendances.portal') }}" class="button small secondary w-full flex items-center justify-between text-xs font-bold">
-                    <span>Presensi Rapat Lainnya</span>
+                <a href="{{ route('attendances.history') }}" class="button small secondary w-full flex items-center justify-between text-xs font-bold">
+                    <span>Lihat Riwayat Presensi Saya</span>
                     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
                 </a>
             </div>

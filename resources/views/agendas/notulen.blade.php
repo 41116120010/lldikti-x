@@ -92,7 +92,7 @@
                 </div>
                 <div>
                     <span class="text-slate-600 block text-[11px] font-bold">Waktu:</span>
-                    <span class="font-mono font-bold text-slate-950">{{ $agenda->waktu_mulai->translatedFormat('d M Y, H:i') }} WIB</span>
+                    <span class="font-mono font-bold text-slate-950">{{ $agenda->waktu_mulai->translatedFormat('d M Y, H:i') }} - {{ $agenda->waktu_selesai->format('H:i') }} WIB</span>
                 </div>
                 <div>
                     <span class="text-slate-600 block text-[11px] font-bold">Format & Lokasi:</span>

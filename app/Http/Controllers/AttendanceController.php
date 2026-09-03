@@ -70,7 +70,11 @@ class AttendanceController extends Controller
 
         // Validate agenda status
         if ($agenda->status !== 'ongoing') {
-            return redirect()->route('admin.agendas.show', $agenda)
+            $redirectRoute = ($user->isAdministrator() || $user->isAdmin())
+                ? route('admin.agendas.show', $agenda)
+                : route('agendas.show', $agenda);
+
+            return redirect($redirectRoute)
                 ->with('error', 'Sesi presensi untuk agenda rapat ini belum dibuka atau telah selesai.');
         }
 
@@ -91,12 +95,20 @@ class AttendanceController extends Controller
 
         // Double check eligibility & attendance status
         if ($agenda->hasUserAttended($user)) {
-            return redirect()->route('admin.agendas.show', $agenda)
+            $redirectRoute = ($user->isAdministrator() || $user->isAdmin())
+                ? route('admin.agendas.show', $agenda)
+                : route('agendas.show', $agenda);
+
+            return redirect($redirectRoute)
                 ->with('info', 'Anda telah melakukan presensi pada agenda rapat ini.');
         }
 
         if ($agenda->status !== 'ongoing') {
-            return redirect()->route('admin.agendas.show', $agenda)
+            $redirectRoute = ($user->isAdministrator() || $user->isAdmin())
+                ? route('admin.agendas.show', $agenda)
+                : route('agendas.show', $agenda);
+
+            return redirect($redirectRoute)
                 ->with('error', 'Sesi presensi untuk agenda rapat ini tidak sedang dibuka.');
         }
 

@@ -7,8 +7,8 @@
 @section('content')
 @php
     $currentUser = $currentUser ?? Auth::user();
-    $defaultMulai = date('Y-m-d\TH:i', strtotime('+1 hour'));
-    $defaultSelesai = date('Y-m-d\TH:i', strtotime('+3 hours'));
+    $defaultMulai = now()->addHour()->format('Y-m-d\TH:i');
+    $defaultSelesai = now()->addHours(3)->format('Y-m-d\TH:i');
 @endphp
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <!-- Main Form Panel (2 Cols) -->

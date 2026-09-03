@@ -12,13 +12,13 @@ use Tests\TestCase;
 
 class AgendaManagementTest extends TestCase
 {
-    public function test_authenticated_users_can_view_agendas_index(): void
+    public function test_admin_can_view_agendas_index_but_staff_is_forbidden(): void
     {
         $superadmin = User::where('role', 'administrator')->first();
         $staff = User::where('role', 'staff')->first();
 
         $this->actingAs($superadmin)->get('/admin/agendas')->assertStatus(200)->assertSee('Agenda Rapat Kedinasan');
-        $this->actingAs($staff)->get('/admin/agendas')->assertStatus(200);
+        $this->actingAs($staff)->get('/admin/agendas')->assertStatus(403);
     }
 
     public function test_administrator_can_create_universal_agenda_with_circular_file(): void
@@ -231,5 +231,116 @@ class AgendaManagementTest extends TestCase
         $agenda = Agenda::where('judul_rapat', $uniqueTitle)->first();
         $this->assertNotNull($agenda);
         $this->assertEquals('https://meet.google.com/abc-defg-hij', $agenda->link_meeting);
+    }
+
+    public function test_staff_can_view_agenda_details_via_non_admin_route_and_cannot_view_attendees(): void
+    {
+        $staff = User::where('role', 'staff')->first();
+        $agenda = Agenda::where('is_all_units', true)->first();
+
+        // Check dashboard displays non-admin link for staff
+        $dashboardResponse = $this->actingAs($staff)->get('/dashboard');
+        $dashboardResponse->assertStatus(200);
+        $dashboardResponse->assertSee("agendas/{$agenda->id}");
+        $dashboardResponse->assertDontSee("admin/agendas/{$agenda->id}");
+
+        // Check staff is forbidden from admin agenda detail route
+        $adminRouteResponse = $this->actingAs($staff)->get("/admin/agendas/{$agenda->id}");
+        $adminRouteResponse->assertStatus(403);
+
+        // Check staff can access the dedicated non-admin agenda detail page
+        $detailResponse = $this->actingAs($staff)->get("/agendas/{$agenda->id}");
+        $detailResponse->assertStatus(200);
+        $detailResponse->assertSee($agenda->judul_rapat);
+        $detailResponse->assertSee('Notulensi');
+        $detailResponse->assertSee('Kesimpulan Rapat');
+        $detailResponse->assertSee('Dokumentasi Foto Rapat');
+        $detailResponse->assertSee('Kembali ke Dashboard');
+
+        // Verify staff CANNOT see other participants' attendance list
+        $detailResponse->assertDontSee('Peserta Hadir');
+        $detailResponse->assertSee('Status Presensi Anda');
+    }
+
+    public function test_staff_cannot_bypass_to_view_draft_agenda(): void
+    {
+        $superadmin = User::where('role', 'administrator')->first();
+        $staff = User::where('role', 'staff')->first();
+
+        $draftAgenda = Agenda::create([
+            'created_by' => $superadmin->id,
+            'judul_rapat' => 'Konsep Agenda Rahasia Internal ' . uniqid(),
+            'slug' => 'konsep-agenda-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'status' => 'draft',
+            'waktu_mulai' => now()->addDays(5),
+            'waktu_selesai' => now()->addDays(5)->addHours(2),
+            'is_all_units' => true,
+        ]);
+
+        $response = $this->actingAs($staff)->get("/agendas/{$draftAgenda->id}");
+        $response->assertStatus(403);
+    }
+
+    public function test_staff_cannot_bypass_to_view_other_unit_restricted_agenda(): void
+    {
+        $unitKlb = \App\Models\Unit::where('kode_unit', 'POKJA-KLB')->first();
+        $staffAkm = User::where('username', 'staff_rizky')->first(); // staff in POKJA-AKM
+        $superadmin = User::where('role', 'administrator')->first();
+
+        $agendaKlb = Agenda::create([
+            'created_by' => $superadmin->id,
+            'judul_rapat' => 'Rapat Terbatas KLB Khusus ' . uniqid(),
+            'slug' => 'rapat-klb-khusus-' . uniqid(),
+            'jenis_rapat' => 'terbatas',
+            'tipe_rapat' => 'offline',
+            'status' => 'scheduled',
+            'waktu_mulai' => now()->addDays(2),
+            'waktu_selesai' => now()->addDays(2)->addHours(2),
+            'is_all_units' => false,
+        ]);
+        $agendaKlb->units()->attach($unitKlb->id);
+
+        $response = $this->actingAs($staffAkm)->get("/agendas/{$agendaKlb->id}");
+        $response->assertStatus(403);
+    }
+
+    public function test_staff_sees_attendance_button_on_ongoing_agenda_detail(): void
+    {
+        $staff = User::where('role', 'staff')->first();
+        $agenda = Agenda::where('is_all_units', true)->first();
+        $agenda->update(['status' => 'ongoing']);
+
+        // Remove any prior attendance for this staff so we test the check-in button
+        $agenda->attendances()->where('user_id', $staff->id)->delete();
+
+        $response = $this->actingAs($staff)->get("/agendas/{$agenda->id}");
+        $response->assertStatus(200);
+        $response->assertSee('Isi Presensi Sekarang');
+    }
+
+    public function test_admin_agenda_detail_renders_clean_management_actions_without_glitch(): void
+    {
+        $superadmin = User::where('role', 'administrator')->first();
+        $agenda = Agenda::where('is_all_units', true)->first();
+        $agenda->update(['status' => 'ongoing']);
+
+        $response = $this->actingAs($superadmin)->get("/admin/agendas/{$agenda->id}");
+        $response->assertStatus(200);
+
+        // Assert clean management buttons are present in hero
+        $response->assertSee('Daftar Agenda');
+        $response->assertSee('Edit Agenda');
+        $response->assertSee('Ekspor PDF');
+        $response->assertSee('Ekspor Word');
+        $response->assertSee('Tutup Rapat &amp; Selesaikan', false);
+
+        // Assert attendance list is visible to admin
+        $response->assertSee('Peserta Hadir');
+
+        // Assert shortcut links on panels
+        $response->assertSee('Edit Notulensi');
+        $response->assertSee('Unggah Foto');
     }
 }

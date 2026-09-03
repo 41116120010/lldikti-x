@@ -174,6 +174,30 @@ class AgendaController extends Controller
     }
 
     /**
+     * Display meeting details for staff (non-admin route).
+     * Strictly hides the list of other attendees.
+     */
+    public function staffShow(Agenda $agenda): View
+    {
+        Gate::authorize('viewStaff', $agenda);
+
+        $agenda->load([
+            'creator.unit',
+            'units',
+        ]);
+
+        $documentations = $agenda->documentations()
+            ->latest('id')
+            ->paginate(6, ['*'], 'page_docs')
+            ->withQueryString();
+
+        $currentUser = Auth::user();
+        $myAttendance = $agenda->attendances()->where('user_id', $currentUser->id)->first();
+
+        return view('agendas.staff_show', compact('agenda', 'documentations', 'currentUser', 'myAttendance'));
+    }
+
+    /**
      * Show the form for editing the specified agenda.
      */
     public function edit(Agenda $agenda): View

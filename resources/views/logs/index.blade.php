@@ -99,7 +99,7 @@
                         <tr class="hover:bg-slate-50 transition">
                             <td class="text-center text-xs text-slate-900 font-mono font-bold">{{ $logs->firstItem() + $index }}</td>
                             <td>
-                                <div class="font-bold text-xs text-slate-950 font-mono">{{ $log->created_at->format('d/m/Y H:i:s') }}</div>
+                                <div class="font-bold text-xs text-slate-950 font-mono">{{ $log->created_at->format('d/m/Y H:i:s') }} WIB</div>
                                 <div class="text-[11px] text-slate-600 font-medium">{{ $log->created_at->diffForHumans() }}</div>
                             </td>
                             <td>

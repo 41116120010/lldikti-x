@@ -7,8 +7,8 @@
 @section('content')
 <div class="space-y-5">
     <!-- Action Bar & Search -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-300 shadow-xs">
-        <form method="GET" action="{{ route('attendances.history') }}" class="flex flex-col sm:flex-row sm:items-center gap-3 flex-1">
+    <div class="bg-white p-4 rounded-xl border border-slate-300 shadow-xs">
+        <form method="GET" action="{{ route('attendances.history') }}" class="flex flex-col sm:flex-row sm:items-center gap-3">
             <div class="relative flex-1 min-w-[200px]">
                 <input 
                     type="text" 
@@ -27,11 +27,6 @@
                 @endif
             </div>
         </form>
-
-        <a href="{{ route('attendances.portal') }}" class="button small flex items-center gap-1.5 text-xs self-start sm:self-auto shrink-0 bg-slate-950 hover:bg-slate-800 text-white font-bold">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-            <span>Portal Presensi Aktif</span>
-        </a>
     </div>
 
     <!-- Attendance History Table -->
@@ -54,7 +49,12 @@
                             <td class="text-center text-xs text-slate-900 font-mono font-bold">{{ $attendances->firstItem() + $index }}</td>
                             <td>
                                 <div class="font-bold text-slate-950 text-sm hover:text-slate-700 transition">
-                                    <a href="{{ route('admin.agendas.show', $att->agenda) }}">
+                                    @php
+                                        $attDetailRoute = (Auth::user()->isAdministrator() || Auth::user()->isAdmin()) 
+                                            ? route('admin.agendas.show', $att->agenda) 
+                                            : route('agendas.show', $att->agenda);
+                                    @endphp
+                                    <a href="{{ $attDetailRoute }}">
                                         {{ $att->agenda->judul_rapat }}
                                     </a>
                                 </div>
@@ -70,7 +70,7 @@
                             <td>
                                 <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-bold bg-emerald-100 text-emerald-950 border border-emerald-300">
                                     <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-                                    {{ $att->signed_at->format('d/m/Y H:i:s') }}
+                                    {{ $att->signed_at->format('d/m/Y H:i:s') }} WIB
                                 </div>
                             </td>
                             <td class="text-center">

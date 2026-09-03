@@ -65,12 +65,7 @@
     <!-- Right Login Form Section -->
     <div class="auth-form-panel">
         <div class="auth-brand md:hidden">
-            <div class="brand-mark">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                    <circle cx="9" cy="7" r="4"/>
-                </svg>
-            </div>
+            <img src="{{ asset('images/tut-wuri-handayani.png') }}" alt="Logo Tut Wuri Handayani" class="w-9 h-9 object-contain shrink-0">
             <div>
                 <div class="brand-name">SIPERAPAT</div>
                 <small>LLDIKTI Wilayah X</small>

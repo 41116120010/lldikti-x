@@ -25,6 +25,28 @@ class AttendanceCheckInTest extends TestCase
         $response->assertSee('Portal Presensi Kehadiran');
     }
 
+    public function test_staff_sidebar_navigation_contains_only_dashboard_and_history(): void
+    {
+        $staff = User::where('role', 'staff')->first();
+
+        $response = $this->actingAs($staff)->get('/dashboard');
+
+        $response->assertStatus(200);
+        $response->assertSee('Dashboard');
+        $response->assertSee('Riwayat Kehadiran');
+        $response->assertDontSee('Portal Presensi');
+    }
+
+    public function test_attendance_history_filter_does_not_contain_portal_presensi_button(): void
+    {
+        $staff = User::where('role', 'staff')->first();
+
+        $response = $this->actingAs($staff)->get(route('attendances.history'));
+
+        $response->assertStatus(200);
+        $response->assertDontSee('Portal Presensi Aktif');
+    }
+
     public function test_user_can_view_checkin_form_for_ongoing_meeting(): void
     {
         $staff = User::where('username', 'staff_rizky')->first();
@@ -47,7 +69,7 @@ class AttendanceCheckInTest extends TestCase
 
         $response = $this->actingAs($staff)->get("/agendas/{$scheduledAgenda->id}/presensi");
 
-        $response->assertRedirect("/admin/agendas/{$scheduledAgenda->id}");
+        $response->assertRedirect("/agendas/{$scheduledAgenda->id}");
         $response->assertSessionHas('error');
     }
 
@@ -176,6 +198,8 @@ class AttendanceCheckInTest extends TestCase
         $response->assertSee('Tanda Terima Presensi Digital');
         $response->assertSee($staff->name);
         $response->assertSee($staff->nip);
+        $response->assertSee('Kembali ke Dashboard');
+        $response->assertDontSee('Portal Presensi');
     }
 
     public function test_attendance_rejects_disallowed_image_extension_payload(): void

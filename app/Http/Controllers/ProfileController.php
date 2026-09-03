@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\Profile\UpdateProfileRequest;
+use App\Models\ActivityLog;
 use App\Models\User;
 use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -67,5 +69,40 @@ class ProfileController extends Controller
         });
 
         return redirect()->route('profile.edit')->with('success', 'Profil akun Anda berhasil diperbarui.');
+    }
+
+    /**
+     * Display the authenticated user's activity logs.
+     */
+    public function logs(Request $request): View
+    {
+        $user = Auth::user();
+        $query = ActivityLog::where('user_id', $user->id)->latest('id');
+
+        // Filter by Activity Type
+        if ($type = $request->input('type')) {
+            $query->where('activity_type', $type);
+        }
+
+        // Filter by Date Range
+        if ($startDate = $request->input('start_date')) {
+            $query->whereDate('created_at', '>=', $startDate);
+        }
+        if ($endDate = $request->input('end_date')) {
+            $query->whereDate('created_at', '<=', $endDate);
+        }
+
+        // Search in description or IP
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('description', 'like', "%{$search}%")
+                  ->orWhere('ip_address', 'like', "%{$search}%");
+            });
+        }
+
+        $logs = $query->paginate(10)->withQueryString();
+        $activityTypes = ActivityLog::where('user_id', $user->id)->distinct()->pluck('activity_type');
+
+        return view('profile.logs', compact('user', 'logs', 'activityTypes'));
     }
 }

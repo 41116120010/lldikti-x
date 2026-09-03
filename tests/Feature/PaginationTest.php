@@ -11,7 +11,7 @@ use Tests\TestCase;
 
 class PaginationTest extends TestCase
 {
-    public function test_dashboard_renders_with_paginated_agendas_and_logs(): void
+    public function test_dashboard_renders_with_paginated_agendas(): void
     {
         $superadmin = User::where('username', 'superadmin')->first();
 
@@ -19,9 +19,18 @@ class PaginationTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertViewHas('activeAgendas');
-        $response->assertViewHas('recentLogs');
         $this->assertInstanceOf(\Illuminate\Contracts\Pagination\Paginator::class, $response->viewData('activeAgendas'));
-        $this->assertInstanceOf(\Illuminate\Contracts\Pagination\Paginator::class, $response->viewData('recentLogs'));
+    }
+
+    public function test_profile_activity_logs_renders_with_pagination(): void
+    {
+        $superadmin = User::where('username', 'superadmin')->first();
+
+        $response = $this->actingAs($superadmin)->get('/profil/aktivitas');
+
+        $response->assertStatus(200);
+        $response->assertViewHas('logs');
+        $this->assertInstanceOf(\Illuminate\Contracts\Pagination\Paginator::class, $response->viewData('logs'));
     }
 
     public function test_reports_index_renders_with_paginated_agendas_and_unit_participation(): void

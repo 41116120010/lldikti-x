@@ -99,7 +99,7 @@
                             </td>
                             <td>
                                 <div class="font-mono text-xs text-slate-950 font-bold">
-                                    {{ $att->signed_at->translatedFormat('H:i:s') }} WIB
+                                    {{ $att->signed_at->format('H:i:s') }} WIB
                                 </div>
                                 <div class="text-[10px] text-slate-600 font-mono font-medium">IP: {{ $att->ip_address ?? '127.0.0.1' }}</div>
                             </td>
