@@ -58,7 +58,7 @@
 
             <div class="flex items-center gap-1.5">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                <span>Oleh: {{ $agenda->creator->name }} ({{ $agenda->creator->unit?->kode_unit ?? 'Pusat' }})</span>
+                <span>Oleh: {{ $agenda->creator?->name ?? 'Penyelenggara Rapat' }} ({{ $agenda->creator?->unit?->kode_unit ?? 'Pusat' }})</span>
             </div>
         </div>
 
@@ -162,11 +162,11 @@
             </div>
             <div class="px-5 py-3 text-xs">
                 <div class="text-[10px] uppercase font-bold text-slate-500 font-mono">Notulis</div>
-                <div class="font-bold text-slate-900">{{ $agenda->creator->name }}</div>
+                <div class="font-bold text-slate-900">{{ $agenda->creator?->name ?? 'Penyelenggara' }}</div>
             </div>
             <div class="px-5 py-3 text-xs">
                 <div class="text-[10px] uppercase font-bold text-slate-500 font-mono">Moderator</div>
-                <div class="font-bold text-slate-900">{{ $agenda->creator->unit?->kode_unit ?? 'Pusat' }}</div>
+                <div class="font-bold text-slate-900">{{ $agenda->creator?->unit?->kode_unit ?? 'Pusat' }}</div>
             </div>
             <div class="px-5 py-3 text-xs">
                 <div class="text-[10px] uppercase font-bold text-slate-500 font-mono">Pimpinan</div>
@@ -402,7 +402,7 @@
                             <div class="h-14 flex items-center justify-center">
                                 <svg viewBox="0 0 100 40" width="80" height="32" class="text-slate-300"><path d="M10 30 Q 25 5 40 25 T 70 20 T 90 25" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
                             </div>
-                            <div class="text-xs font-bold text-slate-900 border-t border-slate-300 pt-2">{{ $agenda->creator->name }}</div>
+                            <div class="text-xs font-bold text-slate-900 border-t border-slate-300 pt-2">{{ $agenda->creator?->name ?? 'Pimpinan Rapat' }}</div>
                         </div>
 
                         <div class="text-center space-y-8">
@@ -410,7 +410,7 @@
                             <div class="h-14 flex items-center justify-center">
                                 <svg viewBox="0 0 100 40" width="80" height="32" class="text-slate-300"><path d="M10 30 Q 25 5 40 25 T 70 20 T 90 25" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
                             </div>
-                            <div class="text-xs font-bold text-slate-900 border-t border-slate-300 pt-2">{{ $agenda->creator->name }}</div>
+                            <div class="text-xs font-bold text-slate-900 border-t border-slate-300 pt-2">{{ $agenda->creator?->name ?? 'Notulis Rapat' }}</div>
                         </div>
 
                         <div class="text-center space-y-8">

@@ -148,6 +148,10 @@ class Agenda extends Model
             return false;
         }
 
+        if ($this->relationLoaded('units')) {
+            return $this->units->contains('id', $user->unit_id);
+        }
+
         return $this->units()->where('units.id', $user->unit_id)->exists();
     }
 
@@ -156,6 +160,10 @@ class Agenda extends Model
      */
     public function hasUserAttended(User $user): bool
     {
+        if ($this->relationLoaded('attendances')) {
+            return $this->attendances->contains('user_id', $user->id);
+        }
+
         return $this->attendances()->where('user_id', $user->id)->exists();
     }
 }

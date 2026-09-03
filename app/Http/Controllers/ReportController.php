@@ -198,7 +198,7 @@ class ReportController extends Controller
     public function exportSummaryCsv(Request $request): StreamedResponse
     {
         $user = Auth::user();
-        $query = Agenda::visibleTo($user)->with(['creator', 'attendances']);
+        $query = Agenda::visibleTo($user)->with('creator')->withCount('attendances');
 
         ActivityLogger::log(
             type: 'EXPORT_CSV',
@@ -275,7 +275,7 @@ class ReportController extends Controller
                     $agenda->waktu_selesai ? $agenda->waktu_selesai->format('d/m/Y H:i') : '-',
                     ucfirst($agenda->status),
                     $safeCreator,
-                    $agenda->attendances->count(),
+                    $agenda->attendances_count,
                 ]);
             }
 

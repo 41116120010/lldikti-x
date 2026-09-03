@@ -204,9 +204,13 @@ class UserController extends Controller
     {
         Gate::authorize('delete', $user);
 
-        // Check if user has attendance history
-        if ($user->attendances()->count() > 0) {
-            return back()->with('error', "Pengguna '{$user->name}' memiliki riwayat presensi rapat kedinasan. Non-aktifkan akun alih-alih menghapusnya.");
+        // Check if user has attendance history or created agendas to protect archive data from cascading deletion
+        if ($user->attendances()->exists()) {
+            return back()->with('error', "Pengguna '{$user->name}' memiliki riwayat presensi rapat kedinasan. Non-aktifkan akun alih-alih menghapusnya demi integritas data arsip.");
+        }
+
+        if ($user->createdAgendas()->exists()) {
+            return back()->with('error', "Pengguna '{$user->name}' tercatat sebagai pembuat agenda rapat kedinasan. Non-aktifkan akun alih-alih menghapusnya agar riwayat agenda rapat tidak terhapus.");
         }
 
         $name = $user->name;

@@ -298,7 +298,12 @@ class AgendaController extends Controller
         $judul = $agenda->judul_rapat;
         $id = $agenda->id;
 
-        DB::transaction(function () use ($agenda) {
+        // Protect archived government meeting records
+        if ($agenda->attendances()->exists()) {
+            return back()->with('error', "Agenda rapat '{$judul}' telah memiliki catatan presensi kehadiran pegawai. Agenda tidak dapat dihapus demi integritas arsip kegiatan. Ubah status agenda menjadi 'Dibatalkan' jika agenda batal terlaksana.");
+        }
+
+        DB::transaction(function () use ($agenda, $id) {
             // Delete circular letter file
             if ($agenda->surat_edaran_path && Storage::disk('public')->exists($agenda->surat_edaran_path)) {
                 Storage::disk('public')->delete($agenda->surat_edaran_path);
@@ -310,6 +315,10 @@ class AgendaController extends Controller
                     Storage::disk('public')->delete($doc->file_path);
                 }
             }
+
+            // Clean up agenda directories
+            Storage::disk('public')->deleteDirectory("documentations/{$id}");
+            Storage::disk('public')->deleteDirectory("attendances/{$id}");
 
             $agenda->delete();
         });

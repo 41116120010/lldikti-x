@@ -116,6 +116,11 @@ class AgendaPolicy
      */
     public function manageMinutes(User $user, Agenda $agenda): bool
     {
+        // Cancelled meetings cannot have their minutes modified
+        if ($agenda->status === 'cancelled') {
+            return false;
+        }
+
         if ($user->isAdministrator()) {
             return true;
         }

@@ -448,4 +448,69 @@ class AgendaManagementTest extends TestCase
         $filterTuResponse->assertSee($agendaTu->judul_rapat);
         $filterTuResponse->assertDontSee($agendaKlb->judul_rapat);
     }
+
+    public function test_agenda_cannot_be_deleted_if_it_has_attendances(): void
+    {
+        $superadmin = User::where('role', 'administrator')->first();
+        $staff = User::where('role', 'staff')->first();
+
+        $agenda = Agenda::create([
+            'created_by' => $superadmin->id,
+            'judul_rapat' => 'Rapat dengan Presensi ' . uniqid(),
+            'slug' => 'rapat-presensi-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang 1',
+            'waktu_mulai' => now()->subHours(2),
+            'waktu_selesai' => now()->subHour(),
+            'is_all_units' => true,
+            'status' => 'completed',
+        ]);
+
+        // Add an attendance record
+        \App\Models\Attendance::create([
+            'agenda_id' => $agenda->id,
+            'user_id' => $staff->id,
+            'signed_at' => now()->subHours(2),
+            'selfie_path' => 'selfies/test.jpg',
+            'signature_path' => 'signatures/test.png',
+        ]);
+
+        // Attempt deletion
+        $response = $this->actingAs($superadmin)->delete("/admin/agendas/{$agenda->id}");
+        $response->assertSessionHas('error');
+        $this->assertDatabaseHas('agendas', ['id' => $agenda->id]);
+
+        // Clean up
+        $agenda->attendances()->delete();
+        $agenda->delete();
+    }
+
+    public function test_cannot_manage_minutes_for_cancelled_agenda(): void
+    {
+        $superadmin = User::where('role', 'administrator')->first();
+
+        $agenda = Agenda::create([
+            'created_by' => $superadmin->id,
+            'judul_rapat' => 'Rapat Dibatalkan ' . uniqid(),
+            'slug' => 'rapat-batal-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang 1',
+            'waktu_mulai' => now()->addDays(1),
+            'waktu_selesai' => now()->addDays(1)->addHours(2),
+            'is_all_units' => true,
+            'status' => 'cancelled',
+        ]);
+
+        // Accessing minutes editor on cancelled agenda should be forbidden (403)
+        $this->actingAs($superadmin)->get("/admin/agendas/{$agenda->id}/notulen")->assertStatus(403);
+
+        // Submitting minutes update on cancelled agenda should be forbidden (403)
+        $this->actingAs($superadmin)->put("/admin/agendas/{$agenda->id}/notulen", [
+            'notulensi' => 'Catatan rapat dibatalkan',
+        ])->assertStatus(403);
+
+        $agenda->delete();
+    }
 }

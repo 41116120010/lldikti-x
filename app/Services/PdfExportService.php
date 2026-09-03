@@ -20,15 +20,8 @@ class PdfExportService
             'documentations',
         ]);
 
-        // Convert signature and selfie images to embedded base64 data URIs for robust standalone rendering
+        // Convert signature images to embedded base64 data URIs for robust standalone rendering
         $attendancesWithMedia = $agenda->attendances->map(function ($att) {
-            $selfieBase64 = null;
-            if ($att->selfie_path && Storage::disk('public')->exists($att->selfie_path)) {
-                $content = Storage::disk('public')->get($att->selfie_path);
-                $mime = Storage::disk('public')->mimeType($att->selfie_path) ?: 'image/jpeg';
-                $selfieBase64 = 'data:' . $mime . ';base64,' . base64_encode($content);
-            }
-
             $sigBase64 = null;
             if ($att->signature_path && Storage::disk('public')->exists($att->signature_path)) {
                 $content = Storage::disk('public')->get($att->signature_path);
@@ -38,7 +31,6 @@ class PdfExportService
 
             return [
                 'model' => $att,
-                'selfie_base64' => $selfieBase64,
                 'sig_base64' => $sigBase64,
             ];
         });

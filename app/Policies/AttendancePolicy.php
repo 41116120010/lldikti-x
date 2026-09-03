@@ -25,8 +25,11 @@ class AttendancePolicy
             return true;
         }
 
-        if ($user->isAdmin() && $attendance->agenda->created_by === $user->id) {
-            return true;
+        if ($user->isAdmin()) {
+            return $attendance->agenda->created_by === $user->id
+                || ($user->unit_id !== null && $attendance->user?->unit_id === $user->unit_id)
+                || ($user->unit_id !== null && $attendance->agenda->units()->where('units.id', $user->unit_id)->exists())
+                || $attendance->agenda->is_all_units;
         }
 
         return $user->id === $attendance->user_id;

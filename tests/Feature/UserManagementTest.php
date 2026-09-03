@@ -155,4 +155,45 @@ class UserManagementTest extends TestCase
             $this->assertNull($u->unit_id);
         }
     }
+
+    public function test_user_cannot_be_deleted_if_they_created_agendas(): void
+    {
+        $superadmin = User::where('role', 'administrator')->first();
+        $unit = Unit::first();
+
+        // Create an admin user who creates an agenda
+        $creator = User::create([
+            'unit_id' => $unit->id,
+            'name' => 'Creator User ' . uniqid(),
+            'nip' => '1990' . rand(10000000, 99999999),
+            'username' => 'creator_' . uniqid(),
+            'email' => 'creator_' . uniqid() . '@lldikti.test',
+            'password' => bcrypt('Password123!'),
+            'role' => 'admin',
+            'is_active' => true,
+        ]);
+
+        $agenda = \App\Models\Agenda::create([
+            'created_by' => $creator->id,
+            'judul_rapat' => 'Rapat Penting dari Creator ' . uniqid(),
+            'slug' => 'rapat-creator-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang 1',
+            'waktu_mulai' => now()->addDays(1),
+            'waktu_selesai' => now()->addDays(1)->addHours(2),
+            'is_all_units' => true,
+            'status' => 'scheduled',
+        ]);
+
+        // Attempt to delete creator user
+        $response = $this->actingAs($superadmin)->delete("/admin/users/{$creator->id}");
+        $response->assertSessionHas('error');
+        $this->assertDatabaseHas('users', ['id' => $creator->id]);
+        $this->assertDatabaseHas('agendas', ['id' => $agenda->id]);
+
+        // Clean up test data
+        $agenda->delete();
+        $creator->delete();
+    }
 }

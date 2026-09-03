@@ -165,7 +165,7 @@
         <tr>
             <td><strong>Penyelenggara</strong></td>
             <td>:</td>
-            <td>{{ $agenda->creator->name }} ({{ $agenda->creator->unit?->nama_unit ?? 'Tingkat Lembaga' }})</td>
+            <td>{{ $agenda->creator?->name ?? 'Penyelenggara Rapat' }} ({{ $agenda->creator?->unit?->nama_unit ?? 'Tingkat Lembaga' }})</td>
         </tr>
     </table>
 
@@ -226,8 +226,8 @@
                     Mengetahui,<br>
                     <strong>Pimpinan Rapat / Penanggung Jawab</strong>
                     <div class="signature-space"></div>
-                    <strong><u>{{ $agenda->creator->name }}</u></strong><br>
-                    NIP. {{ $agenda->creator->nip }}
+                    <strong><u>{{ $agenda->creator?->name ?? 'Pimpinan Rapat' }}</u></strong><br>
+                    NIP. {{ $agenda->creator?->nip ?? '-' }}
                 </td>
                 <td>
                     Padang, {{ now()->translatedFormat('d F Y') }}<br>

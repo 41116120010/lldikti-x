@@ -301,4 +301,56 @@ class AttendanceCheckInTest extends TestCase
         $detailAfterResponse->assertStatus(200);
         $detailAfterResponse->assertSee('Anda Sudah Hadir');
     }
+
+    public function test_admin_unit_can_view_attendance_badge_of_staff_in_their_unit(): void
+    {
+        $adminAkm = User::where('username', 'admin_akademik')->first();
+        $staffAkm = User::where('username', 'staff_rizky')->first(); // staff in AKM
+        $superadmin = User::where('role', 'administrator')->first();
+
+        // Agenda created by Superadmin
+        $agenda = Agenda::create([
+            'created_by' => $superadmin->id,
+            'judul_rapat' => 'Rapat Pleno Lembaga ' . uniqid(),
+            'slug' => 'rapat-pleno-' . uniqid(),
+            'jenis_rapat' => 'pleno',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Aula',
+            'waktu_mulai' => now()->subHours(2),
+            'waktu_selesai' => now()->addHours(1),
+            'is_all_units' => true,
+            'status' => 'ongoing',
+        ]);
+
+        $attendance = Attendance::create([
+            'agenda_id' => $agenda->id,
+            'user_id' => $staffAkm->id,
+            'signed_at' => now(),
+            'selfie_path' => 'selfies/staff.jpg',
+            'signature_path' => 'signatures/staff.png',
+        ]);
+
+        // Admin Unit can view digital attendance badge of staff in their unit
+        $response = $this->actingAs($adminAkm)->get(route('attendances.success', [$agenda, $attendance]));
+        $response->assertStatus(200);
+        $response->assertSee('Tanda Terima Presensi Digital');
+        $response->assertSee($staffAkm->name);
+    }
+
+    public function test_has_user_attended_uses_eager_loaded_relation_without_extra_queries(): void
+    {
+        $user = User::where('role', 'staff')->first();
+        $agenda = Agenda::with('attendances')->first();
+
+        // Enable query log
+        \Illuminate\Support\Facades\DB::enableQueryLog();
+        $initialQueryCount = count(\Illuminate\Support\Facades\DB::getQueryLog());
+
+        // Call hasUserAttended when attendances is already eager loaded
+        $attended = $agenda->hasUserAttended($user);
+
+        // Zero additional queries should be executed because attendances was eager loaded
+        $afterQueryCount = count(\Illuminate\Support\Facades\DB::getQueryLog());
+        $this->assertEquals($initialQueryCount, $afterQueryCount);
+    }
 }

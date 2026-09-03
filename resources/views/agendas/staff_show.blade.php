@@ -54,7 +54,7 @@
 
             <div class="flex items-center gap-1.5">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                <span>Penyelenggara: {{ $agenda->creator->name }} ({{ $agenda->creator->unit?->kode_unit ?? 'Pusat' }})</span>
+                <span>Penyelenggara: {{ $agenda->creator?->name ?? 'Penyelenggara Rapat' }} ({{ $agenda->creator?->unit?->kode_unit ?? 'Pusat' }})</span>
             </div>
         </div>
 

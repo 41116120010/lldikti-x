@@ -406,7 +406,7 @@ const SeamlessNavigation = {
 
             // Exclude binary export routes & storage files from AJAX interception
             const path = targetUrl.pathname.toLowerCase();
-            if (path.includes('/export-') || path.startsWith('/storage/')) return false;
+            if (path.includes('/export') || path.includes('/csv') || path.endsWith('.doc') || path.endsWith('.pdf') || path.startsWith('/storage/')) return false;
 
             return true;
         } catch {
