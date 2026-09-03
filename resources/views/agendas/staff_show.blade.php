@@ -2,7 +2,7 @@
 
 @section('title', $agenda->judul_rapat)
 @section('heading', 'Detail Agenda Rapat')
-@section('subtitle', 'Informasi pelaksanaan, dokumen edaran, notulensi, dan daftar hadir')
+@section('subtitle', 'Informasi pelaksanaan rapat kedinasan, dokumen undangan, notulensi, dan dokumentasi')
 
 @section('content')
 <div class="space-y-6">
@@ -15,15 +15,11 @@
                         $statusStyle = match($agenda->status) {
                             'ongoing' => 'bg-amber-400 text-slate-950 font-bold',
                             'completed' => 'bg-emerald-400 text-slate-950 font-bold',
-                            'draft' => 'bg-slate-800 text-slate-200 border border-slate-700',
-                            'cancelled' => 'bg-rose-400 text-slate-950 font-bold',
                             default => 'bg-slate-800 text-white border border-slate-700 font-bold'
                         };
                         $statusText = match($agenda->status) {
                             'ongoing' => 'Sedang Berlangsung (Presensi Dibuka)',
-                            'completed' => 'Selesai (Presensi Ditutup)',
-                            'draft' => 'Konsep',
-                            'cancelled' => 'Dibatalkan',
+                            'completed' => 'Selesai',
                             default => 'Terjadwal'
                         };
                     @endphp
@@ -57,37 +53,27 @@
 
                     <div class="flex items-center gap-1.5">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                        <span>Oleh: {{ $agenda->creator->name }} ({{ $agenda->creator->unit?->kode_unit ?? 'Pusat' }})</span>
+                        <span>Penyelenggara: {{ $agenda->creator->name }} ({{ $agenda->creator->unit?->kode_unit ?? 'Pusat' }})</span>
                     </div>
                 </div>
             </div>
 
             <!-- Action Controls -->
             <div class="flex flex-wrap items-center gap-2 self-start lg:self-auto shrink-0">
-                <!-- Back Navigation Button -->
-                @if(Auth::user()->isAdministrator() || Auth::user()->isAdmin())
-                    <a href="{{ route('admin.agendas.index') }}" class="button secondary flex items-center gap-2 text-xs bg-white/10 hover:bg-white/20 text-white border-white/30 font-bold">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-                        <span>Daftar Agenda</span>
-                    </a>
-                @else
-                    <a href="{{ route('dashboard') }}" class="button secondary flex items-center gap-2 text-xs bg-white/10 hover:bg-white/20 text-white border-white/30 font-bold">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-                        <span>Kembali ke Dashboard</span>
-                    </a>
-                @endif
+                <!-- Back Navigation to Dashboard -->
+                <a href="{{ route('dashboard') }}" class="button secondary flex items-center gap-2 text-xs bg-white/10 hover:bg-white/20 text-white border-white/30 font-bold">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                    <span>Kembali ke Dashboard</span>
+                </a>
 
                 <!-- Attendance Check-in Direct Action (for Ongoing Meeting) -->
                 @if($agenda->status === 'ongoing')
-                    @php
-                        $userAttendance = $agenda->attendances->firstWhere('user_id', Auth::id());
-                    @endphp
-                    @if($userAttendance)
+                    @if($myAttendance)
                         <span class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold bg-emerald-500 text-slate-950 shadow-sm">
                             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
                             <span>Sudah Mengisi Presensi</span>
                         </span>
-                        <a href="{{ route('attendances.success', [$agenda, $userAttendance]) }}" class="button secondary flex items-center gap-1.5 text-xs bg-white/10 hover:bg-white/20 text-white border-white/30 font-bold">
+                        <a href="{{ route('attendances.success', [$agenda, $myAttendance]) }}" class="button secondary flex items-center gap-1.5 text-xs bg-white/10 hover:bg-white/20 text-white border-white/30 font-bold">
                             <span>Bukti Presensi</span>
                         </a>
                     @else
@@ -97,60 +83,6 @@
                         </a>
                     @endif
                 @endif
-
-                @can('manageStatus', $agenda)
-                    @if($agenda->status === 'scheduled')
-                        <form 
-                            action="{{ route('admin.agendas.update-status', $agenda) }}" 
-                            method="POST" 
-                            class="inline"
-                            data-confirm="Buka sesi presensi rapat '{{ $agenda->judul_rapat }}' sekarang? Pegawai akan dapat langsung mengisi daftar hadir."
-                            data-confirm-title="Buka Sesi Presensi"
-                            data-confirm-type="confirm"
-                            data-confirm-btn="Ya, Mulai Sesi"
-                        >
-                            @csrf
-                            @method('PATCH')
-                            <input type="hidden" name="status" value="ongoing">
-                            <button type="submit" class="button flex items-center gap-2 text-xs bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold shadow-md">
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                                <span>Buka Sesi Presensi</span>
-                            </button>
-                        </form>
-                    @elseif($agenda->status === 'ongoing')
-                        <form 
-                            action="{{ route('admin.agendas.update-status', $agenda) }}" 
-                            method="POST" 
-                            class="inline"
-                            data-confirm="Selesaikan dan tutup sesi presensi rapat '{{ $agenda->judul_rapat }}'? Pegawai tidak dapat mengisi presensi lagi setelah sesi ditutup."
-                            data-confirm-title="Selesaikan Sesi Rapat"
-                            data-confirm-type="warning"
-                            data-confirm-btn="Ya, Selesaikan Rapat"
-                        >
-                            @csrf
-                            @method('PATCH')
-                            <input type="hidden" name="status" value="completed">
-                            <button type="submit" class="button flex items-center gap-2 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-md">
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                                <span>Tutup Rapat & Selesaikan</span>
-                            </button>
-                        </form>
-                    @endif
-                @endcan
-
-                @can('manageMinutes', $agenda)
-                    <a href="{{ route('admin.agendas.notulen', $agenda) }}" class="button secondary flex items-center gap-2 text-xs bg-white/10 hover:bg-white/20 text-white border-white/30 font-bold">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-                        <span>Notulensi & Foto</span>
-                    </a>
-                @endcan
-
-                @can('update', $agenda)
-                    <a href="{{ route('admin.agendas.edit', $agenda) }}" class="button secondary flex items-center gap-2 text-xs bg-white/10 hover:bg-white/20 text-white border-white/30 font-bold">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13 7 4 4"/></svg>
-                        <span>Edit</span>
-                    </a>
-                @endcan
             </div>
         </div>
     </div>
@@ -182,14 +114,8 @@
                 <div class="toolbar">
                     <div class="flex items-center gap-2">
                         <svg class="text-slate-900" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
-                        <h3 class="font-bold text-slate-900 text-sm">Notulensi & Kesimpulan Rapat</h3>
+                        <h3 class="font-bold text-slate-900 text-sm">Notulensi &amp; Kesimpulan Rapat</h3>
                     </div>
-
-                    @can('manageMinutes', $agenda)
-                        <a href="{{ route('admin.agendas.notulen', $agenda) }}" class="text-xs font-bold text-slate-900 hover:underline">
-                            Edit Notulensi
-                        </a>
-                    @endcan
                 </div>
 
                 <div class="p-6 space-y-5">
@@ -207,7 +133,7 @@
                     </div>
 
                     <div>
-                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-900 mb-2">Kesimpulan & Rencana Tindak Lanjut (RTL):</h4>
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-900 mb-2">Kesimpulan &amp; Rencana Tindak Lanjut (RTL):</h4>
                         @if($agenda->kesimpulan)
                             <div class="text-xs text-slate-900 font-medium leading-relaxed whitespace-pre-line bg-emerald-50/70 p-4 rounded-xl border border-emerald-300">
                                 {{ $agenda->kesimpulan }}
@@ -265,8 +191,56 @@
             </div>
         </div>
 
-        <!-- Right: Surat Edaran & Rekap Kehadiran (1 col) -->
+        <!-- Right: Surat Edaran & Status Presensi Pribadi (1 col) -->
         <div class="space-y-6">
+            <!-- Status Presensi Pribadi Saya (Bukan Daftar Orang Lain) -->
+            <div class="panel">
+                <div class="toolbar">
+                    <div class="flex items-center gap-2">
+                        <svg class="text-slate-900" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                        <h3 class="font-bold text-slate-900 text-sm">Status Presensi Anda</h3>
+                    </div>
+                </div>
+                <div class="p-5 space-y-3">
+                    @if($myAttendance)
+                        <div class="p-4 bg-emerald-50 border border-emerald-300 rounded-xl space-y-2">
+                            <div class="flex items-center gap-2 text-emerald-900 font-bold text-xs">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                                <span>Anda Telah Mengisi Presensi</span>
+                            </div>
+                            <div class="text-[11px] text-emerald-950 font-mono">
+                                Waktu Hadir: {{ $myAttendance->signed_at->translatedFormat('d F Y, H:i') }} WIB
+                            </div>
+                        </div>
+                        <a href="{{ route('attendances.success', [$agenda, $myAttendance]) }}" class="button small secondary w-full flex items-center justify-center gap-1.5 text-xs font-bold">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            <span>Lihat Bukti Presensi Digital</span>
+                        </a>
+                    @elseif($agenda->status === 'ongoing')
+                        <div class="p-4 bg-amber-50 border border-amber-300 rounded-xl space-y-2">
+                            <div class="text-xs font-bold text-amber-950">
+                                Sesi Presensi Sedang Dibuka
+                            </div>
+                            <p class="text-[11px] text-amber-900">
+                                Anda belum mengisi daftar hadir untuk agenda pertemuan ini. Silakan isi presensi dengan foto selfie wajah dan tanda tangan digital.
+                            </p>
+                        </div>
+                        <a href="{{ route('attendances.create', $agenda) }}" class="button small w-full flex items-center justify-center gap-1.5 text-xs bg-emerald-700 hover:bg-emerald-800 text-white font-bold shadow-xs">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                            <span>Isi Presensi Sekarang</span>
+                        </a>
+                    @else
+                        <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center text-xs text-slate-600 font-medium">
+                            @if($agenda->status === 'scheduled')
+                                Sesi presensi belum dibuka oleh penyelenggara rapat.
+                            @else
+                                Sesi presensi untuk rapat ini telah ditutup.
+                            @endif
+                        </div>
+                    @endif
+                </div>
+            </div>
+
             <!-- Surat Edaran Card -->
             <div class="panel">
                 <div class="toolbar">
@@ -327,47 +301,6 @@
                         </div>
                     @endif
                 </div>
-            </div>
-
-            <!-- Rekapitulasi Presensi Peserta -->
-            <div class="panel flex flex-col justify-between">
-                <div>
-                    <div class="toolbar">
-                        <div class="flex items-center gap-2">
-                            <svg class="text-slate-900" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                            <h3 class="font-bold text-slate-900 text-sm">Peserta Hadir ({{ $attendances->total() }})</h3>
-                        </div>
-                    </div>
-
-                    <div class="p-4 divide-y divide-slate-200">
-                        @forelse($attendances as $attendance)
-                            <div class="py-2.5 first:pt-0 last:pb-0 flex items-center justify-between gap-3 text-xs">
-                                <div class="flex items-center gap-2.5">
-                                    <div class="w-7 h-7 rounded-full bg-slate-900 text-white font-bold flex items-center justify-center text-[10px] shrink-0">
-                                        {{ substr($attendance->user->name, 0, 2) }}
-                                    </div>
-                                    <div>
-                                        <div class="font-bold text-slate-900">{{ $attendance->user->name }}</div>
-                                        <div class="text-[10px] text-slate-600 font-mono font-medium">{{ $attendance->user->nip }}</div>
-                                    </div>
-                                </div>
-                                <span class="font-mono font-bold text-[11px] text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                                    {{ $attendance->signed_at->format('H:i') }} WIB
-                                </span>
-                            </div>
-                        @empty
-                            <div class="text-center py-6 text-xs text-slate-500 font-medium">
-                                Belum ada peserta yang melakukan presensi.
-                            </div>
-                        @endforelse
-                    </div>
-                </div>
-
-                @if($attendances->hasPages())
-                    <div class="mt-auto">
-                        {{ $attendances->links('vendor.pagination.compact') }}
-                    </div>
-                @endif
             </div>
         </div>
     </div>

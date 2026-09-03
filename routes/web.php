@@ -41,6 +41,7 @@ Route::middleware('auth')->group(function () {
     // Attendance Portal & Personal History
     Route::get('/presensi', [AttendanceController::class, 'portal'])->name('attendances.portal');
     Route::get('/presensi/riwayat', [AttendanceController::class, 'history'])->name('attendances.history');
+    Route::get('/agendas/{agenda}', [AgendaController::class, 'staffShow'])->name('agendas.show');
     Route::get('/agendas/{agenda}/presensi', [AttendanceController::class, 'create'])->name('attendances.create');
     Route::post('/agendas/{agenda}/presensi', [AttendanceController::class, 'store'])->middleware('throttle:30,1')->name('attendances.store');
     Route::get('/agendas/{agenda}/presensi/{attendance}/sukses', [AttendanceController::class, 'success'])->name('attendances.success');

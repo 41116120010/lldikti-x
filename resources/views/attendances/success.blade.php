@@ -95,7 +95,12 @@
                 </a>
 
                 <div class="flex items-center gap-2 w-full sm:w-auto">
-                    <a href="{{ route('admin.agendas.show', $agenda) }}" class="button small secondary flex-1 sm:flex-initial text-xs text-center font-bold">
+                    @php
+                        $detailRoute = (Auth::user()->isAdministrator() || Auth::user()->isAdmin()) 
+                            ? route('admin.agendas.show', $agenda) 
+                            : route('agendas.show', $agenda);
+                    @endphp
+                    <a href="{{ $detailRoute }}" class="button small secondary flex-1 sm:flex-initial text-xs text-center font-bold">
                         Detail Agenda
                     </a>
                     <button type="button" onclick="window.print()" class="button small flex-1 sm:flex-initial flex items-center justify-center gap-1.5 text-xs bg-slate-950 hover:bg-slate-800 text-white font-bold cursor-pointer">

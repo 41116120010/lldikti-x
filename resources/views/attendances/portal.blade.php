@@ -20,56 +20,93 @@
             </a>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             @forelse($ongoingAgendas as $agenda)
                 @php
                     $hasAttended = $agenda->hasUserAttended($user);
+                    $detailRoute = ($user->isAdministrator() || $user->isAdmin()) 
+                        ? route('admin.agendas.show', $agenda) 
+                        : route('agendas.show', $agenda);
                 @endphp
-                <div class="bg-white rounded-2xl p-5 border-2 {{ $hasAttended ? 'border-slate-300' : 'border-slate-900 bg-slate-50/50' }} shadow-xs flex flex-col justify-between space-y-4">
-                    <div class="space-y-2">
-                        <div class="flex items-center justify-between">
-                            <span class="status text-[11px] font-bold {{ $hasAttended ? 'completed' : 'ongoing' }}">
-                                {{ $hasAttended ? 'Sudah Hadir' : 'Sesi Presensi Dibuka' }}
-                            </span>
-                            <span class="text-[11px] font-mono font-bold uppercase bg-slate-100 px-2 py-0.5 rounded text-slate-900 border border-slate-300">
-                                {{ $agenda->tipe_rapat }}
-                            </span>
+                <div class="bg-white rounded-2xl border border-slate-300 shadow-xs hover:border-slate-400 transition flex flex-col justify-between overflow-hidden">
+                    <div>
+                        <!-- Top Card Header: Badges & Status -->
+                        <div class="p-5 pb-3 border-b border-slate-200 flex items-start justify-between gap-2">
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] border {{ $hasAttended ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-bold' : 'bg-amber-100 text-amber-900 border-amber-300 font-bold' }}">
+                                    {{ $hasAttended ? 'Sudah Hadir' : 'Sedang Berlangsung' }}
+                                </span>
+
+                                <span class="text-[11px] font-mono font-bold uppercase px-2 py-0.5 bg-slate-100 text-slate-800 rounded border border-slate-200">
+                                    {{ $agenda->tipe_rapat }}
+                                </span>
+                            </div>
+
+                            @if($user->isAdministrator() || $user->isAdmin())
+                                <!-- Attendee Counter Badge (Admin Only) -->
+                                <span class="inline-flex items-center gap-1 text-xs font-bold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200" title="Jumlah Peserta Hadir">
+                                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                                    {{ $agenda->attendances->count() }} Hadir
+                                </span>
+                            @endif
                         </div>
 
-                        <h4 class="font-bold text-slate-950 text-sm leading-snug">
-                            {{ $agenda->judul_rapat }}
-                        </h4>
+                        <!-- Card Body -->
+                        <div class="p-5 space-y-3">
+                            <h3 class="font-bold text-slate-900 text-base leading-snug hover:text-blue-900 transition line-clamp-2">
+                                <a href="{{ $detailRoute }}">
+                                    {{ $agenda->judul_rapat }}
+                                </a>
+                            </h3>
 
-                        <div class="text-xs text-slate-800 space-y-1 font-medium">
-                            <div class="flex items-center gap-1.5">
-                                <svg class="text-slate-600 shrink-0" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                                <span class="font-bold text-slate-900">{{ $agenda->waktu_mulai->translatedFormat('d M Y') }} &bull; {{ $agenda->waktu_mulai->format('H:i') }} - {{ $agenda->waktu_selesai->format('H:i') }} WIB</span>
-                            </div>
-                            <div class="flex items-center gap-1.5">
-                                <svg class="text-slate-600 shrink-0" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-                                <span>{{ $agenda->lokasi_ruang ?? 'Daring / Ruang Virtual' }}</span>
+                            <div class="space-y-1.5 text-xs text-slate-700 font-medium">
+                                <div class="flex items-center gap-2">
+                                    <svg class="text-slate-600 shrink-0" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                    <span class="text-slate-800">{{ $agenda->waktu_mulai->translatedFormat('d M Y, H:i') }} - {{ $agenda->waktu_selesai->format('H:i') }} WIB</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <svg class="text-slate-600 shrink-0" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                                    <span class="truncate text-slate-800">{{ $agenda->lokasi_ruang ?? 'Daring / Ruang Virtual' }}</span>
+                                </div>
+                                <div class="flex items-center gap-2 pt-1">
+                                    <svg class="text-slate-600 shrink-0" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/></svg>
+                                    @if($agenda->is_all_units)
+                                        <span class="text-emerald-900 font-bold">Seluruh Unit LLDIKTI (Pleno)</span>
+                                    @else
+                                        <span class="text-slate-900 font-bold">{{ $agenda->units->pluck('kode_unit')->join(', ') }}</span>
+                                    @endif
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="pt-3 border-t border-slate-200 flex items-center justify-between">
-                        <span class="text-xs text-slate-700 font-bold">
-                            {{ $agenda->attendances->count() }} pegawai telah hadir
-                        </span>
+                    <!-- Card Footer Actions -->
+                    <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2">
+                        <a href="{{ $detailRoute }}" class="button small secondary text-xs font-bold">
+                            Lihat Detail
+                        </a>
 
-                        @if($hasAttended)
-                            @php
-                                $myAttendance = $agenda->attendances->firstWhere('user_id', $user->id);
-                            @endphp
-                            <a href="{{ route('attendances.success', [$agenda, $myAttendance]) }}" class="button small secondary text-xs font-bold text-slate-900 border-slate-300 hover:bg-slate-100">
-                                Bukti Kehadiran
-                            </a>
-                        @else
-                            <a href="{{ route('attendances.create', $agenda) }}" class="button small flex items-center gap-1.5 text-xs bg-slate-950 hover:bg-slate-800 text-white shadow-xs font-bold">
-                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-                                <span>Isi Presensi (Selfie & TTD)</span>
-                            </a>
-                        @endif
+                        <div class="flex items-center gap-2">
+                            @if($hasAttended)
+                                @php
+                                    $myAttendance = $agenda->attendances->firstWhere('user_id', $user->id);
+                                @endphp
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                                    Sudah Hadir
+                                </span>
+                                @if($myAttendance)
+                                    <a href="{{ route('attendances.success', [$agenda, $myAttendance]) }}" class="button small secondary text-xs font-bold whitespace-nowrap">
+                                        Bukti
+                                    </a>
+                                @endif
+                            @else
+                                <a href="{{ route('attendances.create', $agenda) }}" class="button small flex items-center gap-1.5 text-xs bg-emerald-700 hover:bg-emerald-800 text-white font-bold shadow-xs">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                                    <span>Presensi Sekarang</span>
+                                </a>
+                            @endif
+                        </div>
                     </div>
                 </div>
             @empty
@@ -99,21 +136,60 @@
                     </div>
                 </div>
 
-                <div class="p-4 divide-y divide-slate-200">
+                <div class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                     @forelse($scheduledAgendas as $agenda)
-                        <div class="py-3 first:pt-0 last:pb-0 space-y-1 text-xs">
-                            <div class="flex items-center justify-between">
-                                <span class="font-bold text-slate-950">{{ $agenda->judul_rapat }}</span>
-                                <span class="text-slate-900 font-mono text-[11px] font-bold">{{ $agenda->waktu_mulai->format('d/m/Y') }}</span>
+                        @php
+                            $schedDetailRoute = ($user->isAdministrator() || $user->isAdmin()) 
+                                ? route('admin.agendas.show', $agenda) 
+                                : route('agendas.show', $agenda);
+                        @endphp
+                        <div class="bg-white rounded-xl p-4 border border-slate-300 shadow-xs hover:border-slate-400 transition flex flex-col justify-between space-y-3">
+                            <div>
+                                <div class="flex items-center justify-between gap-1.5 pb-2 border-b border-slate-100">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border bg-slate-100 text-slate-900 border-slate-300">
+                                        Terjadwal
+                                    </span>
+                                    <span class="text-[10px] font-mono font-bold uppercase bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200">
+                                        {{ $agenda->tipe_rapat }}
+                                    </span>
+                                </div>
+                                <h4 class="font-bold text-slate-950 text-xs leading-snug line-clamp-2 pt-2 hover:text-blue-900 transition">
+                                    <a href="{{ $schedDetailRoute }}">
+                                        {{ $agenda->judul_rapat }}
+                                    </a>
+                                </h4>
                             </div>
-                            <div class="text-slate-700 text-[11px] flex items-center gap-2 font-medium">
-                                <span class="font-bold text-slate-900">{{ $agenda->waktu_mulai->format('H:i') }} WIB</span>
-                                <span>&bull;</span>
-                                <span>{{ $agenda->lokasi_ruang ?? 'Daring' }}</span>
+
+                            <div class="text-[11px] text-slate-700 space-y-1.5 font-medium pt-2 border-t border-slate-100">
+                                <div class="flex items-center gap-1.5 text-slate-900 font-semibold">
+                                    <svg class="text-slate-500 shrink-0" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                    <span>{{ $agenda->waktu_mulai->translatedFormat('d M Y, H:i') }} - {{ $agenda->waktu_selesai->format('H:i') }} WIB</span>
+                                </div>
+                                <div class="flex items-center gap-1.5 text-slate-600 truncate">
+                                    <svg class="text-slate-500 shrink-0" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                                    <span class="truncate">{{ $agenda->lokasi_ruang ?? 'Daring / Ruang Virtual' }}</span>
+                                </div>
+                                <div class="flex items-center gap-1.5 text-slate-600 truncate">
+                                    <svg class="text-slate-500 shrink-0" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/></svg>
+                                    <span class="truncate">
+                                        @if($agenda->is_all_units)
+                                            Pleno Seluruh Unit
+                                        @else
+                                            {{ $agenda->units->pluck('kode_unit')->join(', ') }}
+                                        @endif
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
+                                <span class="text-[10px] text-slate-500 font-medium italic">Presensi belum dibuka</span>
+                                <a href="{{ $schedDetailRoute }}" class="text-[11px] text-blue-900 hover:text-blue-950 font-bold underline">
+                                    Lihat Detail &rarr;
+                                </a>
                             </div>
                         </div>
                     @empty
-                        <div class="text-center py-6 text-xs text-slate-600 font-medium">
+                        <div class="col-span-full text-center py-6 text-xs text-slate-600 font-medium">
                             Belum ada agenda rapat terjadwal berikutnya.
                         </div>
                     @endforelse
