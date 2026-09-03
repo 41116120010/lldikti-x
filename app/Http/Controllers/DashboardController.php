@@ -2,12 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ActivityLog;
 use App\Models\Agenda;
 use App\Models\Attendance;
 use App\Models\Unit;
 use App\Models\User;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
@@ -32,27 +30,14 @@ class DashboardController extends Controller
             $stats['total_users'] = User::count();
             $stats['total_units'] = Unit::count();
             $stats['total_attendances'] = Attendance::count();
-            $recentLogs = ActivityLog::with('user.unit')
-                ->latest('id')
-                ->paginate(5, ['*'], 'page_logs')
-                ->withQueryString();
         } elseif ($user->isAdmin()) {
             $stats['total_users'] = User::forUnit($user->unit_id)->count();
             $stats['total_attendances'] = Attendance::whereHas('user', function ($q) use ($user) {
                 $q->where('unit_id', $user->unit_id);
             })->count();
-            $recentLogs = ActivityLog::whereHas('user', function ($q) use ($user) {
-                $q->where('unit_id', $user->unit_id);
-            })->latest('id')
-                ->paginate(5, ['*'], 'page_logs')
-                ->withQueryString();
         } else {
             // Staff
             $stats['my_attendances'] = Attendance::where('user_id', $user->id)->count();
-            $recentLogs = ActivityLog::where('user_id', $user->id)
-                ->latest('id')
-                ->paginate(5, ['*'], 'page_logs')
-                ->withQueryString();
         }
 
         // Active / Ongoing Agendas available right now with pagination
@@ -63,6 +48,6 @@ class DashboardController extends Controller
             ->paginate(5, ['*'], 'page_agendas')
             ->withQueryString();
 
-        return view('dashboard', compact('user', 'stats', 'recentLogs', 'activeAgendas'));
+        return view('dashboard', compact('user', 'stats', 'activeAgendas'));
     }
 }

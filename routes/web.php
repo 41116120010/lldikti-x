@@ -33,9 +33,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // User Profile Management
+    // User Profile Management & Personal Activity Logs
     Route::get('/profil', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profil', [ProfileController::class, 'update'])->name('profile.update');
+    Route::get('/profil/aktivitas', [ProfileController::class, 'logs'])->name('profile.logs');
 
     // Attendance Portal & Personal History
     Route::get('/presensi', [AttendanceController::class, 'portal'])->name('attendances.portal');

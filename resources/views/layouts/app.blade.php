@@ -293,6 +293,10 @@
                                 <svg class="text-slate-700" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                                 <span>Pengaturan Profil Akun</span>
                             </a>
+                            <a href="{{ route('profile.logs') }}" class="flex items-center gap-2.5 px-4 py-2 text-xs text-slate-900 hover:bg-slate-100 transition font-bold" role="menuitem">
+                                <svg class="text-slate-700" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                                <span>Log Aktivitas Saya</span>
+                            </a>
                         </div>
 
                         <!-- Dropdown Logout Footer -->
