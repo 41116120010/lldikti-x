@@ -70,7 +70,7 @@
                             <td>
                                 <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-bold bg-emerald-100 text-emerald-950 border border-emerald-300">
                                     <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-                                    {{ $att->signed_at->format('d/m/Y H:i:s') }}
+                                    {{ $att->signed_at->format('d/m/Y H:i:s') }} WIB
                                 </div>
                             </td>
                             <td class="text-center">

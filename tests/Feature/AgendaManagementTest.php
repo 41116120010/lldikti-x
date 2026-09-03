@@ -319,4 +319,28 @@ class AgendaManagementTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Isi Presensi Sekarang');
     }
+
+    public function test_admin_agenda_detail_renders_clean_management_actions_without_glitch(): void
+    {
+        $superadmin = User::where('role', 'administrator')->first();
+        $agenda = Agenda::where('is_all_units', true)->first();
+        $agenda->update(['status' => 'ongoing']);
+
+        $response = $this->actingAs($superadmin)->get("/admin/agendas/{$agenda->id}");
+        $response->assertStatus(200);
+
+        // Assert clean management buttons are present in hero
+        $response->assertSee('Daftar Agenda');
+        $response->assertSee('Edit Agenda');
+        $response->assertSee('Ekspor PDF');
+        $response->assertSee('Ekspor Word');
+        $response->assertSee('Tutup Rapat &amp; Selesaikan', false);
+
+        // Assert attendance list is visible to admin
+        $response->assertSee('Peserta Hadir');
+
+        // Assert shortcut links on panels
+        $response->assertSee('Edit Notulensi');
+        $response->assertSee('Unggah Foto');
+    }
 }

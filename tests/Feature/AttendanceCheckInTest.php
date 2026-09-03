@@ -198,6 +198,8 @@ class AttendanceCheckInTest extends TestCase
         $response->assertSee('Tanda Terima Presensi Digital');
         $response->assertSee($staff->name);
         $response->assertSee($staff->nip);
+        $response->assertSee('Kembali ke Dashboard');
+        $response->assertDontSee('Portal Presensi');
     }
 
     public function test_attendance_rejects_disallowed_image_extension_payload(): void

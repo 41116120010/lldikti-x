@@ -7,77 +7,78 @@
 @section('content')
 <div class="space-y-6">
     <!-- Top Hero Banner -->
-    <div class="bg-slate-950 text-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-800">
-        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-            <div class="space-y-3">
-                <div class="flex flex-wrap items-center gap-2">
-                    @php
-                        $statusStyle = match($agenda->status) {
-                            'ongoing' => 'bg-amber-400 text-slate-950 font-bold',
-                            'completed' => 'bg-emerald-400 text-slate-950 font-bold',
-                            default => 'bg-slate-800 text-white border border-slate-700 font-bold'
-                        };
-                        $statusText = match($agenda->status) {
-                            'ongoing' => 'Sedang Berlangsung (Presensi Dibuka)',
-                            'completed' => 'Selesai',
-                            default => 'Terjadwal'
-                        };
-                    @endphp
-                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs {{ $statusStyle }}">
-                        {{ $statusText }}
-                    </span>
+    <div class="bg-slate-950 text-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-800 space-y-4">
+        <!-- Top Row: Meeting Type & Status Badges -->
+        <div class="flex flex-wrap items-center gap-2">
+            @php
+                $statusStyle = match($agenda->status) {
+                    'ongoing' => 'bg-amber-400 text-slate-950 font-bold',
+                    'completed' => 'bg-emerald-400 text-slate-950 font-bold',
+                    default => 'bg-slate-800 text-white border border-slate-700 font-bold'
+                };
+                $statusText = match($agenda->status) {
+                    'ongoing' => 'Sedang Berlangsung (Presensi Dibuka)',
+                    'completed' => 'Selesai',
+                    default => 'Terjadwal'
+                };
+            @endphp
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs {{ $statusStyle }}">
+                {{ $statusText }}
+            </span>
 
-                    <span class="text-xs uppercase font-mono font-bold px-2.5 py-1 bg-slate-900 border border-slate-700 rounded-md text-slate-200">
-                        {{ $agenda->tipe_rapat }}
-                    </span>
+            <span class="text-xs uppercase font-mono font-bold px-2.5 py-1 bg-slate-900 border border-slate-700 rounded-md text-slate-200">
+                {{ $agenda->tipe_rapat }}
+            </span>
 
-                    <span class="text-xs uppercase font-bold px-2.5 py-1 bg-slate-900 border border-slate-700 rounded-md text-slate-200">
-                        {{ $agenda->jenis_rapat }}
-                    </span>
-                </div>
+            <span class="text-xs uppercase font-bold px-2.5 py-1 bg-slate-900 border border-slate-700 rounded-md text-slate-200">
+                {{ $agenda->jenis_rapat }}
+            </span>
+        </div>
 
-                <h1 class="text-xl sm:text-2xl font-extrabold text-white tracking-tight leading-snug">
-                    {{ $agenda->judul_rapat }}
-                </h1>
+        <!-- Full Width Meeting Title: Never squeezed by buttons! -->
+        <h1 class="text-xl sm:text-2xl font-extrabold text-white tracking-tight leading-snug">
+            {{ $agenda->judul_rapat }}
+        </h1>
 
-                <div class="flex flex-wrap items-center gap-4 text-xs text-slate-300 font-medium">
-                    <div class="flex items-center gap-1.5">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                        <span>{{ $agenda->waktu_mulai->translatedFormat('l, d F Y &bull; H:i') }} - {{ $agenda->waktu_selesai->format('H:i') }} WIB</span>
-                    </div>
-
-                    <div class="flex items-center gap-1.5">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-                        <span>{{ $agenda->lokasi_ruang ?? 'Daring / Ruang Virtual' }}</span>
-                    </div>
-
-                    <div class="flex items-center gap-1.5">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                        <span>Penyelenggara: {{ $agenda->creator->name }} ({{ $agenda->creator->unit?->kode_unit ?? 'Pusat' }})</span>
-                    </div>
-                </div>
+        <!-- Metadata Row: Date, Location, Organizer -->
+        <div class="flex flex-wrap items-center gap-y-2 gap-x-5 text-xs text-slate-300 font-medium">
+            <div class="flex items-center gap-1.5">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span>{{ $agenda->waktu_mulai->translatedFormat('l, d F Y') }} &bull; {{ $agenda->waktu_mulai->format('H:i') }} - {{ $agenda->waktu_selesai->format('H:i') }} WIB</span>
             </div>
 
-            <!-- Action Controls -->
-            <div class="flex flex-wrap items-center gap-2 self-start lg:self-auto shrink-0">
-                <!-- Back Navigation to Dashboard -->
-                <a href="{{ route('dashboard') }}" class="button secondary flex items-center gap-2 text-xs bg-white/10 hover:bg-white/20 text-white border-white/30 font-bold">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-                    <span>Kembali ke Dashboard</span>
-                </a>
+            <div class="flex items-center gap-1.5">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                <span>{{ $agenda->lokasi_ruang ?? 'Daring / Ruang Virtual' }}</span>
+            </div>
 
-                <!-- Attendance Check-in Direct Action (for Ongoing Meeting) -->
+            <div class="flex items-center gap-1.5">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                <span>Penyelenggara: {{ $agenda->creator->name }} ({{ $agenda->creator->unit?->kode_unit ?? 'Pusat' }})</span>
+            </div>
+        </div>
+
+        <!-- Dedicated Action Toolbar (Full Width Bottom Bar) -->
+        <div class="pt-4 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
+            <!-- Left: Back Navigation to Dashboard -->
+            <a href="{{ route('dashboard') }}" class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold text-white bg-white/10 hover:bg-white/20 border border-white/20 transition">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                <span>Kembali ke Dashboard</span>
+            </a>
+
+            <!-- Right: Attendance Controls -->
+            <div class="flex flex-wrap items-center gap-2.5">
                 @if($agenda->status === 'ongoing')
                     @if($myAttendance)
                         <span class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold bg-emerald-500 text-slate-950 shadow-sm">
                             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
                             <span>Sudah Mengisi Presensi</span>
                         </span>
-                        <a href="{{ route('attendances.success', [$agenda, $myAttendance]) }}" class="button secondary flex items-center gap-1.5 text-xs bg-white/10 hover:bg-white/20 text-white border-white/30 font-bold">
+                        <a href="{{ route('attendances.success', [$agenda, $myAttendance]) }}" class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-bold text-white bg-white/10 hover:bg-white/20 border border-white/20 transition">
                             <span>Bukti Presensi</span>
                         </a>
                     @else
-                        <a href="{{ route('attendances.create', $agenda) }}" class="button flex items-center gap-2 text-xs bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold shadow-md">
+                        <a href="{{ route('attendances.create', $agenda) }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold shadow-md transition">
                             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
                             <span>Isi Presensi Sekarang</span>
                         </a>
