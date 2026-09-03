@@ -18,6 +18,13 @@ class UserManagementTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Kelola Seluruh Pengguna');
         $response->assertSee('Dr. Ir. Hendra Prasetyo');
+        $response->assertViewHas('userStats');
+        $response->assertSee('Total Pengguna');
+        $response->assertSee('Akun Aktif');
+        $response->assertSee('Akun Non-Aktif');
+        
+        $stats = $response->viewData('userStats');
+        $this->assertEquals(User::count(), $stats->total);
     }
 
     public function test_admin_unit_can_only_view_users_in_their_unit(): void
@@ -31,6 +38,11 @@ class UserManagementTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee($staffAkm->name);
         $response->assertDontSee($staffKlb->name);
+        $response->assertViewHas('userStats');
+        $response->assertSee('Pegawai di Unit');
+        
+        $stats = $response->viewData('userStats');
+        $this->assertEquals(User::where('unit_id', $adminAkm->unit_id)->count(), $stats->total);
     }
 
     public function test_staff_cannot_access_user_management(): void
