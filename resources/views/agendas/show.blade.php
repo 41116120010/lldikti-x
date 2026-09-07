@@ -335,8 +335,9 @@
                     </div>
 
                     @can('manageMinutes', $agenda)
-                        <a href="{{ route('admin.agendas.notulen', $agenda) }}" class="text-xs font-bold text-slate-900 hover:underline">
-                            Edit Notulensi
+                        <a href="{{ route('admin.agendas.notulen', $agenda) }}" class="btn btn-secondary py-1 px-3 text-xs inline-flex items-center gap-1.5" title="Buka Pengolah Kata Notulensi & Dokumentasi">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-5m-1.414-9.414a2 2 0 1 1 2.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                            <span>Edit Notulensi</span>
                         </a>
                     @endcan
                 </div>
@@ -349,8 +350,8 @@
                             Pembahasan
                         </h4>
                         @if($agenda->notulensi)
-                            <div class="text-xs text-slate-900 font-medium leading-relaxed whitespace-pre-line pl-7">
-                                {{ $agenda->notulensi }}
+                            <div class="text-xs text-slate-900 font-medium leading-relaxed pl-7 prose-gov">
+                                {!! $agenda->formatted_notulensi !!}
                             </div>
                         @else
                             <p class="text-xs text-slate-600 italic pl-7">
@@ -370,8 +371,8 @@
                             Keputusan & Tindak Lanjut
                         </h4>
                         @if($agenda->kesimpulan)
-                            <div class="text-xs text-slate-900 font-medium leading-relaxed whitespace-pre-line pl-7">
-                                {{ $agenda->kesimpulan }}
+                            <div class="text-xs text-slate-900 font-medium leading-relaxed pl-7 prose-gov">
+                                {!! $agenda->formatted_kesimpulan !!}
                             </div>
                         @else
                             <p class="text-xs text-slate-600 italic pl-7">
@@ -435,6 +436,12 @@
             </div>
 
             <div class="flex items-center gap-2">
+                @can('manageMinutes', $agenda)
+                    <a href="{{ route('admin.agendas.notulen', $agenda) }}" class="px-2.5 py-1 text-xs font-bold rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700 transition inline-flex items-center gap-1.5 cursor-pointer">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        <span>Kelola Foto / Notulen</span>
+                    </a>
+                @endcan
                 @if($documentations->hasPages())
                     <div class="flex items-center gap-1 text-xs">
                         {{ $documentations->links('vendor.pagination.compact') }}

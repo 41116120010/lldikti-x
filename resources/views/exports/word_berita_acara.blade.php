@@ -207,14 +207,14 @@
     <div>
         <strong>A. Catatan Jalannya Rapat (Notulensi):</strong>
         <div class="box-text">
-            {!! nl2br(e($agenda->notulensi ?: 'Tidak ada catatan notulensi khusus yang dicatat.')) !!}
+            {!! $agenda->formatted_notulensi ?: 'Tidak ada catatan notulensi khusus yang dicatat.' !!}
         </div>
     </div>
 
     <div>
         <strong>B. Kesimpulan & Rencana Tindak Lanjut (RTL):</strong>
         <div class="box-text">
-            {!! nl2br(e($agenda->kesimpulan ?: 'Tidak ada catatan kesimpulan khusus yang dicatat.')) !!}
+            {!! $agenda->formatted_kesimpulan ?: 'Tidak ada catatan kesimpulan khusus yang dicatat.' !!}
         </div>
     </div>
 

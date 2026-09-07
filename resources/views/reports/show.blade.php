@@ -262,8 +262,8 @@
                             Pembahasan Jalannya Rapat
                         </h4>
                         @if($agenda->notulensi)
-                            <div class="text-xs text-slate-900 font-medium leading-relaxed whitespace-pre-line pl-7">
-                                {{ $agenda->notulensi }}
+                            <div class="text-xs text-slate-900 font-medium leading-relaxed pl-7 prose-gov">
+                                {!! $agenda->formatted_notulensi !!}
                             </div>
                         @else
                             <p class="text-xs text-slate-600 italic pl-7">
@@ -283,8 +283,8 @@
                             Kesimpulan, Keputusan & Rencana Tindak Lanjut (RTL)
                         </h4>
                         @if($agenda->kesimpulan)
-                            <div class="text-xs text-slate-900 font-medium leading-relaxed whitespace-pre-line pl-7">
-                                {{ $agenda->kesimpulan }}
+                            <div class="text-xs text-slate-900 font-medium leading-relaxed pl-7 prose-gov">
+                                {!! $agenda->formatted_kesimpulan !!}
                             </div>
                         @else
                             <p class="text-xs text-slate-600 italic pl-7">

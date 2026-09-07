@@ -123,8 +123,8 @@
                     <div>
                         <h4 class="text-xs font-bold uppercase tracking-wider text-slate-900 mb-2">Poin-Poin Pembahasan (Notulensi):</h4>
                         @if($agenda->notulensi)
-                            <div class="text-xs text-slate-900 font-medium leading-relaxed whitespace-pre-line bg-slate-50 p-4 rounded-xl border border-slate-200">
-                                {{ $agenda->notulensi }}
+                            <div class="text-xs text-slate-900 font-medium leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-200 prose-gov">
+                                {!! $agenda->formatted_notulensi !!}
                             </div>
                         @else
                             <p class="text-xs text-slate-600 italic bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -136,8 +136,8 @@
                     <div>
                         <h4 class="text-xs font-bold uppercase tracking-wider text-slate-900 mb-2">Kesimpulan &amp; Rencana Tindak Lanjut (RTL):</h4>
                         @if($agenda->kesimpulan)
-                            <div class="text-xs text-slate-900 font-medium leading-relaxed whitespace-pre-line bg-emerald-50/70 p-4 rounded-xl border border-emerald-300">
-                                {{ $agenda->kesimpulan }}
+                            <div class="text-xs text-slate-900 font-medium leading-relaxed bg-emerald-50/70 p-4 rounded-xl border border-emerald-300 prose-gov">
+                                {!! $agenda->formatted_kesimpulan !!}
                             </div>
                         @else
                             <p class="text-xs text-slate-600 italic bg-slate-50 p-4 rounded-xl border border-slate-200">

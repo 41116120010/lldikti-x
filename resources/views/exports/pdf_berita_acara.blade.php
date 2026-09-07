@@ -131,8 +131,27 @@
             padding: 8px 10px;
             font-size: 10pt;
             min-height: 40px;
-            white-space: pre-line;
             text-align: justify;
+        }
+
+        .box-text ul, .box-text ol {
+            margin: 4px 0 4px 20px;
+            padding: 0;
+        }
+
+        .box-text li {
+            margin: 2px 0;
+        }
+
+        .box-text p {
+            margin: 4px 0;
+        }
+
+        .box-text blockquote {
+            border-left: 2px solid #333;
+            padding-left: 8px;
+            margin: 4px 0;
+            font-style: italic;
         }
 
         .signature-block {
@@ -304,14 +323,14 @@
         <div style="margin-bottom: 10px;">
             <div style="font-weight: bold; font-size: 10pt; margin-bottom: 3px;">A. Catatan Jalannya Rapat (Notulensi):</div>
             <div class="box-text">
-                {{ $agenda->notulensi ?: 'Tidak ada catatan notulensi khusus yang dicatat.' }}
+                {!! $agenda->formatted_notulensi ?: 'Tidak ada catatan notulensi khusus yang dicatat.' !!}
             </div>
         </div>
 
         <div>
             <div style="font-weight: bold; font-size: 10pt; margin-bottom: 3px;">B. Kesimpulan & Rencana Tindak Lanjut (RTL):</div>
             <div class="box-text">
-                {{ $agenda->kesimpulan ?: 'Tidak ada catatan kesimpulan khusus yang dicatat.' }}
+                {!! $agenda->formatted_kesimpulan ?: 'Tidak ada catatan kesimpulan khusus yang dicatat.' !!}
             </div>
         </div>
 

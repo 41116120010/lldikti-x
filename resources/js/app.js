@@ -357,7 +357,331 @@ function initGlobalListeners() {
             }
         });
     }
+
+    // Initialize Microsoft Word Ribbon Rich Text Editors
+    WordEditor.init();
+
+    // Initialize Interactive Photo Preview Uploader
+    PhotoPreviewUploader.init();
 }
+
+// --- 2.5. MICROSOFT WORD RIBBON RICH TEXT EDITOR CONTROLLER ---
+const WordEditor = {
+    init() {
+        document.querySelectorAll('.word-editor-wrapper').forEach(wrapper => {
+            if (wrapper.dataset.initialized === 'true') return;
+            wrapper.dataset.initialized = 'true';
+
+            const contentEl = wrapper.querySelector('.word-editor-content');
+            const hiddenInput = wrapper.querySelector('textarea[name], input[name]');
+            const ribbon = wrapper.querySelector('.word-editor-ribbon');
+            const formatSelect = ribbon ? ribbon.querySelector('select[data-command="formatBlock"]') : null;
+            const wordsCountEl = wrapper.querySelector('.word-counter-words');
+            const charsCountEl = wrapper.querySelector('.word-counter-chars');
+
+            if (!contentEl || !hiddenInput) return;
+
+            const updateCounters = () => {
+                const text = contentEl.innerText.trim();
+                const words = text ? text.split(/\s+/).filter(Boolean).length : 0;
+                const chars = text.length;
+                if (wordsCountEl) wordsCountEl.textContent = `${words} Kata`;
+                if (charsCountEl) charsCountEl.textContent = `${chars} Karakter`;
+            };
+
+            const syncContent = () => {
+                hiddenInput.value = contentEl.innerHTML;
+                updateCounters();
+            };
+
+            const updateActiveStates = () => {
+                if (!ribbon) return;
+                const commands = ['bold', 'italic', 'underline', 'strikeThrough', 'justifyLeft', 'justifyCenter', 'justifyRight', 'justifyFull', 'insertUnorderedList', 'insertOrderedList'];
+                commands.forEach(cmd => {
+                    const btn = ribbon.querySelector(`button[data-command="${cmd}"]`);
+                    if (btn) {
+                        try {
+                            if (document.queryCommandState(cmd)) {
+                                btn.classList.add('is-active');
+                            } else {
+                                btn.classList.remove('is-active');
+                            }
+                        } catch (e) {}
+                    }
+                });
+
+                if (formatSelect) {
+                    try {
+                        const block = document.queryCommandValue('formatBlock').toLowerCase();
+                        if (['h2', 'h3', 'p', 'blockquote'].includes(block)) {
+                            formatSelect.value = block;
+                        }
+                    } catch (e) {}
+                }
+            };
+
+            if (ribbon) {
+                ribbon.querySelectorAll('button[data-command]').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const cmd = btn.dataset.command;
+                        contentEl.focus();
+
+                        if (cmd === 'blockquote') {
+                            document.execCommand('formatBlock', false, 'blockquote');
+                        } else if (cmd === 'insertHorizontalRule') {
+                            document.execCommand('insertHorizontalRule', false, null);
+                        } else {
+                            document.execCommand(cmd, false, null);
+                        }
+
+                        syncContent();
+                        updateActiveStates();
+                    });
+                });
+
+                if (formatSelect) {
+                    formatSelect.addEventListener('change', (e) => {
+                        contentEl.focus();
+                        const val = e.target.value;
+                        if (val) {
+                            document.execCommand('formatBlock', false, val);
+                            syncContent();
+                            updateActiveStates();
+                        }
+                    });
+                }
+            }
+
+            // Keyboard shortcuts (Ctrl+B, Ctrl+I, Ctrl+U)
+            contentEl.addEventListener('keydown', (e) => {
+                if (e.ctrlKey || e.metaKey) {
+                    if (e.key === 'b' || e.key === 'B') {
+                        e.preventDefault();
+                        document.execCommand('bold', false, null);
+                        syncContent();
+                        updateActiveStates();
+                    } else if (e.key === 'i' || e.key === 'I') {
+                        e.preventDefault();
+                        document.execCommand('italic', false, null);
+                        syncContent();
+                        updateActiveStates();
+                    } else if (e.key === 'u' || e.key === 'U') {
+                        e.preventDefault();
+                        document.execCommand('underline', false, null);
+                        syncContent();
+                        updateActiveStates();
+                    }
+                }
+            });
+
+            // Normalizes pasted content
+            contentEl.addEventListener('paste', () => {
+                setTimeout(() => {
+                    syncContent();
+                    updateActiveStates();
+                }, 10);
+            });
+
+            contentEl.addEventListener('input', syncContent);
+            contentEl.addEventListener('keyup', updateActiveStates);
+            contentEl.addEventListener('mouseup', updateActiveStates);
+
+            const form = contentEl.closest('form');
+            if (form) {
+                form.addEventListener('submit', () => {
+                    syncContent();
+                });
+            }
+
+            updateCounters();
+        });
+    }
+};
+
+window.WordEditor = WordEditor;
+
+// --- 2.6. INTERACTIVE PHOTO PREVIEW & QUEUE UPLOADER ---
+const PhotoPreviewUploader = {
+    init() {
+        const container = document.querySelector('#photo-uploader-container');
+        if (!container || container.dataset.initialized === 'true') return;
+        container.dataset.initialized = 'true';
+
+        const fileInput = container.querySelector('#photos');
+        const dropzone = container.querySelector('#photo-dropzone');
+        const previewGrid = container.querySelector('#photo-preview-grid');
+        const counterBadge = container.querySelector('#photo-counter-badge');
+
+        if (!fileInput || !previewGrid) return;
+
+        let currentFiles = [];
+        let objectUrls = [];
+
+        const formatSize = (bytes) => {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        };
+
+        const revokeAllUrls = () => {
+            objectUrls.forEach(url => URL.revokeObjectURL(url));
+            objectUrls = [];
+        };
+
+        const syncDataTransfer = () => {
+            try {
+                const dt = new DataTransfer();
+                currentFiles.forEach(file => dt.items.add(file));
+                fileInput.files = dt.files;
+            } catch (err) {
+                console.warn('DataTransfer sync warning:', err);
+            }
+        };
+
+        const render = () => {
+            revokeAllUrls();
+            previewGrid.innerHTML = '';
+
+            if (currentFiles.length === 0) {
+                previewGrid.classList.add('hidden');
+                if (counterBadge) counterBadge.classList.add('hidden');
+                return;
+            }
+
+            previewGrid.classList.remove('hidden');
+            if (counterBadge) {
+                counterBadge.textContent = `${currentFiles.length} Foto Terpilih`;
+                counterBadge.classList.remove('hidden');
+            }
+
+            currentFiles.forEach((file, index) => {
+                const url = URL.createObjectURL(file);
+                objectUrls.push(url);
+
+                const card = document.createElement('div');
+                card.className = 'relative group bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs hover:border-slate-300 transition';
+                card.innerHTML = `
+                    <div class="aspect-4/3 relative bg-slate-100 overflow-hidden flex items-center justify-center">
+                        <img src="${url}" alt="${file.name}" class="w-full h-24 sm:h-28 object-cover">
+                        <button 
+                            type="button" 
+                            class="photo-preview-remove absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shadow-md transition cursor-pointer"
+                            title="Hapus foto ini dari antrean upload"
+                            aria-label="Hapus foto ${file.name}"
+                            data-index="${index}"
+                        >
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="p-2 border-t border-slate-100 bg-white">
+                        <div class="text-[11px] font-bold text-slate-800 truncate" title="${file.name}">${file.name}</div>
+                        <div class="text-[10px] text-slate-500 font-mono font-medium">${formatSize(file.size)}</div>
+                    </div>
+                `;
+
+                const removeBtn = card.querySelector('.photo-preview-remove');
+                removeBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    removeFile(index);
+                });
+
+                previewGrid.appendChild(card);
+            });
+        };
+
+        const removeFile = (index) => {
+            currentFiles.splice(index, 1);
+            syncDataTransfer();
+            render();
+        };
+
+        const addFiles = (newFiles) => {
+            const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+            const maxBytes = 3 * 1024 * 1024; // 3MB
+            const maxTotal = 10;
+
+            let oversizedNames = [];
+
+            Array.from(newFiles).forEach(file => {
+                if (currentFiles.length >= maxTotal) return;
+
+                if (!allowedMimes.includes(file.type) && !/\.(jpe?g|png|webp)$/i.test(file.name)) {
+                    return;
+                }
+
+                if (file.size > maxBytes) {
+                    oversizedNames.push(file.name);
+                    return;
+                }
+
+                // Avoid exact duplicates in current list
+                const isDuplicate = currentFiles.some(f => f.name === file.name && f.size === file.size && f.lastModified === file.lastModified);
+                if (!isDuplicate) {
+                    currentFiles.push(file);
+                }
+            });
+
+            if (oversizedNames.length > 0 && window.showModal) {
+                window.showModal({
+                    title: 'Ukuran Foto Terlalu Besar',
+                    message: `Berkas (${oversizedNames.join(', ')}) melebihi batas maksimal 3 MB.`,
+                    type: 'warning',
+                    confirmText: 'Mengerti'
+                });
+            }
+
+            syncDataTransfer();
+            render();
+        };
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                addFiles(e.target.files);
+            }
+        });
+
+        if (dropzone) {
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropzone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropzone.classList.add('border-slate-500', 'bg-slate-100');
+                });
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropzone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropzone.classList.remove('border-slate-500', 'bg-slate-100');
+                });
+            });
+
+            dropzone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                if (dt && dt.files && dt.files.length > 0) {
+                    addFiles(dt.files);
+                }
+            });
+        }
+
+        const form = container.closest('form');
+        if (form) {
+            form.addEventListener('reset', () => {
+                currentFiles = [];
+                syncDataTransfer();
+                render();
+            });
+        }
+    }
+};
+
+window.PhotoPreviewUploader = PhotoPreviewUploader;
 
 // --- 3. SEAMLESS SPA-FEEL NAVIGATION ENGINE ---
 const SeamlessNavigation = {

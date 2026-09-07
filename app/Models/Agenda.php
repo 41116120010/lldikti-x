@@ -196,4 +196,38 @@ class Agenda extends Model
 
         return $this->attendances()->where('user_id', $user->id)->exists();
     }
+
+    /**
+     * Get the formatted notulensi (rich HTML or safe nl2br for legacy text).
+     */
+    public function getFormattedNotulensiAttribute(): ?string
+    {
+        if (!$this->notulensi) {
+            return null;
+        }
+
+        // If it already contains HTML tags, return as rich formatted content
+        if ($this->notulensi !== strip_tags($this->notulensi)) {
+            return $this->notulensi;
+        }
+
+        // Otherwise legacy plain text, convert newlines safely
+        return nl2br(e($this->notulensi));
+    }
+
+    /**
+     * Get the formatted kesimpulan (rich HTML or safe nl2br for legacy text).
+     */
+    public function getFormattedKesimpulanAttribute(): ?string
+    {
+        if (!$this->kesimpulan) {
+            return null;
+        }
+
+        if ($this->kesimpulan !== strip_tags($this->kesimpulan)) {
+            return $this->kesimpulan;
+        }
+
+        return nl2br(e($this->kesimpulan));
+    }
 }
