@@ -201,9 +201,28 @@
                     </div>
                 </div>
             @empty
-                <div class="col-span-full p-10 text-center bg-white rounded-2xl border border-slate-300 text-xs text-slate-600">
-                    <svg class="mx-auto mb-2 text-slate-400" viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-                    Belum ada agenda rapat aktif atau terjadwal saat ini.
+                <div class="col-span-full p-10 text-center bg-white rounded-2xl border border-slate-300 space-y-3">
+                    <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400 border border-slate-200">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                    </div>
+                    <div class="space-y-1">
+                        <h4 class="text-sm font-bold text-slate-900">Tidak Ada Agenda Rapat Aktif</h4>
+                        <p class="text-xs text-slate-600 max-w-sm mx-auto">Saat ini tidak ada sesi rapat yang sedang berlangsung atau agenda terjadwal dalam waktu dekat.</p>
+                    </div>
+                    <div class="pt-2 flex items-center justify-center gap-2">
+                        @if($user->isAdministrator() || $user->isAdmin())
+                            <a href="{{ route('admin.agendas.index') }}" class="button small secondary text-xs font-bold">
+                                <span>Lihat Semua Arsip Agenda</span>
+                            </a>
+                            <a href="{{ route('admin.agendas.create') }}" class="button small text-xs font-bold">
+                                <span>+ Buat Agenda Baru</span>
+                            </a>
+                        @else
+                            <a href="{{ route('attendances.history') }}" class="button small secondary text-xs font-bold">
+                                <span>Lihat Riwayat Presensi Saya</span>
+                            </a>
+                        @endif
+                    </div>
                 </div>
             @endforelse
         </div>

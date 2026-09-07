@@ -95,11 +95,41 @@ class Agenda extends Model
     }
 
     /**
-     * Scope for scheduled / upcoming agendas.
+     * Scope for scheduled agendas (pure status check).
      */
     public function scopeScheduled(Builder $query): Builder
     {
         return $query->where('status', 'scheduled');
+    }
+
+    /**
+     * Scope for upcoming scheduled agendas that have not passed yet.
+     */
+    public function scopeUpcoming(Builder $query): Builder
+    {
+        return $query->where('status', 'scheduled')
+            ->where(function (Builder $q) {
+                $q->where(function (Builder $sub) {
+                    $sub->whereNotNull('waktu_selesai')
+                        ->where('waktu_selesai', '>=', now());
+                })->orWhere(function (Builder $sub) {
+                    $sub->whereNull('waktu_selesai')
+                        ->where('waktu_mulai', '>=', now()->startOfDay());
+                });
+            });
+    }
+
+    /**
+     * Scope for active/relevant agendas on the dashboard (ongoing right now OR upcoming).
+     */
+    public function scopeRelevantForDashboard(Builder $query): Builder
+    {
+        return $query->where(function (Builder $q) {
+            $q->where('status', 'ongoing')
+              ->orWhere(function (Builder $sub) {
+                  $sub->upcoming();
+              });
+        });
     }
 
     /**

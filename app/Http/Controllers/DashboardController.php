@@ -22,7 +22,7 @@ class DashboardController extends Controller
         $stats = [
             'total_agendas' => Agenda::visibleTo($user)->count(),
             'ongoing_agendas' => Agenda::visibleTo($user)->where('status', 'ongoing')->count(),
-            'upcoming_agendas' => Agenda::visibleTo($user)->where('status', 'scheduled')->count(),
+            'upcoming_agendas' => Agenda::visibleTo($user)->upcoming()->count(),
             'completed_agendas' => Agenda::visibleTo($user)->where('status', 'completed')->count(),
         ];
 
@@ -40,10 +40,11 @@ class DashboardController extends Controller
             $stats['my_attendances'] = Attendance::where('user_id', $user->id)->count();
         }
 
-        // Active / Ongoing Agendas available right now with pagination
+        // Active / Ongoing Agendas available right now with pagination, prioritized by ongoing first
         $activeAgendas = Agenda::visibleTo($user)
             ->with(['creator', 'units', 'attendances'])
-            ->whereIn('status', ['ongoing', 'scheduled'])
+            ->relevantForDashboard()
+            ->orderByRaw("CASE WHEN status = 'ongoing' THEN 1 ELSE 2 END ASC")
             ->orderBy('waktu_mulai', 'asc')
             ->paginate(5, ['*'], 'page_agendas')
             ->withQueryString();

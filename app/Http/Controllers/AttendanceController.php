@@ -33,9 +33,9 @@ class AttendanceController extends Controller
             ->paginate(6, ['*'], 'page_ongoing')
             ->withQueryString();
 
-        // Upcoming scheduled meetings
+        // Upcoming scheduled meetings that have not passed yet
         $scheduledAgendas = Agenda::visibleTo($user)
-            ->where('status', 'scheduled')
+            ->upcoming()
             ->with(['creator', 'units'])
             ->orderBy('waktu_mulai', 'asc')
             ->paginate(4, ['*'], 'page_scheduled')
