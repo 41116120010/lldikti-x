@@ -29,3 +29,6 @@ Thumbs.db
 /database/mariadb.sock*
 /database/mariadb.pid
 *.zip
+AGENTS.md
+ERD.md
+PRD.md
