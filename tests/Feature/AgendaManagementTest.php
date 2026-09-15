@@ -208,10 +208,15 @@ class AgendaManagementTest extends TestCase
 
         $agenda = Agenda::where('judul_rapat', $uniqueTitle)->first();
         $this->assertNotNull($agenda);
-        $this->assertEquals(
-            $startTime->copy()->addHours(2)->format('Y-m-d H:i:s'),
-            $agenda->waktu_selesai->format('Y-m-d H:i:s')
-        );
+        $this->assertNull($agenda->waktu_selesai);
+        $this->assertStringContainsString('WIB s.d. Selesai', $agenda->rentang_waktu);
+
+        // Verify view rendering is null-safe
+        $showResponse = $this->actingAs($superadmin)->get("/admin/agendas/{$agenda->id}");
+        $showResponse->assertStatus(200);
+        $showResponse->assertSee('WIB s.d. Selesai');
+
+        $agenda->delete();
     }
 
     public function test_agenda_creation_normalizes_meeting_link(): void
@@ -678,13 +683,56 @@ class AgendaManagementTest extends TestCase
 
         $agenda = Agenda::where('judul_rapat', $title)->first();
         $this->assertNotNull($agenda);
-        // The system gracefully defaults omitted end time to +2 hours to satisfy DB constraints
-        $this->assertNotNull($agenda->waktu_selesai);
-        $this->assertEquals(
-            \Carbon\Carbon::parse($startStr)->addHours(2)->format('Y-m-d H:i'),
-            $agenda->waktu_selesai->format('Y-m-d H:i')
-        );
+        // The system stores null for "Hingga Selesai" agendas
+        $this->assertNull($agenda->waktu_selesai);
+        $this->assertStringContainsString('WIB s.d. Selesai', $agenda->rentang_waktu);
         $response->assertRedirect("/admin/agendas/{$agenda->id}");
+
+        $agenda->delete();
+    }
+
+    public function test_admin_can_update_agenda_to_until_finished(): void
+    {
+        $superadmin = User::where('role', 'administrator')->first();
+        $startTime = now()->addDays(4)->setTime(10, 0);
+        $endTime = now()->addDays(4)->setTime(12, 0);
+
+        $agenda = Agenda::create([
+            'created_by' => $superadmin->id,
+            'judul_rapat' => 'Rapat Update Hingga Selesai ' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Rapat 2',
+            'waktu_mulai' => $startTime,
+            'waktu_selesai' => $endTime,
+            'is_all_units' => true,
+            'status' => 'scheduled',
+        ]);
+
+        $this->assertNotNull($agenda->waktu_selesai);
+
+        // Update with empty waktu_selesai (checking "Hingga Selesai")
+        $response = $this->actingAs($superadmin)->put("/admin/agendas/{$agenda->id}", [
+            'judul_rapat' => $agenda->judul_rapat,
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Rapat 2',
+            'waktu_mulai' => $startTime->format('Y-m-d H:i:s'),
+            'waktu_selesai' => '',
+            'is_all_units' => true,
+            'status' => 'scheduled',
+        ]);
+
+        $response->assertRedirect("/admin/agendas/{$agenda->id}");
+
+        $agenda->refresh();
+        $this->assertNull($agenda->waktu_selesai);
+        $this->assertEquals('10:00 WIB s.d. Selesai', $agenda->rentang_waktu);
+
+        // Verify views render correctly without errors
+        $indexResponse = $this->actingAs($superadmin)->get('/admin/agendas');
+        $indexResponse->assertStatus(200);
+        $indexResponse->assertSee('WIB s.d. Selesai');
 
         $agenda->delete();
     }

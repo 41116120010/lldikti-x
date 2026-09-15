@@ -21,7 +21,7 @@ return new class extends Migration
             $table->string('lokasi_ruang', 150)->nullable();
             $table->text('link_meeting')->nullable();
             $table->dateTime('waktu_mulai');
-            $table->dateTime('waktu_selesai');
+            $table->dateTime('waktu_selesai')->nullable();
             $table->boolean('is_all_units')->default(true);
             $table->string('surat_edaran_path')->nullable();
             $table->longText('notulensi')->nullable();

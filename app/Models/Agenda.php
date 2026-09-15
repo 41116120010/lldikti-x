@@ -238,4 +238,35 @@ class Agenda extends Model
 
         return nl2br(e($this->kesimpulan));
     }
+
+    /**
+     * Format rentang waktu kedinasan (contoh: "09:00 - 11:00 WIB" atau "09:00 WIB s.d. Selesai").
+     */
+    public function getRentangWaktuAttribute(): string
+    {
+        if (!$this->waktu_mulai) {
+            return '-';
+        }
+
+        $mulai = $this->waktu_mulai->format('H:i');
+
+        if ($this->waktu_selesai) {
+            return $mulai . ' - ' . $this->waktu_selesai->format('H:i') . ' WIB';
+        }
+
+        return $mulai . ' WIB s.d. Selesai';
+    }
+
+    /**
+     * Format jadwal lengkap dengan hari dan tanggal (contoh: "Selasa, 15 Sep 2026 • 09:00 - 11:00 WIB").
+     */
+    public function getJadwalLengkapAttribute(): string
+    {
+        if (!$this->waktu_mulai) {
+            return '-';
+        }
+
+        $tanggal = $this->waktu_mulai->translatedFormat('l, d M Y');
+        return $tanggal . ' • ' . $this->rentang_waktu;
+    }
 }

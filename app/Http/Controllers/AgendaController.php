@@ -112,7 +112,7 @@ class AgendaController extends Controller
             $waktuMulai = $validated['waktu_mulai'];
             $waktuSelesai = !empty($validated['waktu_selesai']) 
                 ? $validated['waktu_selesai'] 
-                : \Carbon\Carbon::parse($waktuMulai)->addHours(2)->toDateTimeString();
+                : null;
 
             $agendaData = [
                 'created_by' => $user->id,
@@ -246,7 +246,7 @@ class AgendaController extends Controller
             $waktuMulai = $validated['waktu_mulai'];
             $waktuSelesai = !empty($validated['waktu_selesai']) 
                 ? $validated['waktu_selesai'] 
-                : \Carbon\Carbon::parse($waktuMulai)->addHours(2)->toDateTimeString();
+                : null;
 
             $updateData = [
                 'judul_rapat' => $validated['judul_rapat'],

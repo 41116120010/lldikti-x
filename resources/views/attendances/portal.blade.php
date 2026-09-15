@@ -62,7 +62,7 @@
                             <div class="space-y-1.5 text-xs text-slate-700 font-medium">
                                 <div class="flex items-center gap-2">
                                     <svg class="text-slate-600 shrink-0" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                                    <span class="text-slate-800">{{ $agenda->waktu_mulai->translatedFormat('d M Y, H:i') }} - {{ $agenda->waktu_selesai->format('H:i') }} WIB</span>
+                                    <span class="text-slate-800">{{ $agenda->waktu_mulai->translatedFormat('d M Y, H:i') }} {{ $agenda->waktu_selesai ? '- ' . $agenda->waktu_selesai->format('H:i') . ' WIB' : 'WIB s.d. Selesai' }}</span>
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <svg class="text-slate-600 shrink-0" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -163,7 +163,7 @@
                             <div class="text-[11px] text-slate-700 space-y-1.5 font-medium pt-2 border-t border-slate-100">
                                 <div class="flex items-center gap-1.5 text-slate-900 font-semibold">
                                     <svg class="text-slate-500 shrink-0" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                                    <span>{{ $agenda->waktu_mulai->translatedFormat('d M Y, H:i') }} - {{ $agenda->waktu_selesai->format('H:i') }} WIB</span>
+                                    <span>{{ $agenda->waktu_mulai->translatedFormat('d M Y, H:i') }} {{ $agenda->waktu_selesai ? '- ' . $agenda->waktu_selesai->format('H:i') . ' WIB' : 'WIB s.d. Selesai' }}</span>
                                 </div>
                                 <div class="flex items-center gap-1.5 text-slate-600 truncate">
                                     <svg class="text-slate-500 shrink-0" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>

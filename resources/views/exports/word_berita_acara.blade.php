@@ -155,7 +155,7 @@
         <tr>
             <td><strong>Waktu Pelaksanaan</strong></td>
             <td>:</td>
-            <td>{{ $agenda->waktu_mulai->format('H:i') }} s.d. {{ $agenda->waktu_selesai->format('H:i') }} WIB</td>
+            <td>{{ $agenda->waktu_mulai->format('H:i') }} {{ $agenda->waktu_selesai ? 's.d. ' . $agenda->waktu_selesai->format('H:i') . ' WIB' : 'WIB s.d. Selesai' }}</td>
         </tr>
         <tr>
             <td><strong>Format & Tempat</strong></td>

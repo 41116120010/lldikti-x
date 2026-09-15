@@ -65,7 +65,7 @@
                             </td>
                             <td>
                                 <div class="text-xs font-bold text-slate-950">{{ $att->agenda->waktu_mulai->translatedFormat('d M Y') }}</div>
-                                <div class="text-[11px] text-slate-600 font-mono font-medium">{{ $att->agenda->waktu_mulai->format('H:i') }} - {{ $att->agenda->waktu_selesai->format('H:i') }} WIB</div>
+                                <div class="text-[11px] text-slate-600 font-mono font-medium">{{ $att->agenda->waktu_mulai->format('H:i') }} {{ $att->agenda->waktu_selesai ? '- ' . $att->agenda->waktu_selesai->format('H:i') . ' WIB' : 'WIB s.d. Selesai' }}</div>
                             </td>
                             <td>
                                 <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-bold bg-emerald-100 text-emerald-950 border border-emerald-300">
