@@ -625,5 +625,62 @@ class AgendaManagementTest extends TestCase
         $draftKlb->delete();
         $draftUniversal->delete();
     }
+
+    public function test_create_and_edit_agenda_page_renders_wib_schedule_picker(): void
+    {
+        $superadmin = User::where('role', 'administrator')->first();
+        $agenda = Agenda::first();
+
+        // 1. Create page checks
+        $createRes = $this->actingAs($superadmin)->get('/admin/agendas/create');
+        $createRes->assertStatus(200);
+        $createRes->assertSee('wib-schedule-picker-root', false);
+        $createRes->assertSee('24 Jam (WIB)');
+        $createRes->assertSee('Pukul (WIB)');
+        $createRes->assertSee('WIB (UTC+7)');
+        $createRes->assertSee('Hingga Selesai');
+        $createRes->assertSee('Pilihan Cepat Jam:');
+        $createRes->assertSee('Tambah Durasi / Preset:');
+        $createRes->assertDontSee('type="datetime-local"', false);
+
+        // 2. Edit page checks
+        $editRes = $this->actingAs($superadmin)->get("/admin/agendas/{$agenda->id}/edit");
+        $editRes->assertStatus(200);
+        $editRes->assertSee('wib-schedule-picker-root', false);
+        $editRes->assertSee('24 Jam (WIB)');
+        $editRes->assertSee('Pukul (WIB)');
+        $editRes->assertDontSee('type="datetime-local"', false);
+    }
+
+    public function test_admin_can_create_agenda_without_end_time(): void
+    {
+        $superadmin = User::where('role', 'administrator')->first();
+        $title = 'Rapat Koordinasi Hingga Selesai ' . uniqid();
+        $startStr = now()->addDays(2)->format('Y-m-d') . 'T09:00';
+
+        $response = $this->actingAs($superadmin)->post('/admin/agendas', [
+            'judul_rapat' => $title,
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Rapat Utama',
+            'waktu_mulai' => $startStr,
+            'waktu_selesai' => '', // Empty string for "Hingga Selesai"
+            'is_all_units' => true,
+            'status' => 'scheduled',
+        ]);
+
+        $agenda = Agenda::where('judul_rapat', $title)->first();
+        $this->assertNotNull($agenda);
+        // The system gracefully defaults omitted end time to +2 hours to satisfy DB constraints
+        $this->assertNotNull($agenda->waktu_selesai);
+        $this->assertEquals(
+            \Carbon\Carbon::parse($startStr)->addHours(2)->format('Y-m-d H:i'),
+            $agenda->waktu_selesai->format('Y-m-d H:i')
+        );
+        $response->assertRedirect("/admin/agendas/{$agenda->id}");
+
+        $agenda->delete();
+    }
 }
+
 

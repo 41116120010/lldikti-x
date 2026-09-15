@@ -22,6 +22,10 @@ class StoreAgendaRequest extends FormRequest
             }
             $this->merge(['link_meeting' => $link]);
         }
+
+        if ($this->has('waktu_selesai') && blank($this->input('waktu_selesai'))) {
+            $this->merge(['waktu_selesai' => null]);
+        }
     }
 
     public function rules(): array

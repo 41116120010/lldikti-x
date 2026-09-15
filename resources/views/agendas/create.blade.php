@@ -115,37 +115,9 @@
                     </div>
                 </div>
 
-                <!-- Waktu Pelaksanaan -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div class="field">
-                        <label for="waktu_mulai" class="text-xs font-bold text-slate-900 block mb-1">Waktu Mulai <span class="text-rose-600">*</span></label>
-                        <input 
-                            type="datetime-local" 
-                            id="waktu_mulai" 
-                            name="waktu_mulai" 
-                            value="{{ old('waktu_mulai', $defaultMulai) }}" 
-                            class="input w-full font-semibold @error('waktu_mulai') input-error @enderror" 
-                            required
-                        >
-                        @error('waktu_mulai')
-                            <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <div class="field">
-                        <label for="waktu_selesai" class="text-xs font-bold text-slate-900 block mb-1">Waktu Selesai (Opsional)</label>
-                        <input 
-                            type="datetime-local" 
-                            id="waktu_selesai" 
-                            name="waktu_selesai" 
-                            value="{{ old('waktu_selesai', $defaultSelesai) }}" 
-                            class="input w-full font-semibold @error('waktu_selesai') input-error @enderror"
-                        >
-                        <p class="text-[11px] text-slate-600 font-medium mt-1">Kosongkan jika rapat berlangsung hingga selesai.</p>
-                        @error('waktu_selesai')
-                            <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>
-                        @enderror
-                    </div>
+                <!-- Waktu Pelaksanaan (Format 24 Jam WIB) -->
+                <div class="field">
+                    <x-wib-schedule-picker :waktuMulai="$defaultMulai" :waktuSelesai="$defaultSelesai" />
                 </div>
             </div>
 
