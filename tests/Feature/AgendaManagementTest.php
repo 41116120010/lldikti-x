@@ -513,4 +513,117 @@ class AgendaManagementTest extends TestCase
 
         $agenda->delete();
     }
+
+    public function test_agendas_index_displays_draft_tab_after_all_tab(): void
+    {
+        $superadmin = User::where('role', 'administrator')->first();
+
+        // Create a draft agenda
+        $draftAgenda = Agenda::create([
+            'created_by' => $superadmin->id,
+            'judul_rapat' => 'Draf Konsep Rapat ' . uniqid(),
+            'slug' => 'draf-konsep-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Draf',
+            'waktu_mulai' => now()->addDays(3),
+            'waktu_selesai' => now()->addDays(3)->addHours(2),
+            'is_all_units' => true,
+            'status' => 'draft',
+        ]);
+
+        $response = $this->actingAs($superadmin)->get('/admin/agendas');
+        $response->assertStatus(200);
+
+        $content = $response->getContent();
+        $posSemua = strpos($content, 'Semua (');
+        $posDraft = strpos($content, 'Draf / Konsep (');
+        $posBerlangsung = strpos($content, 'Sedang Berlangsung (');
+
+        $this->assertNotFalse($posSemua, 'Tab Semua should be visible');
+        $this->assertNotFalse($posDraft, 'Tab Draf / Konsep should be visible');
+        $this->assertNotFalse($posBerlangsung, 'Tab Sedang Berlangsung should be visible');
+        $this->assertTrue($posSemua < $posDraft, 'Tab Draf / Konsep must be placed after tab Semua');
+        $this->assertTrue($posDraft < $posBerlangsung, 'Tab Draf / Konsep must be placed before tab Sedang Berlangsung');
+
+        // Clean up
+        $draftAgenda->delete();
+    }
+
+    public function test_filter_draft_agendas_works_for_admin_and_admin_unit(): void
+    {
+        $superadmin = User::where('role', 'administrator')->first();
+        $adminAkm = User::where('username', 'admin_akademik')->first();
+        $unitAkm = Unit::where('kode_unit', 'POKJA-AKM')->first();
+        $unitKlb = Unit::where('kode_unit', 'POKJA-KLB')->first();
+
+        // Draft for all units
+        $draftUniversal = Agenda::create([
+            'created_by' => $superadmin->id,
+            'judul_rapat' => 'Universal Draft ' . uniqid(),
+            'slug' => 'universal-draft-' . uniqid(),
+            'jenis_rapat' => 'pleno',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Pleno',
+            'waktu_mulai' => now()->addDays(4),
+            'waktu_selesai' => now()->addDays(4)->addHours(2),
+            'is_all_units' => true,
+            'status' => 'draft',
+        ]);
+
+        // Draft for AKM unit only
+        $draftAkm = Agenda::create([
+            'created_by' => $adminAkm->id,
+            'judul_rapat' => 'AKM Draft ' . uniqid(),
+            'slug' => 'akm-draft-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang AKM',
+            'waktu_mulai' => now()->addDays(5),
+            'waktu_selesai' => now()->addDays(5)->addHours(2),
+            'is_all_units' => false,
+            'status' => 'draft',
+        ]);
+        $draftAkm->units()->attach($unitAkm->id);
+
+        // Draft for KLB unit only
+        $draftKlb = Agenda::create([
+            'created_by' => $superadmin->id,
+            'judul_rapat' => 'KLB Draft ' . uniqid(),
+            'slug' => 'klb-draft-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang KLB',
+            'waktu_mulai' => now()->addDays(6),
+            'waktu_selesai' => now()->addDays(6)->addHours(2),
+            'is_all_units' => false,
+            'status' => 'draft',
+        ]);
+        $draftKlb->units()->attach($unitKlb->id);
+
+        // Verify scopeDraft method
+        $this->assertTrue(Agenda::draft()->where('id', $draftUniversal->id)->exists());
+
+        // Superadmin filters ?status=draft -> sees all 3 drafts
+        $superadminResponse = $this->actingAs($superadmin)->get('/admin/agendas?status=draft');
+        $superadminResponse->assertStatus(200);
+        $superadminResponse->assertSee($draftUniversal->judul_rapat);
+        $superadminResponse->assertSee($draftAkm->judul_rapat);
+        $superadminResponse->assertSee($draftKlb->judul_rapat);
+
+        // Admin AKM filters ?status=draft -> sees universal and AKM draft, but NOT KLB draft
+        $akmResponse = $this->actingAs($adminAkm)->get('/admin/agendas?status=draft');
+        $akmResponse->assertStatus(200);
+        $akmResponse->assertSee($draftUniversal->judul_rapat);
+        $akmResponse->assertSee($draftAkm->judul_rapat);
+        $akmResponse->assertDontSee($draftKlb->judul_rapat);
+
+        // Clean up
+        $draftAkm->units()->detach();
+        $draftAkm->delete();
+        $draftKlb->units()->detach();
+        $draftKlb->delete();
+        $draftUniversal->delete();
+    }
 }
+

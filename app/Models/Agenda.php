@@ -87,6 +87,14 @@ class Agenda extends Model
     }
 
     /**
+     * Scope for draft/concept agendas.
+     */
+    public function scopeDraft(Builder $query): Builder
+    {
+        return $query->where('status', 'draft');
+    }
+
+    /**
      * Scope for ongoing agendas.
      */
     public function scopeOngoing(Builder $query): Builder

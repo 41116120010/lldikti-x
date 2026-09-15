@@ -20,6 +20,12 @@
                 Semua ({{ $statusCounts['all'] }})
             </a>
             <a 
+                href="{{ route('admin.agendas.index', ['status' => 'draft'] + request()->except('status', 'page')) }}" 
+                class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition {{ request('status') === 'draft' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-700 hover:text-slate-900' }}"
+            >
+                Draf / Konsep ({{ $statusCounts['draft'] }})
+            </a>
+            <a 
                 href="{{ route('admin.agendas.index', ['status' => 'ongoing'] + request()->except('status', 'page')) }}" 
                 class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition {{ request('status') === 'ongoing' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-700 hover:text-slate-900' }}"
             >

@@ -68,12 +68,18 @@ class AgendaController extends Controller
         $agendas = $query->orderBy('waktu_mulai', 'desc')->paginate(9)->withQueryString();
         $units = $currentUser->isAdministrator() ? Unit::active()->orderBy('nama_unit')->get() : collect();
 
-        // Stat counts
+        // Stat counts (single aggregated query for high performance & durability)
+        $rawCounts = Agenda::visibleTo($currentUser)
+            ->selectRaw('status, count(*) as count')
+            ->groupBy('status')
+            ->pluck('count', 'status');
+
         $statusCounts = [
-            'all' => Agenda::visibleTo($currentUser)->count(),
-            'ongoing' => Agenda::visibleTo($currentUser)->where('status', 'ongoing')->count(),
-            'scheduled' => Agenda::visibleTo($currentUser)->where('status', 'scheduled')->count(),
-            'completed' => Agenda::visibleTo($currentUser)->where('status', 'completed')->count(),
+            'all' => (int) $rawCounts->sum(),
+            'draft' => (int) $rawCounts->get('draft', 0),
+            'ongoing' => (int) $rawCounts->get('ongoing', 0),
+            'scheduled' => (int) $rawCounts->get('scheduled', 0),
+            'completed' => (int) $rawCounts->get('completed', 0),
         ];
 
         return view('agendas.index', compact('agendas', 'currentUser', 'statusCounts', 'units'));
