@@ -102,6 +102,8 @@
             font-size: 11pt;
             min-height: 50px;
             margin-bottom: 10px;
+            overflow-wrap: break-word;
+            word-break: break-word;
         }
 
         .signature-block {

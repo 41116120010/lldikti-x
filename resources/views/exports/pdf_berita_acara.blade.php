@@ -132,6 +132,8 @@
             font-size: 10pt;
             min-height: 40px;
             text-align: justify;
+            overflow-wrap: break-word;
+            word-break: break-word;
         }
 
         .box-text ul, .box-text ol {

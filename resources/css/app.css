@@ -461,6 +461,9 @@
     .prose-gov {
         color: #0f172a;
         line-height: 1.75;
+        overflow-wrap: break-word;
+        word-break: break-word;
+        max-width: 100%;
     }
     .prose-gov p {
         margin-top: 0.5em;
@@ -543,6 +546,8 @@
         border: 1px solid #cbd5e1;
         padding: 0.5rem 0.75rem;
         text-align: left;
+        overflow-wrap: break-word;
+        word-break: break-word;
     }
     .prose-gov th {
         background: #f1f5f9;
