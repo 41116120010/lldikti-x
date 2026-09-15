@@ -16,6 +16,8 @@ class Agenda extends Model
 
     protected $fillable = [
         'created_by',
+        'pimpinan_id',
+        'notulis_id',
         'judul_rapat',
         'slug',
         'jenis_rapat',
@@ -59,6 +61,22 @@ class Agenda extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * Relationship to the designated meeting leader.
+     */
+    public function pimpinan(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'pimpinan_id');
+    }
+
+    /**
+     * Relationship to the designated meeting minute taker.
+     */
+    public function notulis(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'notulis_id');
     }
 
     /**
@@ -268,5 +286,87 @@ class Agenda extends Model
 
         $tanggal = $this->waktu_mulai->translatedFormat('l, d M Y');
         return $tanggal . ' • ' . $this->rentang_waktu;
+    }
+
+    /**
+     * Effective meeting leader (designated pimpinan or fallback to creator).
+     */
+    public function getEffectivePimpinanAttribute(): ?User
+    {
+        return $this->pimpinan ?? $this->creator;
+    }
+
+    /**
+     * Effective minute taker (designated notulis or fallback to creator).
+     */
+    public function getEffectiveNotulisAttribute(): ?User
+    {
+        return $this->notulis ?? $this->creator;
+    }
+
+    /**
+     * Leader's full name.
+     */
+    public function getNamaPimpinanAttribute(): string
+    {
+        return $this->effective_pimpinan?->name ?? 'Pimpinan Rapat';
+    }
+
+    /**
+     * Leader's NIP.
+     */
+    public function getNipPimpinanAttribute(): string
+    {
+        return $this->effective_pimpinan?->nip ?? '-';
+    }
+
+    /**
+     * Minute taker's full name.
+     */
+    public function getNamaNotulisAttribute(): string
+    {
+        return $this->effective_notulis?->name ?? 'Notulis Rapat';
+    }
+
+    /**
+     * Minute taker's NIP.
+     */
+    public function getNipNotulisAttribute(): string
+    {
+        return $this->effective_notulis?->nip ?? '-';
+    }
+
+    /**
+     * Attendance record of the effective pimpinan.
+     */
+    public function getPimpinanAttendanceAttribute(): ?Attendance
+    {
+        $pimpinanId = $this->effective_pimpinan?->id;
+        if (!$pimpinanId) {
+            return null;
+        }
+
+        if ($this->relationLoaded('attendances')) {
+            return $this->attendances->firstWhere('user_id', $pimpinanId);
+        }
+
+        return $this->attendances()->where('user_id', $pimpinanId)->first();
+    }
+
+    /**
+     * Attendance record of the effective notulis.
+     */
+    public function getNotulisAttendanceAttribute(): ?Attendance
+    {
+        $notulisId = $this->effective_notulis?->id;
+        if (!$notulisId) {
+            return null;
+        }
+
+        if ($this->relationLoaded('attendances')) {
+            return $this->attendances->firstWhere('user_id', $notulisId);
+        }
+
+        return $this->attendances()->where('user_id', $notulisId)->first();
     }
 }

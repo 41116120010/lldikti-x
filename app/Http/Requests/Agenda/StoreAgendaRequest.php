@@ -26,12 +26,22 @@ class StoreAgendaRequest extends FormRequest
         if ($this->has('waktu_selesai') && blank($this->input('waktu_selesai'))) {
             $this->merge(['waktu_selesai' => null]);
         }
+
+        if ($this->has('pimpinan_id') && blank($this->input('pimpinan_id'))) {
+            $this->merge(['pimpinan_id' => null]);
+        }
+
+        if ($this->has('notulis_id') && blank($this->input('notulis_id'))) {
+            $this->merge(['notulis_id' => null]);
+        }
     }
 
     public function rules(): array
     {
         return [
             'judul_rapat' => ['required', 'string', 'max:255'],
+            'pimpinan_id' => ['nullable', 'exists:users,id'],
+            'notulis_id' => ['nullable', 'exists:users,id'],
             'jenis_rapat' => ['required', 'string', 'max:100'],
             'tipe_rapat' => ['required', 'string', Rule::in(['offline', 'online', 'hybrid'])],
             'lokasi_ruang' => ['nullable', 'string', 'max:150', Rule::requiredIf(fn () => in_array($this->input('tipe_rapat'), ['offline', 'hybrid']))],
@@ -50,6 +60,8 @@ class StoreAgendaRequest extends FormRequest
     {
         return [
             'judul_rapat' => 'Judul / Perihal Rapat',
+            'pimpinan_id' => 'Pemimpin Rapat',
+            'notulis_id' => 'Notulis Rapat',
             'jenis_rapat' => 'Jenis Rapat',
             'tipe_rapat' => 'Format Pelaksanaan',
             'lokasi_ruang' => 'Lokasi / Ruang Rapat',

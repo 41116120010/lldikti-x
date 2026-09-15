@@ -190,9 +190,59 @@
                 @endif
             </div>
 
-            <!-- 3. Berkas Surat Edaran -->
+            <!-- 3. Penugasan Pimpinan & Notulis Rapat (Hybrid / Fleksibel) -->
             <div class="space-y-4 pt-4 border-t border-slate-200">
-                <h3 class="text-sm font-extrabold uppercase tracking-wider text-slate-900">3. Surat Undangan / Edaran Resmi</h3>
+                <div>
+                    <h3 class="text-sm font-extrabold uppercase tracking-wider text-slate-900">3. Penugasan Pimpinan & Notulis Rapat</h3>
+                    <p class="text-[11px] text-slate-600 font-medium mt-0.5">Opsional. Jika tidak dipilih, pimpinan dan notulis otomatis menggunakan akun pembuat agenda (alur hybrid).</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <!-- Pemimpin Rapat -->
+                    <div class="field">
+                        <label for="pimpinan_id" class="text-xs font-bold text-slate-900 block mb-1">
+                            Pemimpin Rapat
+                            <span class="text-[11px] font-normal text-slate-700">(Penanggung Jawab Acara)</span>
+                        </label>
+                        <select id="pimpinan_id" name="pimpinan_id" class="input w-full font-medium @error('pimpinan_id') input-error @enderror">
+                            <option value="">Default: Pembuat Agenda ({{ $currentUser->name }})</option>
+                            @foreach($users as $user)
+                                <option value="{{ $user->id }}" {{ old('pimpinan_id') == $user->id ? 'selected' : '' }}>
+                                    {{ $user->name }} (NIP: {{ $user->nip ?? '-' }}) — {{ $user->unit?->kode_unit ?? 'Pusat' }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <p class="text-[11px] text-slate-600 font-medium mt-1">Nama dan NIP akan otomatis tertera di lembar pengesahan Berita Acara.</p>
+                        @error('pimpinan_id')
+                            <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <!-- Notulis Rapat -->
+                    <div class="field">
+                        <label for="notulis_id" class="text-xs font-bold text-slate-900 block mb-1">
+                            Notulis Rapat
+                            <span class="text-[11px] font-normal text-slate-700">(Pencatat Notulensi & Dokumentasi)</span>
+                        </label>
+                        <select id="notulis_id" name="notulis_id" class="input w-full font-medium @error('notulis_id') input-error @enderror">
+                            <option value="">Default: Pembuat Agenda ({{ $currentUser->name }})</option>
+                            @foreach($users as $user)
+                                <option value="{{ $user->id }}" {{ old('notulis_id') == $user->id ? 'selected' : '' }}>
+                                    {{ $user->name }} (NIP: {{ $user->nip ?? '-' }}) — {{ $user->unit?->kode_unit ?? 'Pusat' }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <p class="text-[11px] text-slate-600 font-medium mt-1">Pegawai yang ditunjuk otomatis berhak mengisi notulen saat rapat berlangsung.</p>
+                        @error('notulis_id')
+                            <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>
+                        @enderror
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Berkas Surat Edaran -->
+            <div class="space-y-4 pt-4 border-t border-slate-200">
+                <h3 class="text-sm font-extrabold uppercase tracking-wider text-slate-900">4. Surat Undangan / Edaran Resmi</h3>
 
                 <div class="field">
                     <label for="surat_edaran" class="text-xs font-bold text-slate-900 block mb-1">Unggah Dokumen Undangan Resmi (PDF / Gambar)</label>

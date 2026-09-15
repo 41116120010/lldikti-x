@@ -29,7 +29,13 @@ class AgendaPolicy
                 || ($user->unit_id !== null && ($agenda->creator?->unit_id === $user->unit_id || $agenda->units()->where('units.id', $user->unit_id)->exists() || $agenda->is_all_units));
         }
 
-        // Staff is strictly forbidden from accessing admin agenda management view
+        // Designated Notulis or Pimpinan can view the agenda
+        if (($agenda->notulis_id && $agenda->notulis_id === $user->id) 
+            || ($agenda->pimpinan_id && $agenda->pimpinan_id === $user->id)) {
+            return true;
+        }
+
+        // Staff is strictly forbidden from accessing admin agenda management view unless designated
         return false;
     }
 
@@ -125,10 +131,23 @@ class AgendaPolicy
             return true;
         }
 
+        // Creator can always manage minutes unless cancelled
+        if ($agenda->created_by === $user->id) {
+            return true;
+        }
+
         if ($user->isAdmin()) {
-            return $agenda->created_by === $user->id 
-                || ($user->unit_id !== null && $agenda->creator?->unit_id === $user->unit_id)
+            return ($user->unit_id !== null && $agenda->creator?->unit_id === $user->unit_id)
                 || ($user->unit_id !== null && $agenda->units()->where('units.id', $user->unit_id)->exists());
+        }
+
+        // Designated Notulis or Pimpinan for regular staff (pegawai):
+        // HANYA BERLAKU SAAT STATUS RAPAT SEDANG BERLANGSUNG (ongoing)
+        if ($agenda->status === 'ongoing') {
+            if (($agenda->notulis_id && $agenda->notulis_id === $user->id) 
+                || ($agenda->pimpinan_id && $agenda->pimpinan_id === $user->id)) {
+                return true;
+            }
         }
 
         return false;

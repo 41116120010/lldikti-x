@@ -56,6 +56,16 @@
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                 <span>Penyelenggara: {{ $agenda->creator?->name ?? 'Penyelenggara Rapat' }} ({{ $agenda->creator?->unit?->kode_unit ?? 'Pusat' }})</span>
             </div>
+
+            <div class="flex items-center gap-1.5">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <span>Pimpinan: <strong class="text-white">{{ $agenda->nama_pimpinan }}</strong></span>
+            </div>
+
+            <div class="flex items-center gap-1.5">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                <span>Notulis: <strong class="text-white">{{ $agenda->nama_notulis }}</strong></span>
+            </div>
         </div>
 
         <!-- Dedicated Action Toolbar (Full Width Bottom Bar) -->
@@ -66,8 +76,15 @@
                 <span>Kembali ke Dashboard</span>
             </a>
 
-            <!-- Right: Attendance Controls -->
+            <!-- Right: Attendance Controls & Notulen Action for Staff -->
             <div class="flex flex-wrap items-center gap-2.5">
+                @can('manageMinutes', $agenda)
+                    <a href="{{ route('admin.agendas.notulen', $agenda) }}" class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold text-slate-950 bg-amber-400 hover:bg-amber-300 border border-amber-300 shadow-sm transition" title="Kelola Notulensi & Dokumentasi Foto Rapat">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                        <span>Kelola Notulensi Rapat</span>
+                    </a>
+                @endcan
+
                 @if($agenda->status === 'ongoing')
                     @if($myAttendance)
                         <span class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold bg-emerald-500 text-slate-950 shadow-sm">
@@ -110,6 +127,25 @@
                 </div>
             @endif
 
+            <!-- Notulis Assignment Notice (for designated staff during ongoing meeting) -->
+            @can('manageMinutes', $agenda)
+                <div class="p-4 bg-amber-50 border border-amber-300 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-xs">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center shrink-0">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                        </div>
+                        <div>
+                            <div class="font-bold text-xs text-amber-950">Anda Ditugaskan Sebagai Notulis Rapat</div>
+                            <div class="text-[11px] text-amber-800">Sesi rapat sedang berlangsung. Anda memiliki hak akses resmi untuk mencatat notulensi, menyusun kesimpulan (RTL), dan mengunggah dokumentasi kegiatan.</div>
+                        </div>
+                    </div>
+                    <a href="{{ route('admin.agendas.notulen', $agenda) }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-xs transition">
+                        <span>Buka Formulir Notulensi</span>
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                    </a>
+                </div>
+            @endcan
+
             <!-- Notulensi & Kesimpulan Section -->
             <div class="panel">
                 <div class="toolbar">
@@ -117,6 +153,13 @@
                         <svg class="text-slate-900" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
                         <h3 class="font-bold text-slate-900 text-sm">Notulensi &amp; Kesimpulan Rapat</h3>
                     </div>
+
+                    @can('manageMinutes', $agenda)
+                        <a href="{{ route('admin.agendas.notulen', $agenda) }}" class="text-xs font-bold text-slate-900 hover:underline inline-flex items-center gap-1">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                            <span>Edit Notulensi</span>
+                        </a>
+                    @endcan
                 </div>
 
                 <div class="p-6 space-y-5">

@@ -9,6 +9,7 @@ use App\Http\Requests\Agenda\UpdateMinutesRequest;
 use App\Models\Agenda;
 use App\Models\AgendaDocumentation;
 use App\Models\Unit;
+use App\Models\User;
 use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -95,8 +96,9 @@ class AgendaController extends Controller
         $currentUser = Auth::user();
         $currentUser->load('unit');
         $units = Unit::active()->orderBy('nama_unit')->get();
+        $users = User::query()->where('is_active', true)->with('unit')->orderBy('name')->get();
 
-        return view('agendas.create', compact('units', 'currentUser'));
+        return view('agendas.create', compact('units', 'currentUser', 'users'));
     }
 
     /**
@@ -116,6 +118,8 @@ class AgendaController extends Controller
 
             $agendaData = [
                 'created_by' => $user->id,
+                'pimpinan_id' => $validated['pimpinan_id'] ?? null,
+                'notulis_id' => $validated['notulis_id'] ?? null,
                 'judul_rapat' => $validated['judul_rapat'],
                 'slug' => Str::slug($validated['judul_rapat']) . '-' . Str::lower(Str::random(6)),
                 'jenis_rapat' => $validated['jenis_rapat'],
@@ -174,6 +178,8 @@ class AgendaController extends Controller
 
         $agenda->load([
             'creator.unit',
+            'pimpinan.unit',
+            'notulis.unit',
             'units',
         ]);
 
@@ -190,8 +196,9 @@ class AgendaController extends Controller
 
         $currentUser = Auth::user();
         $myAttendance = $agenda->attendances()->where('user_id', $currentUser->id)->first();
+        $users = User::query()->where('is_active', true)->with('unit')->orderBy('name')->get();
 
-        return view('agendas.show', compact('agenda', 'attendances', 'documentations', 'currentUser', 'myAttendance'));
+        return view('agendas.show', compact('agenda', 'attendances', 'documentations', 'currentUser', 'myAttendance', 'users'));
     }
 
     /**
@@ -204,6 +211,8 @@ class AgendaController extends Controller
 
         $agenda->load([
             'creator.unit',
+            'pimpinan.unit',
+            'notulis.unit',
             'units',
         ]);
 
@@ -225,12 +234,13 @@ class AgendaController extends Controller
     {
         Gate::authorize('update', $agenda);
 
-        $agenda->load('units');
+        $agenda->load(['units', 'pimpinan', 'notulis']);
         $currentUser = Auth::user();
         $currentUser->load('unit');
         $units = Unit::active()->orderBy('nama_unit')->get();
+        $users = User::query()->where('is_active', true)->with('unit')->orderBy('name')->get();
 
-        return view('agendas.edit', compact('agenda', 'units', 'currentUser'));
+        return view('agendas.edit', compact('agenda', 'units', 'currentUser', 'users'));
     }
 
     /**
@@ -249,6 +259,8 @@ class AgendaController extends Controller
                 : null;
 
             $updateData = [
+                'pimpinan_id' => $validated['pimpinan_id'] ?? null,
+                'notulis_id' => $validated['notulis_id'] ?? null,
                 'judul_rapat' => $validated['judul_rapat'],
                 'jenis_rapat' => $validated['jenis_rapat'],
                 'tipe_rapat' => $validated['tipe_rapat'],
@@ -377,6 +389,48 @@ class AgendaController extends Controller
     }
 
     /**
+     * Update pimpinan and notulis roles dynamically (e.g. during meeting or from show page).
+     */
+    public function updateRoles(Request $request, Agenda $agenda): RedirectResponse
+    {
+        Gate::authorize('update', $agenda);
+
+        $validated = $request->validate([
+            'pimpinan_id' => ['nullable', 'exists:users,id'],
+            'notulis_id' => ['nullable', 'exists:users,id'],
+        ], [], [
+            'pimpinan_id' => 'Pemimpin Rapat',
+            'notulis_id' => 'Notulis Rapat',
+        ]);
+
+        DB::transaction(function () use ($validated, $agenda) {
+            $oldPimpinan = $agenda->nama_pimpinan;
+            $oldNotulis = $agenda->nama_notulis;
+
+            $agenda->update([
+                'pimpinan_id' => !empty($validated['pimpinan_id']) ? $validated['pimpinan_id'] : null,
+                'notulis_id' => !empty($validated['notulis_id']) ? $validated['notulis_id'] : null,
+            ]);
+
+            $agenda->refresh();
+            $agenda->load(['pimpinan', 'notulis', 'creator']);
+
+            ActivityLogger::log(
+                type: 'UPDATE_AGENDA_ROLES',
+                description: "Penugasan pimpinan rapat ('{$agenda->nama_pimpinan}') dan notulis ('{$agenda->nama_notulis}') untuk rapat '{$agenda->judul_rapat}' diperbarui.",
+                targetModel: Agenda::class,
+                targetId: $agenda->id,
+                properties: [
+                    'old' => ['pimpinan' => $oldPimpinan, 'notulis' => $oldNotulis],
+                    'new' => ['pimpinan' => $agenda->nama_pimpinan, 'notulis' => $agenda->nama_notulis],
+                ]
+            );
+        });
+
+        return back()->with('success', 'Penugasan Pemimpin Rapat dan Notulis berhasil diperbarui.');
+    }
+
+    /**
      * Show Notulensi & Documentation editor view.
      */
     public function notulen(Agenda $agenda): View
@@ -428,7 +482,11 @@ class AgendaController extends Controller
             );
         });
 
-        return redirect()->route('admin.agendas.show', $agenda)
+        $redirectRoute = Auth::user()?->isPegawai() 
+            ? route('agendas.show', $agenda) 
+            : route('admin.agendas.show', $agenda);
+
+        return redirect($redirectRoute)
             ->with('success', "Notulensi dan dokumentasi rapat berhasil disimpan.");
     }
 

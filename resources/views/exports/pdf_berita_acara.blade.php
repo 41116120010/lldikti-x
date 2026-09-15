@@ -340,17 +340,33 @@
                 <tr>
                     <td>
                         Mengetahui,<br>
-                        <strong>Pimpinan Rapat / Penanggung Jawab</strong>
-                        <div class="signature-space"></div>
-                        <strong><u>{{ $agenda->creator?->name ?? 'Pimpinan Rapat' }}</u></strong><br>
-                        NIP. {{ $agenda->creator?->nip ?? '-' }}
+                        <strong>Pemimpin Rapat</strong>
+                        <div class="signature-space" style="display: flex; align-items: center; justify-content: center; height: 60px;">
+                            @if(isset($pimpinanSigBase64) && $pimpinanSigBase64)
+                                <img src="{{ $pimpinanSigBase64 }}" alt="TTD Pimpinan" style="max-height: 55px; max-width: 140px;">
+                            @endif
+                        </div>
+                        <strong><u>{{ $agenda->nama_pimpinan }}</u></strong><br>
+                        @if($agenda->nip_pimpinan && $agenda->nip_pimpinan !== '-')
+                            NIP. {{ $agenda->nip_pimpinan }}
+                        @else
+                            NIP. -
+                        @endif
                     </td>
                     <td>
                         Padang, {{ now()->translatedFormat('d F Y') }}<br>
-                        <strong>Notulis / Petugas Presensi</strong>
-                        <div class="signature-space"></div>
-                        <strong><u>{{ Auth::user()?->name ?? 'Petugas Presensi' }}</u></strong><br>
-                        NIP. {{ Auth::user()?->nip ?? '-' }}
+                        <strong>Notulis Rapat</strong>
+                        <div class="signature-space" style="display: flex; align-items: center; justify-content: center; height: 60px;">
+                            @if(isset($notulisSigBase64) && $notulisSigBase64)
+                                <img src="{{ $notulisSigBase64 }}" alt="TTD Notulis" style="max-height: 55px; max-width: 140px;">
+                            @endif
+                        </div>
+                        <strong><u>{{ $agenda->nama_notulis }}</u></strong><br>
+                        @if($agenda->nip_notulis && $agenda->nip_notulis !== '-')
+                            NIP. {{ $agenda->nip_notulis }}
+                        @else
+                            NIP. -
+                        @endif
                     </td>
                 </tr>
             </table>

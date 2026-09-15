@@ -86,7 +86,7 @@
 
                 <!-- Action Buttons -->
                 <div class="flex items-center justify-end gap-3 pt-5 border-t border-slate-200">
-                    <a href="{{ route('admin.agendas.show', $agenda) }}" class="button secondary text-xs font-bold inline-flex items-center gap-1.5">
+                    <a href="{{ auth()->user()->isPegawai() ? route('agendas.show', $agenda) : route('admin.agendas.show', $agenda) }}" class="button secondary text-xs font-bold inline-flex items-center gap-1.5">
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
                         <span>Kembali ke Detail Agenda</span>
                     </a>

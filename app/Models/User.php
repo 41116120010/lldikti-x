@@ -90,6 +90,11 @@ class User extends Authenticatable
         return $this->role === 'staff';
     }
 
+    public function isPegawai(): bool
+    {
+        return $this->isStaff();
+    }
+
     /**
      * Scope for active users
      */

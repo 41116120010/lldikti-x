@@ -15,6 +15,8 @@ class WordExportService
     {
         $agenda->load([
             'creator.unit',
+            'pimpinan.unit',
+            'notulis.unit',
             'units',
             'attendances.user.unit',
             'documentations',
@@ -35,9 +37,29 @@ class WordExportService
             ];
         });
 
+        // Pimpinan digital signature base64 (if attended)
+        $pimpinanSigBase64 = null;
+        $pimpinanAtt = $agenda->pimpinan_attendance;
+        if ($pimpinanAtt?->signature_path && Storage::disk('public')->exists($pimpinanAtt->signature_path)) {
+            $content = Storage::disk('public')->get($pimpinanAtt->signature_path);
+            $mime = Storage::disk('public')->mimeType($pimpinanAtt->signature_path) ?: 'image/png';
+            $pimpinanSigBase64 = 'data:' . $mime . ';base64,' . base64_encode($content);
+        }
+
+        // Notulis digital signature base64 (if attended)
+        $notulisSigBase64 = null;
+        $notulisAtt = $agenda->notulis_attendance;
+        if ($notulisAtt?->signature_path && Storage::disk('public')->exists($notulisAtt->signature_path)) {
+            $content = Storage::disk('public')->get($notulisAtt->signature_path);
+            $mime = Storage::disk('public')->mimeType($notulisAtt->signature_path) ?: 'image/png';
+            $notulisSigBase64 = 'data:' . $mime . ';base64,' . base64_encode($content);
+        }
+
         $content = view('exports.word_berita_acara', [
             'agenda' => $agenda,
             'attendances' => $attendancesWithMedia,
+            'pimpinanSigBase64' => $pimpinanSigBase64,
+            'notulisSigBase64' => $notulisSigBase64,
             'generatedAt' => now(),
         ])->render();
 

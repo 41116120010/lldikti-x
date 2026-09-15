@@ -141,6 +141,8 @@ class ReportController extends Controller
 
         $agenda->load([
             'creator.unit',
+            'pimpinan.unit',
+            'notulis.unit',
             'units',
         ]);
 

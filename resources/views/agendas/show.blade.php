@@ -130,6 +130,18 @@
                     @endif
                 @endcan
 
+                @can('update', $agenda)
+                    <button 
+                        type="button" 
+                        onclick="openRolesModal()" 
+                        class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold text-white bg-white/10 hover:bg-white/20 border border-white/20 transition cursor-pointer"
+                        title="Tugaskan Pemimpin Rapat dan Notulis"
+                    >
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        <span>Tugaskan Peran</span>
+                    </button>
+                @endcan
+
                 @can('manageMinutes', $agenda)
                     <a href="{{ route('admin.agendas.notulen', $agenda) }}" class="button secondary flex items-center gap-2 text-xs bg-white/10 hover:bg-white/20 text-white border-white/30 font-bold">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
@@ -161,20 +173,30 @@
                 <div class="font-bold text-slate-900">{{ $agenda->slug }}</div>
             </div>
             <div class="px-5 py-3 text-xs">
-                <div class="text-[10px] uppercase font-bold text-slate-500 font-mono">Notulis</div>
-                <div class="font-bold text-slate-900">{{ $agenda->creator?->name ?? 'Penyelenggara' }}</div>
+                <div class="text-[10px] uppercase font-bold text-slate-500 font-mono">Penyelenggara</div>
+                <div class="font-bold text-slate-900">{{ $agenda->creator?->name ?? 'Penyelenggara' }} ({{ $agenda->creator?->unit?->kode_unit ?? 'Pusat' }})</div>
             </div>
             <div class="px-5 py-3 text-xs">
-                <div class="text-[10px] uppercase font-bold text-slate-500 font-mono">Moderator</div>
-                <div class="font-bold text-slate-900">{{ $agenda->creator?->unit?->kode_unit ?? 'Pusat' }}</div>
+                <div class="text-[10px] uppercase font-bold text-slate-500 font-mono">Pemimpin Rapat</div>
+                <div class="font-bold text-slate-900 flex items-center gap-1.5">
+                    <span>{{ $agenda->nama_pimpinan }}</span>
+                    @if($agenda->pimpinan_id)
+                        <span class="text-[10px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">Khusus</span>
+                    @endif
+                </div>
             </div>
             <div class="px-5 py-3 text-xs">
-                <div class="text-[10px] uppercase font-bold text-slate-500 font-mono">Pimpinan</div>
-                <div class="font-bold text-slate-900">{{ $agenda->jenis_rapat }}</div>
+                <div class="text-[10px] uppercase font-bold text-slate-500 font-mono">Notulis Rapat</div>
+                <div class="font-bold text-slate-900 flex items-center gap-1.5">
+                    <span>{{ $agenda->nama_notulis }}</span>
+                    @if($agenda->notulis_id)
+                        <span class="text-[10px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">Khusus</span>
+                    @endif
+                </div>
             </div>
             <div class="px-5 py-3 text-xs">
-                <div class="text-[10px] uppercase font-bold text-slate-500 font-mono">Pimp. vi.</div>
-                <div class="font-bold text-slate-900">{{ $attendances->total() }}</div>
+                <div class="text-[10px] uppercase font-bold text-slate-500 font-mono">Total Hadir</div>
+                <div class="font-bold text-slate-900 font-mono">{{ $attendances->total() }} Pegawai</div>
             </div>
         </div>
     </div>
@@ -401,30 +423,71 @@
                 </div>
 
                 <!-- Signature Section -->
+                @php
+                    $pimpinanAtt = $agenda->pimpinan_attendance;
+                    $notulisAtt = $agenda->notulis_attendance;
+                @endphp
                 <div class="border-t border-slate-200 px-6 py-6">
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                        <div class="text-center space-y-8">
-                            <div class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Pemimpin Rapat</div>
-                            <div class="h-14 flex items-center justify-center">
-                                <svg viewBox="0 0 100 40" width="80" height="32" class="text-slate-300"><path d="M10 30 Q 25 5 40 25 T 70 20 T 90 25" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+                        <div class="text-center space-y-4">
+                            <div class="text-[10px] uppercase font-bold text-slate-500 tracking-wider font-mono">Pemimpin Rapat</div>
+                            <div class="h-16 flex items-center justify-center">
+                                @if($pimpinanAtt && $pimpinanAtt->signature_path)
+                                    <img src="{{ Storage::disk('public')->url($pimpinanAtt->signature_path) }}" alt="Tanda Tangan Pimpinan" class="h-14 max-w-[140px] object-contain">
+                                @else
+                                    <div class="px-3 py-2 border border-dashed border-slate-300 rounded-lg bg-slate-50 text-[11px] text-slate-400 italic">
+                                        Belum Mengisi Presensi
+                                    </div>
+                                @endif
                             </div>
-                            <div class="text-xs font-bold text-slate-900 border-t border-slate-300 pt-2">{{ $agenda->creator?->name ?? 'Pimpinan Rapat' }}</div>
+                            <div class="border-t border-slate-300 pt-2 space-y-0.5">
+                                <div class="text-xs font-bold text-slate-900">{{ $agenda->nama_pimpinan }}</div>
+                                @if($agenda->nip_pimpinan && $agenda->nip_pimpinan !== '-')
+                                    <div class="text-[10px] text-slate-500 font-mono">NIP. {{ $agenda->nip_pimpinan }}</div>
+                                @endif
+                                @if($pimpinanAtt)
+                                    <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                                        <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                        Hadir ({{ $pimpinanAtt->signed_at->format('H:i') }} WIB)
+                                    </span>
+                                @endif
+                            </div>
                         </div>
 
-                        <div class="text-center space-y-8">
-                            <div class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Notulis</div>
-                            <div class="h-14 flex items-center justify-center">
-                                <svg viewBox="0 0 100 40" width="80" height="32" class="text-slate-300"><path d="M10 30 Q 25 5 40 25 T 70 20 T 90 25" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+                        <div class="text-center space-y-4">
+                            <div class="text-[10px] uppercase font-bold text-slate-500 tracking-wider font-mono">Notulis Rapat</div>
+                            <div class="h-16 flex items-center justify-center">
+                                @if($notulisAtt && $notulisAtt->signature_path)
+                                    <img src="{{ Storage::disk('public')->url($notulisAtt->signature_path) }}" alt="Tanda Tangan Notulis" class="h-14 max-w-[140px] object-contain">
+                                @else
+                                    <div class="px-3 py-2 border border-dashed border-slate-300 rounded-lg bg-slate-50 text-[11px] text-slate-400 italic">
+                                        Belum Mengisi Presensi
+                                    </div>
+                                @endif
                             </div>
-                            <div class="text-xs font-bold text-slate-900 border-t border-slate-300 pt-2">{{ $agenda->creator?->name ?? 'Notulis Rapat' }}</div>
+                            <div class="border-t border-slate-300 pt-2 space-y-0.5">
+                                <div class="text-xs font-bold text-slate-900">{{ $agenda->nama_notulis }}</div>
+                                @if($agenda->nip_notulis && $agenda->nip_notulis !== '-')
+                                    <div class="text-[10px] text-slate-500 font-mono">NIP. {{ $agenda->nip_notulis }}</div>
+                                @endif
+                                @if($notulisAtt)
+                                    <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                                        <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                        Hadir ({{ $notulisAtt->signed_at->format('H:i') }} WIB)
+                                    </span>
+                                @endif
+                            </div>
                         </div>
 
-                        <div class="text-center space-y-8">
-                            <div class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Direktur/PJ</div>
-                            <div class="h-14 flex items-center justify-center">
+                        <div class="text-center space-y-4">
+                            <div class="text-[10px] uppercase font-bold text-slate-500 tracking-wider font-mono">Direktur / Pimpinan Unit</div>
+                            <div class="h-16 flex items-center justify-center">
                                 <svg viewBox="0 0 100 40" width="80" height="32" class="text-slate-300"><path d="M10 30 Q 25 5 40 25 T 70 20 T 90 25" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
                             </div>
-                            <div class="text-xs font-bold text-slate-900 border-t border-slate-300 pt-2">Direktur/PJ</div>
+                            <div class="border-t border-slate-300 pt-2">
+                                <div class="text-xs font-bold text-slate-900">Direktur / Penanggung Jawab</div>
+                                <div class="text-[10px] text-slate-500 font-mono">LLDIKTI Wilayah X</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -534,5 +597,116 @@
             @endif
         </div>
     </div>
+    <!-- Roles Assignment Modal Dialog -->
+    @can('update', $agenda)
+    <div 
+        id="modal-roles" 
+        class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 transition-opacity"
+        tabindex="-1"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-roles-title"
+    >
+        <div class="bg-white border border-slate-300 rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-lg bg-slate-900 text-white flex items-center justify-center">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    </div>
+                    <div>
+                        <h3 id="modal-roles-title" class="text-sm font-bold text-slate-900">Tugaskan Pemimpin &amp; Notulis</h3>
+                        <p class="text-[11px] text-slate-500">Penugasan peran resmi rapat kedinasan SIPERAPAT</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeRolesModal()" class="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-200 transition" aria-label="Tutup modal">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+
+            <form action="{{ route('admin.agendas.update-roles', $agenda) }}" method="POST" class="p-6 space-y-5">
+                @csrf
+                @method('PATCH')
+
+                <div class="p-3.5 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900 leading-relaxed space-y-1">
+                    <div class="font-bold flex items-center gap-1.5">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        <span>Sistem Penugasan Fleksibel (Hybrid)</span>
+                    </div>
+                    <p>Jika tidak diatur khusus (dikosongkan), sistem otomatis menetapkan pembuat agenda (<strong>{{ $agenda->creator?->name }}</strong>) sebagai pimpinan dan notulis default.</p>
+                </div>
+
+                <!-- Pemimpin Rapat Selector -->
+                <div class="space-y-1.5">
+                    <label for="modal_pimpinan_id" class="block text-xs font-bold text-slate-800">
+                        Pemimpin Rapat
+                    </label>
+                    <select name="pimpinan_id" id="modal_pimpinan_id" class="w-full text-xs rounded-xl border-slate-300 focus:border-slate-900 focus:ring-slate-900 py-2.5 px-3">
+                        <option value="">-- Gunakan Default: Pembuat Agenda ({{ $agenda->creator?->name }}) --</option>
+                        @foreach($users as $userItem)
+                            <option value="{{ $userItem->id }}" @selected(old('pimpinan_id', $agenda->pimpinan_id) == $userItem->id)>
+                                {{ $userItem->name }} ({{ $userItem->nip }}) &bull; {{ $userItem->unit?->kode_unit ?? 'Pusat' }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- Notulis Rapat Selector -->
+                <div class="space-y-1.5">
+                    <label for="modal_notulis_id" class="block text-xs font-bold text-slate-800">
+                        Notulis Rapat
+                    </label>
+                    <select name="notulis_id" id="modal_notulis_id" class="w-full text-xs rounded-xl border-slate-300 focus:border-slate-900 focus:ring-slate-900 py-2.5 px-3">
+                        <option value="">-- Gunakan Default: Pembuat Agenda ({{ $agenda->creator?->name }}) --</option>
+                        @foreach($users as $userItem)
+                            <option value="{{ $userItem->id }}" @selected(old('notulis_id', $agenda->notulis_id) == $userItem->id)>
+                                {{ $userItem->name }} ({{ $userItem->nip }}) &bull; {{ $userItem->unit?->kode_unit ?? 'Pusat' }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <p class="text-[11px] text-slate-500">Notulis yang ditunjuk berhak mengisi notulensi dan mengunggah dokumentasi foto saat status rapat <strong>Sedang Berlangsung (ongoing)</strong>.</p>
+                </div>
+
+                <div class="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-200">
+                    <button type="button" onclick="closeRolesModal()" class="px-4 py-2.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition min-h-[44px]">
+                        Batal
+                    </button>
+                    <button type="submit" class="px-5 py-2.5 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-xs transition min-h-[44px]">
+                        Simpan Penugasan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openRolesModal() {
+            const modal = document.getElementById('modal-roles');
+            if (modal) {
+                modal.classList.remove('hidden');
+                document.body.classList.add('overflow-hidden');
+            }
+        }
+
+        function closeRolesModal() {
+            const modal = document.getElementById('modal-roles');
+            if (modal) {
+                modal.classList.add('hidden');
+                document.body.classList.remove('overflow-hidden');
+            }
+        }
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeRolesModal();
+            }
+        });
+
+        document.getElementById('modal-roles')?.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeRolesModal();
+            }
+        });
+    </script>
+    @endcan
 </div>
 @endsection

@@ -34,7 +34,7 @@ class DashboardAgendaRelevanceTest extends TestCase
             'jenis_rapat' => 'koordinasi',
             'tipe_rapat' => 'offline',
             'lokasi_ruang' => 'Ruang Sidang',
-            'waktu_mulai' => now()->addHours(2),
+            'waktu_mulai' => now()->startOfDay()->addHours(7),
             'waktu_selesai' => now()->addHours(4),
             'is_all_units' => true,
             'status' => 'scheduled',

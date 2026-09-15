@@ -115,15 +115,25 @@
             </div>
             <div class="px-5 py-3 text-xs">
                 <div class="text-[10px] uppercase font-bold text-slate-500 font-mono">Penyelenggara</div>
-                <div class="font-bold text-slate-900">{{ $agenda->creator?->name ?? 'Penyelenggara' }}</div>
+                <div class="font-bold text-slate-900">{{ $agenda->creator?->name ?? 'Penyelenggara' }} ({{ $agenda->creator?->unit?->kode_unit ?? 'Pusat' }})</div>
             </div>
             <div class="px-5 py-3 text-xs">
-                <div class="text-[10px] uppercase font-bold text-slate-500 font-mono">Unit Kerja</div>
-                <div class="font-bold text-slate-900">{{ $agenda->creator?->unit?->kode_unit ?? 'Pusat' }}</div>
+                <div class="text-[10px] uppercase font-bold text-slate-500 font-mono">Pemimpin Rapat</div>
+                <div class="font-bold text-slate-900 flex items-center gap-1.5">
+                    <span>{{ $agenda->nama_pimpinan }}</span>
+                    @if($agenda->pimpinan_id)
+                        <span class="text-[10px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">Khusus</span>
+                    @endif
+                </div>
             </div>
             <div class="px-5 py-3 text-xs">
-                <div class="text-[10px] uppercase font-bold text-slate-500 font-mono">Jenis Pertemuan</div>
-                <div class="font-bold text-slate-900">{{ ucfirst($agenda->jenis_rapat) }}</div>
+                <div class="text-[10px] uppercase font-bold text-slate-500 font-mono">Notulis Rapat</div>
+                <div class="font-bold text-slate-900 flex items-center gap-1.5">
+                    <span>{{ $agenda->nama_notulis }}</span>
+                    @if($agenda->notulis_id)
+                        <span class="text-[10px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">Khusus</span>
+                    @endif
+                </div>
             </div>
             <div class="px-5 py-3 text-xs">
                 <div class="text-[10px] uppercase font-bold text-slate-500 font-mono">Total Kehadiran</div>
@@ -313,30 +323,71 @@
                 </div>
 
                 <!-- Signature Verification Section -->
+                @php
+                    $pimpinanAtt = $agenda->pimpinan_attendance;
+                    $notulisAtt = $agenda->notulis_attendance;
+                @endphp
                 <div class="border-t border-slate-200 px-6 py-6">
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                        <div class="text-center space-y-8">
+                        <div class="text-center space-y-4">
                             <div class="text-[10px] uppercase font-bold text-slate-500 tracking-wider font-mono">Pemimpin Rapat</div>
-                            <div class="h-14 flex items-center justify-center">
-                                <svg viewBox="0 0 100 40" width="80" height="32" class="text-slate-300"><path d="M10 30 Q 25 5 40 25 T 70 20 T 90 25" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+                            <div class="h-16 flex items-center justify-center">
+                                @if($pimpinanAtt && $pimpinanAtt->signature_path)
+                                    <img src="{{ Storage::disk('public')->url($pimpinanAtt->signature_path) }}" alt="Tanda Tangan Pimpinan" class="h-14 max-w-[140px] object-contain">
+                                @else
+                                    <div class="px-3 py-2 border border-dashed border-slate-300 rounded-lg bg-slate-50 text-[11px] text-slate-400 italic">
+                                        Belum Mengisi Presensi
+                                    </div>
+                                @endif
                             </div>
-                            <div class="text-xs font-bold text-slate-900 border-t border-slate-300 pt-2">{{ $agenda->creator?->name ?? 'Pimpinan Rapat' }}</div>
+                            <div class="border-t border-slate-300 pt-2 space-y-0.5">
+                                <div class="text-xs font-bold text-slate-900">{{ $agenda->nama_pimpinan }}</div>
+                                @if($agenda->nip_pimpinan && $agenda->nip_pimpinan !== '-')
+                                    <div class="text-[10px] text-slate-500 font-mono">NIP. {{ $agenda->nip_pimpinan }}</div>
+                                @endif
+                                @if($pimpinanAtt)
+                                    <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                                        <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                        Tervalidasi Hadir ({{ $pimpinanAtt->signed_at->format('H:i') }} WIB)
+                                    </span>
+                                @endif
+                            </div>
                         </div>
 
-                        <div class="text-center space-y-8">
-                            <div class="text-[10px] uppercase font-bold text-slate-500 tracking-wider font-mono">Notulis</div>
-                            <div class="h-14 flex items-center justify-center">
-                                <svg viewBox="0 0 100 40" width="80" height="32" class="text-slate-300"><path d="M10 30 Q 25 5 40 25 T 70 20 T 90 25" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+                        <div class="text-center space-y-4">
+                            <div class="text-[10px] uppercase font-bold text-slate-500 tracking-wider font-mono">Notulis Rapat</div>
+                            <div class="h-16 flex items-center justify-center">
+                                @if($notulisAtt && $notulisAtt->signature_path)
+                                    <img src="{{ Storage::disk('public')->url($notulisAtt->signature_path) }}" alt="Tanda Tangan Notulis" class="h-14 max-w-[140px] object-contain">
+                                @else
+                                    <div class="px-3 py-2 border border-dashed border-slate-300 rounded-lg bg-slate-50 text-[11px] text-slate-400 italic">
+                                        Belum Mengisi Presensi
+                                    </div>
+                                @endif
                             </div>
-                            <div class="text-xs font-bold text-slate-900 border-t border-slate-300 pt-2">{{ $agenda->creator?->name ?? 'Notulis Rapat' }}</div>
+                            <div class="border-t border-slate-300 pt-2 space-y-0.5">
+                                <div class="text-xs font-bold text-slate-900">{{ $agenda->nama_notulis }}</div>
+                                @if($agenda->nip_notulis && $agenda->nip_notulis !== '-')
+                                    <div class="text-[10px] text-slate-500 font-mono">NIP. {{ $agenda->nip_notulis }}</div>
+                                @endif
+                                @if($notulisAtt)
+                                    <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                                        <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                        Tervalidasi Hadir ({{ $notulisAtt->signed_at->format('H:i') }} WIB)
+                                    </span>
+                                @endif
+                            </div>
                         </div>
 
-                        <div class="text-center space-y-8">
+                        <div class="text-center space-y-4">
                             <div class="text-[10px] uppercase font-bold text-slate-500 tracking-wider font-mono">Direktur / Pimpinan Unit</div>
-                            <div class="h-14 flex items-center justify-center">
+                            <div class="h-16 flex items-center justify-center">
                                 <svg viewBox="0 0 100 40" width="80" height="32" class="text-slate-300"><path d="M10 30 Q 25 5 40 25 T 70 20 T 90 25" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
                             </div>
-                            <div class="text-xs font-bold text-slate-900 border-t border-slate-300 pt-2">Direktur/PJ</div>
+                            <div class="border-t border-slate-300 pt-2">
+                                <div class="text-xs font-bold text-slate-900">Direktur / Penanggung Jawab</div>
+                                <div class="text-[10px] text-slate-500 font-mono">LLDIKTI Wilayah X</div>
+                            </div>
                         </div>
                     </div>
                 </div>
