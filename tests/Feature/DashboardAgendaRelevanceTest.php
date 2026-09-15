@@ -41,14 +41,25 @@ class DashboardAgendaRelevanceTest extends TestCase
         ]);
 
         try {
-            // 3. Request Dashboard
-            $response = $this->actingAs($superadmin)->get('/dashboard');
+            // 3. Determine which page contains future agenda
+            $allRelevantIds = Agenda::visibleTo($superadmin)
+                ->relevantForDashboard()
+                ->orderByRaw("CASE WHEN status = 'ongoing' THEN 1 ELSE 2 END ASC")
+                ->orderBy('waktu_mulai', 'asc')
+                ->pluck('id')
+                ->all();
+
+            $index = array_search($futureAgenda->id, $allRelevantIds);
+            $page = ($index !== false) ? intval(floor($index / 5)) + 1 : 1;
+
+            $response = $this->actingAs($superadmin)->get("/dashboard?page_agendas={$page}");
             $response->assertStatus(200);
 
-            // Future agenda MUST be visible
+            // Future agenda MUST be visible on its paginated page
             $response->assertSee($futureAgenda->judul_rapat);
 
-            // Past scheduled agenda MUST NOT be visible on the dashboard
+            // Past scheduled agenda MUST NOT be visible on the dashboard nor in scope
+            $this->assertFalse(Agenda::relevantForDashboard()->where('id', $pastAgenda->id)->exists());
             $response->assertDontSee($pastAgenda->judul_rapat);
 
             $activeAgendas = $response->viewData('activeAgendas');
@@ -79,7 +90,20 @@ class DashboardAgendaRelevanceTest extends TestCase
         ]);
 
         try {
-            $response = $this->actingAs($superadmin)->get('/dashboard');
+            $this->assertTrue(Agenda::relevantForDashboard()->where('id', $todayAgenda->id)->exists());
+
+            // Determine which page contains this agenda
+            $allRelevantIds = Agenda::visibleTo($superadmin)
+                ->relevantForDashboard()
+                ->orderByRaw("CASE WHEN status = 'ongoing' THEN 1 ELSE 2 END ASC")
+                ->orderBy('waktu_mulai', 'asc')
+                ->pluck('id')
+                ->all();
+
+            $index = array_search($todayAgenda->id, $allRelevantIds);
+            $page = ($index !== false) ? intval(floor($index / 5)) + 1 : 1;
+
+            $response = $this->actingAs($superadmin)->get("/dashboard?page_agendas={$page}");
             $response->assertStatus(200);
             $response->assertSee($todayAgenda->judul_rapat);
 

@@ -618,36 +618,42 @@
             @endif
         </div>
     </div>
-    <!-- Roles Assignment Modal Dialog -->
-    @can('update', $agenda)
-    <div 
-        id="modal-roles" 
-        class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 transition-opacity"
-        tabindex="-1"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="modal-roles-title"
-    >
-        <div class="bg-white border border-slate-300 rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-                <div class="flex items-center gap-2.5">
-                    <div class="w-9 h-9 rounded-lg bg-slate-900 text-white flex items-center justify-center">
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                    </div>
-                    <div>
-                        <h3 id="modal-roles-title" class="text-sm font-bold text-slate-900">Tugaskan Pemimpin &amp; Notulis</h3>
-                        <p class="text-[11px] text-slate-500">Penugasan peran resmi rapat kedinasan SIPERAPAT</p>
-                    </div>
+</div>
+
+@can('update', $agenda)
+<!-- Roles Assignment Modal Dialog -->
+<div 
+    id="modal-roles" 
+    class="fixed inset-0 z-50 hidden !m-0 m-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 overflow-y-auto transition-opacity"
+    tabindex="-1"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="modal-roles-title"
+>
+    <div class="bg-white border border-slate-300 rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden my-auto max-h-[calc(100dvh-2rem)] flex flex-col animate-in fade-in zoom-in-95 duration-150">
+        <!-- 1. Sticky Modal Header -->
+        <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50 shrink-0">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-lg bg-slate-900 text-white flex items-center justify-center shrink-0">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 </div>
-                <button type="button" onclick="closeRolesModal()" class="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-200 transition" aria-label="Tutup modal">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
+                <div>
+                    <h3 id="modal-roles-title" class="text-sm font-bold text-slate-900">Tugaskan Pemimpin &amp; Notulis</h3>
+                    <p class="text-[11px] text-slate-500 font-medium">Penugasan peran resmi rapat kedinasan SIPERAPAT</p>
+                </div>
             </div>
+            <button type="button" onclick="closeRolesModal()" class="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-200 transition cursor-pointer" aria-label="Tutup modal">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
 
-            <form action="{{ route('admin.agendas.update-roles', $agenda) }}" method="POST" class="p-6 space-y-5">
-                @csrf
-                @method('PATCH')
+        <!-- Form with Pinned Footer and Scrollable Body -->
+        <form action="{{ route('admin.agendas.update-roles', $agenda) }}" method="POST" class="flex flex-col flex-1 overflow-hidden m-0">
+            @csrf
+            @method('PATCH')
 
+            <!-- 2. Scrollable Inputs Body -->
+            <div class="p-6 space-y-4 overflow-y-auto flex-1">
                 <div class="p-3.5 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900 leading-relaxed space-y-1">
                     <div class="font-bold flex items-center gap-1.5">
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
@@ -661,7 +667,7 @@
                     <label for="modal_pimpinan_id" class="block text-xs font-bold text-slate-800">
                         Pemimpin Rapat
                     </label>
-                    <select name="pimpinan_id" id="modal_pimpinan_id" class="w-full text-xs rounded-xl border-slate-300 focus:border-slate-900 focus:ring-slate-900 py-2.5 px-3">
+                    <select name="pimpinan_id" id="modal_pimpinan_id" class="w-full text-xs rounded-xl border-slate-300 focus:border-slate-900 focus:ring-slate-900 py-2.5 px-3 font-medium">
                         <option value="">-- Gunakan Default: Pembuat Agenda ({{ $agenda->creator?->name }}) --</option>
                         @foreach($users as $userItem)
                             <option value="{{ $userItem->id }}" @selected(old('pimpinan_id', $agenda->pimpinan_id) == $userItem->id)>
@@ -676,7 +682,7 @@
                     <label for="modal_notulis_id" class="block text-xs font-bold text-slate-800">
                         Notulis Rapat
                     </label>
-                    <select name="notulis_id" id="modal_notulis_id" class="w-full text-xs rounded-xl border-slate-300 focus:border-slate-900 focus:ring-slate-900 py-2.5 px-3">
+                    <select name="notulis_id" id="modal_notulis_id" class="w-full text-xs rounded-xl border-slate-300 focus:border-slate-900 focus:ring-slate-900 py-2.5 px-3 font-medium">
                         <option value="">-- Gunakan Default: Pembuat Agenda ({{ $agenda->creator?->name }}) --</option>
                         @foreach($users as $userItem)
                             <option value="{{ $userItem->id }}" @selected(old('notulis_id', $agenda->notulis_id) == $userItem->id)>
@@ -684,50 +690,57 @@
                             </option>
                         @endforeach
                     </select>
-                    <p class="text-[11px] text-slate-500">Notulis yang ditunjuk berhak mengisi notulensi dan mengunggah dokumentasi foto saat status rapat <strong>Sedang Berlangsung (ongoing)</strong>.</p>
+                    <p class="text-[11px] text-slate-500 font-medium">Notulis yang ditunjuk berhak mengisi notulensi dan mengunggah dokumentasi foto saat status rapat <strong>Sedang Berlangsung (ongoing)</strong>.</p>
                 </div>
+            </div>
 
-                <div class="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-200">
-                    <button type="button" onclick="closeRolesModal()" class="px-4 py-2.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition min-h-[44px]">
-                        Batal
-                    </button>
-                    <button type="submit" class="px-5 py-2.5 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-xs transition min-h-[44px]">
-                        Simpan Penugasan
-                    </button>
-                </div>
-            </form>
-        </div>
+            <!-- 3. Pinned Modal Footer Actions -->
+            <div class="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2.5 shrink-0">
+                <button type="button" onclick="closeRolesModal()" class="px-4 py-2 text-xs font-bold text-slate-700 bg-slate-200 hover:bg-slate-300 rounded-xl transition min-h-[44px] cursor-pointer">
+                    Batal
+                </button>
+                <button type="submit" class="px-5 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-xs transition min-h-[44px] cursor-pointer">
+                    Simpan Penugasan
+                </button>
+            </div>
+        </form>
     </div>
-
-    <script>
-        function openRolesModal() {
-            const modal = document.getElementById('modal-roles');
-            if (modal) {
-                modal.classList.remove('hidden');
-                document.body.classList.add('overflow-hidden');
-            }
-        }
-
-        function closeRolesModal() {
-            const modal = document.getElementById('modal-roles');
-            if (modal) {
-                modal.classList.add('hidden');
-                document.body.classList.remove('overflow-hidden');
-            }
-        }
-
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape') {
-                closeRolesModal();
-            }
-        });
-
-        document.getElementById('modal-roles')?.addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeRolesModal();
-            }
-        });
-    </script>
-    @endcan
 </div>
+
+<script>
+    function openRolesModal() {
+        const modal = document.getElementById('modal-roles');
+        if (modal) {
+            modal.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+        }
+    }
+
+    function closeRolesModal() {
+        const modal = document.getElementById('modal-roles');
+        if (modal) {
+            modal.classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
+        }
+    }
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeRolesModal();
+        }
+    });
+
+    document.getElementById('modal-roles')?.addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeRolesModal();
+        }
+    });
+
+    @if($errors->has('pimpinan_id') || $errors->has('notulis_id'))
+        document.addEventListener('DOMContentLoaded', function() {
+            openRolesModal();
+        });
+    @endif
+</script>
+@endcan
 @endsection
