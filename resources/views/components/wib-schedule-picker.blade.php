@@ -49,15 +49,11 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
         <!-- Kolom Waktu Mulai -->
         <div class="p-4 rounded-xl border border-slate-300 bg-slate-50/70 space-y-3 shadow-xs">
-            <div class="flex items-center justify-between gap-2">
-                <label class="text-xs font-bold text-slate-950 flex items-center gap-2">
-                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-600 shrink-0"></span>
+            <div>
+                <label class="text-xs font-bold text-slate-950 flex items-center gap-1.5">
                     <span>Waktu Mulai Rapat</span>
                     <span class="text-rose-600 font-black">*</span>
                 </label>
-                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-extrabold bg-blue-100 text-blue-900 border border-blue-200 shrink-0">
-                    24 Jam (WIB)
-                </span>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-5 gap-2.5">
@@ -90,37 +86,13 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Pilihan Cepat Jam Mulai -->
-            <div class="pt-1">
-                <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Pilihan Cepat Jam:</div>
-                <div class="flex flex-wrap items-center gap-1.5">
-                    <button type="button" onclick="window.WibSchedule.setJamMulai('08:30')" class="px-2 py-1 text-[11px] font-bold rounded-md bg-white hover:bg-slate-200 border border-slate-300 text-slate-800 transition shadow-2xs">08:30</button>
-                    <button type="button" onclick="window.WibSchedule.setJamMulai('09:00')" class="px-2 py-1 text-[11px] font-bold rounded-md bg-white hover:bg-slate-200 border border-slate-300 text-slate-800 transition shadow-2xs">09:00</button>
-                    <button type="button" onclick="window.WibSchedule.setJamMulai('10:00')" class="px-2 py-1 text-[11px] font-bold rounded-md bg-white hover:bg-slate-200 border border-slate-300 text-slate-800 transition shadow-2xs">10:00</button>
-                    <button type="button" onclick="window.WibSchedule.setJamMulai('13:30')" class="px-2 py-1 text-[11px] font-bold rounded-md bg-white hover:bg-slate-200 border border-slate-300 text-slate-800 transition shadow-2xs">13:30</button>
-                    <button type="button" onclick="window.WibSchedule.setJamMulai('14:00')" class="px-2 py-1 text-[11px] font-bold rounded-md bg-white hover:bg-slate-200 border border-slate-300 text-slate-800 transition shadow-2xs">14:00</button>
-                </div>
-            </div>
         </div>
 
         <!-- Kolom Waktu Selesai -->
         <div class="p-4 rounded-xl border border-slate-300 bg-slate-50/70 space-y-3 shadow-xs">
-            <div class="flex items-center justify-between gap-2">
-                <label class="text-xs font-bold text-slate-950 flex items-center gap-2">
-                    <span class="w-2.5 h-2.5 rounded-full bg-slate-400 shrink-0"></span>
+            <div>
+                <label class="text-xs font-bold text-slate-950 flex items-center gap-1.5">
                     <span>Waktu Selesai Rapat</span>
-                    <span class="text-slate-500 font-normal text-[11px]">(Opsional)</span>
-                </label>
-                <label class="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-700 cursor-pointer select-none">
-                    <input 
-                        type="checkbox" 
-                        id="chk_sampai_selesai" 
-                        onchange="window.WibSchedule.toggleSampaiSelesai(this.checked)" 
-                        class="rounded text-slate-950 accent-slate-950 w-4 h-4 cursor-pointer"
-                        {{ $isSampaiSelesai ? 'checked' : '' }}
-                    >
-                    <span>Hingga Selesai</span>
                 </label>
             </div>
 
@@ -155,20 +127,21 @@
                 </div>
             </div>
 
-            <!-- Tambah Durasi Cepat -->
-            <div id="wrap_preset_durasi" class="pt-1 {{ $isSampaiSelesai ? 'hidden' : '' }}">
-                <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Tambah Durasi / Preset:</div>
-                <div class="flex flex-wrap items-center gap-1.5">
-                    <button type="button" onclick="window.WibSchedule.tambahDurasi(1)" class="px-2 py-1 text-[11px] font-bold rounded-md bg-white hover:bg-slate-200 border border-slate-300 text-slate-800 transition shadow-2xs">+1 Jam</button>
-                    <button type="button" onclick="window.WibSchedule.tambahDurasi(2)" class="px-2 py-1 text-[11px] font-bold rounded-md bg-white hover:bg-slate-200 border border-slate-300 text-slate-800 transition shadow-2xs">+2 Jam</button>
-                    <button type="button" onclick="window.WibSchedule.tambahDurasi(3)" class="px-2 py-1 text-[11px] font-bold rounded-md bg-white hover:bg-slate-200 border border-slate-300 text-slate-800 transition shadow-2xs">+3 Jam</button>
-                    <button type="button" onclick="window.WibSchedule.setJamSelesai('12:00')" class="px-2 py-1 text-[11px] font-bold rounded-md bg-white hover:bg-slate-200 border border-slate-300 text-slate-800 transition shadow-2xs">12:00</button>
-                    <button type="button" onclick="window.WibSchedule.setJamSelesai('16:00')" class="px-2 py-1 text-[11px] font-bold rounded-md bg-white hover:bg-slate-200 border border-slate-300 text-slate-800 transition shadow-2xs">16:00</button>
-                </div>
-            </div>
-
             <div id="notice_sampai_selesai" class="p-3 rounded-lg bg-slate-100 border border-slate-200 text-xs text-slate-700 font-medium {{ $isSampaiSelesai ? '' : 'hidden' }}">
                 Rapat dijadwalkan berlangsung sampai selesai (tanpa jam penutupan kaku).
+            </div>
+
+            <div class="pt-0.5 flex items-center justify-end">
+                <label class="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-700 cursor-pointer select-none">
+                    <input 
+                        type="checkbox" 
+                        id="chk_sampai_selesai" 
+                        onchange="window.WibSchedule.toggleSampaiSelesai(this.checked)" 
+                        class="rounded text-slate-950 accent-slate-950 w-4 h-4 cursor-pointer"
+                        {{ $isSampaiSelesai ? 'checked' : '' }}
+                    >
+                    <span>Hingga Selesai</span>
+                </label>
             </div>
         </div>
     </div>
@@ -285,78 +258,19 @@ window.WibSchedule = {
         });
     },
 
-    setJamMulai(timeStr) {
-        const jamMulai = document.getElementById('input_jam_mulai');
-        if (jamMulai) {
-            jamMulai.value = timeStr;
-            this.sync();
-        }
-    },
-
-    setJamSelesai(timeStr) {
-        const chk = document.getElementById('chk_sampai_selesai');
-        if (chk && chk.checked) {
-            chk.checked = false;
-            this.toggleSampaiSelesai(false);
-        }
-        const jamSelesai = document.getElementById('input_jam_selesai');
-        if (jamSelesai) {
-            jamSelesai.value = timeStr;
-            this.sync();
-        }
-    },
-
-    tambahDurasi(hours) {
-        const chk = document.getElementById('chk_sampai_selesai');
-        if (chk && chk.checked) {
-            chk.checked = false;
-            this.toggleSampaiSelesai(false);
-        }
-
-        const tglMulai = document.getElementById('input_tanggal_mulai');
-        const jamMulai = document.getElementById('input_jam_mulai');
-        const tglSelesai = document.getElementById('input_tanggal_selesai');
-        const jamSelesai = document.getElementById('input_jam_selesai');
-
-        if (!tglMulai || !jamMulai || !tglSelesai || !jamSelesai) return;
-
-        const timeParts = (jamMulai.value || '09:00').split(':');
-        const hh = parseInt(timeParts[0] || '9', 10);
-        const mm = parseInt(timeParts[1] || '0', 10);
-
-        let startDate = new Date(tglMulai.value || new Date().toISOString().slice(0, 10));
-        startDate.setHours(hh, mm, 0, 0);
-
-        let endDate = new Date(startDate.getTime() + hours * 60 * 60 * 1000);
-
-        const pad = (n) => String(n).padStart(2, '0');
-        const endY = endDate.getFullYear();
-        const endM = pad(endDate.getMonth() + 1);
-        const endD = pad(endDate.getDate());
-        const endH = pad(endDate.getHours());
-        const endMin = pad(endDate.getMinutes());
-
-        tglSelesai.value = `${endY}-${endM}-${endD}`;
-        jamSelesai.value = `${pad(endH)}:${pad(endMin)}`;
-        this.sync();
-    },
-
     toggleSampaiSelesai(isChecked) {
         const wrapWaktu = document.getElementById('wrap_waktu_selesai');
-        const wrapPreset = document.getElementById('wrap_preset_durasi');
         const notice = document.getElementById('notice_sampai_selesai');
         const tglSelesai = document.getElementById('input_tanggal_selesai');
         const jamSelesai = document.getElementById('input_jam_selesai');
 
         if (isChecked) {
             if (wrapWaktu) wrapWaktu.classList.add('hidden');
-            if (wrapPreset) wrapPreset.classList.add('hidden');
             if (notice) notice.classList.remove('hidden');
             if (tglSelesai) tglSelesai.disabled = true;
             if (jamSelesai) jamSelesai.disabled = true;
         } else {
             if (wrapWaktu) wrapWaktu.classList.remove('hidden');
-            if (wrapPreset) wrapPreset.classList.remove('hidden');
             if (notice) notice.classList.add('hidden');
             if (tglSelesai) tglSelesai.disabled = false;
             if (jamSelesai) jamSelesai.disabled = false;

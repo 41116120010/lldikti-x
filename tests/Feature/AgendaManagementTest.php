@@ -635,20 +635,27 @@ class AgendaManagementTest extends TestCase
         $createRes = $this->actingAs($superadmin)->get('/admin/agendas/create');
         $createRes->assertStatus(200);
         $createRes->assertSee('wib-schedule-picker-root', false);
-        $createRes->assertSee('24 Jam (WIB)');
+        $createRes->assertSee('Waktu Mulai Rapat');
+        $createRes->assertSee('Waktu Selesai Rapat');
         $createRes->assertSee('Pukul (WIB)');
         $createRes->assertSee('WIB (UTC+7)');
         $createRes->assertSee('Hingga Selesai');
-        $createRes->assertSee('Pilihan Cepat Jam:');
-        $createRes->assertSee('Tambah Durasi / Preset:');
+        $createRes->assertDontSee('24 Jam (WIB)');
+        $createRes->assertDontSee('(Opsional)');
+        $createRes->assertDontSee('Pilihan Cepat Jam:');
+        $createRes->assertDontSee('Tambah Durasi / Preset:');
         $createRes->assertDontSee('type="datetime-local"', false);
 
         // 2. Edit page checks
         $editRes = $this->actingAs($superadmin)->get("/admin/agendas/{$agenda->id}/edit");
         $editRes->assertStatus(200);
         $editRes->assertSee('wib-schedule-picker-root', false);
-        $editRes->assertSee('24 Jam (WIB)');
+        $editRes->assertSee('Waktu Mulai Rapat');
+        $editRes->assertSee('Waktu Selesai Rapat');
         $editRes->assertSee('Pukul (WIB)');
+        $editRes->assertDontSee('24 Jam (WIB)');
+        $editRes->assertDontSee('(Opsional)');
+        $editRes->assertDontSee('Pilihan Cepat Jam:');
         $editRes->assertDontSee('type="datetime-local"', false);
     }
 
