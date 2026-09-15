@@ -192,7 +192,8 @@ function viewLogPayload(logId) {
         title: 'Detail Payload Log Aktivitas',
         message: payloadEl.innerHTML,
         type: 'info',
-        confirmText: 'Tutup'
+        confirmText: 'Tutup',
+        autoClose: false
     });
 }
 </script>

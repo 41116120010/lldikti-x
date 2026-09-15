@@ -201,7 +201,8 @@ function viewPersonalLogPayload(logId) {
         title: 'Detail Rincian Aktivitas',
         message: payloadEl.innerHTML,
         type: 'info',
-        confirmText: 'Tutup'
+        confirmText: 'Tutup',
+        autoClose: false
     });
 }
 </script>

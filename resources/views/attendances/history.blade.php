@@ -138,7 +138,8 @@ function previewAttendanceMedia(mediaUrl, title) {
             </div>
         `,
         type: 'info',
-        confirmText: 'Tutup'
+        confirmText: 'Tutup',
+        autoClose: false
     });
 }
 </script>

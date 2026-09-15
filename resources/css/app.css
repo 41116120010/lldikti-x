@@ -219,6 +219,41 @@
     }
     .modal-close:hover { background: #e2e8f0; color: #0f172a; }
     .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+    .modal-timer-track {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: #f1f5f9;
+        border-bottom-left-radius: 16px;
+        border-bottom-right-radius: 16px;
+        overflow: hidden;
+        z-index: 10;
+    }
+    .modal-timer-bar {
+        height: 100%;
+        width: 100%;
+        transform-origin: left;
+        transition: width 0.08s linear;
+    }
+    .modal-timer-bar.bg-emerald-500 { background-color: #059669; }
+    .modal-timer-bar.bg-rose-500 { background-color: #e11d48; }
+    .modal-timer-bar.bg-amber-500 { background-color: #d97706; }
+    .modal-timer-bar.bg-blue-500 { background-color: #2563eb; }
+    .modal-timer-hint {
+        font-size: 11px;
+        color: #64748b;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 10px;
+        justify-content: center;
+    }
+    .modal-timer-hint.paused {
+        color: #d97706;
+        font-weight: 600;
+    }
 
     .toast { 
         position: fixed; 

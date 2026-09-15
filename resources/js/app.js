@@ -105,23 +105,45 @@ function initGlobalListeners() {
     // Universal Modal & Toast Definitions
     const modalBackdrop = document.querySelector('#app-modal');
     const modalContent = document.querySelector('#modal-content');
+    const modalTimerTrack = document.querySelector('#modal-timer-track');
+    const modalTimerBar = document.querySelector('#modal-timer-bar');
     const toast = document.querySelector('#app-toast');
     let toastTimer;
 
-    window.showToast = (message, type = 'info') => {
-        if (!toast) return;
-        toast.textContent = message;
-        toast.className = 'toast show';
-        if (type === 'success') toast.style.borderColor = '#059669';
-        else if (type === 'error') toast.style.borderColor = '#dc2626';
-        else if (type === 'warning') toast.style.borderColor = '#d97706';
-        else toast.style.borderColor = '#334155';
+    // Modal Auto-Dismiss Timer State Machine
+    let modalTimerInterval = null;
+    let modalRemainingMs = 0;
+    let modalTotalMs = 0;
+    let modalIsPaused = false;
+    let modalActiveConfirmBtn = null;
+    let modalBaseConfirmText = '';
+    let modalHintEl = null;
 
-        clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => toast.classList.remove('show'), 3200);
+    window.clearModalTimer = () => {
+        if (modalTimerInterval) {
+            clearInterval(modalTimerInterval);
+            modalTimerInterval = null;
+        }
+        modalRemainingMs = 0;
+        modalTotalMs = 0;
+        modalIsPaused = false;
+        if (modalTimerTrack) {
+            modalTimerTrack.classList.add('hidden');
+        }
+        if (modalTimerBar) {
+            modalTimerBar.style.width = '100%';
+            modalTimerBar.className = 'modal-timer-bar';
+        }
+        if (modalActiveConfirmBtn && modalBaseConfirmText) {
+            modalActiveConfirmBtn.textContent = modalBaseConfirmText;
+        }
+        modalActiveConfirmBtn = null;
+        modalBaseConfirmText = '';
+        modalHintEl = null;
     };
 
     window.closeModal = () => {
+        window.clearModalTimer();
         if (!modalBackdrop) return;
         modalBackdrop.classList.remove('open');
         modalBackdrop.setAttribute('aria-hidden', 'true');
@@ -135,30 +157,69 @@ function initGlobalListeners() {
         cancelText = null,
         onConfirm = null,
         onCancel = null,
-        isHtml = true
+        isHtml = true,
+        autoClose = null,
+        autoCloseDelay = null
     }) => {
         if (!modalBackdrop || !modalContent) return;
+        window.clearModalTimer();
+
+        // Determine if this modal should auto-close
+        // Default: true for alert/message modals (when cancelText is null and type is not 'confirm')
+        const shouldAutoClose = autoClose !== null ? Boolean(autoClose) : (!cancelText && type !== 'confirm');
+
+        // Determine delay duration
+        let delayMs = 4000;
+        if (typeof autoCloseDelay === 'number' && autoCloseDelay > 0) {
+            delayMs = autoCloseDelay;
+        } else {
+            switch (type) {
+                case 'success': delayMs = 3500; break;
+                case 'info': delayMs = 4000; break;
+                case 'warning': delayMs = 5000; break;
+                case 'error': delayMs = 6000; break;
+                default: delayMs = 4000; break;
+            }
+        }
 
         let iconSvg = '';
         let headerColor = 'text-blue-600';
         let btnColor = 'bg-blue-600 hover:bg-blue-700 text-white';
+        let timerBarColor = 'bg-blue-500';
 
         if (type === 'success') {
             iconSvg = '<div class="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center mx-auto mb-3 shadow-xs"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>';
             headerColor = 'text-emerald-800';
             btnColor = 'bg-emerald-600 hover:bg-emerald-700 text-white';
+            timerBarColor = 'bg-emerald-500';
         } else if (type === 'error') {
             iconSvg = '<div class="w-12 h-12 rounded-full bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center mx-auto mb-3 shadow-xs"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div>';
             headerColor = 'text-rose-800';
             btnColor = 'bg-rose-600 hover:bg-rose-700 text-white';
+            timerBarColor = 'bg-rose-500';
         } else if (type === 'warning') {
             iconSvg = '<div class="w-12 h-12 rounded-full bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center mx-auto mb-3 shadow-xs"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>';
             headerColor = 'text-amber-800';
             btnColor = 'bg-amber-600 hover:bg-amber-700 text-white';
+            timerBarColor = 'bg-amber-500';
         } else if (type === 'confirm') {
-            iconSvg = '<div class="w-12 h-12 rounded-full bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center mx-auto mb-3 shadow-xs"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>';
+            iconSvg = '<div class="w-12 h-12 rounded-full bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center mx-auto mb-3 shadow-xs"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>';
             headerColor = 'text-slate-900';
             btnColor = 'bg-blue-600 hover:bg-blue-700 text-white';
+            timerBarColor = 'bg-blue-500';
+        }
+
+        const initialSeconds = Math.ceil(delayMs / 1000);
+        const buttonDisplay = shouldAutoClose ? `${confirmText} (${initialSeconds}s)` : confirmText;
+
+        let timerHintHtml = '';
+        if (shouldAutoClose) {
+            timerHintHtml = `
+                <div class="modal-timer-hint" id="modal-timer-hint">
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-slate-400"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span id="modal-timer-status">Menutup otomatis dalam <strong class="text-slate-700 font-bold" id="modal-timer-sec">${initialSeconds}</strong> detik</span>
+                </div>
+            `;
         }
 
         let actionsHtml = '';
@@ -166,14 +227,16 @@ function initGlobalListeners() {
             actionsHtml = `
                 <div class="modal-actions mt-5 flex items-center justify-end gap-2.5">
                     <button type="button" class="button secondary text-xs px-4 py-2" id="modal-cancel-btn">${cancelText}</button>
-                    <button type="button" class="button ${btnColor} text-xs px-4 py-2 font-semibold" id="modal-confirm-btn">${confirmText}</button>
+                    <button type="button" class="button ${btnColor} text-xs px-4 py-2 font-semibold" id="modal-confirm-btn">${buttonDisplay}</button>
                 </div>
+                ${timerHintHtml}
             `;
         } else {
             actionsHtml = `
-                <div class="modal-actions mt-5 flex items-center justify-end">
-                    <button type="button" class="button ${btnColor} text-xs px-5 py-2.5 w-full sm:w-auto font-semibold" id="modal-confirm-btn">${confirmText}</button>
+                <div class="modal-actions mt-5 flex flex-col sm:flex-row items-center justify-end gap-2">
+                    <button type="button" class="button ${btnColor} text-xs px-5 py-2.5 w-full sm:w-auto font-semibold" id="modal-confirm-btn">${buttonDisplay}</button>
                 </div>
+                ${timerHintHtml}
             `;
         }
 
@@ -188,6 +251,8 @@ function initGlobalListeners() {
 
         const confirmBtn = modalContent.querySelector('#modal-confirm-btn');
         const cancelBtn = modalContent.querySelector('#modal-cancel-btn');
+        modalHintEl = modalContent.querySelector('#modal-timer-hint');
+        const statusSecEl = modalContent.querySelector('#modal-timer-sec');
 
         if (confirmBtn) {
             confirmBtn.addEventListener('click', () => {
@@ -205,6 +270,45 @@ function initGlobalListeners() {
 
         modalBackdrop.classList.add('open');
         modalBackdrop.setAttribute('aria-hidden', 'false');
+
+        // Setup Auto-Close Timer if enabled
+        if (shouldAutoClose) {
+            modalTotalMs = delayMs;
+            modalRemainingMs = delayMs;
+            modalIsPaused = false;
+            modalActiveConfirmBtn = confirmBtn;
+            modalBaseConfirmText = confirmText;
+
+            if (modalTimerTrack && modalTimerBar) {
+                modalTimerTrack.classList.remove('hidden');
+                modalTimerBar.className = `modal-timer-bar ${timerBarColor}`;
+                modalTimerBar.style.width = '100%';
+            }
+
+            const stepMs = 50;
+            modalTimerInterval = setInterval(() => {
+                if (!modalIsPaused) {
+                    modalRemainingMs -= stepMs;
+                    if (modalTimerBar) {
+                        const pct = Math.max(0, (modalRemainingMs / modalTotalMs) * 100);
+                        modalTimerBar.style.width = `${pct}%`;
+                    }
+
+                    const curSec = Math.max(1, Math.ceil(modalRemainingMs / 1000));
+                    if (modalActiveConfirmBtn) {
+                        modalActiveConfirmBtn.textContent = `${modalBaseConfirmText} (${curSec}s)`;
+                    }
+                    if (statusSecEl) {
+                        statusSecEl.textContent = curSec;
+                    }
+
+                    if (modalRemainingMs <= 0) {
+                        window.closeModal();
+                        if (typeof onConfirm === 'function') onConfirm();
+                    }
+                }
+            }, stepMs);
+        }
     };
 
     if (modalBackdrop && !modalBackdrop.dataset.hasListener) {
@@ -216,6 +320,38 @@ function initGlobalListeners() {
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape') window.closeModal();
         });
+
+        // Pause timer on hover and touch over the modal card
+        const modalCard = modalBackdrop.querySelector('.modal');
+        if (modalCard) {
+            const pauseTimer = () => {
+                modalIsPaused = true;
+                if (modalHintEl) {
+                    modalHintEl.classList.add('paused');
+                    const statusTextEl = modalHintEl.querySelector('#modal-timer-status');
+                    if (statusTextEl) {
+                        statusTextEl.innerHTML = '<strong class="text-amber-700">Otomatis menutup dijeda</strong> (geser kursor untuk melanjutkan)';
+                    }
+                }
+            };
+
+            const resumeTimer = () => {
+                modalIsPaused = false;
+                if (modalHintEl) {
+                    modalHintEl.classList.remove('paused');
+                    const statusTextEl = modalHintEl.querySelector('#modal-timer-status');
+                    const curSec = Math.max(1, Math.ceil(modalRemainingMs / 1000));
+                    if (statusTextEl) {
+                        statusTextEl.innerHTML = `Menutup otomatis dalam <strong class="text-slate-700 font-bold" id="modal-timer-sec">${curSec}</strong> detik`;
+                    }
+                }
+            };
+
+            modalCard.addEventListener('mouseenter', pauseTimer);
+            modalCard.addEventListener('mouseleave', resumeTimer);
+            modalCard.addEventListener('touchstart', pauseTimer, { passive: true });
+            modalCard.addEventListener('touchend', resumeTimer);
+        }
     }
 
     // Process Server Flash Data on Load
@@ -225,12 +361,16 @@ function initGlobalListeners() {
         const type = flashData.dataset.type || 'info';
         const title = flashData.dataset.title || 'Pemberitahuan';
         const message = flashData.dataset.message || '';
+        const autoClose = flashData.dataset.autoClose !== 'false';
+        const autoCloseDelay = flashData.dataset.delay ? parseInt(flashData.dataset.delay, 10) : null;
         if (message) {
             window.showModal({
                 title: title,
                 message: message,
                 type: type,
-                confirmText: 'Mengerti & Tutup'
+                confirmText: 'Mengerti & Tutup',
+                autoClose: autoClose,
+                autoCloseDelay: autoCloseDelay
             });
         }
     }
@@ -901,12 +1041,16 @@ const SeamlessNavigation = {
             const type = newFlashData.dataset.type || 'info';
             const title = newFlashData.dataset.title || 'Pemberitahuan';
             const message = newFlashData.dataset.message || '';
+            const autoClose = newFlashData.dataset.autoClose !== 'false';
+            const autoCloseDelay = newFlashData.dataset.delay ? parseInt(newFlashData.dataset.delay, 10) : null;
             if (message && window.showModal) {
                 window.showModal({
                     title: title,
                     message: message,
                     type: type,
-                    confirmText: 'Mengerti & Tutup'
+                    confirmText: 'Mengerti & Tutup',
+                    autoClose: autoClose,
+                    autoCloseDelay: autoCloseDelay
                 });
             }
         }

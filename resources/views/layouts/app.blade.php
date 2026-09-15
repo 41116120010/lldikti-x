@@ -342,13 +342,13 @@
 
     <!-- Flash Session Data for Modal System -->
     @if (session('success'))
-        <div id="flash-modal-data" data-type="success" data-title="Aksi Berhasil" data-message="{{ session('success') }}" class="hidden"></div>
+        <div id="flash-modal-data" data-type="success" data-title="Aksi Berhasil" data-message="{{ session('success') }}" data-auto-close="true" class="hidden"></div>
     @elseif (session('error'))
-        <div id="flash-modal-data" data-type="error" data-title="Kendala Sistem" data-message="{{ session('error') }}" class="hidden"></div>
+        <div id="flash-modal-data" data-type="error" data-title="Kendala Sistem" data-message="{{ session('error') }}" data-auto-close="true" class="hidden"></div>
     @elseif (session('warning'))
-        <div id="flash-modal-data" data-type="warning" data-title="Pemberitahuan" data-message="{{ session('warning') }}" class="hidden"></div>
+        <div id="flash-modal-data" data-type="warning" data-title="Pemberitahuan" data-message="{{ session('warning') }}" data-auto-close="true" class="hidden"></div>
     @elseif ($errors->any())
-        <div id="flash-modal-data" data-type="warning" data-title="Kondisi Belum Terpenuhi" data-message="&bull; {{ implode('<br>&bull; ', array_map('e', $errors->all())) }}" class="hidden"></div>
+        <div id="flash-modal-data" data-type="warning" data-title="Kondisi Belum Terpenuhi" data-message="&bull; {{ implode('<br>&bull; ', array_map('e', $errors->all())) }}" data-auto-close="true" class="hidden"></div>
     @endif
 
     <!-- Global Modal Structure -->
@@ -358,6 +358,9 @@
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
             <div id="modal-content"></div>
+            <div class="modal-timer-track hidden" id="modal-timer-track" aria-hidden="true">
+                <div class="modal-timer-bar" id="modal-timer-bar"></div>
+            </div>
         </section>
     </div>
 

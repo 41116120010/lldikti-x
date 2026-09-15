@@ -526,7 +526,8 @@ function previewAttendanceMedia(mediaUrl, title) {
                 </div>
             `,
             type: 'info',
-            confirmText: 'Tutup'
+            confirmText: 'Tutup',
+            autoClose: false
         });
     } else {
         window.open(mediaUrl, '_blank');
