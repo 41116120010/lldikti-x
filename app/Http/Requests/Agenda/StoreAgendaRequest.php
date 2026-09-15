@@ -3,14 +3,42 @@
 namespace App\Http\Requests\Agenda;
 
 use App\Models\Agenda;
+use App\Services\AgendaConflictService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class StoreAgendaRequest extends FormRequest
 {
     public function authorize(): bool
     {
         return $this->user()?->can('create', Agenda::class) ?? false;
+    }
+
+    /**
+     * Configure the validator instance with conflict prevention logic.
+     */
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            if ($validator->errors()->isNotEmpty()) {
+                return;
+            }
+
+            $conflictResult = AgendaConflictService::checkConflicts(
+                data: $this->all(),
+                ignoreAgendaId: null,
+                user: $this->user()
+            );
+
+            if ($conflictResult['has_conflicts']) {
+                foreach ($conflictResult['errors'] as $field => $messages) {
+                    foreach ($messages as $message) {
+                        $validator->errors()->add($field, $message);
+                    }
+                }
+            }
+        });
     }
 
     protected function prepareForValidation(): void

@@ -2,8 +2,11 @@
 
 namespace App\Http\Requests\Agenda;
 
+use App\Models\Agenda;
+use App\Services\AgendaConflictService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class UpdateAgendaRequest extends FormRequest
 {
@@ -11,6 +14,35 @@ class UpdateAgendaRequest extends FormRequest
     {
         $agenda = $this->route('agenda');
         return $this->user()?->can('update', $agenda) ?? false;
+    }
+
+    /**
+     * Configure the validator instance with conflict prevention logic.
+     */
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            if ($validator->errors()->isNotEmpty()) {
+                return;
+            }
+
+            $agenda = $this->route('agenda');
+            $agendaId = $agenda instanceof Agenda ? $agenda->id : (int) $agenda;
+
+            $conflictResult = AgendaConflictService::checkConflicts(
+                data: $this->all(),
+                ignoreAgendaId: $agendaId,
+                user: $this->user()
+            );
+
+            if ($conflictResult['has_conflicts']) {
+                foreach ($conflictResult['errors'] as $field => $messages) {
+                    foreach ($messages as $message) {
+                        $validator->errors()->add($field, $message);
+                    }
+                }
+            }
+        });
     }
 
     protected function prepareForValidation(): void

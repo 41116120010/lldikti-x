@@ -15,6 +15,20 @@
             @csrf
             @method('PUT')
 
+            @if($errors->any())
+                <div class="p-4 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-900 space-y-1.5 shadow-2xs" role="alert">
+                    <div class="font-extrabold flex items-center gap-2 text-rose-950">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-rose-600 shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <span>Pemberitahuan Validasi & Deteksi Konflik Jadwal</span>
+                    </div>
+                    <ul class="list-disc list-inside space-y-1 text-rose-800 font-medium pl-1">
+                        @foreach($errors->all() as $err)
+                            <li>{{ $err }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
             <div class="space-y-5">
                 <h3 class="text-sm font-extrabold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-2">1. Informasi Utama Rapat</h3>
 
@@ -278,13 +292,16 @@
             <div class="pt-4 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <label for="status" class="text-xs font-bold text-slate-900 block mb-1">Status Siklus Agenda</label>
-                    <select id="status" name="status" class="input text-xs font-semibold">
+                    <select id="status" name="status" class="input text-xs font-semibold @error('status') input-error @enderror">
                         <option value="draft" {{ old('status', $agenda->status) === 'draft' ? 'selected' : '' }}>Konsep</option>
                         <option value="scheduled" {{ old('status', $agenda->status) === 'scheduled' ? 'selected' : '' }}>Terjadwal</option>
                         <option value="ongoing" {{ old('status', $agenda->status) === 'ongoing' ? 'selected' : '' }}>Sedang Berlangsung</option>
                         <option value="completed" {{ old('status', $agenda->status) === 'completed' ? 'selected' : '' }}>Selesai</option>
                         <option value="cancelled" {{ old('status', $agenda->status) === 'cancelled' ? 'selected' : '' }}>Dibatalkan</option>
                     </select>
+                    @error('status')
+                        <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 <div class="flex items-center gap-3">
