@@ -169,6 +169,30 @@
                                     <span class="text-slate-900 font-bold">{{ $agenda->units->pluck('kode_unit')->join(', ') }}</span>
                                 @endif
                             </div>
+
+                            <!-- Organizer & User Capacity Indicator -->
+                            <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 text-xs">
+                                <div class="flex items-center gap-1.5 truncate text-slate-600">
+                                    <svg class="text-slate-500 shrink-0" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                                    <span class="truncate">Oleh: <strong class="text-slate-800">{{ $agenda->creator?->unit?->kode_unit ?? ($agenda->creator?->isAdministrator() ? 'Pusat' : 'Penyelenggara') }}</strong></span>
+                                </div>
+
+                                @if($currentUser->isAdmin() && !$currentUser->isAdministrator())
+                                    @if($agenda->created_by === $currentUser->id || ($currentUser->unit_id !== null && $agenda->creator?->unit_id === $currentUser->unit_id))
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200 shrink-0">
+                                            Penyelenggara
+                                        </span>
+                                    @elseif($agenda->status === 'ongoing' && ($agenda->pimpinan_id === $currentUser->id || $agenda->notulis_id === $currentUser->id))
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 shrink-0">
+                                            {{ $agenda->pimpinan_id === $currentUser->id ? 'Pimpinan Rapat' : 'Notulis Rapat' }}
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200 shrink-0">
+                                            Unit Partisipan
+                                        </span>
+                                    @endif
+                                @endif
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -248,4 +248,153 @@ class AgendaRoleDelegationTest extends TestCase
         $this->assertStringContainsString($agenda->nama_notulis, $wordContent);
         $this->assertStringContainsString('data:image/png;base64,', $wordContent);
     }
+
+    /**
+     * Test Permasalahan 32: Admin unit lain yang BUKAN pembuat rapat dan TIDAK ditunjuk
+     * DILARANG KERAS mengelola status, mengubah data/peran, atau mengelola notulensi rapat universal (is_all_units = true).
+     */
+    public function test_participating_admin_unit_cannot_manage_universal_agenda(): void
+    {
+        $superadmin = User::where('role', 'administrator')->first();
+        $adminAkademik = User::where('username', 'admin_akademik')->first();
+
+        // 1. Superadmin creates a universal plenary meeting in 'scheduled' status
+        $agenda = Agenda::create([
+            'judul_rapat' => 'Rapat Koordinasi Pleno ' . uniqid(),
+            'slug' => 'RPT-' . uniqid(),
+            'jenis_rapat' => 'pleno',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Auditorium Utama',
+            'waktu_mulai' => now()->addDays(2),
+            'waktu_selesai' => now()->addDays(2)->addHours(2),
+            'status' => 'scheduled',
+            'is_all_units' => true,
+            'created_by' => $superadmin->id,
+        ]);
+
+        // 2. Admin Akademik (participating unit) attempts mutating actions -> MUST BE 403 FORBIDDEN
+        // A. Mutate status (e.g. attempt to start meeting)
+        $this->actingAs($adminAkademik)
+            ->patch("/admin/agendas/{$agenda->id}/status", ['status' => 'ongoing'])
+            ->assertStatus(403);
+
+        // B. Access and submit notulen form
+        $this->actingAs($adminAkademik)
+            ->get("/admin/agendas/{$agenda->id}/notulen")
+            ->assertStatus(403);
+
+        $this->actingAs($adminAkademik)
+            ->put("/admin/agendas/{$agenda->id}/notulen", [
+                'notulensi' => 'Percobaan pembobolan notulensi oleh unit partisipan',
+            ])
+            ->assertStatus(403);
+
+        // C. Update agenda details or dynamically assign roles
+        $this->actingAs($adminAkademik)
+            ->patch("/admin/agendas/{$agenda->id}/roles", [
+                'pimpinan_id' => $adminAkademik->id,
+            ])
+            ->assertStatus(403);
+
+        $this->actingAs($adminAkademik)
+            ->put("/admin/agendas/{$agenda->id}", [
+                'judul_rapat' => 'Judul Dibajak',
+                'jenis_rapat' => 'pleno',
+                'tipe_rapat' => 'offline',
+                'waktu_mulai' => now()->addDays(2)->format('Y-m-d H:i:s'),
+                'is_all_units' => true,
+            ])
+            ->assertStatus(403);
+
+        // D. Delete agenda
+        $this->actingAs($adminAkademik)
+            ->delete("/admin/agendas/{$agenda->id}")
+            ->assertStatus(403);
+
+        // 3. UI Verification: Admin Akademik can view index and show, but without mutation buttons
+        $indexResponse = $this->actingAs($adminAkademik)->get('/admin/agendas');
+        $indexResponse->assertStatus(200);
+        $indexResponse->assertSee('Unit Partisipan');
+
+        $showResponse = $this->actingAs($adminAkademik)->get("/admin/agendas/{$agenda->id}");
+        $showResponse->assertStatus(200);
+        $showResponse->assertSee('Mode Pemantauan (Unit Partisipan)');
+        $showResponse->assertDontSee('Buka Sesi Presensi');
+        $showResponse->assertDontSee('Tugaskan Peran');
+        $showResponse->assertDontSee('Edit Agenda');
+    }
+
+    /**
+     * Test Permasalahan 32: Admin unit yang ditunjuk sebagai pimpinan atau notulis saat rapat berlangsung (ongoing)
+     * DIBERIKAN hak kelola status dan notulensi khusus selama sesi berlangsung.
+     */
+    public function test_appointed_admin_unit_can_manage_agenda_during_ongoing_session(): void
+    {
+        $superadmin = User::where('role', 'administrator')->first();
+        $adminAkademik = User::where('username', 'admin_akademik')->first();
+        $adminKelembagaan = User::where('username', 'admin_kelembagaan')->first();
+
+        // 1. Universal meeting currently ONGOING, Admin Akademik is appointed as Pimpinan
+        $agenda = Agenda::create([
+            'judul_rapat' => 'Rapat Pleno Dipimpin Admin Unit ' . uniqid(),
+            'slug' => 'RPT-' . uniqid(),
+            'jenis_rapat' => 'pleno',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Sidang Utama',
+            'waktu_mulai' => now(),
+            'status' => 'ongoing',
+            'is_all_units' => true,
+            'created_by' => $superadmin->id,
+            'pimpinan_id' => $adminAkademik->id,
+            'notulis_id' => null,
+        ]);
+
+        // 2. Admin Akademik (Appointed Pimpinan during ONGOING) CAN manage minutes, roles, and status
+        $this->actingAs($adminAkademik)
+            ->get("/admin/agendas/{$agenda->id}/notulen")
+            ->assertStatus(200);
+
+        $this->actingAs($adminAkademik)
+            ->put("/admin/agendas/{$agenda->id}/notulen", [
+                'notulensi' => '<p>Catatan jalannya rapat oleh Pimpinan Rapat Terpilih.</p>',
+            ])
+            ->assertSessionHas('success');
+
+        $this->actingAs($adminAkademik)
+            ->patch("/admin/agendas/{$agenda->id}/roles", [
+                'pimpinan_id' => $adminAkademik->id,
+                'notulis_id' => $adminKelembagaan->id,
+            ])
+            ->assertSessionHas('success');
+
+        // 3. Admin Kelembagaan is now NOTULIS during ONGOING -> Can also manage minutes
+        $this->actingAs($adminKelembagaan)
+            ->put("/admin/agendas/{$agenda->id}/notulen", [
+                'kesimpulan' => '<p>Tindak lanjut disahkan oleh Notulis Terpilih.</p>',
+            ])
+            ->assertSessionHas('success');
+
+        // 4. Admin Akademik (Pimpinan) completes the meeting
+        $this->actingAs($adminAkademik)
+            ->patch("/admin/agendas/{$agenda->id}/status", [
+                'status' => 'completed',
+            ])
+            ->assertSessionHas('success');
+
+        $agenda->refresh();
+        $this->assertEquals('completed', $agenda->status);
+
+        // 5. Once COMPLETED, Admin Akademik's mutation rights lock back to read-only archival
+        $this->actingAs($adminAkademik)
+            ->patch("/admin/agendas/{$agenda->id}/status", [
+                'status' => 'scheduled',
+            ])
+            ->assertStatus(403);
+
+        $this->actingAs($adminAkademik)
+            ->patch("/admin/agendas/{$agenda->id}/roles", [
+                'pimpinan_id' => null,
+            ])
+            ->assertStatus(403);
+    }
 }

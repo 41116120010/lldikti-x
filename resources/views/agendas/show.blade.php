@@ -64,11 +64,32 @@
 
         <!-- Dedicated Action Toolbar (Full Width Bottom Bar) -->
         <div class="pt-4 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
-            <!-- Left: Back Navigation -->
-            <a href="{{ route('admin.agendas.index') }}" class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold text-white bg-white/10 hover:bg-white/20 border border-white/20 transition">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-                <span>Daftar Agenda</span>
-            </a>
+            <!-- Left: Back Navigation & User Capacity Indicator -->
+            <div class="flex flex-wrap items-center gap-2.5">
+                <a href="{{ route('admin.agendas.index') }}" class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold text-white bg-white/10 hover:bg-white/20 border border-white/20 transition">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                    <span>Daftar Agenda</span>
+                </a>
+
+                @if($currentUser->isAdmin() && !$currentUser->isAdministrator())
+                    @if($agenda->created_by === $currentUser->id || ($currentUser->unit_id !== null && $agenda->creator?->unit_id === $currentUser->unit_id))
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-200 bg-blue-900/50 border border-blue-500/40">
+                            <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                            Unit Penyelenggara
+                        </span>
+                    @elseif($agenda->status === 'ongoing' && ($agenda->pimpinan_id === $currentUser->id || $agenda->notulis_id === $currentUser->id))
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-amber-200 bg-amber-900/50 border border-amber-500/40">
+                            <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                            {{ $agenda->pimpinan_id === $currentUser->id ? 'Pimpinan Rapat Bertugas' : 'Notulis Rapat Bertugas' }}
+                        </span>
+                    @else
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 bg-white/5 border border-white/10" title="Anda memantau agenda ini sebagai unit peserta/undangan (read-only)">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                            Mode Pemantauan (Unit Partisipan)
+                        </span>
+                    @endif
+                @endif
+            </div>
 
             <!-- Right: Action Controls -->
             <div class="flex flex-wrap items-center gap-2.5">

@@ -75,8 +75,15 @@ class AgendaPolicy
         }
 
         if ($user->isAdmin()) {
-            return $agenda->created_by === $user->id 
-                || ($user->unit_id !== null && $agenda->creator?->unit_id === $user->unit_id);
+            // Pembuat agenda atau rekan admin dari unit penyelenggara yang sama
+            if ($agenda->created_by === $user->id || ($user->unit_id !== null && $agenda->creator?->unit_id === $user->unit_id)) {
+                return true;
+            }
+
+            // Admin unit yang ditunjuk sebagai pimpinan atau notulis khusus saat rapat sedang berlangsung
+            if ($agenda->status === 'ongoing' && ($agenda->pimpinan_id === $user->id || $agenda->notulis_id === $user->id)) {
+                return true;
+            }
         }
 
         return false;
@@ -109,9 +116,15 @@ class AgendaPolicy
         }
 
         if ($user->isAdmin()) {
-            return $agenda->created_by === $user->id 
-                || ($user->unit_id !== null && $agenda->creator?->unit_id === $user->unit_id)
-                || ($user->unit_id !== null && $agenda->units()->where('units.id', $user->unit_id)->exists());
+            // Pembuat agenda atau rekan admin dari unit penyelenggara yang sama
+            if ($agenda->created_by === $user->id || ($user->unit_id !== null && $agenda->creator?->unit_id === $user->unit_id)) {
+                return true;
+            }
+
+            // Admin unit yang ditunjuk sebagai pimpinan atau notulis khusus saat rapat sedang berlangsung
+            if ($agenda->status === 'ongoing' && ($agenda->pimpinan_id === $user->id || $agenda->notulis_id === $user->id)) {
+                return true;
+            }
         }
 
         return false;
@@ -131,18 +144,17 @@ class AgendaPolicy
             return true;
         }
 
-        // Creator can always manage minutes unless cancelled
+        // Pembuat agenda atau rekan admin dari unit penyelenggara yang sama selalu berhak mengelola notulensi
         if ($agenda->created_by === $user->id) {
             return true;
         }
 
-        if ($user->isAdmin()) {
-            return ($user->unit_id !== null && $agenda->creator?->unit_id === $user->unit_id)
-                || ($user->unit_id !== null && $agenda->units()->where('units.id', $user->unit_id)->exists());
+        if ($user->isAdmin() && $user->unit_id !== null && $agenda->creator?->unit_id === $user->unit_id) {
+            return true;
         }
 
-        // Designated Notulis or Pimpinan for regular staff (pegawai):
-        // HANYA BERLAKU SAAT STATUS RAPAT SEDANG BERLANGSUNG (ongoing)
+        // Saat rapat berstatus 'ongoing', petugas yang ditunjuk (pimpinan atau notulis, baik admin unit maupun staf)
+        // berhak mengelola notulensi dan foto dokumentasi kegiatan
         if ($agenda->status === 'ongoing') {
             if (($agenda->notulis_id && $agenda->notulis_id === $user->id) 
                 || ($agenda->pimpinan_id && $agenda->pimpinan_id === $user->id)) {
