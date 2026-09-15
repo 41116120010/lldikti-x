@@ -196,4 +196,46 @@ class WordEditorMinutesTest extends TestCase
         $this->assertStringContainsString('<b>sangat penting</b>', $wordResponse->getContent());
         $this->assertStringContainsString('<ol><li>Tindak lanjut nomor 1</li></ol>', $wordResponse->getContent());
     }
+
+    public function test_advanced_formatting_features_are_rendered_on_editor_ribbon(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('admin.agendas.notulen', $this->agenda));
+
+        $response->assertOk();
+        $response->assertSee('data-action="fontSize"', false);
+        $response->assertSee('data-action="textColor"', false);
+        $response->assertSee('data-action="highlight"', false);
+        $response->assertSee('data-action="insertTable"', false);
+        $response->assertSee('data-action="clearAll"', false);
+        $response->assertSee('data-command="superscript"', false);
+        $response->assertSee('data-command="subscript"', false);
+        $response->assertSee('data-command="indent"', false);
+        $response->assertSee('data-command="outdent"', false);
+        $response->assertSee('Heading 4');
+        $response->assertSee('word-table-picker');
+    }
+
+    public function test_admin_can_save_advanced_rich_elements_like_tables_and_sub_sup(): void
+    {
+        $tableHtml = '<table><thead><tr><th>No</th><th>Kegiatan</th></tr></thead><tbody><tr><td>1</td><td>Audit ISO</td></tr></tbody></table>';
+        $subSupHtml = '<p>Formula H<sub>2</sub>O dan Luas 100 m<sup>2</sup> serta <font size="4">teks besar</font>.</p>';
+
+        $response = $this->actingAs($this->admin)->put(
+            route('admin.agendas.update-notulen', $this->agenda),
+            [
+                'notulensi' => $tableHtml,
+                'kesimpulan' => $subSupHtml,
+            ]
+        );
+
+        $response->assertRedirect(route('admin.agendas.show', $this->agenda));
+        $this->agenda->refresh();
+
+        $this->assertStringContainsString('<table>', $this->agenda->notulensi);
+        $this->assertStringContainsString('<th>Kegiatan</th>', $this->agenda->notulensi);
+        $this->assertStringContainsString('<td>Audit ISO</td>', $this->agenda->notulensi);
+        $this->assertStringContainsString('H<sub>2</sub>O', $this->agenda->kesimpulan);
+        $this->assertStringContainsString('m<sup>2</sup>', $this->agenda->kesimpulan);
+        $this->assertStringContainsString('<font size="4">teks besar</font>', $this->agenda->kesimpulan);
+    }
 }

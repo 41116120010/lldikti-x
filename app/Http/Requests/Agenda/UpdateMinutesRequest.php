@@ -68,12 +68,12 @@ class UpdateMinutesRequest extends FormRequest
 
         // 2. Check for completely empty content or placeholder breaks
         $trimmed = trim(strip_tags($clean));
-        if ($trimmed === '' && !str_contains($clean, '<hr')) {
+        if ($trimmed === '' && !str_contains($clean, '<hr') && !str_contains($clean, '<table')) {
             return null;
         }
 
         // Allowed safe tags for official meeting documentation
-        $allowedTags = '<p><br><b><strong><i><em><u><s><strike><ul><ol><li><h2><h3><h4><blockquote><hr><div><span><table><thead><tbody><tr><th><td>';
+        $allowedTags = '<p><br><b><strong><i><em><u><s><strike><ul><ol><li><h2><h3><h4><blockquote><hr><div><span><table><thead><tbody><tr><th><td><sup><sub><font>';
 
         // 3. Strip all disallowed tags
         $clean = strip_tags($clean, $allowedTags);

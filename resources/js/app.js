@@ -516,8 +516,10 @@ const WordEditor = {
             const hiddenInput = wrapper.querySelector('textarea[name], input[name]');
             const ribbon = wrapper.querySelector('.word-editor-ribbon');
             const formatSelect = ribbon ? ribbon.querySelector('select[data-command="formatBlock"]') : null;
+            const fontSizeSelect = ribbon ? ribbon.querySelector('select[data-action="fontSize"]') : null;
             const wordsCountEl = wrapper.querySelector('.word-counter-words');
             const charsCountEl = wrapper.querySelector('.word-counter-chars');
+            const tablePicker = ribbon ? ribbon.querySelector('.word-table-picker') : null;
 
             if (!contentEl || !hiddenInput) return;
 
@@ -536,7 +538,12 @@ const WordEditor = {
 
             const updateActiveStates = () => {
                 if (!ribbon) return;
-                const commands = ['bold', 'italic', 'underline', 'strikeThrough', 'justifyLeft', 'justifyCenter', 'justifyRight', 'justifyFull', 'insertUnorderedList', 'insertOrderedList'];
+                const commands = [
+                    'bold', 'italic', 'underline', 'strikeThrough',
+                    'justifyLeft', 'justifyCenter', 'justifyRight', 'justifyFull',
+                    'insertUnorderedList', 'insertOrderedList',
+                    'superscript', 'subscript'
+                ];
                 commands.forEach(cmd => {
                     const btn = ribbon.querySelector(`button[data-command="${cmd}"]`);
                     if (btn) {
@@ -552,15 +559,18 @@ const WordEditor = {
 
                 if (formatSelect) {
                     try {
-                        const block = document.queryCommandValue('formatBlock').toLowerCase();
-                        if (['h2', 'h3', 'p', 'blockquote'].includes(block)) {
+                        const block = (document.queryCommandValue('formatBlock') || '').toLowerCase();
+                        if (['h2', 'h3', 'h4', 'p', 'blockquote'].includes(block)) {
                             formatSelect.value = block;
+                        } else {
+                            formatSelect.value = 'p';
                         }
                     } catch (e) {}
                 }
             };
 
             if (ribbon) {
+                // 1. Standard formatting commands
                 ribbon.querySelectorAll('button[data-command]').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         e.preventDefault();
@@ -580,6 +590,7 @@ const WordEditor = {
                     });
                 });
 
+                // 2. Paragraph style dropdown
                 if (formatSelect) {
                     formatSelect.addEventListener('change', (e) => {
                         contentEl.focus();
@@ -588,6 +599,173 @@ const WordEditor = {
                             document.execCommand('formatBlock', false, val);
                             syncContent();
                             updateActiveStates();
+                        }
+                    });
+                }
+
+                // 3. Font Size dropdown
+                if (fontSizeSelect) {
+                    fontSizeSelect.addEventListener('change', (e) => {
+                        contentEl.focus();
+                        const val = e.target.value;
+                        if (val) {
+                            document.execCommand('fontSize', false, val);
+                            syncContent();
+                            updateActiveStates();
+                        }
+                    });
+                }
+
+                // 4. Text Color & Highlight Pickers
+                ribbon.querySelectorAll('.word-color-btn').forEach(colorBtn => {
+                    const action = colorBtn.dataset.action;
+                    const colorInput = ribbon.querySelector(`input[data-color-for="${action}"]`);
+                    const indicator = colorBtn.querySelector('.color-indicator');
+
+                    if (colorInput) {
+                        colorBtn.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            colorInput.click();
+                        });
+
+                        colorInput.addEventListener('input', (e) => {
+                            const selectedColor = e.target.value;
+                            if (indicator) indicator.style.background = selectedColor;
+                            contentEl.focus();
+
+                            if (action === 'textColor') {
+                                document.execCommand('foreColor', false, selectedColor);
+                            } else if (action === 'highlight') {
+                                try {
+                                    if (!document.execCommand('hiliteColor', false, selectedColor)) {
+                                        document.execCommand('backColor', false, selectedColor);
+                                    }
+                                } catch (err) {
+                                    document.execCommand('backColor', false, selectedColor);
+                                }
+                            }
+
+                            syncContent();
+                            updateActiveStates();
+                        });
+                    }
+                });
+
+                // 5. Table Grid Picker (6x6)
+                const tableBtn = ribbon.querySelector('button[data-action="insertTable"]');
+                if (tableBtn && tablePicker) {
+                    const maxRows = 6;
+                    const maxCols = 6;
+                    let gridHtml = '<div class="word-table-grid">';
+                    for (let r = 1; r <= maxRows; r++) {
+                        for (let c = 1; c <= maxCols; c++) {
+                            gridHtml += `<div class="word-table-cell" data-row="${r}" data-col="${c}"></div>`;
+                        }
+                    }
+                    gridHtml += '</div><div class="word-table-picker-label">Pilih Ukuran (0 × 0)</div>';
+                    tablePicker.innerHTML = gridHtml;
+
+                    const cells = tablePicker.querySelectorAll('.word-table-cell');
+                    const labelEl = tablePicker.querySelector('.word-table-picker-label');
+
+                    const updateGridSelection = (targetRow, targetCol) => {
+                        cells.forEach(cell => {
+                            const r = parseInt(cell.dataset.row, 10);
+                            const c = parseInt(cell.dataset.col, 10);
+                            if (r <= targetRow && c <= targetCol) {
+                                cell.classList.add('selected');
+                            } else {
+                                cell.classList.remove('selected');
+                            }
+                        });
+                        if (labelEl) {
+                            labelEl.textContent = targetRow > 0 && targetCol > 0 
+                                ? `${targetRow} × ${targetCol} Tabel` 
+                                : 'Pilih Ukuran (0 × 0)';
+                        }
+                    };
+
+                    cells.forEach(cell => {
+                        cell.addEventListener('mouseenter', () => {
+                            const r = parseInt(cell.dataset.row, 10);
+                            const c = parseInt(cell.dataset.col, 10);
+                            updateGridSelection(r, c);
+                        });
+
+                        cell.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const r = parseInt(cell.dataset.row, 10);
+                            const c = parseInt(cell.dataset.col, 10);
+
+                            let tableHtml = '<table class="w-full"><thead><tr>';
+                            for (let colIdx = 1; colIdx <= c; colIdx++) {
+                                tableHtml += `<th>Kolom ${colIdx}</th>`;
+                            }
+                            tableHtml += '</tr></thead><tbody>';
+                            for (let rowIdx = 1; rowIdx < r; rowIdx++) {
+                                tableHtml += '<tr>';
+                                for (let colIdx = 1; colIdx <= c; colIdx++) {
+                                    tableHtml += '<td>&nbsp;</td>';
+                                }
+                                tableHtml += '</tr>';
+                            }
+                            tableHtml += '</tbody></table><p><br></p>';
+
+                            tablePicker.classList.remove('open');
+                            contentEl.focus();
+                            document.execCommand('insertHTML', false, tableHtml);
+                            syncContent();
+                            updateActiveStates();
+                        });
+                    });
+
+                    tablePicker.addEventListener('mouseleave', () => {
+                        updateGridSelection(0, 0);
+                    });
+
+                    tableBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        tablePicker.classList.toggle('open');
+                        updateGridSelection(0, 0);
+                    });
+
+                    document.addEventListener('click', (e) => {
+                        if (!tablePicker.contains(e.target) && e.target !== tableBtn) {
+                            tablePicker.classList.remove('open');
+                        }
+                    });
+                }
+
+                // 6. Clear All Button with confirmation
+                const clearAllBtn = ribbon.querySelector('button[data-action="clearAll"]');
+                if (clearAllBtn) {
+                    clearAllBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        if (!contentEl.innerText.trim() && !contentEl.querySelector('table, hr, img')) return;
+
+                        if (window.showModal) {
+                            window.showModal({
+                                title: 'Hapus Semua Isi Catatan',
+                                message: 'Apakah Anda yakin ingin mengosongkan seluruh isi catatan ini? Tindakan ini tidak dapat dibatalkan.',
+                                type: 'warning',
+                                confirmText: 'Ya, Kosongkan',
+                                cancelText: 'Batal',
+                                onConfirm: () => {
+                                    contentEl.innerHTML = '';
+                                    syncContent();
+                                    updateActiveStates();
+                                    contentEl.focus();
+                                }
+                            });
+                        } else {
+                            if (confirm('Kosongkan seluruh teks editor?')) {
+                                contentEl.innerHTML = '';
+                                syncContent();
+                                updateActiveStates();
+                                contentEl.focus();
+                            }
                         }
                     });
                 }
@@ -615,8 +793,65 @@ const WordEditor = {
                 }
             });
 
-            // Normalizes pasted content
-            contentEl.addEventListener('paste', () => {
+            // Clean Paste Sanitizer (Strip harmful inline styles, scripts, Word cruft)
+            contentEl.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const clipboardData = e.clipboardData || window.clipboardData;
+                const htmlData = clipboardData ? clipboardData.getData('text/html') : '';
+                const textData = clipboardData ? clipboardData.getData('text/plain') : '';
+
+                if (htmlData) {
+                    try {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(htmlData, 'text/html');
+
+                        const disallowed = doc.querySelectorAll('script, style, meta, link, object, embed, iframe');
+                        disallowed.forEach(el => el.remove());
+
+                        const allowedTags = [
+                            'p', 'br', 'b', 'strong', 'i', 'em', 'u', 's', 'strike',
+                            'h2', 'h3', 'h4', 'ul', 'ol', 'li', 'blockquote', 'hr',
+                            'table', 'thead', 'tbody', 'tr', 'th', 'td', 'sup', 'sub', 'span'
+                        ];
+
+                        const allElements = Array.from(doc.body.querySelectorAll('*'));
+                        allElements.forEach(el => {
+                            const tag = el.tagName.toLowerCase();
+                            if (!allowedTags.includes(tag)) {
+                                el.replaceWith(...el.childNodes);
+                            } else {
+                                const attrs = Array.from(el.attributes);
+                                attrs.forEach(attr => {
+                                    if (['colspan', 'rowspan'].includes(attr.name)) return;
+                                    el.removeAttribute(attr.name);
+                                });
+                            }
+                        });
+
+                        const cleanHtml = doc.body.innerHTML.trim();
+                        if (cleanHtml) {
+                            document.execCommand('insertHTML', false, cleanHtml);
+                        } else {
+                            document.execCommand('insertText', false, textData);
+                        }
+                    } catch (err) {
+                        document.execCommand('insertText', false, textData);
+                    }
+                } else if (textData) {
+                    const paragraphs = textData
+                        .split(/\r?\n\r?\n/)
+                        .map(p => p.trim())
+                        .filter(Boolean)
+                        .map(p => `<p>${p.replace(/\r?\n/g, '<br>')}</p>`)
+                        .join('');
+
+                    if (paragraphs) {
+                        document.execCommand('insertHTML', false, paragraphs);
+                    } else {
+                        document.execCommand('insertText', false, textData);
+                    }
+                }
+
                 setTimeout(() => {
                     syncContent();
                     updateActiveStates();

@@ -536,6 +536,16 @@
         text-decoration: underline;
         text-underline-offset: 3px;
     }
+    .prose-gov sup {
+        font-size: 0.75em;
+        vertical-align: super;
+        line-height: 0;
+    }
+    .prose-gov sub {
+        font-size: 0.75em;
+        vertical-align: sub;
+        line-height: 0;
+    }
     .prose-gov table {
         width: 100%;
         border-collapse: collapse;
@@ -633,6 +643,80 @@
         font-style: italic;
         pointer-events: none;
         display: block;
+    }
+
+    /* Color picker button and input styling */
+    .word-color-btn {
+        flex-direction: column;
+        gap: 1px;
+    }
+    .word-color-btn .color-indicator {
+        width: 14px;
+        height: 3px;
+        border-radius: 1px;
+        display: block;
+    }
+    .word-color-input {
+        position: absolute;
+        width: 0;
+        height: 0;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    /* Table grid picker dropdown */
+    .word-table-picker {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        margin-top: 4px;
+        z-index: 50;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 0.5rem;
+        padding: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        display: none;
+    }
+    .word-table-picker.open {
+        display: block;
+    }
+    .word-table-grid {
+        display: grid;
+        grid-template-columns: repeat(6, 18px);
+        gap: 3px;
+        margin-bottom: 6px;
+    }
+    .word-table-cell {
+        width: 18px;
+        height: 18px;
+        border: 1px solid #cbd5e1;
+        border-radius: 2px;
+        background: #f8fafc;
+        cursor: pointer;
+        transition: all 0.1s;
+    }
+    .word-table-cell.selected {
+        background: #1e3a8a;
+        border-color: #1e3a8a;
+    }
+    .word-table-picker-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: #475569;
+        text-align: center;
+    }
+
+    /* Ribbon responsive adjustments */
+    @media (max-width: 639px) {
+        .word-editor-ribbon {
+            gap: 0.25rem;
+            padding: 0.375rem 0.5rem;
+        }
+        .word-btn {
+            width: 30px;
+            height: 30px;
+        }
     }
 }
 
