@@ -1,7 +1,8 @@
-<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Berita Acara — {{ $agenda->judul_rapat }}</title>
+    <title>Berita Acara &mdash; {{ $agenda->judul_rapat }}</title>
     <!--[if gte mso 9]>
     <xml>
         <w:WordDocument>
@@ -12,189 +13,182 @@
     </xml>
     <![endif]-->
     <style>
+        @page Section1 {
+            size: 595.3pt 841.9pt; /* A4 Portrait: 21.0cm x 29.7cm */
+            margin: 2.0cm 1.5cm 2.0cm 1.5cm;
+            mso-header-margin: 36.0pt;
+            mso-footer-margin: 36.0pt;
+            mso-paper-source: 0;
+        }
+
+        div.Section1 {
+            page: Section1;
+        }
+
         body {
             font-family: 'Times New Roman', Times, serif;
-            font-size: 12pt;
-            line-height: 1.3;
+            font-size: 10.5pt;
+            line-height: 1.25;
             color: #000000;
         }
 
-        .header-kop {
-            text-align: center;
-            border-bottom: 3px double #000;
-            padding-bottom: 8px;
-            margin-bottom: 15px;
-        }
-
-        .header-kop h3 {
+        p, div {
             margin: 0;
-            font-size: 11pt;
-            font-weight: bold;
-            text-transform: uppercase;
+            padding: 0;
         }
 
-        .header-kop h2 {
-            margin: 2px 0;
-            font-size: 13pt;
-            font-weight: bold;
-            text-transform: uppercase;
+        table {
+            border-collapse: collapse;
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
         }
 
-        .header-kop p {
-            margin: 0;
-            font-size: 9.5pt;
-            font-style: normal;
+        table.header-kop {
+            width: 100%;
+            border-bottom: 2.25pt double #000000;
+            margin-bottom: 8pt;
+            padding-bottom: 4pt;
         }
 
-        .doc-title {
-            text-align: center;
-            margin: 15px 0;
-        }
-
-        .doc-title h1 {
-            font-size: 13pt;
-            font-weight: bold;
-            text-decoration: underline;
-            margin: 0;
+        table.header-kop td {
+            vertical-align: middle;
+            border: none;
         }
 
         table.info-table {
             width: 100%;
-            border-collapse: collapse;
-            border: none;
-            margin-bottom: 15px;
-            font-size: 11pt;
+            margin-bottom: 8pt;
+            font-size: 10pt;
         }
 
         table.info-table td {
-            padding: 4px 0;
+            padding: 2pt 0;
             vertical-align: top;
             border: none;
         }
 
         table.attendance-table {
             width: 100%;
-            border-collapse: collapse;
-            border: 1px solid #000000;
-            margin-top: 8px;
-            font-size: 10.5pt;
-        }
-
-        table.attendance-table th, table.attendance-table td {
-            border: 1px solid #000000;
-            padding: 6px 8px;
-            vertical-align: middle;
+            border: 0.5pt solid #000000;
+            margin-top: 3pt;
+            font-size: 9.5pt;
         }
 
         table.attendance-table th {
-            background-color: #EFEFEF;
-            text-align: center;
+            background-color: #f2f2f2;
+            border: 0.5pt solid #000000;
+            padding: 4pt 3pt;
             font-weight: bold;
         }
 
-        .section-title {
-            font-size: 12pt;
-            font-weight: bold;
-            margin: 15px 0 5px 0;
-            text-transform: uppercase;
+        table.attendance-table td {
+            border: 0.5pt solid #000000;
+            padding: 3pt 4pt;
+            vertical-align: middle;
         }
 
-        .box-text {
-            border: 1px solid #000;
-            padding: 10px;
-            font-size: 11pt;
-            min-height: 50px;
-            margin-bottom: 10px;
-            overflow-wrap: break-word;
-            word-break: break-word;
-        }
-
-        .signature-block {
-            margin-top: 30px;
+        table.box-container {
             width: 100%;
+            border: 0.5pt solid #000000;
+            margin-top: 2pt;
+            margin-bottom: 6pt;
         }
 
-        .signature-block table {
+        table.box-container td {
+            border: 0.5pt solid #000000;
+            padding: 5pt 7pt;
+            font-size: 9.5pt;
+            text-align: justify;
+        }
+
+        table.doc-grid {
             width: 100%;
-            border-collapse: collapse;
-            border: none;
+            margin-top: 4pt;
         }
 
-        .signature-block td {
+        table.doc-grid td {
             width: 50%;
+            text-align: center;
+            vertical-align: top;
+            padding: 6pt;
+            border: 0.5pt solid #cbd5e1;
+        }
+
+        table.signature-table {
+            width: 100%;
+            margin-top: 14pt;
+            page-break-inside: avoid;
+            mso-yfti-row: cantSplit;
+        }
+
+        table.signature-table td {
             vertical-align: top;
             text-align: center;
-            font-size: 11pt;
+            font-size: 10pt;
             border: none;
-        }
-
-        .signature-space {
-            height: 65px;
         }
     </style>
 </head>
 <body>
-    <!-- Kop Surat Resmi -->
+<div class="Section1">
+
+    <!-- Kop Surat Resmi Instansi -->
     @if($config['show_kop'] ?? true)
-    <div class="header-kop">
-        @if(($config['show_logo'] ?? true) && isset($logoBase64) && $logoBase64)
-        <table style="width: 100%; border-collapse: collapse; border: none; margin: 0; padding: 0;">
-            <tr>
-                <td style="width: 75px; text-align: center; vertical-align: middle; border: none; padding: 0;">
-                    <img src="{{ $logoBase64 }}" alt="Logo Instansi" width="65" height="65" style="max-height: 65px; max-width: 65px; display: block; margin: 0 auto;">
-                </td>
-                <td style="text-align: center; vertical-align: middle; border: none; padding: 0 10px;">
-                    <h3>{{ $config['instansi_induk'] ?? 'KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI' }}</h3>
-                    <h2>{{ $config['instansi_pelaksana'] ?? 'LEMBAGA LAYANAN PENDIDIKAN TINGGI (LLDIKTI) WILAYAH X' }}</h2>
-                    <p>{{ $config['alamat_kontak'] ?? 'Jalan Khatib Sulaiman, Padang, Sumatera Barat • Laman: lldikti10.kemdikbud.go.id' }}</p>
-                </td>
-                <td style="width: 75px; border: none; padding: 0;"></td>
-            </tr>
-        </table>
-        @else
-        <h3>{{ $config['instansi_induk'] ?? 'KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI' }}</h3>
-        <h2>{{ $config['instansi_pelaksana'] ?? 'LEMBAGA LAYANAN PENDIDIKAN TINGGI (LLDIKTI) WILAYAH X' }}</h2>
-        <p>{{ $config['alamat_kontak'] ?? 'Jalan Khatib Sulaiman, Padang, Sumatera Barat • Laman: lldikti10.kemdikbud.go.id' }}</p>
-        @endif
-    </div>
+    <table class="header-kop" width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; border-collapse: collapse; border-bottom: 2.25pt double #000000; margin-bottom: 8pt; padding-bottom: 4pt;">
+        <tr>
+            @if(($config['show_logo'] ?? true) && isset($logoBase64) && $logoBase64)
+            <td width="75" align="center" valign="middle" style="width: 75pt; padding-right: 10pt; padding-bottom: 4pt;">
+                <img src="{{ $logoBase64 }}" alt="Logo Instansi" width="65" height="65" style="max-height: 65px; max-width: 65px; display: block; margin: 0 auto;">
+            </td>
+            @endif
+            <td align="center" valign="middle" style="padding-bottom: 4pt;">
+                <div style="font-size: 11pt; font-weight: bold; text-transform: uppercase;">{{ $config['instansi_induk'] ?? 'KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI' }}</div>
+                <div style="font-size: 12.5pt; font-weight: bold; text-transform: uppercase; margin: 2pt 0;">{{ $config['instansi_pelaksana'] ?? 'LEMBAGA LAYANAN PENDIDIKAN TINGGI (LLDIKTI) WILAYAH X' }}</div>
+                <div style="font-size: 9pt; font-style: normal;">{{ $config['alamat_kontak'] ?? 'Jalan Khatib Sulaiman, Padang, Sumatera Barat &bull; Laman: lldikti10.kemdikbud.go.id' }}</div>
+            </td>
+            @if(($config['show_logo'] ?? true) && isset($logoBase64) && $logoBase64)
+            <td width="75" style="width: 75pt;">&nbsp;</td>
+            @endif
+        </tr>
+    </table>
     @else
-    <div style="height: 25px;"></div>
+    <div style="height: 12pt;"></div>
     @endif
 
     <!-- Judul Dokumen -->
-    <div class="doc-title">
-        <h1>{{ $config['document_title'] ?? 'BERITA ACARA DAN DAFTAR HADIR RAPAT' }}</h1>
+    <div style="text-align: center; margin: 8pt 0 6pt 0;">
+        <div style="font-size: 12pt; font-weight: bold; text-decoration: underline;">{{ $config['document_title'] ?? 'BERITA ACARA DAN DAFTAR HADIR RAPAT' }}</div>
         @if($config['show_document_number'] ?? true)
-        <div>Nomor: {{ $config['document_number'] ?? ('BA-RAPAT/' . date('Y') . '/' . str_pad($agenda->id, 4, '0', STR_PAD_LEFT)) }}</div>
+        <div style="font-size: 9.5pt; margin-top: 2pt;">Nomor: {{ $config['document_number'] ?? ('BA-RAPAT/' . date('Y') . '/' . str_pad($agenda->id, 4, '0', STR_PAD_LEFT)) }}</div>
         @endif
     </div>
 
-    <!-- Data Rapat -->
+    <!-- Data Pelaksanaan Rapat (Info Table) -->
     @if($config['show_meeting_info'] ?? true)
-    <table class="info-table">
+    <table class="info-table" width="100%" border="0" cellspacing="0" cellpadding="2" style="width: 100%; border-collapse: collapse; margin-bottom: 8pt; font-size: 10pt;">
         <tr>
-            <td style="width: 25%;"><strong>Perihal / Agenda</strong></td>
-            <td style="width: 2%;">:</td>
+            <td width="135" style="width: 135pt; font-weight: bold;">Perihal / Agenda</td>
+            <td width="15" style="width: 15pt;" align="center">:</td>
             <td><strong>{{ $config['custom_agenda_title'] ?? $agenda->judul_rapat }}</strong></td>
         </tr>
         <tr>
-            <td><strong>Hari / Tanggal</strong></td>
-            <td>:</td>
+            <td style="font-weight: bold;">Hari / Tanggal</td>
+            <td align="center">:</td>
             <td>{{ $agenda->waktu_mulai->translatedFormat('l, d F Y') }}</td>
         </tr>
         <tr>
-            <td><strong>Waktu Pelaksanaan</strong></td>
-            <td>:</td>
+            <td style="font-weight: bold;">Waktu Pelaksanaan</td>
+            <td align="center">:</td>
             <td>{{ $agenda->waktu_mulai->format('H:i') }} {{ $agenda->waktu_selesai ? 's.d. ' . $agenda->waktu_selesai->format('H:i') . ' WIB' : 'WIB s.d. Selesai' }}</td>
         </tr>
         <tr>
-            <td><strong>Format & Tempat</strong></td>
-            <td>:</td>
+            <td style="font-weight: bold;">Format &amp; Tempat</td>
+            <td align="center">:</td>
             <td>{{ ucfirst($agenda->tipe_rapat) }} &mdash; {{ $config['custom_location'] ?? ($agenda->lokasi_ruang ?? 'Daring (Online Meeting)') }}</td>
         </tr>
         <tr>
-            <td><strong>Penyelenggara</strong></td>
-            <td>:</td>
+            <td style="font-weight: bold;">Penyelenggara</td>
+            <td align="center">:</td>
             <td>{{ $agenda->creator?->name ?? 'Penyelenggara Rapat' }} ({{ $agenda->creator?->unit?->nama_unit ?? 'Tingkat Lembaga' }})</td>
         </tr>
     </table>
@@ -202,68 +196,83 @@
 
     <!-- I. Daftar Hadir Peserta -->
     @if($config['show_attendees'] ?? true)
-    <div class="section-title">I. DAFTAR KEHADIRAN PESERTA ({{ $agenda->attendances->count() }} Orang)</div>
-    <table class="attendance-table" border="1" cellspacing="0" cellpadding="0" style="border-collapse: collapse; border: 1px solid #000000; width: 100%;">
-        <thead>
-            <tr>
-                <th style="width: 6%;">No</th>
-                <th>Nama Lengkap</th>
-                @if($config['show_nip'] ?? true)
-                    <th style="width: 22%;">NIP</th>
+    @php
+        $hasNip = $config['show_nip'] ?? true;
+        $hasUnit = $config['show_unit'] ?? true;
+        $hasTime = $config['show_attendance_time'] ?? true;
+        $hasSelfie = $config['show_selfie_photos'] ?? true;
+
+        $colCount = 2; // No, Nama Lengkap
+        if ($hasNip) $colCount++;
+        if ($hasUnit) $colCount++;
+        if ($hasTime) $colCount++;
+        if ($hasSelfie) $colCount++;
+        $colCount++; // Status / TTD
+
+        // Dynamic column percentage calculation ensuring exact 100% total
+        $wNo = 5;
+        $wSelfie = $hasSelfie ? 11 : 0;
+        $wTime = $hasTime ? 9 : 0;
+        $wSig = 15;
+        $wUnit = $hasUnit ? 18 : 0;
+        $wNip = $hasNip ? 20 : 0;
+        $wNama = 100 - $wNo - $wSelfie - $wTime - $wSig - $wUnit - $wNip;
+    @endphp
+    <div style="font-size: 10.5pt; font-weight: bold; margin: 8pt 0 3pt 0;">I. DAFTAR KEHADIRAN PESERTA ({{ count($attendances) }} Orang)</div>
+    <table class="attendance-table" width="100%" border="1" cellspacing="0" cellpadding="0" bordercolor="#000000" style="width: 100%; border-collapse: collapse; border: 0.5pt solid #000000; margin-top: 3pt; font-size: 9.5pt;">
+        <thead style="mso-yfti-tblheader: yes; background-color: #f2f2f2;">
+            <tr style="mso-yfti-tblheader: yes; background-color: #f2f2f2;">
+                <th width="{{ $wNo }}%" align="center" style="width: {{ $wNo }}%; border: 0.5pt solid #000000; padding: 4pt 3pt;">No</th>
+                <th width="{{ $wNama }}%" align="left" style="width: {{ $wNama }}%; border: 0.5pt solid #000000; padding: 4pt 5pt;">Nama Lengkap</th>
+                @if($hasNip)
+                    <th width="{{ $wNip }}%" align="left" style="width: {{ $wNip }}%; border: 0.5pt solid #000000; padding: 4pt 5pt;">NIP</th>
                 @endif
-                @if($config['show_unit'] ?? true)
-                    <th style="width: 18%;">Unit Kerja / Pokja</th>
+                @if($hasUnit)
+                    <th width="{{ $wUnit }}%" align="left" style="width: {{ $wUnit }}%; border: 0.5pt solid #000000; padding: 4pt 5pt;">Unit Kerja / Pokja</th>
                 @endif
-                @if($config['show_attendance_time'] ?? true)
-                    <th style="width: 10%;">Waktu</th>
+                @if($hasTime)
+                    <th width="{{ $wTime }}%" align="center" style="width: {{ $wTime }}%; border: 0.5pt solid #000000; padding: 4pt 3pt;">Waktu</th>
                 @endif
-                @if($config['show_selfie_photos'] ?? true)
-                    <th style="width: 12%;">Foto Kehadiran</th>
+                @if($hasSelfie)
+                    <th width="{{ $wSelfie }}%" align="center" style="width: {{ $wSelfie }}%; border: 0.5pt solid #000000; padding: 4pt 3pt;">Foto Kehadiran</th>
                 @endif
-                <th style="width: 12%;">Status / TTD</th>
+                <th width="{{ $wSig }}%" align="center" style="width: {{ $wSig }}%; border: 0.5pt solid #000000; padding: 4pt 3pt;">Status / TTD</th>
             </tr>
         </thead>
         <tbody>
             @forelse($attendances as $index => $item)
-                <tr>
-                    <td style="text-align: center;">{{ $index + 1 }}</td>
-                    <td><strong>{{ $item['model']->user->name }}</strong></td>
-                    @if($config['show_nip'] ?? true)
-                        <td style="font-family: monospace;">{{ $item['model']->user->nip }}</td>
+                <tr style="mso-yfti-row: cantSplit; page-break-inside: avoid;">
+                    <td align="center" style="border: 0.5pt solid #000000; padding: 3pt;">{{ $index + 1 }}</td>
+                    <td style="border: 0.5pt solid #000000; padding: 3pt 5pt;"><strong>{{ $item['model']->user->name }}</strong></td>
+                    @if($hasNip)
+                        <td style="border: 0.5pt solid #000000; padding: 3pt 5pt; font-family: monospace; font-size: 8.5pt;">{{ $item['model']->user->nip }}</td>
                     @endif
-                    @if($config['show_unit'] ?? true)
-                        <td>{{ $item['model']->user->unit?->kode_unit ?? 'Pusat' }}</td>
+                    @if($hasUnit)
+                        <td style="border: 0.5pt solid #000000; padding: 3pt 5pt;">{{ $item['model']->user->unit?->kode_unit ?? 'Pusat' }}</td>
                     @endif
-                    @if($config['show_attendance_time'] ?? true)
-                        <td style="text-align: center;">{{ $item['model']->signed_at->format('H:i') }}</td>
+                    @if($hasTime)
+                        <td align="center" style="border: 0.5pt solid #000000; padding: 3pt;">{{ $item['model']->signed_at->format('H:i') }}</td>
                     @endif
-                    @if($config['show_selfie_photos'] ?? true)
-                        <td style="text-align: center; vertical-align: middle; padding: 4px;">
+                    @if($hasSelfie)
+                        <td align="center" valign="middle" style="border: 0.5pt solid #000000; padding: 2pt;">
                             @if(!empty($item['selfie_base64']))
-                                <img src="{{ $item['selfie_base64'] }}" alt="Selfie" width="40" height="40" style="max-height: 40px; max-width: 40px; display: inline-block;">
+                                <img src="{{ $item['selfie_base64'] }}" alt="Selfie" width="38" height="38" style="max-height: 38px; max-width: 38px; display: inline-block;">
                             @else
                                 <span style="font-size: 8pt; color: #94a3b8; font-style: italic;">-</span>
                             @endif
                         </td>
                     @endif
-                    <td style="text-align: center; vertical-align: middle;">
+                    <td align="center" valign="middle" style="border: 0.5pt solid #000000; padding: 3pt;">
                         @if(($config['show_attendee_signatures'] ?? true) && $item['sig_base64'])
-                            <img src="{{ $item['sig_base64'] }}" alt="TTD" style="max-height: 35px; max-width: 90px;">
+                            <img src="{{ $item['sig_base64'] }}" alt="TTD" style="max-height: 30px; max-width: 75px;">
                         @else
-                            <span style="color: green; font-weight: bold; font-size: 9pt;">HADIR</span>
+                            <span style="color: #166534; font-weight: bold; font-size: 8.5pt;">HADIR</span>
                         @endif
                     </td>
                 </tr>
             @empty
-                @php
-                    $colCount = 3;
-                    if ($config['show_nip'] ?? true) $colCount++;
-                    if ($config['show_unit'] ?? true) $colCount++;
-                    if ($config['show_attendance_time'] ?? true) $colCount++;
-                    if ($config['show_selfie_photos'] ?? true) $colCount++;
-                @endphp
                 <tr>
-                    <td colspan="{{ $colCount }}" style="text-align: center; padding: 15px; font-style: italic;">
+                    <td colspan="{{ $colCount }}" align="center" style="border: 0.5pt solid #000000; padding: 8pt; font-style: italic; color: #64748b;">
                         Tidak ada data kehadiran yang tercatat.
                     </td>
                 </tr>
@@ -272,97 +281,128 @@
     </table>
     @endif
 
-    <!-- II. Notulensi & Kesimpulan -->
+    <!-- II. Notulensi & Kesimpulan (1x1 Table Container for 100% border durability) -->
     @if(($config['show_notulensi'] ?? true) || ($config['show_kesimpulan'] ?? true))
-    <div class="section-title" style="margin-top: 20px;">II. NOTULENSI &amp; KESIMPULAN RAPAT</div>
+    <div style="font-size: 10.5pt; font-weight: bold; margin: 8pt 0 3pt 0;">II. NOTULENSI &amp; KESIMPULAN RAPAT</div>
     @if($config['show_notulensi'] ?? true)
-    <div style="margin-bottom: 10px;">
-        <strong>A. Catatan Jalannya Rapat (Notulensi):</strong>
-        <div class="box-text">
-            {!! $agenda->formatted_notulensi ?: 'Tidak ada catatan notulensi khusus yang dicatat.' !!}
-        </div>
+    <div style="margin-bottom: 4pt;">
+        <div style="font-weight: bold; font-size: 9.5pt; margin-bottom: 1pt;">A. Catatan Jalannya Rapat (Notulensi):</div>
+        <table class="box-container" width="100%" border="1" cellspacing="0" cellpadding="5" bordercolor="#000000" style="width: 100%; border-collapse: collapse; border: 0.5pt solid #000000; margin-top: 2pt; margin-bottom: 4pt;">
+            <tr>
+                <td style="border: 0.5pt solid #000000; padding: 5pt 7pt; font-size: 9.5pt; text-align: justify;">
+                    {!! $agenda->formatted_notulensi ?: 'Tidak ada catatan notulensi khusus yang dicatat.' !!}
+                </td>
+            </tr>
+        </table>
     </div>
     @endif
 
     @if($config['show_kesimpulan'] ?? true)
-    <div>
-        <strong>B. Kesimpulan &amp; Rencana Tindak Lanjut (RTL):</strong>
-        <div class="box-text">
-            {!! $agenda->formatted_kesimpulan ?: 'Tidak ada catatan kesimpulan khusus yang dicatat.' !!}
-        </div>
+    <div style="margin-bottom: 4pt;">
+        <div style="font-weight: bold; font-size: 9.5pt; margin-bottom: 1pt;">B. Kesimpulan &amp; Rencana Tindak Lanjut (RTL):</div>
+        <table class="box-container" width="100%" border="1" cellspacing="0" cellpadding="5" bordercolor="#000000" style="width: 100%; border-collapse: collapse; border: 0.5pt solid #000000; margin-top: 2pt; margin-bottom: 4pt;">
+            <tr>
+                <td style="border: 0.5pt solid #000000; padding: 5pt 7pt; font-size: 9.5pt; text-align: justify;">
+                    {!! $agenda->formatted_kesimpulan ?: 'Tidak ada catatan kesimpulan khusus yang dicatat.' !!}
+                </td>
+            </tr>
+        </table>
     </div>
     @endif
     @endif
 
     <!-- III. Foto Dokumentasi Kegiatan (Opsional) -->
     @if(($config['show_documentation'] ?? true) && isset($documentations) && count($documentations) > 0)
-    <div class="section-title" style="margin-top: 20px;">III. DOKUMENTASI KEGIATAN</div>
-    <table style="width: 100%; border: none;">
+    <div style="font-size: 10.5pt; font-weight: bold; margin: 8pt 0 3pt 0;">III. DOKUMENTASI KEGIATAN</div>
+    <table class="doc-grid" width="100%" border="0" cellspacing="0" cellpadding="4" style="width: 100%; border-collapse: collapse; margin-top: 4pt;">
         @foreach($documentations->chunk(2) as $chunk)
-            <tr>
+            <tr style="mso-yfti-row: cantSplit; page-break-inside: avoid;">
                 @foreach($chunk as $docItem)
-                    <td style="width: 50%; text-align: center; padding: 10px; border: 1px solid #cbd5e1;">
+                    <td width="50%" align="center" valign="top" style="width: 50%;">
                         @if($docItem['base64'])
-                            <img src="{{ $docItem['base64'] }}" alt="Dokumentasi" style="max-height: 180px; max-width: 250px;">
+                            <img src="{{ $docItem['base64'] }}" alt="Dokumentasi" style="max-height: 150px; max-width: 230px; display: block; margin: 0 auto;">
                         @endif
                         @if($docItem['model']->caption)
-                            <div style="font-size: 9pt; color: #475569; margin-top: 5px; font-style: italic;">{{ $docItem['model']->caption }}</div>
+                            <div style="font-size: 8.5pt; color: #475569; margin-top: 4pt; font-style: italic;">{{ $docItem['model']->caption }}</div>
                         @endif
                     </td>
                 @endforeach
                 @if(count($chunk) < 2)
-                    <td style="width: 50%; border: none;"></td>
+                    <td width="50%" style="width: 50%; border: none;">&nbsp;</td>
                 @endif
             </tr>
         @endforeach
     </table>
     @endif
 
-    <!-- Tanda Tangan Pengesahan -->
-    <div class="signature-block" style="margin-top: 25px;">
-        <table>
-            <tr>
-                <td style="width: {{ ($config['show_signer3'] ?? false) ? '33.3%' : '50%' }};">
-                    Mengetahui,<br>
-                    <strong>{{ $config['signer1_role'] ?? 'Pemimpin Rapat' }}</strong>
-                    <div class="signature-space" style="height: 60px;">
-                        @if(($config['show_signer1_signature'] ?? true) && isset($pimpinanSigBase64) && $pimpinanSigBase64)
-                            <img src="{{ $pimpinanSigBase64 }}" alt="TTD Pimpinan" style="max-height: 55px; max-width: 140px;">
-                        @endif
-                    </div>
-                    <strong><u>{{ $config['signer1_name'] ?? $agenda->nama_pimpinan }}</u></strong><br>
-                    NIP. {{ $config['signer1_nip'] ?? $agenda->nip_pimpinan }}
-                </td>
-
-                @if($config['show_signer3'] ?? false)
-                <td style="width: 33.3%;">
-                    Menyetujui,<br>
-                    <strong>{{ $config['signer3_role'] ?? 'Kepala LLDIKTI' }}</strong>
-                    <div class="signature-space" style="height: 60px;"></div>
-                    <strong><u>{{ $config['signer3_name'] ?? '-' }}</u></strong><br>
-                    NIP. {{ $config['signer3_nip'] ?? '-' }}
-                </td>
+    <!-- Tanda Tangan Pengesahan (3-Row Structure: Header, Space/Image, Name/NIP) -->
+    @php
+        $showSigner3 = $config['show_signer3'] ?? false;
+        $sigColWidth = $showSigner3 ? '33.3%' : '50%';
+    @endphp
+    <table class="signature-table" width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; border-collapse: collapse; margin-top: 12pt; page-break-inside: avoid; mso-yfti-row: cantSplit;">
+        <tr style="page-break-inside: avoid; mso-yfti-row: cantSplit;">
+            <td width="{{ $sigColWidth }}" align="center" valign="top" style="width: {{ $sigColWidth }}; text-align: center; vertical-align: top;">
+                Mengetahui,<br>
+                <strong>{{ $config['signer1_role'] ?? 'Pemimpin Rapat' }}</strong>
+            </td>
+            @if($showSigner3)
+            <td width="{{ $sigColWidth }}" align="center" valign="top" style="width: {{ $sigColWidth }}; text-align: center; vertical-align: top;">
+                Menyetujui,<br>
+                <strong>{{ $config['signer3_role'] ?? 'Kepala LLDIKTI' }}</strong>
+            </td>
+            @endif
+            <td width="{{ $sigColWidth }}" align="center" valign="top" style="width: {{ $sigColWidth }}; text-align: center; vertical-align: top;">
+                {{ $config['signing_city'] ?? 'Padang' }}, {{ $config['signing_date'] ?? now()->translatedFormat('d F Y') }}<br>
+                <strong>{{ $config['signer2_role'] ?? 'Notulis Rapat' }}</strong>
+            </td>
+        </tr>
+        <tr height="55" style="height: 42pt; mso-height-rule: exactly; page-break-inside: avoid; mso-yfti-row: cantSplit;">
+            <td width="{{ $sigColWidth }}" align="center" valign="middle" height="55" style="width: {{ $sigColWidth }}; height: 42pt; text-align: center; vertical-align: middle;">
+                @if(($config['show_signer1_signature'] ?? true) && isset($pimpinanSigBase64) && $pimpinanSigBase64)
+                    <img src="{{ $pimpinanSigBase64 }}" alt="TTD Pimpinan" height="42" style="max-height: 42pt; max-width: 120pt;">
+                @else
+                    &nbsp;
                 @endif
+            </td>
+            @if($showSigner3)
+            <td width="{{ $sigColWidth }}" align="center" valign="middle" height="55" style="width: {{ $sigColWidth }}; height: 42pt; text-align: center; vertical-align: middle;">
+                &nbsp;
+            </td>
+            @endif
+            <td width="{{ $sigColWidth }}" align="center" valign="middle" height="55" style="width: {{ $sigColWidth }}; height: 42pt; text-align: center; vertical-align: middle;">
+                @if(($config['show_signer2_signature'] ?? true) && isset($notulisSigBase64) && $notulisSigBase64)
+                    <img src="{{ $notulisSigBase64 }}" alt="TTD Notulis" height="42" style="max-height: 42pt; max-width: 120pt;">
+                @else
+                    &nbsp;
+                @endif
+            </td>
+        </tr>
+        <tr style="page-break-inside: avoid; mso-yfti-row: cantSplit;">
+            <td width="{{ $sigColWidth }}" align="center" valign="top" style="width: {{ $sigColWidth }}; text-align: center; vertical-align: top;">
+                <strong><u>{{ $config['signer1_name'] ?? $agenda->nama_pimpinan }}</u></strong><br>
+                NIP. {{ $config['signer1_nip'] ?? $agenda->nip_pimpinan }}
+            </td>
+            @if($showSigner3)
+            <td width="{{ $sigColWidth }}" align="center" valign="top" style="width: {{ $sigColWidth }}; text-align: center; vertical-align: top;">
+                <strong><u>{{ $config['signer3_name'] ?? '-' }}</u></strong><br>
+                NIP. {{ $config['signer3_nip'] ?? '-' }}
+            </td>
+            @endif
+            <td width="{{ $sigColWidth }}" align="center" valign="top" style="width: {{ $sigColWidth }}; text-align: center; vertical-align: top;">
+                <strong><u>{{ $config['signer2_name'] ?? $agenda->nama_notulis }}</u></strong><br>
+                NIP. {{ $config['signer2_nip'] ?? $agenda->nip_notulis }}
+            </td>
+        </tr>
+    </table>
 
-                <td style="width: {{ ($config['show_signer3'] ?? false) ? '33.3%' : '50%' }};">
-                    {{ $config['signing_city'] ?? 'Padang' }}, {{ $config['signing_date'] ?? now()->translatedFormat('d F Y') }}<br>
-                    <strong>{{ $config['signer2_role'] ?? 'Notulis Rapat' }}</strong>
-                    <div class="signature-space" style="height: 60px;">
-                        @if(($config['show_signer2_signature'] ?? true) && isset($notulisSigBase64) && $notulisSigBase64)
-                            <img src="{{ $notulisSigBase64 }}" alt="TTD Notulis" style="max-height: 55px; max-width: 140px;">
-                        @endif
-                    </div>
-                    <strong><u>{{ $config['signer2_name'] ?? $agenda->nama_notulis }}</u></strong><br>
-                    NIP. {{ $config['signer2_nip'] ?? $agenda->nip_notulis }}
-                </td>
-            </tr>
-        </table>
-    </div>
-
+    <!-- Catatan Kaki Resmi (Footer Note) -->
     @if($config['show_footer_note'] ?? true)
-    <div style="margin-top: 30px; padding-top: 10px; border-top: 1px dashed #cbd5e1; font-size: 8pt; color: #64748b; text-align: center; font-style: italic;">
+    <div style="margin-top: 14pt; padding-top: 6pt; border-top: 1pt dashed #94a3b8; font-size: 8pt; color: #64748b; text-align: center; font-style: italic;">
         {{ $config['footer_note'] ?? 'Dokumen ini diterbitkan secara resmi melalui Sistem Informasi Presensi Rapat (SIPERAPAT) LLDIKTI Wilayah X' }} &bull; Dicetak pada {{ now()->translatedFormat('d F Y H:i') }} WIB
     </div>
     @endif
+
+</div>
 </body>
 </html>
