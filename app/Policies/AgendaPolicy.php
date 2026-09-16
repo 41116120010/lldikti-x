@@ -91,16 +91,34 @@ class AgendaPolicy
 
     /**
      * Determine whether the user can delete the agenda.
+     * Hak tertinggi: Administrator (semua unit).
+     * Terbatas: Admin Unit yang berkaitan (pembuat, rekan se-unit penyelenggara, atau unit sasaran non-universal).
      */
     public function delete(User $user, Agenda $agenda): bool
     {
+        // 1. Administrator memiliki hak tertinggi untuk menghapus agenda di semua unit
         if ($user->isAdministrator()) {
             return true;
         }
 
+        // 2. Admin Unit hanya dapat menghapus agenda yang berkaitan dengan unit kerjanya
         if ($user->isAdmin()) {
-            return $agenda->created_by === $user->id 
-                || ($user->unit_id !== null && $agenda->creator?->unit_id === $user->unit_id);
+            // Pembuat langsung agenda
+            if ($agenda->created_by === $user->id) {
+                return true;
+            }
+
+            if ($user->unit_id !== null) {
+                // Unit penyelenggara sama dengan unit kerja admin
+                if ($agenda->creator?->unit_id === $user->unit_id) {
+                    return true;
+                }
+
+                // Agenda rapat khusus non-universal yang ditujukan untuk unit kerja admin
+                if (! $agenda->is_all_units && $agenda->units()->where('units.id', $user->unit_id)->exists()) {
+                    return true;
+                }
+            }
         }
 
         return false;

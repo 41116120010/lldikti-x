@@ -181,6 +181,29 @@
                     </a>
                 @endcan
 
+                @can('delete', $agenda)
+                    <form 
+                        action="{{ route('admin.agendas.destroy', $agenda) }}" 
+                        method="POST" 
+                        class="inline"
+                        data-confirm="Apakah Anda yakin ingin menghapus agenda rapat '{{ $agenda->judul_rapat }}'? Seluruh data presensi, tanda tangan digital, foto presensi, notulensi, dan lampiran dokumentasi akan dihapus permanen. Tindakan ini tidak dapat dibatalkan!"
+                        data-confirm-title="Hapus Agenda Rapat"
+                        data-confirm-type="danger"
+                        data-confirm-btn="Ya, Hapus Agenda"
+                    >
+                        @csrf
+                        @method('DELETE')
+                        <button 
+                            type="submit" 
+                            class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold text-rose-200 bg-rose-950/60 hover:bg-rose-900 border border-rose-800/80 transition cursor-pointer shadow-sm"
+                            title="Hapus agenda rapat kedinasan"
+                        >
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                            <span>Hapus Agenda</span>
+                        </button>
+                    </form>
+                @endcan
+
                 {{-- Personal Attendance Action for Current User --}}
                 @if(isset($myAttendance) && $myAttendance)
                     <a href="{{ route('attendances.success', [$agenda, $myAttendance]) }}" class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold text-emerald-950 bg-emerald-400 hover:bg-emerald-300 border border-emerald-300 shadow-sm transition" title="Lihat Bukti Kehadiran Anda">
@@ -460,7 +483,7 @@
                     $notulisAtt = $agenda->notulis_attendance;
                 @endphp
                 <div class="border-t border-slate-200 px-6 py-6">
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-8 max-w-2xl mx-auto">
                         <div class="text-center space-y-4">
                             <div class="text-[10px] uppercase font-bold text-slate-500 tracking-wider font-mono">Pemimpin Rapat</div>
                             <div class="h-16 flex items-center justify-center">
@@ -508,17 +531,6 @@
                                         Hadir ({{ $notulisAtt->signed_at->format('H:i') }} WIB)
                                     </span>
                                 @endif
-                            </div>
-                        </div>
-
-                        <div class="text-center space-y-4">
-                            <div class="text-[10px] uppercase font-bold text-slate-500 tracking-wider font-mono">Direktur / Pimpinan Unit</div>
-                            <div class="h-16 flex items-center justify-center">
-                                <svg viewBox="0 0 100 40" width="80" height="32" class="text-slate-300"><path d="M10 30 Q 25 5 40 25 T 70 20 T 90 25" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
-                            </div>
-                            <div class="border-t border-slate-300 pt-2">
-                                <div class="text-xs font-bold text-slate-900">Direktur / Penanggung Jawab</div>
-                                <div class="text-[10px] text-slate-500 font-mono">LLDIKTI Wilayah X</div>
                             </div>
                         </div>
                     </div>

@@ -308,6 +308,7 @@ class AgendaController extends Controller
 
     /**
      * Remove the specified agenda from storage.
+     * Dapat dilakukan oleh Administrator (semua unit) atau Admin Unit yang berkaitan.
      */
     public function destroy(Agenda $agenda): RedirectResponse
     {
@@ -316,34 +317,50 @@ class AgendaController extends Controller
         $judul = $agenda->judul_rapat;
         $id = $agenda->id;
 
-        // Protect archived government meeting records
+        // Lindungi catatan presensi kegiatan kedinasan yang sudah terlaksana
         if ($agenda->attendances()->exists()) {
             return back()->with('error', "Agenda rapat '{$judul}' telah memiliki catatan presensi kehadiran pegawai. Agenda tidak dapat dihapus demi integritas arsip kegiatan. Ubah status agenda menjadi 'Dibatalkan' jika agenda batal terlaksana.");
         }
 
         DB::transaction(function () use ($agenda, $id) {
-            // Delete circular letter file
+            // 1. Hapus berkas fisik surat edaran
             if ($agenda->surat_edaran_path && Storage::disk('public')->exists($agenda->surat_edaran_path)) {
                 Storage::disk('public')->delete($agenda->surat_edaran_path);
             }
 
-            // Delete documentation files
+            // 2. Hapus berkas fisik custom logo kop jika ada
+            if (!empty($agenda->report_config['custom_logo_path']) && Storage::disk('public')->exists($agenda->report_config['custom_logo_path'])) {
+                Storage::disk('public')->delete($agenda->report_config['custom_logo_path']);
+            }
+
+            // 3. Hapus berkas fisik foto dokumentasi rapat
             foreach ($agenda->documentations as $doc) {
-                if (Storage::disk('public')->exists($doc->file_path)) {
+                if ($doc->file_path && Storage::disk('public')->exists($doc->file_path)) {
                     Storage::disk('public')->delete($doc->file_path);
                 }
             }
 
-            // Clean up agenda directories
+            // 4. Hapus berkas fisik presensi peserta (foto selfie dan tanda tangan digital)
+            foreach ($agenda->attendances as $attendance) {
+                if ($attendance->selfie_path && Storage::disk('public')->exists($attendance->selfie_path)) {
+                    Storage::disk('public')->delete($attendance->selfie_path);
+                }
+                if ($attendance->signature_path && Storage::disk('public')->exists($attendance->signature_path)) {
+                    Storage::disk('public')->delete($attendance->signature_path);
+                }
+            }
+
+            // 5. Bersihkan direktori agenda jika tersisa
             Storage::disk('public')->deleteDirectory("documentations/{$id}");
             Storage::disk('public')->deleteDirectory("attendances/{$id}");
 
+            // 6. Hapus agenda (relasi attendances, documentations, agenda_units cascade otomatis)
             $agenda->delete();
         });
 
         ActivityLogger::log(
             type: 'DELETE_AGENDA',
-            description: "Agenda rapat '{$judul}' (ID: {$id}) dihapus.",
+            description: "Agenda rapat '{$judul}' (ID: {$id}) berhasil dihapus oleh " . Auth::user()->name . ".",
             targetModel: Agenda::class,
             targetId: $id
         );
