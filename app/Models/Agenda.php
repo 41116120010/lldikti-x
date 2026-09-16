@@ -246,6 +246,47 @@ class Agenda extends Model
     }
 
     /**
+     * Insert zero-width space (\u{200B}) into unbroken words longer than threshold (e.g., URLs, hashes)
+     * to ensure proper wrapping and prevent margin overflow in Web Preview, PDF, and Word exports.
+     * Safely preserves HTML tags, tag attributes, and entities.
+     */
+    public static function wrapLongWordsWithZeroWidthSpace(?string $html, int $threshold = 30): ?string
+    {
+        if ($html === null || $html === '') {
+            return $html;
+        }
+
+        $zwsp = "\u{200B}";
+
+        // Split HTML by tags to isolate text nodes from tags/attributes
+        $parts = preg_split('/(<[^>]+>)/u', $html, -1, PREG_SPLIT_DELIM_CAPTURE);
+        if ($parts === false) {
+            return $html;
+        }
+
+        foreach ($parts as $i => $part) {
+            // Even indices are text nodes; odd indices are HTML tags
+            if ($i % 2 === 0 && $part !== '') {
+                // Split text node by HTML entities so entities like &nbsp; are not corrupted
+                $entityParts = preg_split('/(&[a-zA-Z0-9#]+;)/u', $part, -1, PREG_SPLIT_DELIM_CAPTURE);
+                if ($entityParts !== false) {
+                    foreach ($entityParts as $j => $entityPart) {
+                        // Even indices are raw text; odd indices are entities
+                        if ($j % 2 === 0 && $entityPart !== '') {
+                            $entityParts[$j] = preg_replace_callback('/([^\s]{' . $threshold . '})/u', function ($m) use ($zwsp) {
+                                return $m[1] . $zwsp;
+                            }, $entityPart);
+                        }
+                    }
+                    $parts[$i] = implode('', $entityParts);
+                }
+            }
+        }
+
+        return implode('', $parts);
+    }
+
+    /**
      * Get the formatted notulensi (rich HTML or safe nl2br for legacy text).
      */
     public function getFormattedNotulensiAttribute(): ?string
@@ -256,11 +297,11 @@ class Agenda extends Model
 
         // If it already contains HTML tags, return as rich formatted content
         if ($this->notulensi !== strip_tags($this->notulensi)) {
-            return $this->notulensi;
+            return self::wrapLongWordsWithZeroWidthSpace($this->notulensi);
         }
 
         // Otherwise legacy plain text, convert newlines safely
-        return nl2br(e($this->notulensi));
+        return self::wrapLongWordsWithZeroWidthSpace(nl2br(e($this->notulensi)));
     }
 
     /**
@@ -273,10 +314,10 @@ class Agenda extends Model
         }
 
         if ($this->kesimpulan !== strip_tags($this->kesimpulan)) {
-            return $this->kesimpulan;
+            return self::wrapLongWordsWithZeroWidthSpace($this->kesimpulan);
         }
 
-        return nl2br(e($this->kesimpulan));
+        return self::wrapLongWordsWithZeroWidthSpace(nl2br(e($this->kesimpulan)));
     }
 
     /**

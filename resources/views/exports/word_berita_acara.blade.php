@@ -40,6 +40,13 @@
             padding: 0pt;
             mso-pagination: widow-orphan;
             mso-line-height-rule: exactly;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
 
         table {

@@ -50,11 +50,11 @@
 
 <!-- Informasi Pelaksanaan Rapat -->
 @if($config['show_meeting_info'] ?? true)
-<table class="info-table" width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; margin-bottom: 5pt; border-collapse: collapse; font-size: 9.5pt; border: none; font-family: 'Times New Roman', Times, serif;">
+<table class="info-table" width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; margin-bottom: 5pt; border-collapse: collapse; font-size: 9.5pt; border: none; font-family: 'Times New Roman', Times, serif; word-wrap: break-word; overflow-wrap: break-word;">
     <tr>
         <td style="width: 25%; font-weight: bold; padding: 1.5pt 0; vertical-align: top; border: none;">Perihal / Agenda</td>
         <td style="width: 2%; padding: 1.5pt 0; vertical-align: top; border: none;">:</td>
-        <td style="padding: 1.5pt 0; vertical-align: top; border: none;"><strong>{{ $config['custom_agenda_title'] ?? $agenda->judul_rapat }}</strong></td>
+        <td style="padding: 1.5pt 0; vertical-align: top; border: none; word-wrap: break-word; overflow-wrap: break-word;"><strong>{{ $config['custom_agenda_title'] ?? $agenda->judul_rapat }}</strong></td>
     </tr>
     <tr>
         <td style="width: 25%; font-weight: bold; padding: 1.5pt 0; vertical-align: top; border: none;">Hari / Tanggal</td>
@@ -69,7 +69,7 @@
     <tr>
         <td style="width: 25%; font-weight: bold; padding: 1.5pt 0; vertical-align: top; border: none;">Format &amp; Tempat</td>
         <td style="width: 2%; padding: 1.5pt 0; vertical-align: top; border: none;">:</td>
-        <td style="padding: 1.5pt 0; vertical-align: top; border: none;">
+        <td style="padding: 1.5pt 0; vertical-align: top; border: none; word-wrap: break-word; overflow-wrap: break-word;">
             {{ ucfirst($agenda->tipe_rapat) }} &mdash; 
             {{ $config['custom_location'] ?? ($agenda->lokasi_ruang ?? 'Daring (Online Meeting)') }}
         </td>
@@ -77,7 +77,7 @@
     <tr>
         <td style="width: 25%; font-weight: bold; padding: 1.5pt 0; vertical-align: top; border: none;">Penyelenggara Rapat</td>
         <td style="width: 2%; padding: 1.5pt 0; vertical-align: top; border: none;">:</td>
-        <td style="padding: 1.5pt 0; vertical-align: top; border: none;">{{ $agenda->creator?->name ?? 'Penyelenggara Rapat' }} ({{ $agenda->creator?->unit?->nama_unit ?? 'Tingkat Lembaga' }})</td>
+        <td style="padding: 1.5pt 0; vertical-align: top; border: none; word-wrap: break-word; overflow-wrap: break-word;">{{ $agenda->creator?->name ?? 'Penyelenggara Rapat' }} ({{ $agenda->creator?->unit?->nama_unit ?? 'Tingkat Lembaga' }})</td>
     </tr>
 </table>
 @endif
@@ -85,7 +85,7 @@
 <!-- Daftar Hadir Peserta -->
 @if($config['show_attendees'] ?? true)
 <div class="section-title" style="font-size: 10pt; font-weight: bold; margin: 8pt 0 4pt 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif; page-break-after: avoid; break-after: avoid;">I. DAFTAR KEHADIRAN PESERTA ({{ $agenda->attendances->count() }} Orang)</div>
-<table class="attendance-table" width="100%" border="1" cellspacing="0" cellpadding="0" bordercolor="#000000" style="width: 100%; border-collapse: collapse; border: 1px solid #000000; margin-top: 2pt; font-size: 8.5pt; font-family: 'Times New Roman', Times, serif;">
+<table class="attendance-table" width="100%" border="1" cellspacing="0" cellpadding="0" bordercolor="#000000" style="width: 100%; table-layout: fixed; border-collapse: collapse; border: 1px solid #000000; margin-top: 2pt; font-size: 8.5pt; font-family: 'Times New Roman', Times, serif; word-wrap: break-word; overflow-wrap: break-word;">
     <thead>
         <tr style="background-color: #f2f2f2; mso-yfti-tblheader: yes; page-break-inside: avoid; break-inside: avoid;">
             <th style="border: 1px solid #000000; padding: 3pt 2pt; text-align: center; width: 4%; font-weight: bold; white-space: nowrap;">No</th>
@@ -156,17 +156,17 @@
 
 <!-- Notulensi & Kesimpulan Rapat -->
 @if(($config['show_notulensi'] ?? true) || ($config['show_kesimpulan'] ?? true))
-<table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; border-collapse: collapse; border: none; margin-top: 6pt; page-break-inside: avoid; break-inside: avoid; mso-yfti-row: cantSplit;">
+<table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; border-collapse: collapse; border: none; margin-top: 6pt; page-break-inside: avoid; break-inside: avoid; mso-yfti-row: cantSplit;">
     <tr style="page-break-inside: avoid; break-inside: avoid; mso-yfti-row: cantSplit;">
-        <td style="border: none; padding: 0;">
+        <td style="border: none; padding: 0; width: 100%; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;">
             <div class="section-title" style="font-size: 10pt; font-weight: bold; margin: 0 0 3pt 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif; page-break-after: avoid; break-after: avoid;">II. NOTULENSI &amp; KESIMPULAN RAPAT</div>
 
             @if($config['show_notulensi'] ?? true)
             <div style="margin-bottom: 4pt;">
                 <div style="font-weight: bold; font-size: 8.5pt; margin-bottom: 1.5pt; font-family: 'Times New Roman', Times, serif;">A. Catatan Jalannya Rapat (Notulensi):</div>
-                <table width="100%" border="1" cellspacing="0" cellpadding="0" bordercolor="#000000" style="width: 100%; border-collapse: collapse; border: 1px solid #000000; font-size: 8.5pt; line-height: 1.25; background: #fafafa; font-family: 'Times New Roman', Times, serif;">
+                <table width="100%" border="1" cellspacing="0" cellpadding="0" bordercolor="#000000" style="width: 100%; table-layout: fixed; border-collapse: collapse; border: 1px solid #000000; font-size: 8.5pt; line-height: 1.25; background: #fafafa; font-family: 'Times New Roman', Times, serif;">
                     <tr>
-                        <td style="border: 1px solid #000000; padding: 2pt 4pt; text-align: justify; vertical-align: top;">
+                        <td style="border: 1px solid #000000; padding: 2pt 4pt; text-align: justify; vertical-align: top; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;">
                             {!! $agenda->formatted_notulensi ?: '<span style="color: #64748b; font-style: italic;">Tidak ada catatan notulensi khusus yang dicatat.</span>' !!}
                         </td>
                     </tr>
@@ -177,9 +177,9 @@
             @if($config['show_kesimpulan'] ?? true)
             <div>
                 <div style="font-weight: bold; font-size: 8.5pt; margin-bottom: 1.5pt; font-family: 'Times New Roman', Times, serif;">B. Kesimpulan &amp; Rencana Tindak Lanjut (RTL):</div>
-                <table width="100%" border="1" cellspacing="0" cellpadding="0" bordercolor="#000000" style="width: 100%; border-collapse: collapse; border: 1px solid #000000; font-size: 8.5pt; line-height: 1.25; background: #fafafa; font-family: 'Times New Roman', Times, serif;">
+                <table width="100%" border="1" cellspacing="0" cellpadding="0" bordercolor="#000000" style="width: 100%; table-layout: fixed; border-collapse: collapse; border: 1px solid #000000; font-size: 8.5pt; line-height: 1.25; background: #fafafa; font-family: 'Times New Roman', Times, serif;">
                     <tr>
-                        <td style="border: 1px solid #000000; padding: 2pt 4pt; text-align: justify; vertical-align: top;">
+                        <td style="border: 1px solid #000000; padding: 2pt 4pt; text-align: justify; vertical-align: top; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;">
                             {!! $agenda->formatted_kesimpulan ?: '<span style="color: #64748b; font-style: italic;">Tidak ada catatan kesimpulan khusus yang dicatat.</span>' !!}
                         </td>
                     </tr>

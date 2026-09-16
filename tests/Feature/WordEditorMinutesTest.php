@@ -238,4 +238,43 @@ class WordEditorMinutesTest extends TestCase
         $this->assertStringContainsString('m<sup>2</sup>', $this->agenda->kesimpulan);
         $this->assertStringContainsString('<font size="4">teks besar</font>', $this->agenda->kesimpulan);
     }
+
+    public function test_long_words_in_minutes_and_conclusions_are_safely_wrapped_with_zero_width_space(): void
+    {
+        $longUrl = 'https://lldikti3.kemdikbud.go.id/portal/v2/dokumen/verifikasi/token_kehadiran_rapat_koordinasi_bidang_kelembagaan_dan_sumber_daya_2026.pdf';
+        $longHash = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+        $normalIndonesian = 'Pimpinan rapat mempertanggungjawabkannya sesuai ketentuan tata naskah dinas.';
+        $htmlWithLinksAndEntities = '<p>Dokumen dapat diunduh pada <a href="' . $longUrl . '">' . $longUrl . '</a>&nbsp;dengan verifikasi hash ' . $longHash . '.</p>';
+
+        $this->agenda->update([
+            'notulensi' => $htmlWithLinksAndEntities,
+            'kesimpulan' => $normalIndonesian . ' ' . $longUrl,
+        ]);
+
+        $formattedNotulensi = $this->agenda->formatted_notulensi;
+        $formattedKesimpulan = $this->agenda->formatted_kesimpulan;
+
+        // 1. Invisible zero-width space (\u{200B}) must be inserted into the long visible text to prevent layout overflow
+        $zwsp = "\u{200B}";
+        $this->assertStringContainsString($zwsp, $formattedNotulensi);
+        $this->assertStringContainsString($zwsp, $formattedKesimpulan);
+
+        // 2. HTML attribute values (such as href="https://...") MUST NOT be corrupted by ZWSP
+        $this->assertStringContainsString('href="' . $longUrl . '"', $formattedNotulensi);
+
+        // 3. Normal Indonesian words (even long ones like "mempertanggungjawabkannya" ~25 chars) must not be split
+        $this->assertStringContainsString('mempertanggungjawabkannya', $formattedKesimpulan);
+
+        // 4. HTML entities like &nbsp; must remain completely intact
+        $this->assertStringContainsString('&nbsp;', $formattedNotulensi);
+
+        // 5. Test exports include wrapped content
+        $pdfResponse = $this->actingAs($this->admin)->get(route('admin.reports.export.pdf', $this->agenda));
+        $pdfResponse->assertOk();
+        $this->assertStringContainsString($zwsp, $pdfResponse->getContent());
+
+        $wordResponse = $this->actingAs($this->admin)->get(route('admin.reports.export.word', $this->agenda));
+        $wordResponse->assertOk();
+        $this->assertStringContainsString($zwsp, $wordResponse->getContent());
+    }
 }

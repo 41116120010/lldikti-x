@@ -12,6 +12,8 @@
 
         * {
             box-sizing: border-box;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
 
         body {
@@ -154,6 +156,13 @@
             font-size: 9.5pt;
             line-height: 1.4;
             text-align: justify;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
 
         .signature-block {
