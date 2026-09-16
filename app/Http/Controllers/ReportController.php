@@ -162,7 +162,7 @@ class ReportController extends Controller
     }
 
     /**
-     * Export Official Meeting Minutes & Attendance to PDF (Print View).
+     * Export Official Meeting Minutes & Attendance to PDF (Binary Download or A4 Sheet Print View).
      */
     public function exportPdf(Request $request, Agenda $agenda, PdfExportService $pdfService): Response
     {
@@ -175,8 +175,15 @@ class ReportController extends Controller
             description: "Mengekspor Berita Acara & Daftar Hadir PDF untuk agenda: {$agenda->judul_rapat}",
             targetModel: Agenda::class,
             targetId: $agenda->id,
-            properties: ['custom_config' => !empty($request->all())]
+            properties: [
+                'custom_config' => !empty($request->all()),
+                'download_mode' => $request->query('download') === 'pdf' ? 'binary' : 'preview',
+            ]
         );
+
+        if ($request->query('download') === 'pdf' || $request->input('download') === 'pdf' || $request->boolean('download_pdf')) {
+            return $pdfService->exportBinaryPdf($agenda, $config);
+        }
 
         return $pdfService->exportBeritaAcara($agenda, $config);
     }

@@ -15,6 +15,15 @@ class AttendanceCheckInTest extends TestCase
     private string $validJpegBase64 = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=';
     private string $validPngBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $staff = User::where('username', 'staff_rizky')->first();
+        if ($staff) {
+            Attendance::where('user_id', $staff->id)->delete();
+        }
+    }
+
     public function test_user_can_view_attendance_portal(): void
     {
         $staff = User::where('role', 'staff')->first();

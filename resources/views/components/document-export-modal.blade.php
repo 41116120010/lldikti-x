@@ -409,21 +409,35 @@
                         type="submit" 
                         formaction="{{ route('admin.reports.export.word', $agenda) }}" 
                         onclick="this.form.target='_self';" 
-                        class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-blue-700 hover:bg-blue-800 transition shadow-xs cursor-pointer"
+                        class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-white bg-blue-700 hover:bg-blue-800 transition shadow-xs cursor-pointer"
+                        title="Unduh berkas dokumen format Microsoft Word (.doc)"
                     >
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="8 13 12 17 16 13"/><line x1="12" y1="9" x2="12" y2="17"/></svg>
                         <span>Unduh Word (.doc)</span>
                     </button>
 
-                    <!-- Export PDF Button -->
+                    <!-- Direct Binary PDF Download Button -->
+                    <button 
+                        type="submit" 
+                        formaction="{{ route('admin.reports.export.pdf', ['agenda' => $agenda, 'download' => 'pdf']) }}" 
+                        onclick="this.form.target='_self';" 
+                        class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition shadow-xs cursor-pointer"
+                        title="Unduh langsung berkas PDF biner resmi"
+                    >
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        <span>Unduh PDF (.pdf)</span>
+                    </button>
+
+                    <!-- Print / A4 Sheet Preview Button -->
                     <button 
                         type="submit" 
                         formaction="{{ route('admin.reports.export.pdf', $agenda) }}" 
                         onclick="this.form.target='_blank';" 
-                        class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 transition shadow-sm cursor-pointer"
+                        class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 transition shadow-sm cursor-pointer"
+                        title="Buka pratinjau lembar A4 di tab baru untuk dicetak"
                     >
-                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
-                        <span>Cetak / Pratinjau PDF</span>
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                        <span>Pratinjau / Cetak A4</span>
                     </button>
                 </div>
             </div>

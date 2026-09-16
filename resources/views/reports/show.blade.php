@@ -83,14 +83,24 @@
                     <span>Sesuaikan Dokumen</span>
                 </button>
 
-                <!-- PDF Export Button -->
+                <!-- Direct Binary PDF Export Button -->
+                <a 
+                    href="{{ route('admin.reports.export.pdf', ['agenda' => $agenda, 'download' => 'pdf']) }}" 
+                    class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition shadow-xs"
+                    title="Unduh langsung berkas Berita Acara & Rekap Kehadiran PDF (.pdf)"
+                >
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    <span>Unduh PDF (.pdf)</span>
+                </a>
+
+                <!-- A4 Sheet Preview & Print Button -->
                 <a 
                     href="{{ route('admin.reports.export.pdf', $agenda) }}" 
                     target="_blank" 
                     class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold text-white bg-white/10 hover:bg-white/20 border border-white/20 transition shadow-xs"
-                    title="Cetak Berita Acara & Rekap Kehadiran (PDF)"
+                    title="Buka pratinjau lembar A4 di tab baru untuk dicetak"
                 >
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
                     <span>Cetak Berita Acara (PDF)</span>
                 </a>
 

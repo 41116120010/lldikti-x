@@ -6,25 +6,48 @@
     <title>Berita Acara — {{ $agenda->judul_rapat }}</title>
     <style>
         @page {
-            size: A4 portrait;
-            margin: 20mm 15mm 20mm 15mm;
+            size: 210mm 297mm portrait;
+            margin: 12mm 15mm 12mm 15mm;
+        }
+
+        * {
+            box-sizing: border-box;
         }
 
         body {
             font-family: 'Times New Roman', Times, serif;
             font-size: 11pt;
-            line-height: 1.4;
-            color: #000;
-            background: #fff;
+            line-height: 1.35;
+            color: #000000;
+            background: #e2e8f0;
             margin: 0;
             padding: 0;
         }
 
+        /* Screen Sheet View */
+        .a4-sheet-wrapper {
+            display: flex;
+            justify-content: center;
+            padding: 24px 16px 48px 16px;
+            overflow-x: auto;
+            min-height: calc(100vh - 54px);
+        }
+
+        .a4-sheet-container {
+            width: 210mm;
+            min-height: 297mm;
+            background: #ffffff;
+            padding: 12mm 15mm 12mm 15mm;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1), 0 20px 25px -5px rgba(0, 0, 0, 0.15);
+            border: 1px solid #cbd5e1;
+            box-sizing: border-box;
+            margin: 0 auto;
+        }
+
         .header-kop {
             text-align: center;
-            border-bottom: 3px double #000;
-            padding-bottom: 8px;
-            margin-bottom: 15px;
+            padding-bottom: 2px;
+            margin-bottom: 8px;
         }
 
         .header-kop h3 {
@@ -51,7 +74,7 @@
 
         .doc-title {
             text-align: center;
-            margin: 15px 0 10px 0;
+            margin: 12px 0 10px 0;
         }
 
         .doc-title h1 {
@@ -69,14 +92,14 @@
 
         .info-table {
             width: 100%;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
             border-collapse: collapse;
             font-size: 10.5pt;
             border: none;
         }
 
         .info-table td {
-            padding: 3px 0;
+            padding: 2.5px 0;
             vertical-align: top;
             border: none;
         }
@@ -93,21 +116,23 @@
         .section-title {
             font-size: 11pt;
             font-weight: bold;
-            margin: 15px 0 6px 0;
+            margin: 14px 0 6px 0;
             text-transform: uppercase;
+            page-break-after: avoid;
+            break-after: avoid;
         }
 
         .attendance-table {
             width: 100%;
             border-collapse: collapse;
             border: 1px solid #000;
-            margin-top: 5px;
-            font-size: 10pt;
+            margin-top: 4px;
+            font-size: 9.5pt;
         }
 
         .attendance-table th, .attendance-table td {
             border: 1px solid #000;
-            padding: 5px 6px;
+            padding: 4px 6px;
             vertical-align: middle;
         }
 
@@ -119,50 +144,22 @@
 
         .sig-cell {
             text-align: center;
-            height: 40px;
-        }
-
-        .sig-cell img {
-            max-height: 36px;
-            max-width: 80px;
-            display: block;
-            margin: 0 auto;
+            height: 36px;
         }
 
         .box-text {
-            border: 1px solid #000;
-            padding: 8px 10px;
-            font-size: 10pt;
-            min-height: 40px;
+            border: 1px solid #000000;
+            padding: 6px 8px;
+            background-color: #fafafa;
+            font-size: 9.5pt;
+            line-height: 1.4;
             text-align: justify;
-            overflow-wrap: break-word;
-            word-break: break-word;
-        }
-
-        .box-text ul, .box-text ol {
-            margin: 4px 0 4px 20px;
-            padding: 0;
-        }
-
-        .box-text li {
-            margin: 2px 0;
-        }
-
-        .box-text p {
-            margin: 4px 0;
-        }
-
-        .box-text blockquote {
-            border-left: 2px solid #333;
-            padding-left: 8px;
-            margin: 4px 0;
-            font-style: italic;
         }
 
         .signature-block {
-            margin-top: 25px;
-            width: 100%;
+            margin-top: 20px;
             page-break-inside: avoid;
+            break-inside: avoid;
         }
 
         .signature-block table {
@@ -172,301 +169,200 @@
         }
 
         .signature-block td {
-            width: 50%;
             vertical-align: top;
             text-align: center;
             font-size: 10.5pt;
             border: none;
         }
 
-        .signature-space {
-            height: 60px;
-        }
-
+        /* Top Bar Screen Styles */
         .no-print-bar {
             background: #0f172a;
-            color: #fff;
+            color: #ffffff;
             padding: 10px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-family: sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             font-size: 12px;
             position: sticky;
             top: 0;
             z-index: 100;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .brand-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #f8fafc;
+        }
+
+        .brand-title strong {
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            color: #ffffff;
+        }
+
+        .brand-divider {
+            color: #475569;
+            font-weight: 300;
+        }
+
+        .brand-subtitle {
+            color: #94a3b8;
+            font-size: 12.5px;
+            font-weight: 500;
+        }
+
+        .actions-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            border: 1px solid transparent;
+            transition: all 0.15s ease-in-out;
+            min-height: 36px;
+        }
+
+        .btn-action svg {
+            width: 15px;
+            height: 15px;
+            flex-shrink: 0;
+        }
+
+        .btn-pdf {
+            background: #059669;
+            color: #ffffff;
+        }
+        .btn-pdf:hover {
+            background: #047857;
         }
 
         .btn-print {
-            background: #059669;
-            color: #fff;
-            border: none;
-            padding: 6px 14px;
-            border-radius: 6px;
-            font-weight: bold;
-            cursor: pointer;
+            background: #1e3a8a;
+            color: #ffffff;
+        }
+        .btn-print:hover {
+            background: #1d4ed8;
+        }
+
+        .btn-word {
+            background: #2563eb;
+            color: #ffffff;
+        }
+        .btn-word:hover {
+            background: #1d4ed8;
         }
 
         .btn-close {
+            background: #334155;
+            color: #f1f5f9;
+            border: 1px solid #475569;
+        }
+        .btn-close:hover {
             background: #475569;
-            color: #fff;
-            border: none;
-            padding: 6px 14px;
-            border-radius: 6px;
-            cursor: pointer;
-            text-decoration: none;
         }
 
         @media print {
+            @page {
+                size: 210mm 297mm portrait !important;
+                margin: 12mm 15mm 12mm 15mm !important;
+            }
+            html, body {
+                width: 210mm !important;
+                background: #ffffff !important;
+                color: #000000 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
             .no-print-bar {
                 display: none !important;
             }
-            body {
-                background: none;
+            .a4-sheet-wrapper {
+                display: block !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                overflow: visible !important;
+                min-height: auto !important;
+            }
+            .a4-sheet-container {
+                width: 100% !important;
+                max-width: none !important;
+                min-height: auto !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                box-shadow: none !important;
+                border: none !important;
             }
             .page-break {
                 page-break-before: always;
+                break-before: page;
             }
         }
     </style>
 </head>
 <body>
-    <!-- Top Print Bar for Browser -->
+    <!-- Top Action Bar for Browser (Clean & Non-Slop) -->
     <div class="no-print-bar">
-        <div><strong>SIPERAPAT LLDIKTI</strong> &bull; Pratinjau Dokumen Berita Acara & Daftar Hadir Resmi</div>
-        <div style="display: flex; gap: 8px;">
-            <button class="btn-print" onclick="window.print()">Cetak / Simpan PDF</button>
-            <button class="btn-close" onclick="window.close()">Tutup</button>
+        <div class="brand-title">
+            <strong>SIPERAPAT</strong>
+            <span class="brand-divider">|</span>
+            <span class="brand-subtitle">Pratinjau Dokumen Berita Acara</span>
+        </div>
+        <div class="actions-group">
+            <a href="{{ request()->fullUrlWithQuery(['download' => 'pdf']) }}" class="btn-action btn-pdf" title="Unduh langsung berkas PDF biner resmi">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                Unduh PDF (.pdf)
+            </a>
+            <button class="btn-action btn-print" onclick="window.print()" title="Cetak langsung ke printer atau Simpan ke PDF via browser">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                    <rect x="6" y="14" width="12" height="8"></rect>
+                </svg>
+                Cetak Lembar A4
+            </button>
+            <a href="{{ route('admin.reports.export.word', array_merge(['agenda' => $agenda], request()->query())) }}" class="btn-action btn-word" title="Unduh salinan berkas Microsoft Word (.doc)">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <line x1="10" y1="9" x2="8" y2="9"></line>
+                </svg>
+                Unduh Word (.doc)
+            </a>
+            <button class="btn-action btn-close" onclick="window.close()" title="Tutup pratinjau">Tutup</button>
         </div>
     </div>
 
-    <div style="padding: 20px 30px;">
-        <!-- Kop Surat Resmi Instansi -->
-        @if($config['show_kop'] ?? true)
-        <div class="header-kop">
-            @if(($config['show_logo'] ?? true) && isset($logoBase64) && $logoBase64)
-            <table style="width: 100%; border-collapse: collapse; border: none; margin: 0; padding: 0;">
-                <tr>
-                    <td style="width: 75px; text-align: center; vertical-align: middle; border: none; padding: 0;">
-                        <img src="{{ $logoBase64 }}" alt="Logo Instansi" style="max-height: 70px; max-width: 70px; object-fit: contain; display: block; margin: 0 auto;">
-                    </td>
-                    <td style="text-align: center; vertical-align: middle; border: none; padding: 0 10px;">
-                        <h3>{{ $config['instansi_induk'] ?? 'KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI' }}</h3>
-                        <h2>{{ $config['instansi_pelaksana'] ?? 'LEMBAGA LAYANAN PENDIDIKAN TINGGI (LLDIKTI) WILAYAH X' }}</h2>
-                        <p>{{ $config['alamat_kontak'] ?? 'Jalan Khatib Sulaiman, Padang, Sumatera Barat • Laman: lldikti10.kemdikbud.go.id' }}</p>
-                    </td>
-                    <td style="width: 75px; border: none; padding: 0;"></td>
-                </tr>
-            </table>
-            @else
-            <h3>{{ $config['instansi_induk'] ?? 'KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI' }}</h3>
-            <h2>{{ $config['instansi_pelaksana'] ?? 'LEMBAGA LAYANAN PENDIDIKAN TINGGI (LLDIKTI) WILAYAH X' }}</h2>
-            <p>{{ $config['alamat_kontak'] ?? 'Jalan Khatib Sulaiman, Padang, Sumatera Barat • Laman: lldikti10.kemdikbud.go.id' }}</p>
-            @endif
+    <!-- Center Screen Wrapper for A4 Physical Sheet -->
+    <div class="a4-sheet-wrapper">
+        <div class="a4-sheet-container">
+            @include('exports.partials.document_body')
         </div>
-        @else
-        <div style="height: 25px;"></div>
-        @endif
-
-        <!-- Judul Dokumen -->
-        <div class="doc-title">
-            <h1>{{ $config['document_title'] ?? 'BERITA ACARA DAN DAFTAR HADIR RAPAT' }}</h1>
-            @if($config['show_document_number'] ?? true)
-            <span>Nomor: {{ $config['document_number'] ?? ('BA-RAPAT/' . date('Y') . '/' . str_pad($agenda->id, 4, '0', STR_PAD_LEFT)) }}</span>
-            @endif
-        </div>
-
-        <!-- Informasi Pelaksanaan -->
-        @if($config['show_meeting_info'] ?? true)
-        <table class="info-table">
-            <tr>
-                <td class="label">Perihal / Agenda</td>
-                <td class="colon">:</td>
-                <td><strong>{{ $config['custom_agenda_title'] ?? $agenda->judul_rapat }}</strong></td>
-            </tr>
-            <tr>
-                <td class="label">Hari / Tanggal</td>
-                <td class="colon">:</td>
-                <td>{{ $agenda->waktu_mulai->translatedFormat('l, d F Y') }}</td>
-            </tr>
-            <tr>
-                <td class="label">Waktu Pelaksanaan</td>
-                <td class="colon">:</td>
-                <td>{{ $agenda->waktu_mulai->format('H:i') }} {{ $agenda->waktu_selesai ? 's.d. ' . $agenda->waktu_selesai->format('H:i') . ' WIB' : 'WIB s.d. Selesai' }}</td>
-            </tr>
-            <tr>
-                <td class="label">Format & Tempat</td>
-                <td class="colon">:</td>
-                <td>
-                    {{ ucfirst($agenda->tipe_rapat) }} &mdash; 
-                    {{ $config['custom_location'] ?? ($agenda->lokasi_ruang ?? 'Daring (Online Meeting)') }}
-                </td>
-            </tr>
-            <tr>
-                <td class="label">Penyelenggara Rapat</td>
-                <td class="colon">:</td>
-                <td>{{ $agenda->creator?->name ?? 'Penyelenggara Rapat' }} ({{ $agenda->creator?->unit?->nama_unit ?? 'Tingkat Lembaga' }})</td>
-            </tr>
-        </table>
-        @endif
-
-        <!-- Daftar Hadir Peserta -->
-        @if($config['show_attendees'] ?? true)
-        <div class="section-title">I. DAFTAR KEHADIRAN PESERTA ({{ $agenda->attendances->count() }} Orang)</div>
-        <table class="attendance-table">
-            <thead>
-                <tr>
-                    <th style="width: 5%;">No</th>
-                    <th>Nama Lengkap</th>
-                    @if($config['show_nip'] ?? true)
-                        <th style="width: 20%;">NIP</th>
-                    @endif
-                    @if($config['show_unit'] ?? true)
-                        <th style="width: 18%;">Unit Kerja / Pokja</th>
-                    @endif
-                    @if($config['show_attendance_time'] ?? true)
-                        <th style="width: 10%;">Waktu</th>
-                    @endif
-                    @if($config['show_selfie_photos'] ?? true)
-                        <th style="width: 12%;">Foto Kehadiran</th>
-                    @endif
-                    <th style="width: 12%;">Tanda Tangan</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($attendances as $index => $item)
-                    <tr>
-                        <td style="text-align: center;">{{ $index + 1 }}</td>
-                        <td><strong>{{ $item['model']->user->name }}</strong></td>
-                        @if($config['show_nip'] ?? true)
-                            <td style="font-family: monospace; font-size: 9pt;">{{ $item['model']->user->nip }}</td>
-                        @endif
-                        @if($config['show_unit'] ?? true)
-                            <td>{{ $item['model']->user->unit?->kode_unit ?? 'Pusat' }}</td>
-                        @endif
-                        @if($config['show_attendance_time'] ?? true)
-                            <td style="text-align: center; font-size: 9pt;">{{ $item['model']->signed_at->format('H:i') }}</td>
-                        @endif
-                        @if($config['show_selfie_photos'] ?? true)
-                            <td style="text-align: center; vertical-align: middle; padding: 3px;">
-                                @if(!empty($item['selfie_base64']))
-                                    <img src="{{ $item['selfie_base64'] }}" alt="Selfie" style="width: 44px; height: 44px; object-fit: cover; border-radius: 4px; border: 1px solid #cbd5e1; display: inline-block;">
-                                @else
-                                    <span style="font-size: 8pt; color: #94a3b8; font-style: italic;">Tanpa Foto</span>
-                                @endif
-                            </td>
-                        @endif
-                        <td class="sig-cell">
-                            @if(($config['show_attendee_signatures'] ?? true) && $item['sig_base64'])
-                                <img src="{{ $item['sig_base64'] }}" alt="TTD">
-                            @else
-                                <span style="font-size: 8pt; color: #166534; font-weight: bold;">(HADIR)</span>
-                            @endif
-                        </td>
-                    </tr>
-                @empty
-                    @php
-                        $colCount = 3; // No, Nama Lengkap, Tanda Tangan
-                        if ($config['show_nip'] ?? true) $colCount++;
-                        if ($config['show_unit'] ?? true) $colCount++;
-                        if ($config['show_attendance_time'] ?? true) $colCount++;
-                        if ($config['show_selfie_photos'] ?? true) $colCount++;
-                    @endphp
-                    <tr>
-                        <td colspan="{{ $colCount }}" style="text-align: center; padding: 15px; font-style: italic; color: #666;">
-                            Tidak ada data kehadiran peserta yang tercatat.
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-        @endif
-
-        <!-- Notulensi & Kesimpulan -->
-        @if(($config['show_notulensi'] ?? true) || ($config['show_kesimpulan'] ?? true))
-        <div class="section-title" style="margin-top: 20px;">II. NOTULENSI &amp; KESIMPULAN RAPAT</div>
-        @if($config['show_notulensi'] ?? true)
-        <div style="margin-bottom: 10px;">
-            <div style="font-weight: bold; font-size: 10pt; margin-bottom: 3px;">A. Catatan Jalannya Rapat (Notulensi):</div>
-            <div class="box-text">
-                {!! $agenda->formatted_notulensi ?: 'Tidak ada catatan notulensi khusus yang dicatat.' !!}
-            </div>
-        </div>
-        @endif
-
-        @if($config['show_kesimpulan'] ?? true)
-        <div>
-            <div style="font-weight: bold; font-size: 10pt; margin-bottom: 3px;">B. Kesimpulan &amp; Rencana Tindak Lanjut (RTL):</div>
-            <div class="box-text">
-                {!! $agenda->formatted_kesimpulan ?: 'Tidak ada catatan kesimpulan khusus yang dicatat.' !!}
-            </div>
-        </div>
-        @endif
-        @endif
-
-        <!-- Lampiran Foto Dokumentasi -->
-        @if(($config['show_documentation'] ?? true) && count($documentations) > 0)
-        <div class="section-title page-break" style="margin-top: 20px;">III. DOKUMENTASI KEGIATAN</div>
-        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 10px;">
-            @foreach($documentations as $docItem)
-                <div style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; text-align: center; background: #fff;">
-                    @if($docItem['base64'])
-                        <img src="{{ $docItem['base64'] }}" alt="Dokumentasi" style="max-height: 180px; width: auto; max-width: 100%; object-fit: contain; margin: 0 auto; display: block;">
-                    @endif
-                    @if($docItem['model']->caption)
-                        <div style="font-size: 9pt; color: #475569; margin-top: 6px; font-style: italic;">{{ $docItem['model']->caption }}</div>
-                    @endif
-                </div>
-            @endforeach
-        </div>
-        @endif
-
-        <!-- Tanda Tangan Pengesahan -->
-        <div class="signature-block">
-            <table>
-                <tr>
-                    <td style="width: {{ ($config['show_signer3'] ?? false) ? '33.3%' : '50%' }};">
-                        Mengetahui,<br>
-                        <strong>{{ $config['signer1_role'] ?? 'Pemimpin Rapat' }}</strong>
-                        <div class="signature-space" style="display: flex; align-items: center; justify-content: center; height: 60px;">
-                            @if(($config['show_signer1_signature'] ?? true) && isset($pimpinanSigBase64) && $pimpinanSigBase64)
-                                <img src="{{ $pimpinanSigBase64 }}" alt="TTD Pimpinan" style="max-height: 55px; max-width: 140px;">
-                            @endif
-                        </div>
-                        <strong><u>{{ $config['signer1_name'] ?? $agenda->nama_pimpinan }}</u></strong><br>
-                        NIP. {{ $config['signer1_nip'] ?? $agenda->nip_pimpinan }}
-                    </td>
-
-                    @if($config['show_signer3'] ?? false)
-                    <td style="width: 33.3%;">
-                        Menyetujui,<br>
-                        <strong>{{ $config['signer3_role'] ?? 'Kepala LLDIKTI' }}</strong>
-                        <div class="signature-space" style="height: 60px;"></div>
-                        <strong><u>{{ $config['signer3_name'] ?? '-' }}</u></strong><br>
-                        NIP. {{ $config['signer3_nip'] ?? '-' }}
-                    </td>
-                    @endif
-
-                    <td style="width: {{ ($config['show_signer3'] ?? false) ? '33.3%' : '50%' }};">
-                        {{ $config['signing_city'] ?? 'Padang' }}, {{ $config['signing_date'] ?? now()->translatedFormat('d F Y') }}<br>
-                        <strong>{{ $config['signer2_role'] ?? 'Notulis Rapat' }}</strong>
-                        <div class="signature-space" style="display: flex; align-items: center; justify-content: center; height: 60px;">
-                            @if(($config['show_signer2_signature'] ?? true) && isset($notulisSigBase64) && $notulisSigBase64)
-                                <img src="{{ $notulisSigBase64 }}" alt="TTD Notulis" style="max-height: 55px; max-width: 140px;">
-                            @endif
-                        </div>
-                        <strong><u>{{ $config['signer2_name'] ?? $agenda->nama_notulis }}</u></strong><br>
-                        NIP. {{ $config['signer2_nip'] ?? $agenda->nip_notulis }}
-                    </td>
-                </tr>
-            </table>
-        </div>
-
-        @if($config['show_footer_note'] ?? true)
-        <div style="margin-top: 30px; padding-top: 10px; border-top: 1px dashed #cbd5e1; font-size: 8pt; color: #64748b; text-align: center; font-style: italic;">
-            {{ $config['footer_note'] ?? 'Dokumen ini diterbitkan secara resmi melalui Sistem Informasi Presensi Rapat (SIPERAPAT) LLDIKTI Wilayah X' }} &bull; Dicetak pada {{ now()->translatedFormat('d F Y H:i') }} WIB
-        </div>
-        @endif
     </div>
 </body>
 </html>
