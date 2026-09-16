@@ -413,7 +413,16 @@ class AgendaController extends Controller
             ]);
 
             $agenda->refresh();
-            $agenda->load(['pimpinan', 'notulis', 'creator']);
+            $agenda->load(['pimpinan.unit', 'notulis.unit', 'creator.unit']);
+
+            if (is_array($agenda->report_config)) {
+                $currentConfig = $agenda->report_config;
+                $currentConfig['signer1_name'] = $agenda->nama_pimpinan;
+                $currentConfig['signer1_nip'] = ($agenda->nip_pimpinan && $agenda->nip_pimpinan !== '-') ? $agenda->nip_pimpinan : '-';
+                $currentConfig['signer2_name'] = $agenda->nama_notulis;
+                $currentConfig['signer2_nip'] = ($agenda->nip_notulis && $agenda->nip_notulis !== '-') ? $agenda->nip_notulis : '-';
+                $agenda->update(['report_config' => $currentConfig]);
+            }
 
             ActivityLogger::log(
                 type: 'UPDATE_AGENDA_ROLES',

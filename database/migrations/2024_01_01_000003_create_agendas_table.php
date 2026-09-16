@@ -14,8 +14,6 @@ return new class extends Migration
         Schema::create('agendas', function (Blueprint $table) {
             $table->id();
             $table->foreignId('created_by')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('pimpinan_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->foreignId('notulis_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('judul_rapat', 255);
             $table->string('slug', 255)->unique();
             $table->enum('jenis_rapat', ['koordinasi', 'pleno', 'evaluasi', 'konsinyasi', 'terbatas', 'lainnya'])->default('koordinasi');
@@ -23,7 +21,7 @@ return new class extends Migration
             $table->string('lokasi_ruang', 150)->nullable();
             $table->text('link_meeting')->nullable();
             $table->dateTime('waktu_mulai');
-            $table->dateTime('waktu_selesai')->nullable();
+            $table->dateTime('waktu_selesai');
             $table->boolean('is_all_units')->default(true);
             $table->string('surat_edaran_path')->nullable();
             $table->longText('notulensi')->nullable();

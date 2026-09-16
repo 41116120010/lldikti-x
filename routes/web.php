@@ -67,8 +67,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [ReportController::class, 'index'])->name('index');
         Route::get('/summary/csv', [ReportController::class, 'exportSummaryCsv'])->name('summary.csv');
         Route::get('/{agenda}', [ReportController::class, 'show'])->name('show');
-        Route::get('/{agenda}/export/pdf', [ReportController::class, 'exportPdf'])->name('export.pdf');
-        Route::get('/{agenda}/export/word', [ReportController::class, 'exportWord'])->name('export.word');
+        Route::match(['get', 'post'], '/{agenda}/export/pdf', [ReportController::class, 'exportPdf'])->name('export.pdf');
+        Route::match(['get', 'post'], '/{agenda}/export/word', [ReportController::class, 'exportWord'])->name('export.word');
+        Route::post('/{agenda}/report-config/reset', [ReportController::class, 'resetReportConfig'])->name('report-config.reset');
     });
 
     // Unit Management (Superadmin)

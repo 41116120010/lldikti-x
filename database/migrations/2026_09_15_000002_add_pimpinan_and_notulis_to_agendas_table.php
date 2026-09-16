@@ -12,20 +12,25 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('agendas', function (Blueprint $table) {
-            $table->foreignId('pimpinan_id')
-                ->nullable()
-                ->after('created_by')
-                ->constrained('users')
-                ->nullOnDelete();
+            if (!Schema::hasColumn('agendas', 'pimpinan_id')) {
+                $table->foreignId('pimpinan_id')
+                    ->nullable()
+                    ->after('created_by')
+                    ->constrained('users')
+                    ->nullOnDelete();
 
-            $table->foreignId('notulis_id')
-                ->nullable()
-                ->after('pimpinan_id')
-                ->constrained('users')
-                ->nullOnDelete();
+                $table->index('pimpinan_id');
+            }
 
-            $table->index('pimpinan_id');
-            $table->index('notulis_id');
+            if (!Schema::hasColumn('agendas', 'notulis_id')) {
+                $table->foreignId('notulis_id')
+                    ->nullable()
+                    ->after('pimpinan_id')
+                    ->constrained('users')
+                    ->nullOnDelete();
+
+                $table->index('notulis_id');
+            }
         });
     }
 
@@ -35,9 +40,15 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('agendas', function (Blueprint $table) {
-            $table->dropForeign(['pimpinan_id']);
-            $table->dropForeign(['notulis_id']);
-            $table->dropColumn(['pimpinan_id', 'notulis_id']);
+            if (Schema::hasColumn('agendas', 'pimpinan_id')) {
+                $table->dropForeign(['pimpinan_id']);
+                $table->dropColumn('pimpinan_id');
+            }
+
+            if (Schema::hasColumn('agendas', 'notulis_id')) {
+                $table->dropForeign(['notulis_id']);
+                $table->dropColumn('notulis_id');
+            }
         });
     }
 };

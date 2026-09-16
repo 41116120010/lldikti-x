@@ -46,7 +46,7 @@
         .header-kop p {
             margin: 0;
             font-size: 9pt;
-            font-style: italic;
+            font-style: normal;
         }
 
         .doc-title {
@@ -72,11 +72,13 @@
             margin-bottom: 15px;
             border-collapse: collapse;
             font-size: 10.5pt;
+            border: none;
         }
 
         .info-table td {
             padding: 3px 0;
             vertical-align: top;
+            border: none;
         }
 
         .info-table td.label {
@@ -98,6 +100,7 @@
         .attendance-table {
             width: 100%;
             border-collapse: collapse;
+            border: 1px solid #000;
             margin-top: 5px;
             font-size: 10pt;
         }
@@ -165,6 +168,7 @@
         .signature-block table {
             width: 100%;
             border-collapse: collapse;
+            border: none;
         }
 
         .signature-block td {
@@ -172,6 +176,7 @@
             vertical-align: top;
             text-align: center;
             font-size: 10.5pt;
+            border: none;
         }
 
         .signature-space {
@@ -237,24 +242,47 @@
 
     <div style="padding: 20px 30px;">
         <!-- Kop Surat Resmi Instansi -->
+        @if($config['show_kop'] ?? true)
         <div class="header-kop">
-            <h3>KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI</h3>
-            <h2>LEMBAGA LAYANAN PENDIDIKAN TINGGI (LLDIKTI) WILAYAH X</h2>
-            <p>Jalan Khatib Sulaiman, Padang, Sumatera Barat &bull; Laman: lldikti10.kemdikbud.go.id</p>
+            @if(($config['show_logo'] ?? true) && isset($logoBase64) && $logoBase64)
+            <table style="width: 100%; border-collapse: collapse; border: none; margin: 0; padding: 0;">
+                <tr>
+                    <td style="width: 75px; text-align: center; vertical-align: middle; border: none; padding: 0;">
+                        <img src="{{ $logoBase64 }}" alt="Logo Instansi" style="max-height: 70px; max-width: 70px; object-fit: contain; display: block; margin: 0 auto;">
+                    </td>
+                    <td style="text-align: center; vertical-align: middle; border: none; padding: 0 10px;">
+                        <h3>{{ $config['instansi_induk'] ?? 'KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI' }}</h3>
+                        <h2>{{ $config['instansi_pelaksana'] ?? 'LEMBAGA LAYANAN PENDIDIKAN TINGGI (LLDIKTI) WILAYAH X' }}</h2>
+                        <p>{{ $config['alamat_kontak'] ?? 'Jalan Khatib Sulaiman, Padang, Sumatera Barat • Laman: lldikti10.kemdikbud.go.id' }}</p>
+                    </td>
+                    <td style="width: 75px; border: none; padding: 0;"></td>
+                </tr>
+            </table>
+            @else
+            <h3>{{ $config['instansi_induk'] ?? 'KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI' }}</h3>
+            <h2>{{ $config['instansi_pelaksana'] ?? 'LEMBAGA LAYANAN PENDIDIKAN TINGGI (LLDIKTI) WILAYAH X' }}</h2>
+            <p>{{ $config['alamat_kontak'] ?? 'Jalan Khatib Sulaiman, Padang, Sumatera Barat • Laman: lldikti10.kemdikbud.go.id' }}</p>
+            @endif
         </div>
+        @else
+        <div style="height: 25px;"></div>
+        @endif
 
         <!-- Judul Dokumen -->
         <div class="doc-title">
-            <h1>BERITA ACARA DAN DAFTAR HADIR RAPAT</h1>
-            <span>Nomor: BA-RAPAT/{{ date('Y') }}/{{ str_pad($agenda->id, 4, '0', STR_PAD_LEFT) }}</span>
+            <h1>{{ $config['document_title'] ?? 'BERITA ACARA DAN DAFTAR HADIR RAPAT' }}</h1>
+            @if($config['show_document_number'] ?? true)
+            <span>Nomor: {{ $config['document_number'] ?? ('BA-RAPAT/' . date('Y') . '/' . str_pad($agenda->id, 4, '0', STR_PAD_LEFT)) }}</span>
+            @endif
         </div>
 
         <!-- Informasi Pelaksanaan -->
+        @if($config['show_meeting_info'] ?? true)
         <table class="info-table">
             <tr>
                 <td class="label">Perihal / Agenda</td>
                 <td class="colon">:</td>
-                <td><strong>{{ $agenda->judul_rapat }}</strong></td>
+                <td><strong>{{ $config['custom_agenda_title'] ?? $agenda->judul_rapat }}</strong></td>
             </tr>
             <tr>
                 <td class="label">Hari / Tanggal</td>
@@ -271,7 +299,7 @@
                 <td class="colon">:</td>
                 <td>
                     {{ ucfirst($agenda->tipe_rapat) }} &mdash; 
-                    {{ $agenda->lokasi_ruang ?? 'Daring (Online Meeting)' }}
+                    {{ $config['custom_location'] ?? ($agenda->lokasi_ruang ?? 'Daring (Online Meeting)') }}
                 </td>
             </tr>
             <tr>
@@ -280,18 +308,29 @@
                 <td>{{ $agenda->creator?->name ?? 'Penyelenggara Rapat' }} ({{ $agenda->creator?->unit?->nama_unit ?? 'Tingkat Lembaga' }})</td>
             </tr>
         </table>
+        @endif
 
         <!-- Daftar Hadir Peserta -->
+        @if($config['show_attendees'] ?? true)
         <div class="section-title">I. DAFTAR KEHADIRAN PESERTA ({{ $agenda->attendances->count() }} Orang)</div>
         <table class="attendance-table">
             <thead>
                 <tr>
                     <th style="width: 5%;">No</th>
-                    <th style="width: 32%;">Nama Lengkap</th>
-                    <th style="width: 23%;">NIP</th>
-                    <th style="width: 22%;">Unit Kerja / Pokja</th>
-                    <th style="width: 9%;">Waktu</th>
-                    <th style="width: 9%;">Tanda Tangan</th>
+                    <th>Nama Lengkap</th>
+                    @if($config['show_nip'] ?? true)
+                        <th style="width: 20%;">NIP</th>
+                    @endif
+                    @if($config['show_unit'] ?? true)
+                        <th style="width: 18%;">Unit Kerja / Pokja</th>
+                    @endif
+                    @if($config['show_attendance_time'] ?? true)
+                        <th style="width: 10%;">Waktu</th>
+                    @endif
+                    @if($config['show_selfie_photos'] ?? true)
+                        <th style="width: 12%;">Foto Kehadiran</th>
+                    @endif
+                    <th style="width: 12%;">Tanda Tangan</th>
                 </tr>
             </thead>
             <tbody>
@@ -299,80 +338,135 @@
                     <tr>
                         <td style="text-align: center;">{{ $index + 1 }}</td>
                         <td><strong>{{ $item['model']->user->name }}</strong></td>
-                        <td style="font-family: monospace; font-size: 9pt;">{{ $item['model']->user->nip }}</td>
-                        <td>{{ $item['model']->user->unit?->kode_unit ?? 'Pusat' }}</td>
-                        <td style="text-align: center; font-size: 9pt;">{{ $item['model']->signed_at->format('H:i') }}</td>
+                        @if($config['show_nip'] ?? true)
+                            <td style="font-family: monospace; font-size: 9pt;">{{ $item['model']->user->nip }}</td>
+                        @endif
+                        @if($config['show_unit'] ?? true)
+                            <td>{{ $item['model']->user->unit?->kode_unit ?? 'Pusat' }}</td>
+                        @endif
+                        @if($config['show_attendance_time'] ?? true)
+                            <td style="text-align: center; font-size: 9pt;">{{ $item['model']->signed_at->format('H:i') }}</td>
+                        @endif
+                        @if($config['show_selfie_photos'] ?? true)
+                            <td style="text-align: center; vertical-align: middle; padding: 3px;">
+                                @if(!empty($item['selfie_base64']))
+                                    <img src="{{ $item['selfie_base64'] }}" alt="Selfie" style="width: 44px; height: 44px; object-fit: cover; border-radius: 4px; border: 1px solid #cbd5e1; display: inline-block;">
+                                @else
+                                    <span style="font-size: 8pt; color: #94a3b8; font-style: italic;">Tanpa Foto</span>
+                                @endif
+                            </td>
+                        @endif
                         <td class="sig-cell">
-                            @if($item['sig_base64'])
+                            @if(($config['show_attendee_signatures'] ?? true) && $item['sig_base64'])
                                 <img src="{{ $item['sig_base64'] }}" alt="TTD">
                             @else
-                                <span style="font-size: 8pt; color: #666;">(Tervalidasi)</span>
+                                <span style="font-size: 8pt; color: #166534; font-weight: bold;">(HADIR)</span>
                             @endif
                         </td>
                     </tr>
                 @empty
+                    @php
+                        $colCount = 3; // No, Nama Lengkap, Tanda Tangan
+                        if ($config['show_nip'] ?? true) $colCount++;
+                        if ($config['show_unit'] ?? true) $colCount++;
+                        if ($config['show_attendance_time'] ?? true) $colCount++;
+                        if ($config['show_selfie_photos'] ?? true) $colCount++;
+                    @endphp
                     <tr>
-                        <td colspan="6" style="text-align: center; padding: 15px; font-style: italic; color: #666;">
+                        <td colspan="{{ $colCount }}" style="text-align: center; padding: 15px; font-style: italic; color: #666;">
                             Tidak ada data kehadiran peserta yang tercatat.
                         </td>
                     </tr>
                 @endforelse
             </tbody>
         </table>
+        @endif
 
         <!-- Notulensi & Kesimpulan -->
-        <div class="section-title" style="margin-top: 20px;">II. NOTULENSI & KESIMPULAN RAPAT</div>
+        @if(($config['show_notulensi'] ?? true) || ($config['show_kesimpulan'] ?? true))
+        <div class="section-title" style="margin-top: 20px;">II. NOTULENSI &amp; KESIMPULAN RAPAT</div>
+        @if($config['show_notulensi'] ?? true)
         <div style="margin-bottom: 10px;">
             <div style="font-weight: bold; font-size: 10pt; margin-bottom: 3px;">A. Catatan Jalannya Rapat (Notulensi):</div>
             <div class="box-text">
                 {!! $agenda->formatted_notulensi ?: 'Tidak ada catatan notulensi khusus yang dicatat.' !!}
             </div>
         </div>
+        @endif
 
+        @if($config['show_kesimpulan'] ?? true)
         <div>
-            <div style="font-weight: bold; font-size: 10pt; margin-bottom: 3px;">B. Kesimpulan & Rencana Tindak Lanjut (RTL):</div>
+            <div style="font-weight: bold; font-size: 10pt; margin-bottom: 3px;">B. Kesimpulan &amp; Rencana Tindak Lanjut (RTL):</div>
             <div class="box-text">
                 {!! $agenda->formatted_kesimpulan ?: 'Tidak ada catatan kesimpulan khusus yang dicatat.' !!}
             </div>
         </div>
+        @endif
+        @endif
+
+        <!-- Lampiran Foto Dokumentasi -->
+        @if(($config['show_documentation'] ?? true) && count($documentations) > 0)
+        <div class="section-title page-break" style="margin-top: 20px;">III. DOKUMENTASI KEGIATAN</div>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 10px;">
+            @foreach($documentations as $docItem)
+                <div style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; text-align: center; background: #fff;">
+                    @if($docItem['base64'])
+                        <img src="{{ $docItem['base64'] }}" alt="Dokumentasi" style="max-height: 180px; width: auto; max-width: 100%; object-fit: contain; margin: 0 auto; display: block;">
+                    @endif
+                    @if($docItem['model']->caption)
+                        <div style="font-size: 9pt; color: #475569; margin-top: 6px; font-style: italic;">{{ $docItem['model']->caption }}</div>
+                    @endif
+                </div>
+            @endforeach
+        </div>
+        @endif
 
         <!-- Tanda Tangan Pengesahan -->
         <div class="signature-block">
             <table>
                 <tr>
-                    <td>
+                    <td style="width: {{ ($config['show_signer3'] ?? false) ? '33.3%' : '50%' }};">
                         Mengetahui,<br>
-                        <strong>Pemimpin Rapat</strong>
+                        <strong>{{ $config['signer1_role'] ?? 'Pemimpin Rapat' }}</strong>
                         <div class="signature-space" style="display: flex; align-items: center; justify-content: center; height: 60px;">
-                            @if(isset($pimpinanSigBase64) && $pimpinanSigBase64)
+                            @if(($config['show_signer1_signature'] ?? true) && isset($pimpinanSigBase64) && $pimpinanSigBase64)
                                 <img src="{{ $pimpinanSigBase64 }}" alt="TTD Pimpinan" style="max-height: 55px; max-width: 140px;">
                             @endif
                         </div>
-                        <strong><u>{{ $agenda->nama_pimpinan }}</u></strong><br>
-                        @if($agenda->nip_pimpinan && $agenda->nip_pimpinan !== '-')
-                            NIP. {{ $agenda->nip_pimpinan }}
-                        @else
-                            NIP. -
-                        @endif
+                        <strong><u>{{ $config['signer1_name'] ?? $agenda->nama_pimpinan }}</u></strong><br>
+                        NIP. {{ $config['signer1_nip'] ?? $agenda->nip_pimpinan }}
                     </td>
-                    <td>
-                        Padang, {{ now()->translatedFormat('d F Y') }}<br>
-                        <strong>Notulis Rapat</strong>
+
+                    @if($config['show_signer3'] ?? false)
+                    <td style="width: 33.3%;">
+                        Menyetujui,<br>
+                        <strong>{{ $config['signer3_role'] ?? 'Kepala LLDIKTI' }}</strong>
+                        <div class="signature-space" style="height: 60px;"></div>
+                        <strong><u>{{ $config['signer3_name'] ?? '-' }}</u></strong><br>
+                        NIP. {{ $config['signer3_nip'] ?? '-' }}
+                    </td>
+                    @endif
+
+                    <td style="width: {{ ($config['show_signer3'] ?? false) ? '33.3%' : '50%' }};">
+                        {{ $config['signing_city'] ?? 'Padang' }}, {{ $config['signing_date'] ?? now()->translatedFormat('d F Y') }}<br>
+                        <strong>{{ $config['signer2_role'] ?? 'Notulis Rapat' }}</strong>
                         <div class="signature-space" style="display: flex; align-items: center; justify-content: center; height: 60px;">
-                            @if(isset($notulisSigBase64) && $notulisSigBase64)
+                            @if(($config['show_signer2_signature'] ?? true) && isset($notulisSigBase64) && $notulisSigBase64)
                                 <img src="{{ $notulisSigBase64 }}" alt="TTD Notulis" style="max-height: 55px; max-width: 140px;">
                             @endif
                         </div>
-                        <strong><u>{{ $agenda->nama_notulis }}</u></strong><br>
-                        @if($agenda->nip_notulis && $agenda->nip_notulis !== '-')
-                            NIP. {{ $agenda->nip_notulis }}
-                        @else
-                            NIP. -
-                        @endif
+                        <strong><u>{{ $config['signer2_name'] ?? $agenda->nama_notulis }}</u></strong><br>
+                        NIP. {{ $config['signer2_nip'] ?? $agenda->nip_notulis }}
                     </td>
                 </tr>
             </table>
         </div>
+
+        @if($config['show_footer_note'] ?? true)
+        <div style="margin-top: 30px; padding-top: 10px; border-top: 1px dashed #cbd5e1; font-size: 8pt; color: #64748b; text-align: center; font-style: italic;">
+            {{ $config['footer_note'] ?? 'Dokumen ini diterbitkan secara resmi melalui Sistem Informasi Presensi Rapat (SIPERAPAT) LLDIKTI Wilayah X' }} &bull; Dicetak pada {{ now()->translatedFormat('d F Y H:i') }} WIB
+        </div>
+        @endif
     </div>
 </body>
 </html>

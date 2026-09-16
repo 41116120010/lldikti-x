@@ -30,6 +30,7 @@ class Agenda extends Model
         'surat_edaran_path',
         'notulensi',
         'kesimpulan',
+        'report_config',
         'status',
     ];
 
@@ -39,6 +40,7 @@ class Agenda extends Model
             'waktu_mulai' => 'datetime',
             'waktu_selesai' => 'datetime',
             'is_all_units' => 'boolean',
+            'report_config' => 'array',
         ];
     }
 
@@ -51,6 +53,26 @@ class Agenda extends Model
                 $baseSlug = Str::slug($agenda->judul_rapat);
                 $uniqueSlug = $baseSlug . '-' . Str::lower(Str::random(6));
                 $agenda->slug = $uniqueSlug;
+            }
+        });
+
+        static::saving(function (Agenda $agenda) {
+            if ($agenda->isDirty(['pimpinan_id', 'notulis_id']) && is_array($agenda->report_config)) {
+                $config = $agenda->report_config;
+
+                if ($agenda->isDirty('pimpinan_id')) {
+                    $newPimpinan = $agenda->pimpinan_id ? User::find($agenda->pimpinan_id) : $agenda->creator;
+                    $config['signer1_name'] = $newPimpinan?->name ?? 'Pemimpin Rapat';
+                    $config['signer1_nip'] = ($newPimpinan?->nip && $newPimpinan->nip !== '-') ? $newPimpinan->nip : '-';
+                }
+
+                if ($agenda->isDirty('notulis_id')) {
+                    $newNotulis = $agenda->notulis_id ? User::find($agenda->notulis_id) : $agenda->creator;
+                    $config['signer2_name'] = $newNotulis?->name ?? 'Notulis Rapat';
+                    $config['signer2_nip'] = ($newNotulis?->nip && $newNotulis->nip !== '-') ? $newNotulis->nip : '-';
+                }
+
+                $agenda->report_config = $config;
             }
         });
     }
@@ -368,5 +390,84 @@ class Agenda extends Model
         }
 
         return $this->attendances()->where('user_id', $notulisId)->first();
+    }
+
+    /**
+     * Get system default report configuration for this agenda.
+     */
+    public function getDefaultReportConfig(): array
+    {
+        return [
+            // Header
+            'show_kop' => true,
+            'show_logo' => true,
+            'custom_logo_path' => null,
+            'instansi_induk' => 'KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI',
+            'instansi_pelaksana' => 'LEMBAGA LAYANAN PENDIDIKAN TINGGI (LLDIKTI) WILAYAH X',
+            'alamat_kontak' => 'Jalan Khatib Sulaiman, Padang, Sumatera Barat • Laman: lldikti10.kemdikbud.go.id',
+            'document_title' => 'BERITA ACARA DAN DAFTAR HADIR RAPAT',
+            'show_document_number' => true,
+            'document_number' => 'BA-RAPAT/' . ($this->waktu_mulai ? $this->waktu_mulai->format('Y') : date('Y')) . '/' . str_pad($this->id, 4, '0', STR_PAD_LEFT),
+
+            // Content
+            'show_meeting_info' => true,
+            'custom_agenda_title' => $this->judul_rapat,
+            'custom_location' => $this->lokasi_ruang ?? 'Daring (Online Meeting)',
+            'show_attendees' => true,
+            'show_nip' => true,
+            'show_unit' => true,
+            'show_attendance_time' => true,
+            'show_selfie_photos' => true,
+            'show_attendee_signatures' => true,
+            'show_notulensi' => true,
+            'show_kesimpulan' => true,
+            'show_documentation' => true,
+
+            // Footer
+            'signing_city' => 'Padang',
+            'signing_date' => $this->waktu_mulai ? $this->waktu_mulai->translatedFormat('d F Y') : now()->translatedFormat('d F Y'),
+            'signer1_role' => 'Pemimpin Rapat',
+            'signer1_name' => $this->nama_pimpinan,
+            'signer1_nip' => ($this->nip_pimpinan && $this->nip_pimpinan !== '-') ? $this->nip_pimpinan : '-',
+            'show_signer1_signature' => true,
+            'signer2_role' => 'Notulis Rapat',
+            'signer2_name' => $this->nama_notulis,
+            'signer2_nip' => ($this->nip_notulis && $this->nip_notulis !== '-') ? $this->nip_notulis : '-',
+            'show_signer2_signature' => true,
+            'show_signer3' => false,
+            'signer3_role' => 'Kepala Lembaga Layanan Pendidikan Tinggi Wilayah X',
+            'signer3_name' => '',
+            'signer3_nip' => '-',
+            'show_footer_note' => true,
+            'footer_note' => 'Dokumen ini diterbitkan secara resmi melalui Sistem Informasi Presensi Rapat (SIPERAPAT) LLDIKTI Wilayah X',
+        ];
+    }
+
+    /**
+     * Get resolved report configuration, merging stored config with defaults.
+     */
+    public function getResolvedReportConfigAttribute(): array
+    {
+        $defaults = $this->getDefaultReportConfig();
+        $stored = is_array($this->report_config) ? $this->report_config : [];
+
+        $resolved = array_replace($defaults, $stored);
+
+        // Dynamically track active assigned leader and minute taker if roles were assigned
+        if ($this->pimpinan_id && isset($stored['signer1_name'])) {
+            if ($stored['signer1_name'] === $this->creator?->name || empty($stored['signer1_name'])) {
+                $resolved['signer1_name'] = $this->nama_pimpinan;
+                $resolved['signer1_nip'] = ($this->nip_pimpinan && $this->nip_pimpinan !== '-') ? $this->nip_pimpinan : '-';
+            }
+        }
+
+        if ($this->notulis_id && isset($stored['signer2_name'])) {
+            if ($stored['signer2_name'] === $this->creator?->name || empty($stored['signer2_name'])) {
+                $resolved['signer2_name'] = $this->nama_notulis;
+                $resolved['signer2_nip'] = ($this->nip_notulis && $this->nip_notulis !== '-') ? $this->nip_notulis : '-';
+            }
+        }
+
+        return $resolved;
     }
 }
