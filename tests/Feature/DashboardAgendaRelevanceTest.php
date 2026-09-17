@@ -237,4 +237,22 @@ class DashboardAgendaRelevanceTest extends TestCase
             $pastAgenda->delete();
         }
     }
+
+    public function test_dashboard_header_is_clean_without_unwanted_subtitle_text(): void
+    {
+        $superadmin = User::where('role', 'administrator')->first();
+        $staff = User::where('role', 'staff')->first();
+
+        // Check for superadmin
+        $adminResponse = $this->actingAs($superadmin)->get('/dashboard');
+        $adminResponse->assertStatus(200);
+        $adminResponse->assertSee('Agenda Rapat Terkini');
+        $adminResponse->assertDontSee('Rapat aktif dan terjadwal terdekat');
+
+        // Check for staff
+        $staffResponse = $this->actingAs($staff)->get('/dashboard');
+        $staffResponse->assertStatus(200);
+        $staffResponse->assertSee('Agenda Rapat Terkini');
+        $staffResponse->assertDontSee('Rapat aktif dan terjadwal terdekat');
+    }
 }
