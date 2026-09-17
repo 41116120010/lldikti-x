@@ -503,6 +503,9 @@ function initGlobalListeners() {
 
     // Initialize Interactive Photo Preview Uploader
     PhotoPreviewUploader.init();
+
+    // Initialize Office Document WYSIWYG Workstation
+    OfficeWorkstation.init();
 }
 
 // --- 2.5. MICROSOFT WORD RIBBON RICH TEXT EDITOR CONTROLLER ---
@@ -1057,6 +1060,413 @@ const PhotoPreviewUploader = {
 };
 
 window.PhotoPreviewUploader = PhotoPreviewUploader;
+
+// --- 2.7. OFFICE DOCUMENT WYSIWYG WORKSTATION CONTROLLER ---
+const OfficeWorkstation = {
+    init() {
+        const workstation = document.querySelector('#office-workstation');
+        if (!workstation || workstation.dataset.initialized === 'true') return;
+        workstation.dataset.initialized = 'true';
+
+        const ribbon = workstation.querySelector('.word-editor-ribbon');
+        const zoomContainer = workstation.querySelector('#office-zoom-container');
+        const deskCanvas = workstation.querySelector('.office-desk-canvas');
+        const sheets = workstation.querySelectorAll('.office-paper-sheet');
+        
+        const notulensiBox = workstation.querySelector('#notulensi-content');
+        const kesimpulanBox = workstation.querySelector('#kesimpulan-content');
+        const notulensiHidden = workstation.querySelector('#notulensi-hidden');
+        const kesimpulanHidden = workstation.querySelector('#kesimpulan-hidden');
+
+        const activeIndicator = workstation.querySelector('#office-active-editor-indicator');
+        const wordsCountEl = workstation.querySelector('.word-counter-words');
+        const charsCountEl = workstation.querySelector('.word-counter-chars');
+
+        let activeBox = notulensiBox;
+        let activeHidden = notulensiHidden;
+        let savedRange = null;
+
+        const updateCounters = () => {
+            const notulText = notulensiBox ? notulensiBox.innerText.trim() : '';
+            const kesimpText = kesimpulanBox ? kesimpulanBox.innerText.trim() : '';
+            const totalText = (notulText + ' ' + kesimpText).trim();
+            const words = totalText ? totalText.split(/\s+/).filter(Boolean).length : 0;
+            const chars = totalText.length;
+            if (wordsCountEl) wordsCountEl.textContent = `${words} Kata`;
+            if (charsCountEl) charsCountEl.textContent = `${chars} Karakter`;
+        };
+
+        const syncContent = () => {
+            if (notulensiBox && notulensiHidden) notulensiHidden.value = notulensiBox.innerHTML;
+            if (kesimpulanBox && kesimpulanHidden) kesimpulanHidden.value = kesimpulanBox.innerHTML;
+            updateCounters();
+        };
+
+        const setActiveEditor = (box, hidden, name) => {
+            activeBox = box;
+            activeHidden = hidden;
+            if (notulensiBox) notulensiBox.classList.remove('is-active-editor');
+            if (kesimpulanBox) kesimpulanBox.classList.remove('is-active-editor');
+            if (box) box.classList.add('is-active-editor');
+
+            if (activeIndicator) {
+                activeIndicator.textContent = name === 'notulensi'
+                    ? 'Fokus: Catatan Jalannya Rapat (A)'
+                    : 'Fokus: Kesimpulan & RTL (B)';
+            }
+        };
+
+        if (notulensiBox) {
+            notulensiBox.addEventListener('focus', () => setActiveEditor(notulensiBox, notulensiHidden, 'notulensi'));
+            notulensiBox.addEventListener('click', () => setActiveEditor(notulensiBox, notulensiHidden, 'notulensi'));
+            notulensiBox.addEventListener('input', syncContent);
+            notulensiBox.addEventListener('blur', syncContent);
+        }
+
+        if (kesimpulanBox) {
+            kesimpulanBox.addEventListener('focus', () => setActiveEditor(kesimpulanBox, kesimpulanHidden, 'kesimpulan'));
+            kesimpulanBox.addEventListener('click', () => setActiveEditor(kesimpulanBox, kesimpulanHidden, 'kesimpulan'));
+            kesimpulanBox.addEventListener('input', syncContent);
+            kesimpulanBox.addEventListener('blur', syncContent);
+        }
+
+        // Initialize active editor to notulensi by default
+        setActiveEditor(notulensiBox, notulensiHidden, 'notulensi');
+        syncContent();
+
+        const rulerEl = workstation.querySelector('#office-document-ruler');
+        const statusBarEl = workstation.querySelector('#office-status-bar');
+        const statusSizeEl = workstation.querySelector('#office-status-size');
+        const statusPageEl = workstation.querySelector('#office-status-page');
+        const statusZoomEl = workstation.querySelector('#office-status-zoom');
+
+        // 1. Paper Format Switcher (A4 vs F4)
+        const paperButtons = workstation.querySelectorAll('[data-paper-size]');
+        const setPaperSize = (size) => {
+            sheets.forEach(sheet => {
+                sheet.classList.remove('paper-a4', 'paper-f4');
+                sheet.classList.add(`paper-${size}`);
+            });
+            if (rulerEl) {
+                rulerEl.classList.remove('paper-a4', 'paper-f4', 'ruler-f4');
+                if (size === 'f4') {
+                    rulerEl.classList.add('paper-f4', 'ruler-f4');
+                } else {
+                    rulerEl.classList.add('paper-a4');
+                }
+            }
+            if (statusBarEl) {
+                statusBarEl.classList.remove('paper-a4', 'paper-f4', 'status-f4');
+                if (size === 'f4') {
+                    statusBarEl.classList.add('paper-f4', 'status-f4');
+                } else {
+                    statusBarEl.classList.add('paper-a4');
+                }
+            }
+            if (statusSizeEl) {
+                statusSizeEl.textContent = size === 'f4' ? 'F4 / Folio (215 × 330 mm)' : 'A4 (210 × 297 mm)';
+            }
+            paperButtons.forEach(btn => {
+                if (btn.dataset.paperSize === size) {
+                    btn.classList.add('bg-slate-900', 'text-white', 'shadow-xs');
+                    btn.classList.remove('text-slate-700', 'hover:bg-slate-200');
+                } else {
+                    btn.classList.remove('bg-slate-900', 'text-white', 'shadow-xs');
+                    btn.classList.add('text-slate-700', 'hover:bg-slate-200');
+                }
+            });
+            try {
+                localStorage.setItem('siperapat_paper_format', size);
+            } catch (e) {}
+        };
+
+        paperButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                setPaperSize(btn.dataset.paperSize);
+            });
+        });
+
+        // Load saved paper format preference (default A4)
+        const savedFormat = (() => {
+            try { return localStorage.getItem('siperapat_paper_format') || 'a4'; } catch (e) { return 'a4'; }
+        })();
+        setPaperSize(savedFormat);
+
+        // 2. Zoom & Scaling Controls
+        const zoomButtons = workstation.querySelectorAll('[data-zoom]');
+        const setZoom = (zoomVal) => {
+            if (!zoomContainer) return;
+            zoomButtons.forEach(b => b.classList.remove('active-zoom', 'bg-slate-900', 'text-white'));
+
+            const activeBtn = workstation.querySelector(`[data-zoom="${zoomVal}"]`);
+            if (activeBtn) activeBtn.classList.add('active-zoom', 'bg-slate-900', 'text-white');
+
+            let currentZoomText = `Zoom: ${zoomVal}%`;
+            if (zoomVal === 'fit') {
+                const canvasWidth = deskCanvas ? deskCanvas.clientWidth - 48 : window.innerWidth;
+                const sheetWidthPx = sheets[0] ? sheets[0].offsetWidth : 794;
+                const scale = Math.min(1, Math.max(0.4, canvasWidth / sheetWidthPx));
+                zoomContainer.style.transform = `scale(${scale})`;
+                currentZoomText = `Zoom: Sesuaikan (${Math.round(scale * 100)}%)`;
+            } else {
+                const scale = parseFloat(zoomVal) / 100;
+                zoomContainer.style.transform = `scale(${scale})`;
+            }
+            if (statusZoomEl) {
+                statusZoomEl.textContent = currentZoomText;
+            }
+        };
+
+        zoomButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                setZoom(btn.dataset.zoom);
+            });
+        });
+
+        // On small viewports (<768px), auto-fit zoom
+        if (window.innerWidth < 768) {
+            setZoom('fit');
+        } else {
+            setZoom('100');
+        }
+
+        // 2.1. Viewport Scroll Detection for Active Sheet Indicator
+        if (sheets.length > 0 && statusPageEl) {
+            const handleScroll = () => {
+                const midY = window.innerHeight / 2;
+                let activePage = 1;
+                sheets.forEach((sheet, idx) => {
+                    const rect = sheet.getBoundingClientRect();
+                    if (rect.top <= midY && rect.bottom >= midY) {
+                        activePage = idx + 1;
+                    }
+                });
+                statusPageEl.textContent = `Halaman ${activePage} dari ${sheets.length}`;
+            };
+            window.addEventListener('scroll', handleScroll, { passive: true });
+            if (deskCanvas) {
+                deskCanvas.addEventListener('scroll', handleScroll, { passive: true });
+            }
+            handleScroll();
+        }
+
+        // 3. Ribbon Toolbar Commands for Active Box
+        if (ribbon) {
+            const formatSelect = ribbon.querySelector('select[data-command="formatBlock"]');
+            const fontSizeSelect = ribbon.querySelector('select[data-action="fontSize"]');
+            const tablePicker = ribbon.querySelector('.word-table-picker');
+
+            const saveSelection = () => {
+                const sel = window.getSelection();
+                if (sel.rangeCount > 0) savedRange = sel.getRangeAt(0);
+            };
+
+            const restoreSelection = () => {
+                if (activeBox) activeBox.focus();
+                if (savedRange) {
+                    const sel = window.getSelection();
+                    sel.removeAllRanges();
+                    sel.addRange(savedRange);
+                }
+            };
+
+            // Formatting Buttons
+            ribbon.querySelectorAll('button[data-command]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    restoreSelection();
+                    const cmd = btn.dataset.command;
+                    if (cmd === 'blockquote') {
+                        document.execCommand('formatBlock', false, 'blockquote');
+                    } else if (cmd === 'insertHorizontalRule') {
+                        document.execCommand('insertHorizontalRule', false, null);
+                    } else {
+                        document.execCommand(cmd, false, null);
+                    }
+                    syncContent();
+                });
+            });
+
+            // Paragraph Block Select
+            if (formatSelect) {
+                formatSelect.addEventListener('change', (e) => {
+                    restoreSelection();
+                    const val = e.target.value;
+                    if (val) {
+                        document.execCommand('formatBlock', false, val);
+                        syncContent();
+                    }
+                });
+            }
+
+            // Font Size Select
+            if (fontSizeSelect) {
+                fontSizeSelect.addEventListener('change', (e) => {
+                    restoreSelection();
+                    const val = e.target.value;
+                    if (val) {
+                        document.execCommand('fontSize', false, val);
+                        syncContent();
+                    }
+                });
+            }
+
+            // Text Color & Highlight Pickers
+            ribbon.querySelectorAll('.word-color-btn').forEach(colorBtn => {
+                const action = colorBtn.dataset.action;
+                const colorInput = ribbon.querySelector(`input[data-color-for="${action}"]`);
+                const indicator = colorBtn.querySelector('.color-indicator');
+
+                if (colorInput) {
+                    colorBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        saveSelection();
+                        colorInput.click();
+                    });
+
+                    colorInput.addEventListener('input', (e) => {
+                        const selectedColor = e.target.value;
+                        if (indicator) indicator.style.background = selectedColor;
+                        restoreSelection();
+
+                        if (action === 'textColor') {
+                            document.execCommand('foreColor', false, selectedColor);
+                        } else if (action === 'highlight') {
+                            try {
+                                if (!document.execCommand('hiliteColor', false, selectedColor)) {
+                                    document.execCommand('backColor', false, selectedColor);
+                                }
+                            } catch (err) {
+                                document.execCommand('backColor', false, selectedColor);
+                            }
+                        }
+                        syncContent();
+                    });
+                }
+            });
+
+            // Table Grid Picker
+            const tableBtn = ribbon.querySelector('button[data-action="insertTable"]');
+            if (tableBtn && tablePicker) {
+                const maxRows = 6;
+                const maxCols = 6;
+                let gridHtml = '<div class="word-table-grid">';
+                for (let r = 1; r <= maxRows; r++) {
+                    for (let c = 1; c <= maxCols; c++) {
+                        gridHtml += `<div class="word-table-cell" data-row="${r}" data-col="${c}"></div>`;
+                    }
+                }
+                gridHtml += '</div><div class="word-table-picker-label">Pilih Ukuran (0 × 0)</div>';
+                tablePicker.innerHTML = gridHtml;
+
+                const cells = tablePicker.querySelectorAll('.word-table-cell');
+                const labelEl = tablePicker.querySelector('.word-table-picker-label');
+
+                const updateGridSelection = (targetRow, targetCol) => {
+                    cells.forEach(cell => {
+                        const r = parseInt(cell.dataset.row, 10);
+                        const c = parseInt(cell.dataset.col, 10);
+                        if (r <= targetRow && c <= targetCol) {
+                            cell.classList.add('selected');
+                        } else {
+                            cell.classList.remove('selected');
+                        }
+                    });
+                    if (labelEl) {
+                        labelEl.textContent = targetRow > 0 && targetCol > 0 
+                            ? `${targetRow} × ${targetCol} Tabel` 
+                            : 'Pilih Ukuran (0 × 0)';
+                    }
+                };
+
+                cells.forEach(cell => {
+                    cell.addEventListener('mouseenter', () => {
+                        const r = parseInt(cell.dataset.row, 10);
+                        const c = parseInt(cell.dataset.col, 10);
+                        updateGridSelection(r, c);
+                    });
+
+                    cell.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const r = parseInt(cell.dataset.row, 10);
+                        const c = parseInt(cell.dataset.col, 10);
+
+                        let tableHtml = '<table class="w-full my-2 border-collapse border border-black" border="1"><thead><tr>';
+                        for (let colIdx = 1; colIdx <= c; colIdx++) {
+                            tableHtml += `<th class="border border-black p-1 bg-slate-100 text-xs">Kolom ${colIdx}</th>`;
+                        }
+                        tableHtml += '</tr></thead><tbody>';
+                        for (let rowIdx = 1; rowIdx < r; rowIdx++) {
+                            tableHtml += '<tr>';
+                            for (let colIdx = 1; colIdx <= c; colIdx++) {
+                                tableHtml += '<td class="border border-black p-1 text-xs">&nbsp;</td>';
+                            }
+                            tableHtml += '</tr>';
+                        }
+                        tableHtml += '</tbody></table><p><br></p>';
+
+                        tablePicker.classList.remove('open');
+                        restoreSelection();
+                        document.execCommand('insertHTML', false, tableHtml);
+                        syncContent();
+                    });
+                });
+
+                tablePicker.addEventListener('mouseleave', () => updateGridSelection(0, 0));
+
+                tableBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    saveSelection();
+                    tablePicker.classList.toggle('open');
+                    updateGridSelection(0, 0);
+                });
+
+                document.addEventListener('click', (e) => {
+                    if (!tablePicker.contains(e.target) && e.target !== tableBtn) {
+                        tablePicker.classList.remove('open');
+                    }
+                });
+            }
+
+            // Clear All Button
+            const clearAllBtn = ribbon.querySelector('button[data-action="clearAll"]');
+            if (clearAllBtn) {
+                clearAllBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (!activeBox || !activeBox.innerText.trim()) return;
+                    if (confirm('Kosongkan teks pada bagian yang sedang aktif?')) {
+                        activeBox.innerHTML = '';
+                        syncContent();
+                    }
+                });
+            }
+        }
+
+        // 4. Keyboard Shortcuts: Ctrl+S / Cmd+S to Save
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+                const saveForm = workstation.querySelector('form');
+                if (saveForm) {
+                    e.preventDefault();
+                    syncContent();
+                    saveForm.requestSubmit ? saveForm.requestSubmit() : saveForm.submit();
+                }
+            }
+        });
+
+        // Form Submit: Ensure latest sync
+        const form = workstation.querySelector('form');
+        if (form) {
+            form.addEventListener('submit', () => syncContent());
+        }
+    }
+};
+
+window.OfficeWorkstation = OfficeWorkstation;
 
 // --- 3. SEAMLESS SPA-FEEL NAVIGATION ENGINE ---
 const SeamlessNavigation = {

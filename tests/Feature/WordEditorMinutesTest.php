@@ -277,4 +277,50 @@ class WordEditorMinutesTest extends TestCase
         $wordResponse->assertOk();
         $this->assertStringContainsString($zwsp, $wordResponse->getContent());
     }
+
+    public function test_dedicated_notulen_page_renders_office_workstation_with_a4_and_f4_paper_layouts_and_page_separators(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('admin.agendas.notulen', $this->agenda));
+
+        $response->assertOk();
+
+        // 1. Office Desk Canvas & Zoom Container
+        $response->assertSee('office-desk-canvas');
+        $response->assertSee('office-zoom-container');
+
+        // 2. Paper Size Switcher (A4 and F4)
+        $response->assertSee('data-paper-size="a4"', false);
+        $response->assertSee('data-paper-size="f4"', false);
+        $response->assertSee('F4 / Folio');
+
+        // 3. Zoom Controls & Active Editor Indicator
+        $response->assertSee('data-zoom="75"', false);
+        $response->assertSee('data-zoom="100"', false);
+        $response->assertSee('data-zoom="fit"', false);
+        $response->assertSee('id="office-active-editor-indicator"', false);
+
+        // 4. Multi-Page Discrete Sheets Structure
+        $response->assertSee('data-page="1"', false);
+        $response->assertSee('data-page="2"', false);
+        $response->assertSee('office-paper-sheet');
+        $response->assertSee('office-page-separator');
+        $response->assertSee('Pemisah Halaman');
+        $response->assertSee('Menuju Lembar Pengesahan');
+
+        // 5. Official Format Elements pre-rendered on sheets
+        $response->assertSee('KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI');
+        $response->assertSee('(LLDIKTI) WILAYAH X');
+        $response->assertSee('BERITA ACARA');
+        $response->assertSee('I. DAFTAR KEHADIRAN PESERTA');
+        $response->assertSee('II. NOTULENSI &amp; KESIMPULAN RAPAT', false);
+        $response->assertSee('LEMBAR PENGESAHAN &amp; LAMPIRAN DOKUMENTASI', false);
+        $response->assertSee('III. Lampiran Foto Dokumentasi Kegiatan');
+
+        // 6. Interactive Editable Sections inside document
+        $response->assertSee('id="notulensi-content"', false);
+        $response->assertSee('id="kesimpulan-content"', false);
+        $response->assertSee('id="notulensi-hidden"', false);
+        $response->assertSee('id="kesimpulan-hidden"', false);
+    }
 }
+

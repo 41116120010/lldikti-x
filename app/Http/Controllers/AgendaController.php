@@ -460,18 +460,32 @@ class AgendaController extends Controller
     }
 
     /**
-     * Show Notulensi & Documentation editor view.
+     * Show Notulensi & Documentation editor view (Office Document WYSIWYG).
      */
     public function notulen(Agenda $agenda): View
     {
         Gate::authorize('manageMinutes', $agenda);
+
+        $agenda->load([
+            'creator.unit',
+            'pimpinan.unit',
+            'notulis.unit',
+            'units',
+        ]);
+
+        $attendances = $agenda->attendances()
+            ->with('user.unit')
+            ->orderBy('signed_at', 'asc')
+            ->get();
+
+        $config = $agenda->resolved_report_config;
 
         $documentations = $agenda->documentations()
             ->latest('id')
             ->paginate(6, ['*'], 'page_docs')
             ->withQueryString();
 
-        return view('agendas.notulen', compact('agenda', 'documentations'));
+        return view('agendas.notulen', compact('agenda', 'documentations', 'config', 'attendances'));
     }
 
     /**
