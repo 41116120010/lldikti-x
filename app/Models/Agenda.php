@@ -527,4 +527,41 @@ class Agenda extends Model
 
         return $resolved;
     }
+
+    /**
+     * Get public root-relative URL for surat edaran file if present.
+     * Using root-relative path prevents CSP origin blocks caused by APP_URL / port differences.
+     */
+    public function getSuratEdaranUrlAttribute(): ?string
+    {
+        if (!$this->surat_edaran_path) {
+            return null;
+        }
+
+        return '/storage/' . ltrim($this->surat_edaran_path, '/');
+    }
+
+    /**
+     * Get lowercase extension of surat edaran file.
+     */
+    public function getSuratEdaranExtensionAttribute(): ?string
+    {
+        return $this->surat_edaran_path ? strtolower(pathinfo($this->surat_edaran_path, PATHINFO_EXTENSION)) : null;
+    }
+
+    /**
+     * Determine if the attached surat edaran is a PDF document.
+     */
+    public function getIsSuratEdaranPdfAttribute(): bool
+    {
+        return $this->surat_edaran_extension === 'pdf';
+    }
+
+    /**
+     * Determine if the attached surat edaran is an image format.
+     */
+    public function getIsSuratEdaranImageAttribute(): bool
+    {
+        return in_array($this->surat_edaran_extension, ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'], true);
+    }
 }
