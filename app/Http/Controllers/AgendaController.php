@@ -31,7 +31,8 @@ class AgendaController extends Controller
 
         $currentUser = Auth::user();
         $query = Agenda::visibleTo($currentUser)
-            ->with(['creator.unit', 'units', 'attendances']);
+            ->with(['creator.unit', 'units', 'attendances'])
+            ->withCount('attendances');
 
         // Status Filter Tabs
         if ($status = $request->input('status')) {
@@ -182,6 +183,7 @@ class AgendaController extends Controller
             'notulis.unit',
             'units',
         ]);
+        $agenda->loadCount('attendances');
 
         $attendances = $agenda->attendances()
             ->with('user.unit')
@@ -235,6 +237,7 @@ class AgendaController extends Controller
         Gate::authorize('update', $agenda);
 
         $agenda->load(['units', 'pimpinan', 'notulis']);
+        $agenda->loadCount('attendances');
         $currentUser = Auth::user();
         $currentUser->load('unit');
         $units = Unit::active()->orderBy('nama_unit')->get();

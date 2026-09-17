@@ -332,9 +332,18 @@ class AgendaDeletionTest extends TestCase
     public function test_detail_agenda_does_not_contain_direktur_signature_column_and_shows_delete_button_for_authorized_user(): void
     {
         $superadmin = User::where('role', 'administrator')->first();
-        $agenda = Agenda::first();
+        $agendaWithoutAttendances = Agenda::create([
+            'judul_rapat' => 'Rapat Uji Detail Hapus ' . uniqid(),
+            'tanggal_rapat' => now()->toDateString(),
+            'waktu_mulai' => now()->addHour(),
+            'waktu_selesai' => now()->addHours(2),
+            'lokasi_ruang' => 'Ruang Uji',
+            'status' => 'scheduled',
+            'created_by' => $superadmin->id,
+            'is_all_units' => true,
+        ]);
 
-        $response = $this->actingAs($superadmin)->get("/admin/agendas/{$agenda->id}");
+        $response = $this->actingAs($superadmin)->get("/admin/agendas/{$agendaWithoutAttendances->id}");
 
         $response->assertStatus(200);
         // Signature headers
@@ -344,8 +353,133 @@ class AgendaDeletionTest extends TestCase
         $response->assertDontSee('Direktur / Penanggung Jawab');
         $response->assertDontSee('Direktur / Pimpinan Unit');
 
-        // Delete button must be present for superadmin
+        // Delete button must be present for superadmin on agenda without attendances
         $response->assertSee('Hapus Agenda');
+
+        $agendaWithoutAttendances->delete();
+    }
+
+    public function test_agendas_index_and_detail_hides_delete_button_when_agenda_has_attendances(): void
+    {
+        $superadmin = User::where('role', 'administrator')->first();
+        $unitA = Unit::create(['nama_unit' => 'Unit Uji Presensi Hapus', 'kode_unit' => 'UUPH_' . uniqid()]);
+        $adminUnit = User::create([
+            'name' => 'Admin Unit UUPH',
+            'nip' => '198701012010011088',
+            'username' => 'admin_uuph_' . uniqid(),
+            'email' => 'admin_uuph_' . uniqid() . '@lldikti.test',
+            'password' => bcrypt('password'),
+            'role' => 'admin',
+            'unit_id' => $unitA->id,
+            'is_active' => true,
+        ]);
+
+        // Agenda A: Has attendances
+        $agendaWithAtt = Agenda::create([
+            'judul_rapat' => 'Rapat Berisi Presensi ' . uniqid(),
+            'tanggal_rapat' => now()->toDateString(),
+            'waktu_mulai' => now()->subHours(2),
+            'waktu_selesai' => now()->addHour(),
+            'lokasi_ruang' => 'Ruang A',
+            'status' => 'ongoing',
+            'created_by' => $adminUnit->id,
+            'is_all_units' => false,
+        ]);
+        $agendaWithAtt->units()->sync([$unitA->id]);
+
+        $attUser = User::create([
+            'name' => 'Peserta Uji Presensi',
+            'nip' => '198801012010011089',
+            'username' => 'peserta_uuph_' . uniqid(),
+            'email' => 'peserta_uuph_' . uniqid() . '@lldikti.test',
+            'password' => bcrypt('password'),
+            'role' => 'staff',
+            'unit_id' => $unitA->id,
+            'is_active' => true,
+        ]);
+
+        $attendance = Attendance::create([
+            'agenda_id' => $agendaWithAtt->id,
+            'user_id' => $attUser->id,
+            'signed_at' => now(),
+            'selfie_path' => 'selfies/test.jpg',
+            'signature_path' => 'signatures/test.png',
+            'ip_address' => '127.0.0.1',
+            'user_agent' => 'PHPUnit Test',
+        ]);
+
+        // Agenda B: No attendances
+        $agendaWithoutAtt = Agenda::create([
+            'judul_rapat' => 'Rapat Tanpa Presensi ' . uniqid(),
+            'tanggal_rapat' => now()->toDateString(),
+            'waktu_mulai' => now()->addHours(2),
+            'waktu_selesai' => now()->addHours(4),
+            'lokasi_ruang' => 'Ruang B',
+            'status' => 'scheduled',
+            'created_by' => $adminUnit->id,
+            'is_all_units' => false,
+        ]);
+        $agendaWithoutAtt->units()->sync([$unitA->id]);
+
+        try {
+            // 1. SUPERADMIN on index (admin/agendas)
+            $superIndexWith = $this->actingAs($superadmin)->get('/admin/agendas?search=' . urlencode($agendaWithAtt->judul_rapat));
+            $superIndexWith->assertStatus(200);
+            $superIndexWith->assertSee($agendaWithAtt->judul_rapat);
+            $superIndexWith->assertDontSee('title="Hapus Agenda"', false);
+
+            $superIndexWithout = $this->actingAs($superadmin)->get('/admin/agendas?search=' . urlencode($agendaWithoutAtt->judul_rapat));
+            $superIndexWithout->assertStatus(200);
+            $superIndexWithout->assertSee($agendaWithoutAtt->judul_rapat);
+            $superIndexWithout->assertSee('title="Hapus Agenda"', false);
+
+            // 2. SUPERADMIN on detail (admin/agendas/{id})
+            $superDetailWith = $this->actingAs($superadmin)->get("/admin/agendas/{$agendaWithAtt->id}");
+            $superDetailWith->assertStatus(200);
+            $superDetailWith->assertDontSee('Hapus Agenda');
+
+            $superDetailWithout = $this->actingAs($superadmin)->get("/admin/agendas/{$agendaWithoutAtt->id}");
+            $superDetailWithout->assertStatus(200);
+            $superDetailWithout->assertSee('Hapus Agenda');
+
+            // 3. SUPERADMIN on edit (admin/agendas/{id}/edit)
+            $superEditWith = $this->actingAs($superadmin)->get("/admin/agendas/{$agendaWithAtt->id}/edit");
+            $superEditWith->assertStatus(200);
+            $superEditWith->assertDontSee('Zona Bahaya');
+            $superEditWith->assertDontSee('Hapus Agenda Ini');
+
+            $superEditWithout = $this->actingAs($superadmin)->get("/admin/agendas/{$agendaWithoutAtt->id}/edit");
+            $superEditWithout->assertStatus(200);
+            $superEditWithout->assertSee('Zona Bahaya');
+            $superEditWithout->assertSee('Hapus Agenda Ini');
+
+            // 4. ADMIN UNIT on index (admin/agendas)
+            $unitIndexWith = $this->actingAs($adminUnit)->get('/admin/agendas?search=' . urlencode($agendaWithAtt->judul_rapat));
+            $unitIndexWith->assertStatus(200);
+            $unitIndexWith->assertSee($agendaWithAtt->judul_rapat);
+            $unitIndexWith->assertDontSee('title="Hapus Agenda"', false);
+
+            $unitIndexWithout = $this->actingAs($adminUnit)->get('/admin/agendas?search=' . urlencode($agendaWithoutAtt->judul_rapat));
+            $unitIndexWithout->assertStatus(200);
+            $unitIndexWithout->assertSee($agendaWithoutAtt->judul_rapat);
+            $unitIndexWithout->assertSee('title="Hapus Agenda"', false);
+
+            // 5. ADMIN UNIT on detail (admin/agendas/{id})
+            $unitDetailWith = $this->actingAs($adminUnit)->get("/admin/agendas/{$agendaWithAtt->id}");
+            $unitDetailWith->assertStatus(200);
+            $unitDetailWith->assertDontSee('Hapus Agenda');
+
+            $unitDetailWithout = $this->actingAs($adminUnit)->get("/admin/agendas/{$agendaWithoutAtt->id}");
+            $unitDetailWithout->assertStatus(200);
+            $unitDetailWithout->assertSee('Hapus Agenda');
+        } finally {
+            $attendance->delete();
+            $agendaWithAtt->delete();
+            $agendaWithoutAtt->delete();
+            $attUser->delete();
+            $adminUnit->delete();
+            $unitA->delete();
+        }
     }
 
     public function test_report_detail_does_not_contain_direktur_signature_column(): void

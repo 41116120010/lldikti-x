@@ -246,6 +246,22 @@ class Agenda extends Model
     }
 
     /**
+     * Determine whether the agenda already has recorded attendee attendances.
+     */
+    public function hasAttendances(): bool
+    {
+        if (isset($this->attendances_count)) {
+            return $this->attendances_count > 0;
+        }
+
+        if ($this->relationLoaded('attendances')) {
+            return $this->attendances->isNotEmpty();
+        }
+
+        return $this->attendances()->exists();
+    }
+
+    /**
      * Insert zero-width space (\u{200B}) into unbroken words longer than threshold (e.g., URLs, hashes)
      * to ensure proper wrapping and prevent margin overflow in Web Preview, PDF, and Word exports.
      * Safely preserves HTML tags, tag attributes, and entities.

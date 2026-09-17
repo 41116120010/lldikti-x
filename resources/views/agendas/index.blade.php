@@ -249,21 +249,23 @@
                         @endcan
 
                         @can('delete', $agenda)
-                            <form 
-                                action="{{ route('admin.agendas.destroy', $agenda) }}" 
-                                method="POST" 
-                                class="inline"
-                                data-confirm="Apakah Anda yakin ingin menghapus agenda '{{ $agenda->judul_rapat }}'? Seluruh data presensi dan lampiran dokumentasi akan dihapus permanen!"
-                                data-confirm-title="Hapus Agenda"
-                                data-confirm-type="danger"
-                                data-confirm-btn="Ya, Hapus"
-                            >
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="button small text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold px-2 py-1 flex items-center justify-center transition" title="Hapus Agenda">
-                                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                                </button>
-                            </form>
+                            @if(!$agenda->hasAttendances())
+                                <form 
+                                    action="{{ route('admin.agendas.destroy', $agenda) }}" 
+                                    method="POST" 
+                                    class="inline"
+                                    data-confirm="Apakah Anda yakin ingin menghapus agenda '{{ $agenda->judul_rapat }}'? Seluruh data presensi dan lampiran dokumentasi akan dihapus permanen!"
+                                    data-confirm-title="Hapus Agenda"
+                                    data-confirm-type="danger"
+                                    data-confirm-btn="Ya, Hapus"
+                                >
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="button small text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold px-2 py-1 flex items-center justify-center transition" title="Hapus Agenda">
+                                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                    </button>
+                                </form>
+                            @endif
                         @endcan
                     </div>
                 </div>
