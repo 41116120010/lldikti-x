@@ -19,6 +19,7 @@ class PdfExportIntegrityTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertHeader('Content-Type', 'application/pdf; charset=UTF-8');
+        $response->assertHeader('X-Accel-Buffering', 'no');
         $this->assertStringContainsString('Berita_Acara_Rapat_', $response->headers->get('Content-Disposition'));
         $this->assertStringContainsString('.pdf', $response->headers->get('Content-Disposition'));
 
@@ -36,6 +37,7 @@ class PdfExportIntegrityTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertHeader('Content-Type', 'text/html; charset=UTF-8');
+        $response->assertHeader('X-Accel-Buffering', 'no');
 
         $content = $response->getContent();
         $this->assertStringContainsString('size: 210mm 297mm portrait', $content);
@@ -60,6 +62,7 @@ class PdfExportIntegrityTest extends TestCase
 
         $this->assertEquals(200, $response->getStatusCode());
         $this->assertStringContainsString('application/pdf', $response->headers->get('Content-Type'));
+        $this->assertEquals('no', $response->headers->get('X-Accel-Buffering'));
         $content = $response->getContent();
         $this->assertStringStartsWith('%PDF-', $content);
     }
@@ -108,5 +111,38 @@ class PdfExportIntegrityTest extends TestCase
 
         $previewResponse = $this->get("/admin/reports/{$agenda->id}/export/pdf");
         $previewResponse->assertRedirect('/login');
+    }
+
+    public function test_is_libreoffice_available_method_returns_boolean(): void
+    {
+        $service = app(PdfExportService::class);
+        $this->assertIsBool($service->isLibreOfficeAvailable());
+    }
+
+    public function test_graceful_fallback_when_binary_pdf_export_fails(): void
+    {
+        $superadmin = User::where('role', 'administrator')->first();
+        $agenda = Agenda::first();
+
+        // Mock PdfExportService to simulate failure in binary PDF conversion
+        $mockPdfService = $this->createMock(PdfExportService::class);
+        $mockPdfService->method('exportBinaryPdf')
+            ->willThrowException(new \RuntimeException('Simulated LibreOffice failure'));
+        $mockPdfService->method('exportBeritaAcara')
+            ->willReturn(response('<html>Mocked Printable A4 View</html>', 200, ['Content-Type' => 'text/html']));
+
+        $this->app->instance(PdfExportService::class, $mockPdfService);
+
+        // 1. GET download request should gracefully fallback to printable view (no 500)
+        $getResponse = $this->actingAs($superadmin)->get("/admin/reports/{$agenda->id}/export/pdf?download=pdf");
+        $getResponse->assertStatus(200);
+        $this->assertStringContainsString('Mocked Printable A4 View', $getResponse->getContent());
+
+        // 2. POST download request should redirect with warning alert (no 500)
+        $postResponse = $this->actingAs($superadmin)->post("/admin/reports/{$agenda->id}/export/pdf?download=pdf", [
+            'document_title' => 'RAPAT UJI FALLBACK',
+        ]);
+        $postResponse->assertRedirect(route('admin.agendas.show', $agenda));
+        $postResponse->assertSessionHas('warning');
     }
 }

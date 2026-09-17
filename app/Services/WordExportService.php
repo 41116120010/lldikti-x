@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Agenda;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class WordExportService
@@ -14,6 +15,9 @@ class WordExportService
      */
     public function prepareViewData(Agenda $agenda, array $config = []): array
     {
+        @ini_set('memory_limit', '256M');
+        @set_time_limit(120);
+
         $agenda->load([
             'creator.unit',
             'pimpinan.unit',
@@ -28,28 +32,40 @@ class WordExportService
         // Process Logo Base64 (Custom logo or default Tut Wuri Handayani)
         $logoBase64 = null;
         if ($resolvedConfig['show_logo'] ?? true) {
-            $customLogo = $resolvedConfig['custom_logo_path'] ?? null;
-            if ($customLogo && Storage::disk('public')->exists($customLogo)) {
-                $raw = Storage::disk('public')->get($customLogo);
-                $logoBase64 = $this->optimizeAndEncodeImage($raw, 100, 'png');
-            } elseif (file_exists(public_path('images/tut-wuri-handayani.png'))) {
-                $raw = file_get_contents(public_path('images/tut-wuri-handayani.png'));
-                $logoBase64 = $this->optimizeAndEncodeImage($raw, 100, 'png');
+            try {
+                $customLogo = $resolvedConfig['custom_logo_path'] ?? null;
+                if ($customLogo && Storage::disk('public')->exists($customLogo)) {
+                    $raw = Storage::disk('public')->get($customLogo);
+                    $logoBase64 = $this->optimizeAndEncodeImage($raw, 100, 'png');
+                } elseif (file_exists(public_path('images/tut-wuri-handayani.png'))) {
+                    $raw = file_get_contents(public_path('images/tut-wuri-handayani.png'));
+                    $logoBase64 = $this->optimizeAndEncodeImage($raw, 100, 'png');
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Failed to load institution logo for document export: ' . $e->getMessage());
             }
         }
 
         // Embed media into optimized base64 data URIs
         $attendancesWithMedia = $agenda->attendances->map(function ($att) {
             $sigBase64 = null;
-            if ($att->signature_path && Storage::disk('public')->exists($att->signature_path)) {
-                $raw = Storage::disk('public')->get($att->signature_path);
-                $sigBase64 = $this->optimizeAndEncodeImage($raw, 140, 'png');
+            try {
+                if ($att->signature_path && Storage::disk('public')->exists($att->signature_path)) {
+                    $raw = Storage::disk('public')->get($att->signature_path);
+                    $sigBase64 = $this->optimizeAndEncodeImage($raw, 140, 'png');
+                }
+            } catch (\Throwable $e) {
+                Log::warning("Failed to process signature for attendance {$att->id}: " . $e->getMessage());
             }
 
             $selfieBase64 = null;
-            if ($att->selfie_path && Storage::disk('public')->exists($att->selfie_path)) {
-                $raw = Storage::disk('public')->get($att->selfie_path);
-                $selfieBase64 = $this->optimizeAndEncodeImage($raw, 80, 'jpeg', 85, true);
+            try {
+                if ($att->selfie_path && Storage::disk('public')->exists($att->selfie_path)) {
+                    $raw = Storage::disk('public')->get($att->selfie_path);
+                    $selfieBase64 = $this->optimizeAndEncodeImage($raw, 80, 'jpeg', 85, true);
+                }
+            } catch (\Throwable $e) {
+                Log::warning("Failed to process selfie for attendance {$att->id}: " . $e->getMessage());
             }
 
             return [
@@ -61,26 +77,38 @@ class WordExportService
 
         // Pimpinan digital signature base64 (if attended)
         $pimpinanSigBase64 = null;
-        $pimpinanAtt = $agenda->pimpinan_attendance;
-        if ($pimpinanAtt?->signature_path && Storage::disk('public')->exists($pimpinanAtt->signature_path)) {
-            $raw = Storage::disk('public')->get($pimpinanAtt->signature_path);
-            $pimpinanSigBase64 = $this->optimizeAndEncodeImage($raw, 140, 'png');
+        try {
+            $pimpinanAtt = $agenda->pimpinan_attendance;
+            if ($pimpinanAtt?->signature_path && Storage::disk('public')->exists($pimpinanAtt->signature_path)) {
+                $raw = Storage::disk('public')->get($pimpinanAtt->signature_path);
+                $pimpinanSigBase64 = $this->optimizeAndEncodeImage($raw, 140, 'png');
+            }
+        } catch (\Throwable $e) {
+            Log::warning("Failed to process meeting leader signature: " . $e->getMessage());
         }
 
         // Notulis digital signature base64 (if attended)
         $notulisSigBase64 = null;
-        $notulisAtt = $agenda->notulis_attendance;
-        if ($notulisAtt?->signature_path && Storage::disk('public')->exists($notulisAtt->signature_path)) {
-            $raw = Storage::disk('public')->get($notulisAtt->signature_path);
-            $notulisSigBase64 = $this->optimizeAndEncodeImage($raw, 140, 'png');
+        try {
+            $notulisAtt = $agenda->notulis_attendance;
+            if ($notulisAtt?->signature_path && Storage::disk('public')->exists($notulisAtt->signature_path)) {
+                $raw = Storage::disk('public')->get($notulisAtt->signature_path);
+                $notulisSigBase64 = $this->optimizeAndEncodeImage($raw, 140, 'png');
+            }
+        } catch (\Throwable $e) {
+            Log::warning("Failed to process minute taker signature: " . $e->getMessage());
         }
 
         // Documentation photos with optimized base64 for Word/PDF
         $documentationsWithMedia = $agenda->documentations->map(function ($doc) {
             $base64 = null;
-            if ($doc->file_path && Storage::disk('public')->exists($doc->file_path)) {
-                $raw = Storage::disk('public')->get($doc->file_path);
-                $base64 = $this->optimizeAndEncodeImage($raw, 500, 'jpeg', 80);
+            try {
+                if ($doc->file_path && Storage::disk('public')->exists($doc->file_path)) {
+                    $raw = Storage::disk('public')->get($doc->file_path);
+                    $base64 = $this->optimizeAndEncodeImage($raw, 500, 'jpeg', 80);
+                }
+            } catch (\Throwable $e) {
+                Log::warning("Failed to process documentation photo {$doc->id}: " . $e->getMessage());
             }
 
             return [
@@ -123,6 +151,7 @@ class WordExportService
             'Content-Type' => 'application/vnd.ms-word; charset=UTF-8',
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
             'Cache-Control' => 'max-age=0',
+            'X-Accel-Buffering' => 'no', // Bypass Nginx FastCGI buffer proxy caching
         ]);
     }
 
@@ -146,71 +175,76 @@ class WordExportService
             return 'data:' . $mime . ';base64,' . base64_encode($binary);
         }
 
-        $src = @imagecreatefromstring($binary);
-        if (!$src) {
+        try {
+            $src = @imagecreatefromstring($binary);
+            if (!$src) {
+                return 'data:' . $mime . ';base64,' . base64_encode($binary);
+            }
+
+            // Always ensure alpha preservation on source image
+            imagealphablending($src, false);
+            imagesavealpha($src, true);
+
+            $origW = imagesx($src);
+            $origH = imagesy($src);
+
+            if ($cropSquare) {
+                $minDim = min($origW, $origH);
+                $srcX = (int) round(($origW - $minDim) / 2);
+                $srcY = (int) round(($origH - $minDim) / 2);
+                $targetDim = min($maxDim, $minDim);
+
+                $dst = imagecreatetruecolor($targetDim, $targetDim);
+                if ($format === 'png') {
+                    imagealphablending($dst, false);
+                    imagesavealpha($dst, true);
+                    $transparent = imagecolorallocatealpha($dst, 255, 255, 255, 127);
+                    imagefilledrectangle($dst, 0, 0, $targetDim, $targetDim, $transparent);
+                } else {
+                    $white = imagecolorallocate($dst, 255, 255, 255);
+                    imagefilledrectangle($dst, 0, 0, $targetDim, $targetDim, $white);
+                }
+
+                imagecopyresampled($dst, $src, 0, 0, $srcX, $srcY, $targetDim, $targetDim, $minDim, $minDim);
+                imagedestroy($src);
+                $src = $dst;
+            } elseif ($origW > $maxDim || $origH > $maxDim) {
+                $ratio = min($maxDim / $origW, $maxDim / $origH);
+                $targetW = max(1, (int) round($origW * $ratio));
+                $targetH = max(1, (int) round($origH * $ratio));
+
+                $dst = imagecreatetruecolor($targetW, $targetH);
+
+                if ($format === 'png') {
+                    imagealphablending($dst, false);
+                    imagesavealpha($dst, true);
+                    $transparent = imagecolorallocatealpha($dst, 255, 255, 255, 127);
+                    imagefilledrectangle($dst, 0, 0, $targetW, $targetH, $transparent);
+                } else {
+                    $white = imagecolorallocate($dst, 255, 255, 255);
+                    imagefilledrectangle($dst, 0, 0, $targetW, $targetH, $white);
+                }
+
+                imagecopyresampled($dst, $src, 0, 0, 0, 0, $targetW, $targetH, $origW, $origH);
+                imagedestroy($src);
+                $src = $dst;
+            }
+
+            ob_start();
+            if ($format === 'jpeg') {
+                imagejpeg($src, null, $quality);
+            } else {
+                imagesavealpha($src, true);
+                imagepng($src, null, 9);
+            }
+            $processed = ob_get_clean();
+            imagedestroy($src);
+
+            $encoded = base64_encode($processed ?: $binary);
+            return 'data:' . $mime . ';base64,' . $encoded;
+        } catch (\Throwable $e) {
+            Log::warning('Image optimization failed, falling back to raw binary: ' . $e->getMessage());
             return 'data:' . $mime . ';base64,' . base64_encode($binary);
         }
-
-        // Always ensure alpha preservation on source image
-        imagealphablending($src, false);
-        imagesavealpha($src, true);
-
-        $origW = imagesx($src);
-        $origH = imagesy($src);
-
-        if ($cropSquare) {
-            $minDim = min($origW, $origH);
-            $srcX = (int) round(($origW - $minDim) / 2);
-            $srcY = (int) round(($origH - $minDim) / 2);
-            $targetDim = min($maxDim, $minDim);
-
-            $dst = imagecreatetruecolor($targetDim, $targetDim);
-            if ($format === 'png') {
-                imagealphablending($dst, false);
-                imagesavealpha($dst, true);
-                $transparent = imagecolorallocatealpha($dst, 255, 255, 255, 127);
-                imagefilledrectangle($dst, 0, 0, $targetDim, $targetDim, $transparent);
-            } else {
-                $white = imagecolorallocate($dst, 255, 255, 255);
-                imagefilledrectangle($dst, 0, 0, $targetDim, $targetDim, $white);
-            }
-
-            imagecopyresampled($dst, $src, 0, 0, $srcX, $srcY, $targetDim, $targetDim, $minDim, $minDim);
-            imagedestroy($src);
-            $src = $dst;
-        } elseif ($origW > $maxDim || $origH > $maxDim) {
-            $ratio = min($maxDim / $origW, $maxDim / $origH);
-            $targetW = max(1, (int) round($origW * $ratio));
-            $targetH = max(1, (int) round($origH * $ratio));
-
-            $dst = imagecreatetruecolor($targetW, $targetH);
-
-            if ($format === 'png') {
-                imagealphablending($dst, false);
-                imagesavealpha($dst, true);
-                $transparent = imagecolorallocatealpha($dst, 255, 255, 255, 127);
-                imagefilledrectangle($dst, 0, 0, $targetW, $targetH, $transparent);
-            } else {
-                $white = imagecolorallocate($dst, 255, 255, 255);
-                imagefilledrectangle($dst, 0, 0, $targetW, $targetH, $white);
-            }
-
-            imagecopyresampled($dst, $src, 0, 0, 0, 0, $targetW, $targetH, $origW, $origH);
-            imagedestroy($src);
-            $src = $dst;
-        }
-
-        ob_start();
-        if ($format === 'jpeg') {
-            imagejpeg($src, null, $quality);
-        } else {
-            imagesavealpha($src, true);
-            imagepng($src, null, 9);
-        }
-        $processed = ob_get_clean();
-        imagedestroy($src);
-
-        $encoded = base64_encode($processed ?: $binary);
-        return 'data:' . $mime . ';base64,' . $encoded;
     }
 }

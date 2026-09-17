@@ -9,10 +9,12 @@ use App\Models\User;
 use App\Services\ActivityLogger;
 use App\Services\PdfExportService;
 use App\Services\WordExportService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -164,11 +166,13 @@ class ReportController extends Controller
     /**
      * Export Official Meeting Minutes & Attendance to PDF (Binary Download or A4 Sheet Print View).
      */
-    public function exportPdf(Request $request, Agenda $agenda, PdfExportService $pdfService): Response
+    public function exportPdf(Request $request, Agenda $agenda, PdfExportService $pdfService): Response|RedirectResponse
     {
         Gate::authorize('view', $agenda);
 
         $config = $this->extractReportConfig($request, $agenda);
+
+        $wantsBinary = ($request->query('download') === 'pdf' || $request->input('download') === 'pdf' || $request->boolean('download_pdf'));
 
         ActivityLogger::log(
             type: 'EXPORT_PDF',
@@ -177,21 +181,46 @@ class ReportController extends Controller
             targetId: $agenda->id,
             properties: [
                 'custom_config' => !empty($request->all()),
-                'download_mode' => $request->query('download') === 'pdf' ? 'binary' : 'preview',
+                'download_mode' => $wantsBinary ? 'binary' : 'preview',
             ]
         );
 
-        if ($request->query('download') === 'pdf' || $request->input('download') === 'pdf' || $request->boolean('download_pdf')) {
-            return $pdfService->exportBinaryPdf($agenda, $config);
+        if ($wantsBinary) {
+            try {
+                return $pdfService->exportBinaryPdf($agenda, $config);
+            } catch (\Throwable $e) {
+                Log::error('Gagal mengekspor berkas PDF biner: ' . $e->getMessage(), [
+                    'agenda_id' => $agenda->id,
+                    'exception' => $e,
+                ]);
+
+                // Graceful fallback for browser GET requests: present print-ready A4 sheet view
+                if ($request->isMethod('get') && !$request->ajax()) {
+                    return $pdfService->exportBeritaAcara($agenda, $config);
+                }
+
+                return redirect()->route('admin.agendas.show', $agenda)
+                    ->with('warning', 'Layanan konversi PDF biner di server sedang tidak tersedia (LibreOffice belum terpasang). Silakan gunakan opsi "Pratinjau / Cetak A4" untuk mencetak langsung atau menyimpan ke format PDF.');
+            }
         }
 
-        return $pdfService->exportBeritaAcara($agenda, $config);
+        try {
+            return $pdfService->exportBeritaAcara($agenda, $config);
+        } catch (\Throwable $e) {
+            Log::error('Gagal memuat pratinjau dokumen PDF Berita Acara: ' . $e->getMessage(), [
+                'agenda_id' => $agenda->id,
+                'exception' => $e,
+            ]);
+
+            return redirect()->route('admin.agendas.show', $agenda)
+                ->with('error', 'Terjadi kesalahan saat memuat pratinjau dokumen Berita Acara. Silakan periksa kelengkapan data agenda.');
+        }
     }
 
     /**
      * Export Official Meeting Minutes & Attendance to Microsoft Word (.doc).
      */
-    public function exportWord(Request $request, Agenda $agenda, WordExportService $wordService): Response
+    public function exportWord(Request $request, Agenda $agenda, WordExportService $wordService): Response|RedirectResponse
     {
         Gate::authorize('view', $agenda);
 
@@ -205,7 +234,17 @@ class ReportController extends Controller
             properties: ['custom_config' => !empty($request->all())]
         );
 
-        return $wordService->exportBeritaAcara($agenda, $config);
+        try {
+            return $wordService->exportBeritaAcara($agenda, $config);
+        } catch (\Throwable $e) {
+            Log::error('Gagal mengekspor dokumen Microsoft Word (.doc): ' . $e->getMessage(), [
+                'agenda_id' => $agenda->id,
+                'exception' => $e,
+            ]);
+
+            return redirect()->route('admin.agendas.show', $agenda)
+                ->with('error', 'Terjadi kesalahan saat mengekspor dokumen Word. Silakan coba kembali atau gunakan format Pratinjau Dokumen.');
+        }
     }
 
     /**

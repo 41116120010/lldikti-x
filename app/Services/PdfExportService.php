@@ -13,11 +13,39 @@ class PdfExportService
     ) {}
 
     /**
+     * Determine if LibreOffice headless binary and shell execution are available in the current environment.
+     */
+    public function isLibreOfficeAvailable(): bool
+    {
+        if (!function_exists('exec')) {
+            return false;
+        }
+
+        $disabled = explode(',', (string) ini_get('disable_functions'));
+        $disabled = array_map('trim', $disabled);
+        if (in_array('exec', $disabled, true)) {
+            return false;
+        }
+
+        $checkCommand = 'which libreoffice 2>/dev/null || which soffice 2>/dev/null || command -v libreoffice 2>/dev/null';
+        exec($checkCommand, $output, $returnCode);
+
+        return $returnCode === 0 && !empty($output);
+    }
+
+    /**
      * Generate authentic binary PDF document (.pdf) using headless LibreOffice converter.
      * Guaranteed exact A4 portrait layout (210mm x 297mm) and Tata Naskah Dinas margins.
      */
     public function exportBinaryPdf(Agenda $agenda, array $config = []): Response
     {
+        @ini_set('memory_limit', '256M');
+        @set_time_limit(120);
+
+        if (!$this->isLibreOfficeAvailable()) {
+            throw new \RuntimeException('Layanan LibreOffice headless tidak tersedia atau dinonaktifkan pada server ini.');
+        }
+
         $docHtml = $this->wordExportService->generateDocumentContent($agenda, $config);
 
         $tmpDir = sys_get_temp_dir() . '/siperapat_pdf_' . bin2hex(random_bytes(8));
@@ -57,6 +85,7 @@ class PdfExportService
                 'Content-Type' => 'application/pdf; charset=UTF-8',
                 'Content-Disposition' => 'attachment; filename="' . $filename . '"',
                 'Cache-Control' => 'max-age=0, must-revalidate',
+                'X-Accel-Buffering' => 'no', // Bypass Nginx FastCGI buffer proxy caching
             ]);
         } finally {
             $this->cleanupDirectory($tmpDir);
@@ -76,6 +105,7 @@ class PdfExportService
         return response($html, 200, [
             'Content-Type' => 'text/html; charset=UTF-8',
             'Content-Disposition' => 'inline; filename="' . $filename . '"',
+            'X-Accel-Buffering' => 'no',
         ]);
     }
 
