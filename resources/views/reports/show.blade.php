@@ -175,41 +175,8 @@
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <!-- Left: Surat Edaran, Target Unit, & Status Partisipasi (1 col) -->
         <div class="space-y-6">
-            <!-- Surat Edaran Card -->
-            <div class="panel">
-                <div class="toolbar">
-                    <div class="flex items-center gap-2">
-                        <svg class="text-slate-900" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                        <h3 class="font-bold text-slate-900 text-sm">Surat Edaran</h3>
-                    </div>
-                </div>
-
-                <div class="p-5">
-                    @if($agenda->surat_edaran_path)
-                        <div class="text-center p-5 bg-slate-50 border border-slate-300 rounded-xl space-y-3">
-                            <div class="w-12 h-12 rounded-xl bg-slate-900 text-white flex items-center justify-center mx-auto">
-                                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                            </div>
-                            <div>
-                                <div class="text-xs font-bold text-slate-900">Berkas Undangan Rapat</div>
-                                <div class="text-[11px] text-slate-600 font-medium">PDF / Dokumen Resmi</div>
-                            </div>
-                            <a 
-                                href="{{ Storage::disk('public')->url($agenda->surat_edaran_path) }}" 
-                                target="_blank" 
-                                class="button small w-full flex items-center justify-center gap-2 text-xs font-bold"
-                            >
-                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                <span>Buka / Unduh Surat</span>
-                            </a>
-                        </div>
-                    @else
-                        <div class="text-center py-6 text-xs text-slate-500 font-medium">
-                            Tidak ada berkas surat edaran terlampir.
-                        </div>
-                    @endif
-                </div>
-            </div>
+            <!-- Surat Edaran / Undangan Card -->
+            @include('agendas.partials.surat_edaran_preview', ['agenda' => $agenda])
 
             <!-- Target Partisipan Unit Card -->
             <div class="panel">

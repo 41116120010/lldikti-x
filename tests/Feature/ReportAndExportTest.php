@@ -146,4 +146,126 @@ class ReportAndExportTest extends TestCase
         // Must prepend single quote to prevent spreadsheet execution
         $this->assertStringContainsString("'=cmd", $content);
     }
+
+    public function test_report_recap_renders_unified_surat_edaran_preview_for_pdf(): void
+    {
+        $superadmin = User::where('role', 'administrator')->first();
+        $agenda = Agenda::create([
+            'created_by' => $superadmin->id,
+            'judul_rapat' => 'Rapat Evaluasi PDF Preview',
+            'slug' => 'test-pdf-preview-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Rapat Utama',
+            'waktu_mulai' => now()->addDay(),
+            'waktu_selesai' => now()->addDay()->addHours(2),
+            'is_all_units' => true,
+            'status' => 'scheduled',
+            'surat_edaran_path' => 'surat_edaran/sample_invitation.pdf',
+        ]);
+
+        $response = $this->actingAs($superadmin)->get("/admin/reports/{$agenda->id}");
+
+        $response->assertStatus(200);
+        $response->assertSee('Surat Edaran / Undangan');
+        $response->assertSee('PDF');
+        $response->assertSee('Pratinjau Layar Penuh');
+        $response->assertSee('Tab Baru');
+        $response->assertSee('Unduh File');
+        $response->assertSee("modal-surat-preview-{$agenda->id}");
+        $response->assertSee('sample_invitation.pdf#toolbar=0');
+    }
+
+    public function test_report_recap_renders_unified_surat_edaran_preview_for_image(): void
+    {
+        $superadmin = User::where('role', 'administrator')->first();
+        $agenda = Agenda::create([
+            'created_by' => $superadmin->id,
+            'judul_rapat' => 'Rapat Evaluasi Image Preview',
+            'slug' => 'test-image-preview-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Rapat Utama',
+            'waktu_mulai' => now()->addDay(),
+            'waktu_selesai' => now()->addDay()->addHours(2),
+            'is_all_units' => true,
+            'status' => 'scheduled',
+            'surat_edaran_path' => 'surat_edaran/sample_flyer.jpg',
+        ]);
+
+        $response = $this->actingAs($superadmin)->get("/admin/reports/{$agenda->id}");
+
+        $response->assertStatus(200);
+        $response->assertSee('Surat Edaran / Undangan');
+        $response->assertSee('GAMBAR');
+        $response->assertSee('Klik untuk perbesar');
+        $response->assertSee('Pratinjau Layar Penuh');
+        $response->assertSee("modal-surat-preview-{$agenda->id}");
+        $response->assertSee('sample_flyer.jpg');
+    }
+
+    public function test_report_recap_renders_unified_surat_edaran_empty_state(): void
+    {
+        $superadmin = User::where('role', 'administrator')->first();
+        $agenda = Agenda::create([
+            'created_by' => $superadmin->id,
+            'judul_rapat' => 'Rapat Tanpa Surat Edaran',
+            'slug' => 'test-empty-surat-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Rapat Utama',
+            'waktu_mulai' => now()->addDay(),
+            'waktu_selesai' => now()->addDay()->addHours(2),
+            'is_all_units' => true,
+            'status' => 'scheduled',
+            'surat_edaran_path' => null,
+        ]);
+
+        $response = $this->actingAs($superadmin)->get("/admin/reports/{$agenda->id}");
+
+        $response->assertStatus(200);
+        $response->assertSee('Surat Edaran / Undangan');
+        $response->assertSee('Tidak ada berkas surat edaran atau undangan terlampir.');
+    }
+
+    public function test_surat_edaran_preview_parity_between_agenda_show_and_report_show(): void
+    {
+        $superadmin = User::where('role', 'administrator')->first();
+        $agenda = Agenda::create([
+            'created_by' => $superadmin->id,
+            'judul_rapat' => 'Rapat Parity Test',
+            'slug' => 'test-parity-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Rapat Utama',
+            'waktu_mulai' => now()->addDay(),
+            'waktu_selesai' => now()->addDay()->addHours(2),
+            'is_all_units' => true,
+            'status' => 'scheduled',
+            'surat_edaran_path' => 'surat_edaran/sample_parity.pdf',
+        ]);
+
+        $agendaShow = $this->actingAs($superadmin)->get("/admin/agendas/{$agenda->id}");
+        $reportShow = $this->actingAs($superadmin)->get("/admin/reports/{$agenda->id}");
+
+        $agendaShow->assertStatus(200);
+        $reportShow->assertStatus(200);
+
+        // Both pages must render the identical unified preview component
+        $expectedFragments = [
+            'Surat Edaran / Undangan',
+            'PDF',
+            'Pratinjau Layar Penuh',
+            'Tab Baru',
+            'Unduh File',
+            "modal-surat-preview-{$agenda->id}",
+            'sample_parity.pdf#toolbar=0',
+        ];
+
+        foreach ($expectedFragments as $fragment) {
+            $agendaShow->assertSee($fragment);
+            $reportShow->assertSee($fragment);
+        }
+    }
 }
+
