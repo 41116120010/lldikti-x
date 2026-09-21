@@ -93,12 +93,16 @@ class PdfExportService
     }
 
     /**
-     * Generate printable official Web Preview / Berita Acara document for an Agenda.
+     * Generate print-ready inline HTML Berita Acara as browser-printing fallback.
+     *
+     * Renders the shared Word/PDF template (single source of truth) with
+     * Content-Disposition: inline so the browser opens it for Ctrl+P / Save as PDF.
+     * Used when LibreOffice headless binary conversion is unavailable.
      */
     public function exportBeritaAcara(Agenda $agenda, array $config = []): Response
     {
         $data = $this->wordExportService->prepareViewData($agenda, $config);
-        $html = view('exports.pdf_berita_acara', $data)->render();
+        $html = view('exports.word_berita_acara', $data)->render();
 
         $filename = 'Berita_Acara_Rapat_' . $agenda->slug . '.html';
 

@@ -165,7 +165,11 @@ class ReportController extends Controller
     }
 
     /**
-     * Export Official Meeting Minutes & Attendance to PDF (Binary Download or A4 Sheet Print View).
+     * Export Official Meeting Minutes & Attendance to PDF (Direct Binary Download).
+     *
+     * Uses headless LibreOffice to produce a true PDF binary. If LibreOffice is
+     * unavailable, falls back to an inline print-ready HTML response so the user
+     * can still use the browser's built-in "Save as PDF" / Ctrl+P.
      */
     public function exportPdf(Request $request, Agenda $agenda, PdfExportService $pdfService): Response|RedirectResponse
     {
@@ -173,48 +177,34 @@ class ReportController extends Controller
 
         $config = $this->extractReportConfig($request, $agenda);
 
-        $wantsBinary = ($request->query('download') === 'pdf' || $request->input('download') === 'pdf' || $request->boolean('download_pdf'));
-
         ActivityLogger::log(
             type: 'EXPORT_PDF',
             description: "Mengekspor Berita Acara & Daftar Hadir PDF untuk agenda: {$agenda->judul_rapat}",
             targetModel: Agenda::class,
             targetId: $agenda->id,
-            properties: [
-                'custom_config' => !empty($request->all()),
-                'download_mode' => $wantsBinary ? 'binary' : 'preview',
-            ]
+            properties: ['custom_config' => !empty($request->all())]
         );
 
-        if ($wantsBinary) {
-            try {
-                return $pdfService->exportBinaryPdf($agenda, $config);
-            } catch (\Throwable $e) {
-                Log::error('Gagal mengekspor berkas PDF biner: ' . $e->getMessage(), [
-                    'agenda_id' => $agenda->id,
-                    'exception' => $e,
-                ]);
-
-                // Graceful fallback for browser GET requests: present print-ready A4 sheet view
-                if ($request->isMethod('get') && !$request->ajax()) {
-                    return $pdfService->exportBeritaAcara($agenda, $config);
-                }
-
-                return redirect()->route('admin.agendas.show', $agenda)
-                    ->with('warning', 'Layanan konversi PDF biner di server sedang tidak tersedia (LibreOffice belum terpasang). Silakan gunakan opsi "Pratinjau / Cetak A4" untuk mencetak langsung atau menyimpan ke format PDF.');
-            }
-        }
-
         try {
-            return $pdfService->exportBeritaAcara($agenda, $config);
+            // Always attempt true binary PDF download first (via LibreOffice headless)
+            return $pdfService->exportBinaryPdf($agenda, $config);
         } catch (\Throwable $e) {
-            Log::error('Gagal memuat pratinjau dokumen PDF Berita Acara: ' . $e->getMessage(), [
+            Log::warning('Gagal mengekspor PDF biner (LibreOffice tidak tersedia), menggunakan fallback cetak browser: ' . $e->getMessage(), [
                 'agenda_id' => $agenda->id,
-                'exception' => $e,
             ]);
 
-            return redirect()->route('admin.agendas.show', $agenda)
-                ->with('error', 'Terjadi kesalahan saat memuat pratinjau dokumen Berita Acara. Silakan periksa kelengkapan data agenda.');
+            try {
+                // Fallback: return inline print-ready HTML — user can Ctrl+P / Save as PDF
+                return $pdfService->exportBeritaAcara($agenda, $config);
+            } catch (\Throwable $fallbackException) {
+                Log::error('Gagal memuat fallback pratinjau PDF: ' . $fallbackException->getMessage(), [
+                    'agenda_id' => $agenda->id,
+                    'exception' => $fallbackException,
+                ]);
+
+                return redirect()->route('admin.agendas.show', $agenda)
+                    ->with('error', 'Terjadi kesalahan saat mengekspor dokumen Berita Acara. Silakan periksa kelengkapan data agenda dan coba kembali.');
+            }
         }
     }
 

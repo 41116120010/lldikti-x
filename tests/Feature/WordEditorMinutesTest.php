@@ -184,13 +184,19 @@ class WordEditorMinutesTest extends TestCase
             'kesimpulan' => '<ol><li>Tindak lanjut nomor 1</li></ol>',
         ]);
 
-        // Printable PDF Export
+        // Direct PDF Export: binary PDF (LibreOffice) or HTML fallback
         $pdfResponse = $this->actingAs($this->admin)->get(route('admin.reports.export.pdf', $this->agenda));
         $pdfResponse->assertOk();
-        $this->assertStringContainsString('<b>sangat penting</b>', $pdfResponse->getContent());
-        $this->assertStringContainsString('<ol><li>Tindak lanjut nomor 1</li></ol>', $pdfResponse->getContent());
+        $isBinaryPdf = str_contains($pdfResponse->headers->get('Content-Type', ''), 'application/pdf');
+        if ($isBinaryPdf) {
+            $this->assertStringContainsString('application/pdf', $pdfResponse->headers->get('Content-Type', ''));
+            $this->assertStringStartsWith('%PDF-', $pdfResponse->getContent());
+        } else {
+            $this->assertStringContainsString('<b>sangat penting</b>', $pdfResponse->getContent());
+            $this->assertStringContainsString('<ol><li>Tindak lanjut nomor 1</li></ol>', $pdfResponse->getContent());
+        }
 
-        // Word Export
+        // Word Export always returns HTML as .doc attachment
         $wordResponse = $this->actingAs($this->admin)->get(route('admin.reports.export.word', $this->agenda));
         $wordResponse->assertOk();
         $this->assertStringContainsString('<b>sangat penting</b>', $wordResponse->getContent());
@@ -268,10 +274,15 @@ class WordEditorMinutesTest extends TestCase
         // 4. HTML entities like &nbsp; must remain completely intact
         $this->assertStringContainsString('&nbsp;', $formattedNotulensi);
 
-        // 5. Test exports include wrapped content
+        // 5. Test exports are successful (content assertions differ by response type)
         $pdfResponse = $this->actingAs($this->admin)->get(route('admin.reports.export.pdf', $this->agenda));
         $pdfResponse->assertOk();
-        $this->assertStringContainsString($zwsp, $pdfResponse->getContent());
+        $isBinaryPdf = str_contains($pdfResponse->headers->get('Content-Type', ''), 'application/pdf');
+        if ($isBinaryPdf) {
+            $this->assertStringStartsWith('%PDF-', $pdfResponse->getContent());
+        } else {
+            $this->assertStringContainsString($zwsp, $pdfResponse->getContent());
+        }
 
         $wordResponse = $this->actingAs($this->admin)->get(route('admin.reports.export.word', $this->agenda));
         $wordResponse->assertOk();
@@ -371,11 +382,17 @@ class WordEditorMinutesTest extends TestCase
         // Test PDF & Word export with multi-paragraph content
         $pdfResponse = $this->actingAs($this->admin)->get(route('admin.reports.export.pdf', $this->agenda));
         $pdfResponse->assertOk();
-        $this->assertStringContainsString('Paragraf pembahasan resmi 6', $pdfResponse->getContent());
+        $isBinaryPdf = str_contains($pdfResponse->headers->get('Content-Type', ''), 'application/pdf');
+        if ($isBinaryPdf) {
+            $this->assertStringStartsWith('%PDF-', $pdfResponse->getContent());
+        } else {
+            $this->assertStringContainsString('Paragraf pembahasan resmi 6', $pdfResponse->getContent());
+        }
 
         $wordResponse = $this->actingAs($this->admin)->get(route('admin.reports.export.word', $this->agenda));
         $wordResponse->assertOk();
         $this->assertStringContainsString('Paragraf pembahasan resmi 6', $wordResponse->getContent());
+
     }
 
     public function test_notulen_workstation_enforces_bottom_margin_and_footer_locking(): void
