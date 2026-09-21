@@ -303,7 +303,6 @@ class WordEditorMinutesTest extends TestCase
 
         // 4. Multi-Page Discrete Sheets Structure
         $response->assertSee('data-page="1"', false);
-        $response->assertSee('data-page="2"', false);
         $response->assertSee('office-paper-sheet');
         $response->assertSee('office-page-separator');
         $response->assertSee('Pemisah Halaman');
@@ -315,8 +314,8 @@ class WordEditorMinutesTest extends TestCase
         $response->assertSee('BERITA ACARA');
         $response->assertSee('I. DAFTAR KEHADIRAN PESERTA');
         $response->assertSee('II. NOTULENSI &amp; KESIMPULAN RAPAT', false);
-        $response->assertSee('LEMBAR PENGESAHAN &amp; LAMPIRAN DOKUMENTASI', false);
-        $response->assertSee('III. Lampiran Foto Dokumentasi Kegiatan');
+        $response->assertSee('LEMBAR PENGESAHAN BERITA ACARA', false);
+        $response->assertSee('Lampiran Foto');
 
         // 6. Interactive Editable Sections inside document
         $response->assertSee('id="notulensi-content"', false);
@@ -327,6 +326,8 @@ class WordEditorMinutesTest extends TestCase
         // 7. Dynamic Continuation Container & Modular Final Sheet
         $response->assertSee('id="dynamic-continuation-sheets"', false);
         $response->assertSee('id="sheet-pengesahan-final"', false);
+        $response->assertSee('id="modal-notulen-dokumentasi"', false);
+        $response->assertSee('Kelola Lampiran Foto Dokumentasi');
     }
 
     public function test_workstation_page_renders_modular_pagination_containers_and_handles_long_paragraphs(): void
@@ -387,6 +388,45 @@ class WordEditorMinutesTest extends TestCase
         $response->assertSee('office-paper-sheet');
         $response->assertSee('sheet-section-kesimpulan-wrapper');
         $response->assertSee('SIPERAPAT &bull; LLDIKTI Wilayah X', false);
+    }
+
+    public function test_signature_block_fills_remaining_space_in_continuous_flow(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('admin.agendas.notulen', $this->agenda));
+
+        $response->assertOk();
+        // 1. Signature block exists as a modular wrapper inside document flow
+        $response->assertSee('id="sheet-pengesahan-final"', false);
+        $response->assertSee('class="sheet-signature-wrapper"', false);
+        $response->assertSee('id="sheet-signature-standalone-header"', false);
+
+        // 2. Signer roles & details are present
+        $response->assertSee('id="sheet-signer1-role"', false);
+        $response->assertSee('id="sheet-signer2-role"', false);
+        $response->assertSee('id="sheet-signer1-name"', false);
+        $response->assertSee('id="sheet-signer2-name"', false);
+        $response->assertSee('id="sheet-signer1-nip"', false);
+        $response->assertSee('id="sheet-signer2-nip"', false);
+        $response->assertSee('Mengetahui,');
+    }
+
+    public function test_photo_documentation_upload_controls_are_separated_from_sheets_into_modal(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('admin.agendas.notulen', $this->agenda));
+
+        $response->assertOk();
+        // 1. Modal exists outside office-paper-sheet
+        $response->assertSee('id="modal-notulen-dokumentasi"', false);
+        $response->assertSee('Kelola Lampiran Foto Dokumentasi');
+        $response->assertSee('id="photo-uploader-container"', false);
+        $response->assertSee('id="photo-dropzone"', false);
+        $response->assertSee('name="photos[]"', false);
+        $response->assertSee('id="photo-preview-grid"', false);
+
+        // 2. Top action bar contains quick button to open documentation modal
+        $response->assertSee('id="nav-photo-count"', false);
+        $response->assertSee('Lampiran Foto');
+        $response->assertSee('openDokumentasiModal()', false);
     }
 }
 

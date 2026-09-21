@@ -79,6 +79,24 @@
                 <span>Penyesuaian Dokumen</span>
             </button>
 
+            <!-- 1.3 Foto Dokumentasi Modal Trigger -->
+            <button 
+                type="button" 
+                onclick="openDokumentasiModal()" 
+                class="button flex items-center gap-2 text-xs font-semibold shadow-xs cursor-pointer border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 relative"
+                title="Kelola foto dokumentasi kegiatan rapat (di luar lembar dokumen resmi)"
+            >
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+                    <circle cx="9" cy="9" r="2"/>
+                    <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                </svg>
+                <span>Lampiran Foto</span>
+                <span id="nav-photo-count" class="px-1.5 py-0.2 rounded-full bg-slate-100 border border-slate-300 text-[10px] font-bold text-slate-700" data-stored-count="{{ $documentations->total() }}">
+                    {{ $documentations->total() }}
+                </span>
+            </button>
+
             <!-- Quick Export Dropdown -->
             <div class="relative inline-block text-left" x-data="{ open: false }" @click.outside="open = false">
                 <button 
@@ -496,15 +514,111 @@
                         </div>
                     </div>
 
+                    <!-- Blok Pengesahan & Tanda Tangan (Dynamic Word Signature Flow) -->
+                    <div id="sheet-pengesahan-final" class="sheet-signature-wrapper" style="margin-top: 10pt;">
+                        <!-- Header if on standalone page -->
+                        <div id="sheet-signature-standalone-header" style="display: none; text-align: center; margin-bottom: 8pt; padding-bottom: 4pt; border-bottom: 1.5pt solid #000;">
+                            <h2 style="font-size: 11pt; font-weight: bold; text-transform: uppercase; margin: 0; font-family: 'Times New Roman', Times, serif;">
+                                LEMBAR PENGESAHAN BERITA ACARA
+                            </h2>
+                            <div style="font-size: 8.5pt; color: #334155; margin-top: 2pt; font-family: 'Times New Roman', Times, serif;">
+                                Pelaksanaan: {{ $agenda->waktu_mulai->translatedFormat('d F Y') }} &bull; Format: {{ ucfirst($agenda->tipe_rapat) }}
+                            </div>
+                        </div>
+
+                        <!-- Tanda Tangan Pengesahan (Pemimpin Rapat & Notulis) -->
+                        @php
+                            $pimpinanAtt = $agenda->pimpinan_attendance;
+                            $notulisAtt = $agenda->notulis_attendance;
+                        @endphp
+                        <div class="signature-block" style="margin: 8pt 0 4pt 0;">
+                            <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; border-collapse: collapse; border: none; font-family: 'Times New Roman', Times, serif;">
+                                <colgroup>
+                                    <col style="width: 50%;">
+                                    <col style="width: 50%;">
+                                </colgroup>
+                                <tr>
+                                    <td style="text-align: center; vertical-align: top; border: none; padding: 0 8pt; font-size: 9.5pt;">
+                                        Mengetahui,<br>
+                                        <strong id="sheet-signer1-role">{{ $config['signer1_role'] ?? 'Pemimpin Rapat' }}</strong>
+                                    </td>
+                                    <td style="text-align: center; vertical-align: top; border: none; padding: 0 8pt; font-size: 9.5pt;">
+                                        <span id="sheet-signing-city">{{ $config['signing_city'] ?? 'Padang' }}</span>, <span id="sheet-signing-date">{{ $config['signing_date'] ?? ($agenda->waktu_mulai ? $agenda->waktu_mulai->translatedFormat('d F Y') : now()->translatedFormat('d F Y')) }}</span><br>
+                                        <strong id="sheet-signer2-role">{{ $config['signer2_role'] ?? 'Notulis Rapat' }}</strong>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="height: 36pt; text-align: center; vertical-align: middle; border: none; padding: 2pt 0;">
+                                        @if($pimpinanAtt && $pimpinanAtt->signature_path)
+                                            <img src="{{ Storage::disk('public')->url($pimpinanAtt->signature_path) }}" alt="TTD Pimpinan" width="95" height="32" style="width: 95px; height: 32px; object-fit: contain; display: block; margin: 0 auto; border: none;">
+                                        @else
+                                            <span style="font-size: 7.5pt; color: #64748b; font-style: italic;">(Tanda tangan tercatat saat presensi)</span>
+                                        @endif
+                                    </td>
+                                    <td style="height: 36pt; text-align: center; vertical-align: middle; border: none; padding: 2pt 0;">
+                                        @if($notulisAtt && $notulisAtt->signature_path)
+                                            <img src="{{ Storage::disk('public')->url($notulisAtt->signature_path) }}" alt="TTD Notulis" width="95" height="32" style="width: 95px; height: 32px; object-fit: contain; display: block; margin: 0 auto; border: none;">
+                                        @else
+                                            <span style="font-size: 7.5pt; color: #64748b; font-style: italic;">(Tanda tangan tercatat saat presensi)</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: center; vertical-align: top; border: none; padding: 0 8pt; font-size: 9.5pt;">
+                                        <strong><u id="sheet-signer1-name">{{ $config['signer1_name'] ?? $agenda->nama_pimpinan }}</u></strong><br>
+                                        NIP. <span id="sheet-signer1-nip">{{ $config['signer1_nip'] ?? $agenda->nip_pimpinan }}</span>
+                                    </td>
+                                    <td style="text-align: center; vertical-align: top; border: none; padding: 0 8pt; font-size: 9.5pt;">
+                                        <strong><u id="sheet-signer2-name">{{ $config['signer2_name'] ?? $agenda->nama_notulis }}</u></strong><br>
+                                        NIP. <span id="sheet-signer2-nip">{{ $config['signer2_nip'] ?? $agenda->nip_notulis }}</span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <!-- Catatan Kaki Dokumen Resmi -->
+                        <div style="margin: 8pt 0 4pt 0; padding-top: 3pt; border-top: 1px solid #cbd5e1; font-size: 7.5pt; color: #64748b; text-align: center; font-family: 'Times New Roman', Times, serif;">
+                            <span id="sheet-footer-note">{{ $config['footer_note'] ?? 'Dokumen ini diterbitkan secara resmi melalui Sistem Informasi Presensi Rapat (SIPERAPAT) LLDIKTI Wilayah X' }}</span> &bull; <span>Dicetak pada {{ now()->translatedFormat('d F Y H:i') }} WIB</span>
+                        </div>
+                    </div>
+
+                    <!-- Lampiran Bersih Foto Dokumentasi pada Lembar Cetak (Hanya Tampil Jika Foto Ada & Opsi Aktif) -->
+                    @if($documentations->count() > 0)
+                        <div id="sheet-documentation-annex" class="sheet-documentation-annex" style="margin-top: 10pt; padding-top: 8pt; border-top: 1.5px solid #000; {{ ($config['show_documentation'] ?? true) ? '' : 'display: none;' }}">
+                            <div style="font-size: 9.5pt; font-weight: bold; margin-bottom: 6pt; text-transform: uppercase; font-family: 'Times New Roman', Times, serif; text-align: center;">
+                                III. LAMPIRAN FOTO DOKUMENTASI KEGIATAN
+                            </div>
+                            <table width="100%" border="0" cellspacing="0" cellpadding="4" style="width: 100%; border-collapse: collapse;">
+                                @foreach($documentations->chunk(2) as $chunk)
+                                    <tr>
+                                        @foreach($chunk as $doc)
+                                            <td width="50%" align="center" valign="top" style="padding: 4pt; border: none;">
+                                                <div style="border: 1px solid #94a3b8; padding: 3pt; background: #ffffff; text-align: center;">
+                                                    <img src="{{ Storage::disk('public')->url($doc->file_path) }}" alt="Foto Dokumentasi" style="width: 100%; max-height: 120px; object-fit: contain; display: block; margin: 0 auto;">
+                                                    @if($doc->caption)
+                                                        <div style="font-size: 7.5pt; color: #334155; margin-top: 2pt; font-style: italic; font-family: 'Times New Roman', Times, serif;">{{ $doc->caption }}</div>
+                                                    @endif
+                                                </div>
+                                            </td>
+                                        @endforeach
+                                        @if($chunk->count() === 1)
+                                            <td width="50%" style="border: none;">&nbsp;</td>
+                                        @endif
+                                    </tr>
+                                @endforeach
+                            </table>
+                        </div>
+                    @endif
+
                     <!-- Running Footer Lembar 1 -->
                     <div class="doc-running-footer">
                         <span>SIPERAPAT &bull; LLDIKTI Wilayah X</span>
-                        <span class="doc-page-number font-bold">Halaman 1 dari 2</span>
+                        <span class="doc-page-number font-bold">Halaman 1 dari 1</span>
                     </div>
                 </div>
 
                 <!-- ==================== PEMISAH ANTAR HALAMAN (NATURAL PAGE BREAK) ==================== -->
-                <div class="office-page-separator" id="page-separator-1" aria-hidden="true">
+                <div class="office-page-separator" id="page-separator-1" style="display: none;" aria-hidden="true">
                     <div class="office-page-gap" id="office-page-gap">
                         <div class="gap-line"></div>
                         <div class="gap-indicator">
@@ -518,178 +632,12 @@
                 <!-- Wadah Lembar Lanjutan Dinamis (Sheet 2, 3, dst.) -->
                 <div id="dynamic-continuation-sheets"></div>
 
-                <!-- ==================== LEMBAR FINAL (PENGESAHAN & LAMPIRAN FOTO) ==================== -->
-                <div class="office-paper-sheet paper-a4" id="sheet-pengesahan-final" data-page="2">
-                    <!-- Page Number Badge (Top Right Corner) -->
-                    <div class="doc-badge-page absolute top-3 right-4 text-[10px] font-mono font-bold text-slate-400 select-none print:hidden">
-                        HALAMAN 2
-                    </div>
-
-                    <!-- Running Header Lembar Final -->
-                    <div class="doc-running-header">
-                        <span class="truncate max-w-sm">Berita Acara Rapat: <strong>{{ $agenda->judul_rapat }}</strong></span>
-                        <span class="doc-page-number font-bold shrink-0">Halaman 2 dari 2</span>
-                    </div>
-
-                    <!-- Header Lembar Pengesahan -->
-                    <div style="text-align: center; margin-bottom: 10pt; padding-bottom: 5pt; border-bottom: 1.5pt solid #000;">
-                        <h2 style="font-size: 11pt; font-weight: bold; text-transform: uppercase; margin: 0; font-family: 'Times New Roman', Times, serif;">
-                            LEMBAR PENGESAHAN &amp; LAMPIRAN DOKUMENTASI
-                        </h2>
-                        <div style="font-size: 8.5pt; color: #334155; margin-top: 2pt; font-family: 'Times New Roman', Times, serif;">
-                            Pelaksanaan: {{ $agenda->waktu_mulai->translatedFormat('d F Y') }} &bull; Format: {{ ucfirst($agenda->tipe_rapat) }}
-                        </div>
-                    </div>
-
-                    <!-- Tanda Tangan Pengesahan (Pemimpin Rapat & Notulis) -->
-                    @php
-                        $pimpinanAtt = $agenda->pimpinan_attendance;
-                        $notulisAtt = $agenda->notulis_attendance;
-                    @endphp
-                    <div class="signature-block" style="margin: 12pt 0 10pt 0;">
-                        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; border-collapse: collapse; border: none; font-family: 'Times New Roman', Times, serif;">
-                            <colgroup>
-                                <col style="width: 50%;">
-                                <col style="width: 50%;">
-                            </colgroup>
-                            <tr>
-                                <td style="text-align: center; vertical-align: top; border: none; padding: 0 8pt; font-size: 9.5pt;">
-                                    Mengetahui,<br>
-                                    <strong id="sheet-signer1-role">{{ $config['signer1_role'] ?? 'Pemimpin Rapat' }}</strong>
-                                </td>
-                                <td style="text-align: center; vertical-align: top; border: none; padding: 0 8pt; font-size: 9.5pt;">
-                                    <span id="sheet-signing-city">{{ $config['signing_city'] ?? 'Padang' }}</span>, <span id="sheet-signing-date">{{ $config['signing_date'] ?? ($agenda->waktu_mulai ? $agenda->waktu_mulai->translatedFormat('d F Y') : now()->translatedFormat('d F Y')) }}</span><br>
-                                    <strong id="sheet-signer2-role">{{ $config['signer2_role'] ?? 'Notulis Rapat' }}</strong>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td style="height: 38pt; text-align: center; vertical-align: middle; border: none; padding: 2pt 0;">
-                                    @if($pimpinanAtt && $pimpinanAtt->signature_path)
-                                        <img src="{{ Storage::disk('public')->url($pimpinanAtt->signature_path) }}" alt="TTD Pimpinan" width="95" height="32" style="width: 95px; height: 32px; object-fit: contain; display: block; margin: 0 auto; border: none;">
-                                    @else
-                                        <span style="font-size: 7.5pt; color: #64748b; font-style: italic;">(Tanda tangan tercatat saat presensi)</span>
-                                    @endif
-                                </td>
-                                <td style="height: 38pt; text-align: center; vertical-align: middle; border: none; padding: 2pt 0;">
-                                    @if($notulisAtt && $notulisAtt->signature_path)
-                                        <img src="{{ Storage::disk('public')->url($notulisAtt->signature_path) }}" alt="TTD Notulis" width="95" height="32" style="width: 95px; height: 32px; object-fit: contain; display: block; margin: 0 auto; border: none;">
-                                    @else
-                                        <span style="font-size: 7.5pt; color: #64748b; font-style: italic;">(Tanda tangan tercatat saat presensi)</span>
-                                    @endif
-                                </td>
-                            </tr>
-                            <tr>
-                                <td style="text-align: center; vertical-align: top; border: none; padding: 0 8pt; font-size: 9.5pt;">
-                                    <strong><u id="sheet-signer1-name">{{ $config['signer1_name'] ?? $agenda->nama_pimpinan }}</u></strong><br>
-                                    NIP. <span id="sheet-signer1-nip">{{ $config['signer1_nip'] ?? $agenda->nip_pimpinan }}</span>
-                                </td>
-                                <td style="text-align: center; vertical-align: top; border: none; padding: 0 8pt; font-size: 9.5pt;">
-                                    <strong><u id="sheet-signer2-name">{{ $config['signer2_name'] ?? $agenda->nama_notulis }}</u></strong><br>
-                                    NIP. <span id="sheet-signer2-nip">{{ $config['signer2_nip'] ?? $agenda->nip_notulis }}</span>
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
-
-                    <!-- Catatan Kaki Dokumen Resmi -->
-                    <div style="margin: 10pt 0 14pt 0; padding-top: 3pt; border-top: 1px solid #cbd5e1; font-size: 7.5pt; color: #64748b; text-align: center; font-family: 'Times New Roman', Times, serif;">
-                        <span id="sheet-footer-note">{{ $config['footer_note'] ?? 'Dokumen ini diterbitkan secara resmi melalui Sistem Informasi Presensi Rapat (SIPERAPAT) LLDIKTI Wilayah X' }}</span> &bull; <span>Dicetak pada {{ now()->translatedFormat('d F Y H:i') }} WIB</span>
-                    </div>
-
-                    <!-- Seksi III: Lampiran Foto Dokumentasi Kegiatan -->
-                    <div style="border-top: 2px dashed #cbd5e1; padding-top: 10pt; margin-top: 10pt;">
-                        <div class="flex items-center justify-between mb-3">
-                            <div>
-                                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900 font-sans">
-                                    III. Lampiran Foto Dokumentasi Kegiatan
-                                </h3>
-                                <p class="text-[11px] text-slate-600 font-sans">Unggah foto suasana rapat, dokumen pendukung, atau paparan materi sebagai lampiran sah.</p>
-                            </div>
-                            <span id="photo-counter-badge" class="hidden text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-900 text-white font-mono">
-                                0 Foto Terpilih
-                            </span>
-                        </div>
-
-                        <!-- Dropzone & File Input -->
-                        <div id="photo-uploader-container" class="space-y-3">
-                            <div 
-                                id="photo-dropzone"
-                                class="border-2 border-dashed border-slate-300 hover:border-slate-400 bg-slate-50/75 rounded-xl p-5 text-center transition cursor-pointer relative group font-sans"
-                            >
-                                <input 
-                                    type="file" 
-                                    id="photos" 
-                                    name="photos[]" 
-                                    multiple 
-                                    accept="image/jpeg,image/png,image/webp" 
-                                    class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                                    title="Pilih atau seret berkas foto dokumentasi"
-                                >
-                                <div class="flex flex-col items-center justify-center pointer-events-none space-y-2">
-                                    <div class="w-9 h-9 rounded-full bg-slate-200 group-hover:bg-slate-300 transition flex items-center justify-center text-slate-700">
-                                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
-                                    </div>
-                                    <div>
-                                        <span class="text-xs font-bold text-slate-900 group-hover:underline">Klik untuk memilih foto lampiran</span>
-                                        <span class="text-xs text-slate-500"> atau seret & jatuhkan berkas ke sini</span>
-                                    </div>
-                                    <p class="text-[11px] text-slate-500">Format: JPG, JPEG, PNG, WEBP (Maksimal 3 MB per foto, hingga 10 foto).</p>
-                                </div>
-                            </div>
-
-                            @error('photos')
-                                <p class="text-xs text-rose-700 font-bold mt-1 font-sans">{{ $message }}</p>
-                            @enderror
-                            @error('photos.*')
-                                <p class="text-xs text-rose-700 font-bold mt-1 font-sans">{{ $message }}</p>
-                            @enderror
-
-                            <!-- Preview Grid Container for newly selected files -->
-                            <div id="photo-preview-grid" class="hidden grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 pt-2 font-sans">
-                                <!-- Pratinjau foto akan dirender dinamis via JavaScript -->
-                            </div>
-                        </div>
-
-                        <!-- Galeri Dokumentasi Foto Tersimpan -->
-                        @if($documentations->count() > 0)
-                            <div class="mt-4 pt-3 border-t border-slate-200 font-sans">
-                                <div class="flex items-center justify-between mb-2">
-                                    <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wide">
-                                        Foto Dokumentasi Tersimpan ({{ $documentations->total() }})
-                                    </h4>
-                                </div>
-                                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                                    @foreach($documentations as $doc)
-                                        <div class="relative group bg-slate-50 rounded-xl overflow-hidden border border-slate-300">
-                                            <img src="{{ Storage::disk('public')->url($doc->file_path) }}" alt="Dokumentasi Rapat" class="w-full h-24 object-cover">
-                                            <div class="p-1.5 bg-white text-[10px] text-slate-900 font-bold truncate border-t border-slate-200">
-                                                {{ $doc->caption ?? 'Dokumentasi' }}
-                                            </div>
-                                        </div>
-                                    @endforeach
-                                </div>
-                                @if($documentations->hasPages())
-                                    <div class="mt-3">
-                                        {{ $documentations->links('vendor.pagination.compact') }}
-                                    </div>
-                                @endif
-                            </div>
-                        @endif
-                    </div>
-
-                    <!-- Running Footer Lembar Final -->
-                    <div class="doc-running-footer">
-                        <span>SIPERAPAT &bull; LLDIKTI Wilayah X</span>
-                        <span class="doc-page-number font-bold">Halaman 2 dari 2</span>
-                    </div>
-                </div>
-
             </div>
 
             <!-- 5. Word Office Bottom Status Bar -->
             <div class="office-status-bar" id="office-status-bar" aria-label="Bilah Status Dokumen">
                 <div class="flex items-center gap-3">
-                    <span id="office-status-page" class="font-semibold text-slate-200">Halaman 1 dari 2</span>
+                    <span id="office-status-page" class="font-semibold text-slate-200">Halaman 1 dari 1</span>
                     <span class="text-slate-600">&bull;</span>
                     <span id="office-status-size">A4 (210 × 297 mm)</span>
                     <span class="text-slate-600">&bull;</span>
@@ -697,6 +645,128 @@
                 </div>
                 <div class="flex items-center gap-3">
                     <span id="office-status-zoom">Zoom: 100%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================================================= -->
+        <!-- MODAL KELOLA FOTO DOKUMENTASI RAPAT (DI LUAR LEMBAR DOKUMEN FISIK)        -->
+        <!-- ========================================================================= -->
+        <div 
+            id="modal-notulen-dokumentasi" 
+            class="fixed inset-0 z-50 hidden !m-0 m-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 overflow-y-auto transition-opacity"
+            tabindex="-1"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-notulen-dokumentasi-title"
+        >
+            <div class="bg-white border border-slate-300 rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden my-auto max-h-[calc(100dvh-2rem)] flex flex-col animate-in fade-in zoom-in-95 duration-150">
+                <!-- 1. Header -->
+                <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50 shrink-0">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-9 h-9 rounded-lg bg-slate-900 text-white flex items-center justify-center shrink-0">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+                                <circle cx="9" cy="9" r="2"/>
+                                <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 id="modal-notulen-dokumentasi-title" class="text-sm font-bold text-slate-900">Kelola Lampiran Foto Dokumentasi</h3>
+                            <p class="text-[11px] text-slate-500 font-medium truncate max-w-md">{{ $agenda->judul_rapat }}</p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="closeDokumentasiModal()" class="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-200 transition cursor-pointer" aria-label="Tutup modal">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </div>
+
+                <!-- 2. Body -->
+                <div class="p-6 space-y-4 overflow-y-auto flex-1 text-xs">
+                    <div class="p-3.5 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900 leading-relaxed flex items-start gap-2">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0 mt-0.5 text-blue-600"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        <div>
+                            <strong>Dokumentasi Sah Rapat</strong>
+                            <p class="text-[11px] text-blue-800 mt-0.5">Unggah foto suasana rapat, paparan materi, atau dokumen pendukung. Berkas yang dipilih di sini akan otomatis diunggah saat Anda menekan tombol <strong>Simpan Notulensi</strong>.</p>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Dropzone -->
+                    <div id="photo-uploader-container" class="space-y-3">
+                        <div 
+                            id="photo-dropzone"
+                            class="border-2 border-dashed border-slate-300 hover:border-slate-400 bg-slate-50/75 rounded-xl p-6 text-center transition cursor-pointer relative group font-sans"
+                        >
+                            <input 
+                                type="file" 
+                                id="photos" 
+                                name="photos[]" 
+                                multiple 
+                                accept="image/jpeg,image/png,image/webp" 
+                                class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                title="Pilih atau seret berkas foto dokumentasi"
+                            >
+                            <div class="flex flex-col items-center justify-center pointer-events-none space-y-2">
+                                <div class="w-10 h-10 rounded-full bg-slate-200 group-hover:bg-slate-300 transition flex items-center justify-center text-slate-700">
+                                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                                </div>
+                                <div>
+                                    <span class="text-xs font-bold text-slate-900 group-hover:underline">Klik untuk memilih foto lampiran</span>
+                                    <span class="text-xs text-slate-500"> atau seret &amp; jatuhkan berkas ke sini</span>
+                                </div>
+                                <p class="text-[11px] text-slate-500">Format: JPG, JPEG, PNG, WEBP (Maksimal 3 MB per foto, hingga 10 foto).</p>
+                            </div>
+                        </div>
+
+                        @error('photos')
+                            <p class="text-xs text-rose-700 font-bold mt-1 font-sans">{{ $message }}</p>
+                        @enderror
+                        @error('photos.*')
+                            <p class="text-xs text-rose-700 font-bold mt-1 font-sans">{{ $message }}</p>
+                        @enderror
+
+                        <!-- Preview Grid Container for newly selected files -->
+                        <div id="photo-preview-grid" class="hidden grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 font-sans">
+                        </div>
+                    </div>
+
+                    <!-- Galeri Foto yang Sudah Tersimpan -->
+                    @if($documentations->count() > 0)
+                        <div class="mt-4 pt-3 border-t border-slate-200 font-sans">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wide">
+                                    Foto Tersimpan di Database ({{ $documentations->total() }})
+                                </h4>
+                            </div>
+                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                @foreach($documentations as $doc)
+                                    <div class="relative group bg-slate-50 rounded-xl overflow-hidden border border-slate-300">
+                                        <img src="{{ Storage::disk('public')->url($doc->file_path) }}" alt="Dokumentasi Rapat" class="w-full h-24 object-cover">
+                                        <div class="p-1.5 bg-white text-[10px] text-slate-900 font-bold truncate border-t border-slate-200 flex items-center justify-between">
+                                            <span class="truncate">{{ $doc->caption ?? 'Dokumentasi' }}</span>
+                                            <a href="{{ Storage::disk('public')->url($doc->file_path) }}" target="_blank" class="text-blue-600 hover:underline shrink-0 ml-1">Lihat</a>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+                </div>
+
+                <!-- 3. Footer -->
+                <div class="px-6 py-3.5 border-t border-slate-200 bg-slate-50 flex items-center justify-between shrink-0">
+                    <span id="photo-counter-badge" class="hidden text-xs font-bold text-slate-700 font-mono">
+                        0 Foto Terpilih
+                    </span>
+                    <div class="ml-auto">
+                        <button 
+                            type="button" 
+                            onclick="closeDokumentasiModal()" 
+                            class="button text-xs font-semibold border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 cursor-pointer"
+                        >
+                            Tutup
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1280,9 +1350,26 @@
         if (footerNoteEl && val('footer_note')) footerNoteEl.textContent = val('footer_note');
     }
 
+    function openDokumentasiModal() {
+        const modal = document.getElementById('modal-notulen-dokumentasi');
+        if (modal) {
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    function closeDokumentasiModal() {
+        const modal = document.getElementById('modal-notulen-dokumentasi');
+        if (modal) {
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+    }
+
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             closeDocumentConfigModal();
+            closeDokumentasiModal();
         }
     });
 

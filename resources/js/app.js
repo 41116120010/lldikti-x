@@ -924,6 +924,11 @@ const PhotoPreviewUploader = {
             if (currentFiles.length === 0) {
                 previewGrid.classList.add('hidden');
                 if (counterBadge) counterBadge.classList.add('hidden');
+                const navBadge = document.querySelector('#nav-photo-count');
+                if (navBadge) {
+                    const stored = parseInt(navBadge.dataset.storedCount || '0', 10);
+                    navBadge.textContent = stored;
+                }
                 return;
             }
 
@@ -931,6 +936,11 @@ const PhotoPreviewUploader = {
             if (counterBadge) {
                 counterBadge.textContent = `${currentFiles.length} Foto Terpilih`;
                 counterBadge.classList.remove('hidden');
+            }
+            const navBadge = document.querySelector('#nav-photo-count');
+            if (navBadge) {
+                const stored = parseInt(navBadge.dataset.storedCount || '0', 10);
+                navBadge.textContent = stored + currentFiles.length;
             }
 
             currentFiles.forEach((file, index) => {
@@ -1072,7 +1082,8 @@ const OfficeWorkstation = {
         const zoomContainer = workstation.querySelector('#office-zoom-container');
         const deskCanvas = workstation.querySelector('.office-desk-canvas');
         const continuationContainer = workstation.querySelector('#dynamic-continuation-sheets');
-        const finalSheet = workstation.querySelector('#sheet-pengesahan-final');
+        const sigWrapper = workstation.querySelector('#sheet-pengesahan-final');
+        const docAnnex = workstation.querySelector('#sheet-documentation-annex');
         const separator1 = workstation.querySelector('#page-separator-1');
         
         const notulensiBox = workstation.querySelector('#notulensi-content');
@@ -1554,6 +1565,14 @@ const OfficeWorkstation = {
                     const nBlocks = parseBlocks(nBoxes, notulensiHidden);
                     const kBlocks = parseBlocks(kBoxes, kesimpulanHidden);
 
+                    // Temporarily detach signature block & documentation annex to ensure accurate margin calculation during text layout
+                    if (sigWrapper && sigWrapper.parentNode) {
+                        sigWrapper.parentNode.removeChild(sigWrapper);
+                    }
+                    if (docAnnex && docAnnex.parentNode) {
+                        docAnnex.parentNode.removeChild(docAnnex);
+                    }
+
                     // Clear continuation container
                     if (continuationContainer) {
                         continuationContainer.innerHTML = '';
@@ -1631,28 +1650,52 @@ const OfficeWorkstation = {
                         }
                     }
 
-                    let curPage = 2;
-                    while (remN.length > 0 || remK.length > 0) {
+                    const createContinuationSheet = (pageNum) => {
                         const sheet = document.createElement('div');
                         sheet.className = `office-paper-sheet paper-${curFormat}`;
-                        sheet.dataset.page = String(curPage);
-
+                        sheet.dataset.page = String(pageNum);
                         sheet.innerHTML = `
                             <div class="doc-badge-page absolute top-3 right-4 text-[10px] font-mono font-bold text-slate-400 select-none print:hidden">
-                                HALAMAN ${curPage}
+                                HALAMAN ${pageNum}
                             </div>
                             <div class="doc-running-header">
                                 <span class="truncate max-w-sm">Berita Acara Rapat: <strong>${agendaTitle}</strong></span>
-                                <span class="doc-page-number font-bold shrink-0">Halaman ${curPage}</span>
+                                <span class="doc-page-number font-bold shrink-0">Halaman ${pageNum}</span>
                             </div>
                             <div class="continuation-content-area" style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 8pt;">
                             </div>
                             <div class="doc-running-footer">
                                 <span>SIPERAPAT &bull; LLDIKTI Wilayah X</span>
-                                <span class="doc-page-number font-bold">Halaman ${curPage}</span>
+                                <span class="doc-page-number font-bold">Halaman ${pageNum}</span>
                             </div>
                         `;
+                        return sheet;
+                    };
 
+                    const createPageSeparator = (targetPageName) => {
+                        const sep = document.createElement('div');
+                        sep.className = 'office-page-separator';
+                        sep.setAttribute('aria-hidden', 'true');
+                        sep.innerHTML = `
+                            <div class="office-page-gap ${curFormat === 'f4' ? 'gap-f4' : ''}">
+                                <div class="gap-line"></div>
+                                <div class="gap-indicator">
+                                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                    <span class="gap-indicator-text">Pemisah Halaman &bull; Menuju ${targetPageName}</span>
+                                </div>
+                                <div class="gap-line"></div>
+                            </div>
+                        `;
+                        return sep;
+                    };
+
+                    let curPage = 2;
+                    while (remN.length > 0 || remK.length > 0) {
+                        if (continuationContainer.querySelectorAll('.office-paper-sheet').length > 0) {
+                            continuationContainer.appendChild(createPageSeparator(`Halaman ${curPage}`));
+                        }
+
+                        const sheet = createContinuationSheet(curPage);
                         continuationContainer.appendChild(sheet);
                         const contentArea = sheet.querySelector('.continuation-content-area');
 
@@ -1705,27 +1748,79 @@ const OfficeWorkstation = {
                             }
                         }
 
-                        // Add separator AFTER this continuation sheet
-                        const sep = document.createElement('div');
-                        sep.className = 'office-page-separator';
-                        sep.setAttribute('aria-hidden', 'true');
-                        sep.innerHTML = `
-                            <div class="office-page-gap ${curFormat === 'f4' ? 'gap-f4' : ''}">
-                                <div class="gap-line"></div>
-                                <div class="gap-indicator">
-                                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                                    <span class="gap-indicator-text">Pemisah Halaman &bull; Menuju ${remN.length > 0 || remK.length > 0 ? 'Halaman ' + (curPage + 1) : 'Lembar Pengesahan'}</span>
-                                </div>
-                                <div class="gap-line"></div>
-                            </div>
-                        `;
-                        continuationContainer.appendChild(sep);
-
                         curPage++;
                         if (curPage > 25) break;
                     }
 
-                    // Update all sheets page numbers
+                    // --- PLACEMENT OF SIGNATURE BLOCK (#sheet-pengesahan-final) ---
+                    if (sigWrapper) {
+                        const contSheets = Array.from(continuationContainer.querySelectorAll('.office-paper-sheet'));
+                        const lastContentSheet = contSheets.length > 0 ? contSheets[contSheets.length - 1] : sheet1;
+                        const standaloneHeader = sigWrapper.querySelector('#sheet-signature-standalone-header');
+
+                        // Try placing signature block on lastContentSheet first (dynamic flow filling remaining space)
+                        if (lastContentSheet === sheet1) {
+                            sheet1.insertBefore(sigWrapper, sheet1.querySelector('.doc-running-footer'));
+                        } else {
+                            const ca = lastContentSheet.querySelector('.continuation-content-area');
+                            if (ca) {
+                                ca.appendChild(sigWrapper);
+                            } else {
+                                lastContentSheet.insertBefore(sigWrapper, lastContentSheet.querySelector('.doc-running-footer'));
+                            }
+                        }
+
+                        if (standaloneHeader) standaloneHeader.style.display = 'none';
+
+                        // If it exceeds margin on lastContentSheet, flow it cleanly to a dedicated Lembar Pengesahan sheet!
+                        if (isExceedingMargin(lastContentSheet, sigWrapper)) {
+                            if (sigWrapper.parentNode) sigWrapper.parentNode.removeChild(sigWrapper);
+
+                            if (continuationContainer.querySelectorAll('.office-paper-sheet').length > 0) {
+                                continuationContainer.appendChild(createPageSeparator('Lembar Pengesahan'));
+                            }
+
+                            const sigSheet = createContinuationSheet(curPage);
+                            continuationContainer.appendChild(sigSheet);
+                            const sigArea = sigSheet.querySelector('.continuation-content-area');
+                            sigArea.appendChild(sigWrapper);
+                            if (standaloneHeader) standaloneHeader.style.display = 'block';
+                            curPage++;
+                        }
+                    }
+
+                    // --- PLACEMENT OF DOCUMENTATION ANNEX (CLEAN PRINT VIEW ONLY IF EXISTS) ---
+                    if (docAnnex) {
+                        const allSheets = Array.from(workstation.querySelectorAll('.office-paper-sheet'));
+                        const targetSheet = allSheets[allSheets.length - 1];
+
+                        if (targetSheet === sheet1) {
+                            sheet1.insertBefore(docAnnex, sheet1.querySelector('.doc-running-footer'));
+                        } else {
+                            const ca = targetSheet.querySelector('.continuation-content-area');
+                            if (ca) {
+                                ca.appendChild(docAnnex);
+                            } else {
+                                targetSheet.insertBefore(docAnnex, targetSheet.querySelector('.doc-running-footer'));
+                            }
+                        }
+
+                        if (isExceedingMargin(targetSheet, docAnnex)) {
+                            if (docAnnex.parentNode) docAnnex.parentNode.removeChild(docAnnex);
+
+                            if (continuationContainer.querySelectorAll('.office-paper-sheet').length > 0) {
+                                continuationContainer.appendChild(createPageSeparator('Lampiran Dokumentasi'));
+                            }
+
+                            const annexSheet = createContinuationSheet(curPage);
+                            continuationContainer.appendChild(annexSheet);
+                            const annexArea = annexSheet.querySelector('.continuation-content-area');
+                            annexArea.appendChild(docAnnex);
+                            curPage++;
+                        }
+                    }
+
+                    // Update all sheets page numbers and running headers/footers
                     const allSheets = workstation.querySelectorAll('.office-paper-sheet');
                     const totPages = allSheets.length;
 
@@ -1740,13 +1835,16 @@ const OfficeWorkstation = {
                         if (rf) rf.textContent = `Halaman ${pNum} dari ${totPages}`;
                     });
 
-                    // Update separator 1 text
+                    // Update Separator 1 (between Sheet 1 and dynamic sheets)
                     if (separator1) {
-                        const indText = separator1.querySelector('.gap-indicator-text');
-                        if (totPages > 2) {
-                            if (indText) indText.textContent = 'Pemisah Halaman • Menuju Halaman 2';
+                        if (totPages <= 1) {
+                            separator1.style.display = 'none';
                         } else {
-                            if (indText) indText.textContent = 'Pemisah Halaman • Menuju Lembar Pengesahan';
+                            separator1.style.display = 'block';
+                            const indText = separator1.querySelector('.gap-indicator-text');
+                            if (indText) {
+                                indText.textContent = 'Pemisah Halaman • Menuju Halaman 2';
+                            }
                         }
                     }
 
