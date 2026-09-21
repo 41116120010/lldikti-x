@@ -821,25 +821,34 @@
         border: 1px solid #94a3b8;
         box-sizing: border-box;
         margin: 0 auto;
-        padding: 16mm 18mm 16mm 18mm;
+        padding: 16mm 18mm 22mm 18mm;
         font-family: 'Times New Roman', Times, serif;
         color: #000000;
         position: relative;
-        transition: width 0.25s ease, min-height 0.25s ease;
+        transition: width 0.25s ease, height 0.25s ease;
         word-wrap: break-word;
         overflow-wrap: break-word;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
     }
 
     .office-paper-sheet.paper-a4 {
         width: 210mm;
         min-height: 297mm;
+        max-height: 297mm;
+        height: 297mm;
         max-width: 100%;
+        overflow: hidden;
     }
 
     .office-paper-sheet.paper-f4 {
         width: 215mm;
         min-height: 330mm;
+        max-height: 330mm;
+        height: 330mm;
         max-width: 100%;
+        overflow: hidden;
     }
 
     /* Spreadsheet / Word Table Styles for Attendees */
@@ -895,7 +904,14 @@
         align-items: center;
         border-top: 0.75pt solid #cbd5e1;
         padding-top: 4pt;
-        margin-top: 14pt;
+        position: absolute !important;
+        bottom: 12mm !important;
+        left: 18mm !important;
+        right: 18mm !important;
+        height: 20px;
+        margin: 0 !important;
+        background: #ffffff;
+        z-index: 10;
     }
 
     /* Authentic Word Page Break & Gap */
@@ -966,7 +982,7 @@
         border: 1.5px solid #0f172a;
         border-radius: 4px;
         padding: 6pt 8pt;
-        min-height: 140px;
+        min-height: 50px;
         background: #ffffff;
         outline: none;
         font-family: 'Times New Roman', Times, serif;

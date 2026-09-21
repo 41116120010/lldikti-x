@@ -1071,7 +1071,9 @@ const OfficeWorkstation = {
         const ribbon = workstation.querySelector('.word-editor-ribbon');
         const zoomContainer = workstation.querySelector('#office-zoom-container');
         const deskCanvas = workstation.querySelector('.office-desk-canvas');
-        const sheets = workstation.querySelectorAll('.office-paper-sheet');
+        const continuationContainer = workstation.querySelector('#dynamic-continuation-sheets');
+        const finalSheet = workstation.querySelector('#sheet-pengesahan-final');
+        const separator1 = workstation.querySelector('#page-separator-1');
         
         const notulensiBox = workstation.querySelector('#notulensi-content');
         const kesimpulanBox = workstation.querySelector('#kesimpulan-content');
@@ -1083,35 +1085,35 @@ const OfficeWorkstation = {
         let savedRange = null;
 
         const syncContent = () => {
-            if (notulensiBox && notulensiHidden) notulensiHidden.value = notulensiBox.innerHTML;
-            if (kesimpulanBox && kesimpulanHidden) kesimpulanHidden.value = kesimpulanBox.innerHTML;
+            const nBoxes = workstation.querySelectorAll('[data-editor="notulensi"]');
+            let joinedN = '';
+            nBoxes.forEach(box => {
+                const html = box.innerHTML.trim();
+                if (html && html !== '<p><br></p>' && html !== '<br>') {
+                    joinedN += html;
+                }
+            });
+            if (notulensiHidden) notulensiHidden.value = joinedN;
+
+            const kBoxes = workstation.querySelectorAll('[data-editor="kesimpulan"]');
+            let joinedK = '';
+            kBoxes.forEach(box => {
+                const html = box.innerHTML.trim();
+                if (html && html !== '<p><br></p>' && html !== '<br>') {
+                    joinedK += html;
+                }
+            });
+            if (kesimpulanHidden) kesimpulanHidden.value = joinedK;
         };
 
         const setActiveEditor = (box, hidden) => {
             activeBox = box;
             activeHidden = hidden;
-            if (notulensiBox) notulensiBox.classList.remove('is-active-editor');
-            if (kesimpulanBox) kesimpulanBox.classList.remove('is-active-editor');
+            workstation.querySelectorAll('.office-editable-box').forEach(b => {
+                b.classList.remove('is-active-editor');
+            });
             if (box) box.classList.add('is-active-editor');
         };
-
-        if (notulensiBox) {
-            notulensiBox.addEventListener('focus', () => setActiveEditor(notulensiBox, notulensiHidden, 'notulensi'));
-            notulensiBox.addEventListener('click', () => setActiveEditor(notulensiBox, notulensiHidden, 'notulensi'));
-            notulensiBox.addEventListener('input', syncContent);
-            notulensiBox.addEventListener('blur', syncContent);
-        }
-
-        if (kesimpulanBox) {
-            kesimpulanBox.addEventListener('focus', () => setActiveEditor(kesimpulanBox, kesimpulanHidden, 'kesimpulan'));
-            kesimpulanBox.addEventListener('click', () => setActiveEditor(kesimpulanBox, kesimpulanHidden, 'kesimpulan'));
-            kesimpulanBox.addEventListener('input', syncContent);
-            kesimpulanBox.addEventListener('blur', syncContent);
-        }
-
-        // Initialize active editor to notulensi by default
-        setActiveEditor(notulensiBox, notulensiHidden, 'notulensi');
-        syncContent();
 
         const rulerEl = workstation.querySelector('#office-document-ruler');
         const statusBarEl = workstation.querySelector('#office-status-bar');
@@ -1119,12 +1121,21 @@ const OfficeWorkstation = {
         const statusPageEl = workstation.querySelector('#office-status-page');
         const statusZoomEl = workstation.querySelector('#office-status-zoom');
 
+        const titleEl = workstation.querySelector('.doc-running-header strong');
+        const agendaTitle = titleEl ? titleEl.textContent : 'Agenda Rapat';
+
         // 1. Paper Format Switcher (A4 vs F4)
         const paperButtons = workstation.querySelectorAll('[data-paper-size]');
-        const setPaperSize = (size) => {
-            sheets.forEach(sheet => {
+        const setPaperSize = (size, triggerReflow = true) => {
+            const allSheets = workstation.querySelectorAll('.office-paper-sheet');
+            allSheets.forEach(sheet => {
                 sheet.classList.remove('paper-a4', 'paper-f4');
                 sheet.classList.add(`paper-${size}`);
+            });
+            const allGaps = workstation.querySelectorAll('.office-page-gap');
+            allGaps.forEach(gap => {
+                gap.classList.remove('gap-f4');
+                if (size === 'f4') gap.classList.add('gap-f4');
             });
             if (rulerEl) {
                 rulerEl.classList.remove('paper-a4', 'paper-f4', 'ruler-f4');
@@ -1157,6 +1168,10 @@ const OfficeWorkstation = {
             try {
                 localStorage.setItem('siperapat_paper_format', size);
             } catch (e) {}
+
+            if (triggerReflow && paginationEngine) {
+                paginationEngine.reflow();
+            }
         };
 
         paperButtons.forEach(btn => {
@@ -1165,12 +1180,6 @@ const OfficeWorkstation = {
                 setPaperSize(btn.dataset.paperSize);
             });
         });
-
-        // Load saved paper format preference (default A4)
-        const savedFormat = (() => {
-            try { return localStorage.getItem('siperapat_paper_format') || 'a4'; } catch (e) { return 'a4'; }
-        })();
-        setPaperSize(savedFormat);
 
         // 2. Zoom & Scaling Controls
         const zoomButtons = workstation.querySelectorAll('[data-zoom]');
@@ -1184,7 +1193,8 @@ const OfficeWorkstation = {
             let currentZoomText = `Zoom: ${zoomVal}%`;
             if (zoomVal === 'fit') {
                 const canvasWidth = deskCanvas ? deskCanvas.clientWidth - 48 : window.innerWidth;
-                const sheetWidthPx = sheets[0] ? sheets[0].offsetWidth : 794;
+                const firstSheet = workstation.querySelector('.office-paper-sheet');
+                const sheetWidthPx = firstSheet ? firstSheet.offsetWidth : 794;
                 const scale = Math.min(1, Math.max(0.4, canvasWidth / sheetWidthPx));
                 zoomContainer.style.transform = `scale(${scale})`;
                 currentZoomText = `Zoom: Sesuaikan (${Math.round(scale * 100)}%)`;
@@ -1204,7 +1214,6 @@ const OfficeWorkstation = {
             });
         });
 
-        // On small viewports (<768px), auto-fit zoom
         if (window.innerWidth < 768) {
             setZoom('fit');
         } else {
@@ -1212,24 +1221,572 @@ const OfficeWorkstation = {
         }
 
         // 2.1. Viewport Scroll Detection for Active Sheet Indicator
-        if (sheets.length > 0 && statusPageEl) {
-            const handleScroll = () => {
-                const midY = window.innerHeight / 2;
-                let activePage = 1;
-                sheets.forEach((sheet, idx) => {
-                    const rect = sheet.getBoundingClientRect();
-                    if (rect.top <= midY && rect.bottom >= midY) {
-                        activePage = idx + 1;
-                    }
-                });
-                statusPageEl.textContent = `Halaman ${activePage} dari ${sheets.length}`;
-            };
-            window.addEventListener('scroll', handleScroll, { passive: true });
-            if (deskCanvas) {
-                deskCanvas.addEventListener('scroll', handleScroll, { passive: true });
-            }
-            handleScroll();
+        const handleScroll = () => {
+            const curSheets = workstation.querySelectorAll('.office-paper-sheet');
+            if (curSheets.length === 0 || !statusPageEl) return;
+            const midY = window.innerHeight / 2;
+            let activePage = 1;
+            curSheets.forEach((sheet, idx) => {
+                const rect = sheet.getBoundingClientRect();
+                if (rect.top <= midY && rect.bottom >= midY) {
+                    activePage = idx + 1;
+                }
+            });
+            statusPageEl.textContent = `Halaman ${activePage} dari ${curSheets.length}`;
+        };
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        if (deskCanvas) {
+            deskCanvas.addEventListener('scroll', handleScroll, { passive: true });
         }
+
+        // 2.2 Caret Preservation & Navigation Utilities
+        const saveCaretInfo = () => {
+            const sel = window.getSelection();
+            if (!sel || sel.rangeCount === 0 || !activeBox) return null;
+            const editorType = activeBox.dataset.editor;
+            const range = sel.getRangeAt(0);
+
+            let boxOffset = 0;
+            try {
+                const preCaretRange = range.cloneRange();
+                preCaretRange.selectNodeContents(activeBox);
+                preCaretRange.setEnd(range.endContainer, range.endOffset);
+                boxOffset = preCaretRange.toString().length;
+            } catch (e) {
+                boxOffset = activeBox.textContent.length;
+            }
+
+            let globalOffset = 0;
+            const boxes = Array.from(workstation.querySelectorAll(`[data-editor="${editorType}"]`));
+            for (const b of boxes) {
+                if (b === activeBox) {
+                    globalOffset += boxOffset;
+                    break;
+                }
+                globalOffset += b.textContent.length;
+            }
+
+            return { editorType, globalOffset };
+        };
+
+        const restoreCaretInfo = (caretInfo) => {
+            if (!caretInfo || !caretInfo.editorType) return;
+            const boxes = Array.from(workstation.querySelectorAll(`[data-editor="${caretInfo.editorType}"]`));
+            if (boxes.length === 0) return;
+
+            let remainingOffset = caretInfo.globalOffset;
+            let targetBox = boxes[0];
+
+            for (const b of boxes) {
+                const textLen = b.textContent.length;
+                if (remainingOffset <= textLen) {
+                    targetBox = b;
+                    break;
+                }
+                remainingOffset -= textLen;
+                targetBox = b;
+            }
+
+            targetBox.focus();
+            setActiveEditor(targetBox, targetBox.dataset.editor === 'kesimpulan' ? kesimpulanHidden : notulensiHidden);
+
+            try {
+                const sel = window.getSelection();
+                const range = document.createRange();
+                let currentOffset = 0;
+                let found = false;
+
+                function traverse(node) {
+                    if (found) return;
+                    if (node.nodeType === Node.TEXT_NODE) {
+                        const len = node.textContent.length;
+                        if (currentOffset + len >= remainingOffset) {
+                            range.setStart(node, Math.min(Math.max(0, remainingOffset - currentOffset), len));
+                            range.collapse(true);
+                            found = true;
+                            return;
+                        }
+                        currentOffset += len;
+                    } else {
+                        for (let i = 0; i < node.childNodes.length; i++) {
+                            traverse(node.childNodes[i]);
+                            if (found) return;
+                        }
+                    }
+                }
+
+                traverse(targetBox);
+                if (!found) {
+                    range.selectNodeContents(targetBox);
+                    range.collapse(false);
+                }
+                sel.removeAllRanges();
+                sel.addRange(range);
+            } catch (e) {
+                targetBox.focus();
+            }
+        };
+
+        const setCaretAtEnd = (el) => {
+            el.focus();
+            try {
+                const range = document.createRange();
+                range.selectNodeContents(el);
+                range.collapse(false);
+                const sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(range);
+            } catch (e) {}
+        };
+
+        // 2.3 Strict Page Margin Enforcement Helper
+        const isExceedingMargin = (sheet, element) => {
+            if (!sheet) return false;
+            const footer = sheet.querySelector('.doc-running-footer');
+            if (!footer) return sheet.scrollHeight > sheet.clientHeight;
+            const footerRect = footer.getBoundingClientRect();
+            const elRect = element.getBoundingClientRect();
+            // 12px breathing buffer above the running footer line
+            return (elRect.bottom > footerRect.top - 12) || (sheet.scrollHeight > sheet.clientHeight + 2);
+        };
+
+        const splitBlockToFit = (sheet, container, block) => {
+            container.appendChild(block);
+            if (!isExceedingMargin(sheet, block)) {
+                return null; // Entire block fits comfortably
+            }
+
+            // Word Processor Rule: If container already has previous blocks,
+            // move this entire paragraph cleanly to the next page
+            if (container.children.length > 1) {
+                container.removeChild(block);
+                return block;
+            }
+
+            // If this is the only block in this container, but it overflows the margin:
+            const text = block.textContent;
+            if (!text || text.trim().length < 20 || block.tagName === 'TABLE' || block.querySelector('table')) {
+                return null;
+            }
+
+            const words = text.split(/\s+/);
+            if (words.length <= 4) {
+                return null;
+            }
+
+            const originalHtml = block.innerHTML;
+            let low = 1, high = words.length - 1, best = 0;
+
+            while (low <= high) {
+                const mid = Math.floor((low + high) / 2);
+                block.textContent = words.slice(0, mid).join(' ');
+                if (!isExceedingMargin(sheet, block)) {
+                    best = mid;
+                    low = mid + 1;
+                } else {
+                    high = mid - 1;
+                }
+            }
+
+            if (best > 4) {
+                block.textContent = words.slice(0, best).join(' ');
+                const remBlock = document.createElement(block.tagName || 'p');
+                if (block.className) remBlock.className = block.className;
+                remBlock.textContent = words.slice(best).join(' ');
+                return remBlock;
+            } else {
+                block.innerHTML = originalHtml;
+                return null;
+            }
+        };
+
+        // 2.4 Dynamic Multi-Page Reflow Engine
+        let reflowTimer = null;
+        const debouncedReflow = (delay = 600) => {
+            clearTimeout(reflowTimer);
+            reflowTimer = setTimeout(() => {
+                if (paginationEngine) {
+                    paginationEngine.reflow();
+                }
+            }, delay);
+        };
+
+        const attachBoxEvents = (box) => {
+            if (!box || box.dataset.eventsBound === 'true') return;
+            box.dataset.eventsBound = 'true';
+
+            const editorType = box.dataset.editor;
+            const hiddenInput = editorType === 'kesimpulan' ? kesimpulanHidden : notulensiHidden;
+
+            box.addEventListener('focus', () => setActiveEditor(box, hiddenInput));
+            box.addEventListener('click', () => setActiveEditor(box, hiddenInput));
+            
+            box.addEventListener('input', () => {
+                syncContent();
+                const sheet = box.closest('.office-paper-sheet');
+                if (sheet && isExceedingMargin(sheet, box)) {
+                    debouncedReflow(150); // Fast live reflow when encroaching margin
+                } else {
+                    debouncedReflow(600);
+                }
+            });
+
+            box.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    const sheet = box.closest('.office-paper-sheet');
+                    const footer = sheet ? sheet.querySelector('.doc-running-footer') : null;
+                    if (sheet && footer) {
+                        const footerTop = footer.getBoundingClientRect().top;
+                        const sel = window.getSelection();
+                        if (sel && sel.rangeCount > 0) {
+                            const range = sel.getRangeAt(0);
+                            const caretRect = range.getBoundingClientRect();
+                            let caretBottom = caretRect.bottom;
+                            if (!caretBottom || caretRect.height === 0) {
+                                const node = range.startContainer.nodeType === Node.ELEMENT_NODE 
+                                    ? range.startContainer 
+                                    : range.startContainer.parentElement;
+                                if (node) caretBottom = node.getBoundingClientRect().bottom;
+                            }
+                            
+                            // If caret is near bottom margin (within 36px of footer top)
+                            if (caretBottom && caretBottom > footerTop - 36) {
+                                e.preventDefault();
+                                document.execCommand('insertParagraph', false, null);
+                                syncContent();
+                                const curCaret = saveCaretInfo();
+                                paginationEngine.reflow({
+                                    caretInfo: {
+                                        editorType: box.dataset.editor,
+                                        globalOffset: (curCaret ? curCaret.globalOffset : 0) + 1
+                                    }
+                                });
+                                return;
+                            }
+                        }
+                    }
+                } else if (e.key === 'Backspace') {
+                    const sel = window.getSelection();
+                    if (sel && sel.rangeCount > 0) {
+                        const range = sel.getRangeAt(0);
+                        if (range.collapsed && range.startOffset === 0) {
+                            const curPage = parseInt(box.dataset.page || '1', 10);
+                            if (curPage > 1) {
+                                const prevBoxes = Array.from(workstation.querySelectorAll(`[data-editor="${box.dataset.editor}"][data-page="${curPage - 1}"]`));
+                                if (prevBoxes.length > 0) {
+                                    const prevBox = prevBoxes[0];
+                                    if (box.textContent.trim().length === 0) {
+                                        e.preventDefault();
+                                        setCaretAtEnd(prevBox);
+                                        syncContent();
+                                        debouncedReflow(100);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            box.addEventListener('blur', () => {
+                syncContent();
+                debouncedReflow(200);
+            });
+
+            box.addEventListener('paste', () => {
+                setTimeout(() => {
+                    syncContent();
+                    paginationEngine.reflow({ restoreCaret: true });
+                }, 50);
+            });
+        };
+
+        const paginationEngine = {
+            isReflowing: false,
+
+            reflow(options = {}) {
+                if (this.isReflowing) return;
+                this.isReflowing = true;
+
+                const caretToRestore = options.caretInfo || (options.restoreCaret && document.activeElement?.classList.contains('office-editable-box') ? saveCaretInfo() : null);
+
+                try {
+                    const sheet1 = workstation.querySelector('.office-paper-sheet[data-page="1"]');
+                    if (!sheet1) return;
+
+                    const curFormat = sheet1.classList.contains('paper-f4') ? 'f4' : 'a4';
+
+                    // Gather all blocks across editors
+                    const nBoxes = Array.from(workstation.querySelectorAll('[data-editor="notulensi"]'));
+                    const kBoxes = Array.from(workstation.querySelectorAll('[data-editor="kesimpulan"]'));
+
+                    const parseBlocks = (boxes, hiddenEl) => {
+                        const blocks = [];
+                        boxes.forEach(box => {
+                            Array.from(box.childNodes).forEach(node => {
+                                if (node.nodeType === Node.ELEMENT_NODE) {
+                                    if (node.outerHTML && node.outerHTML.trim()) {
+                                        blocks.push(node.cloneNode(true));
+                                    }
+                                } else if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
+                                    const p = document.createElement('p');
+                                    p.textContent = node.textContent.trim();
+                                    blocks.push(p);
+                                }
+                            });
+                        });
+                        if (blocks.length === 0 && hiddenEl && hiddenEl.value.trim()) {
+                            const tmp = document.createElement('div');
+                            tmp.innerHTML = hiddenEl.value.trim();
+                            Array.from(tmp.childNodes).forEach(node => {
+                                if (node.nodeType === Node.ELEMENT_NODE) {
+                                    blocks.push(node.cloneNode(true));
+                                } else if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
+                                    const p = document.createElement('p');
+                                    p.textContent = node.textContent.trim();
+                                    blocks.push(p);
+                                }
+                            });
+                        }
+                        return blocks;
+                    };
+
+                    const nBlocks = parseBlocks(nBoxes, notulensiHidden);
+                    const kBlocks = parseBlocks(kBoxes, kesimpulanHidden);
+
+                    // Clear continuation container
+                    if (continuationContainer) {
+                        continuationContainer.innerHTML = '';
+                    }
+
+                    // Reset Sheet 1
+                    const s1NBox = sheet1.querySelector('#notulensi-content');
+                    const s1KWrap = sheet1.querySelector('#sheet-section-kesimpulan-wrapper');
+                    const s1KBox = sheet1.querySelector('#kesimpulan-content');
+
+                    if (s1NBox) s1NBox.innerHTML = '';
+                    if (s1KBox) s1KBox.innerHTML = '';
+                    if (s1KWrap) s1KWrap.style.display = 'block';
+
+                    let nIdx = 0;
+                    let nOverflowed = false;
+                    let nRemainderBlock = null;
+
+                    for (let i = 0; i < nBlocks.length; i++) {
+                        const block = nBlocks[i].cloneNode(true);
+                        const rem = splitBlockToFit(sheet1, s1NBox, block);
+                        if (rem !== null) {
+                            nIdx = i + 1;
+                            nRemainderBlock = rem;
+                            nOverflowed = true;
+                            break;
+                        }
+                        nIdx = i + 1;
+                    }
+
+                    let kIdx = 0;
+                    let kOverflowed = false;
+                    let kRemainderBlock = null;
+
+                    if (!nOverflowed) {
+                        if (s1KWrap) {
+                            s1KWrap.style.display = 'block';
+                            if (isExceedingMargin(sheet1, s1KWrap)) {
+                                s1KWrap.style.display = 'none';
+                                kIdx = 0;
+                                kOverflowed = kBlocks.length > 0;
+                            } else {
+                                for (let j = 0; j < kBlocks.length; j++) {
+                                    const block = kBlocks[j].cloneNode(true);
+                                    const rem = splitBlockToFit(sheet1, s1KBox, block);
+                                    if (rem !== null) {
+                                        kIdx = j + 1;
+                                        kRemainderBlock = rem;
+                                        kOverflowed = true;
+                                        break;
+                                    }
+                                    kIdx = j + 1;
+                                }
+                            }
+                        }
+                    } else {
+                        if (s1KWrap) s1KWrap.style.display = 'none';
+                        kIdx = 0;
+                        kOverflowed = kBlocks.length > 0;
+                    }
+
+                    const remN = [];
+                    if (nRemainderBlock) remN.push(nRemainderBlock);
+                    if (nBlocks.length > nIdx) {
+                        for (let idx = nIdx; idx < nBlocks.length; idx++) {
+                            remN.push(nBlocks[idx].cloneNode(true));
+                        }
+                    }
+
+                    const remK = [];
+                    if (kRemainderBlock) remK.push(kRemainderBlock);
+                    if (kBlocks.length > kIdx) {
+                        for (let idx = kIdx; idx < kBlocks.length; idx++) {
+                            remK.push(kBlocks[idx].cloneNode(true));
+                        }
+                    }
+
+                    let curPage = 2;
+                    while (remN.length > 0 || remK.length > 0) {
+                        const sheet = document.createElement('div');
+                        sheet.className = `office-paper-sheet paper-${curFormat}`;
+                        sheet.dataset.page = String(curPage);
+
+                        sheet.innerHTML = `
+                            <div class="doc-badge-page absolute top-3 right-4 text-[10px] font-mono font-bold text-slate-400 select-none print:hidden">
+                                HALAMAN ${curPage}
+                            </div>
+                            <div class="doc-running-header">
+                                <span class="truncate max-w-sm">Berita Acara Rapat: <strong>${agendaTitle}</strong></span>
+                                <span class="doc-page-number font-bold shrink-0">Halaman ${curPage}</span>
+                            </div>
+                            <div class="continuation-content-area" style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 8pt;">
+                            </div>
+                            <div class="doc-running-footer">
+                                <span>SIPERAPAT &bull; LLDIKTI Wilayah X</span>
+                                <span class="doc-page-number font-bold">Halaman ${curPage}</span>
+                            </div>
+                        `;
+
+                        continuationContainer.appendChild(sheet);
+                        const contentArea = sheet.querySelector('.continuation-content-area');
+
+                        if (remN.length > 0) {
+                            const wrapper = document.createElement('div');
+                            wrapper.innerHTML = `
+                                <div class="text-[8.5pt] font-bold text-slate-800 mb-1 font-serif">
+                                    A. Notulensi / Catatan Jalannya Rapat (Lanjutan):
+                                </div>
+                                <div class="office-editable-box prose-gov" contenteditable="true" data-editor="notulensi" data-page="${curPage}" style="min-height: 60px;"></div>
+                            `;
+                            contentArea.appendChild(wrapper);
+                            const contBox = wrapper.querySelector('.office-editable-box');
+
+                            while (remN.length > 0) {
+                                const block = remN[0];
+                                const rem = splitBlockToFit(sheet, contBox, block);
+                                if (rem !== null) {
+                                    remN[0] = rem;
+                                    break;
+                                }
+                                remN.shift();
+                            }
+                        }
+
+                        if (remN.length === 0 && remK.length > 0) {
+                            const wrapper = document.createElement('div');
+                            const isContinuationK = (kIdx > 0);
+                            wrapper.innerHTML = `
+                                <div class="text-[8.5pt] font-bold text-slate-800 mb-1 font-serif">
+                                    B. Kesimpulan &amp; Rencana Tindak Lanjut (RTL)${isContinuationK ? ' (Lanjutan)' : ''}:
+                                </div>
+                                <div class="office-editable-box prose-gov" contenteditable="true" data-editor="kesimpulan" data-page="${curPage}" style="min-height: 60px;"></div>
+                            `;
+                            contentArea.appendChild(wrapper);
+                            
+                            if (isExceedingMargin(sheet, wrapper) && contentArea.children.length > 1) {
+                                contentArea.removeChild(wrapper);
+                            } else {
+                                const contBox = wrapper.querySelector('.office-editable-box');
+                                while (remK.length > 0) {
+                                    const block = remK[0];
+                                    const rem = splitBlockToFit(sheet, contBox, block);
+                                    if (rem !== null) {
+                                        remK[0] = rem;
+                                        break;
+                                    }
+                                    remK.shift();
+                                }
+                            }
+                        }
+
+                        // Add separator AFTER this continuation sheet
+                        const sep = document.createElement('div');
+                        sep.className = 'office-page-separator';
+                        sep.setAttribute('aria-hidden', 'true');
+                        sep.innerHTML = `
+                            <div class="office-page-gap ${curFormat === 'f4' ? 'gap-f4' : ''}">
+                                <div class="gap-line"></div>
+                                <div class="gap-indicator">
+                                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                    <span class="gap-indicator-text">Pemisah Halaman &bull; Menuju ${remN.length > 0 || remK.length > 0 ? 'Halaman ' + (curPage + 1) : 'Lembar Pengesahan'}</span>
+                                </div>
+                                <div class="gap-line"></div>
+                            </div>
+                        `;
+                        continuationContainer.appendChild(sep);
+
+                        curPage++;
+                        if (curPage > 25) break;
+                    }
+
+                    // Update all sheets page numbers
+                    const allSheets = workstation.querySelectorAll('.office-paper-sheet');
+                    const totPages = allSheets.length;
+
+                    allSheets.forEach((sh, idx) => {
+                        const pNum = idx + 1;
+                        sh.dataset.page = String(pNum);
+                        const badge = sh.querySelector('.doc-badge-page');
+                        if (badge) badge.textContent = `HALAMAN ${pNum}`;
+                        const rh = sh.querySelector('.doc-running-header .doc-page-number');
+                        if (rh) rh.textContent = `Halaman ${pNum} dari ${totPages}`;
+                        const rf = sh.querySelector('.doc-running-footer .doc-page-number');
+                        if (rf) rf.textContent = `Halaman ${pNum} dari ${totPages}`;
+                    });
+
+                    // Update separator 1 text
+                    if (separator1) {
+                        const indText = separator1.querySelector('.gap-indicator-text');
+                        if (totPages > 2) {
+                            if (indText) indText.textContent = 'Pemisah Halaman • Menuju Halaman 2';
+                        } else {
+                            if (indText) indText.textContent = 'Pemisah Halaman • Menuju Lembar Pengesahan';
+                        }
+                    }
+
+                    // Re-bind events to all editable boxes
+                    workstation.querySelectorAll('.office-editable-box').forEach(b => {
+                        attachBoxEvents(b);
+                    });
+
+                    // Sync content
+                    syncContent();
+
+                    // Restore Caret Position if requested
+                    if (caretToRestore) {
+                        restoreCaretInfo(caretToRestore);
+                    }
+
+                    // Update status bar
+                    if (statusPageEl) {
+                        handleScroll();
+                    }
+                } finally {
+                    this.isReflowing = false;
+                }
+            }
+        };
+
+        // Initialize active editor to notulensi by default
+        setActiveEditor(notulensiBox, notulensiHidden);
+        workstation.querySelectorAll('.office-editable-box').forEach(b => {
+            attachBoxEvents(b);
+        });
+
+        // Load saved paper format preference (default A4)
+        const savedFormat = (() => {
+            try { return localStorage.getItem('siperapat_paper_format') || 'a4'; } catch (e) { return 'a4'; }
+        })();
+        setPaperSize(savedFormat, false);
+
+        // Initial reflow
+        paginationEngine.reflow();
 
         // 3. Ribbon Toolbar Commands for Active Box
         if (ribbon) {

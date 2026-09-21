@@ -323,6 +323,70 @@ class WordEditorMinutesTest extends TestCase
         $response->assertSee('id="kesimpulan-content"', false);
         $response->assertSee('id="notulensi-hidden"', false);
         $response->assertSee('id="kesimpulan-hidden"', false);
+
+        // 7. Dynamic Continuation Container & Modular Final Sheet
+        $response->assertSee('id="dynamic-continuation-sheets"', false);
+        $response->assertSee('id="sheet-pengesahan-final"', false);
+    }
+
+    public function test_workstation_page_renders_modular_pagination_containers_and_handles_long_paragraphs(): void
+    {
+        $longNotulensi = '';
+        for ($i = 1; $i <= 6; $i++) {
+            $longNotulensi .= "<p>Paragraf pembahasan resmi {$i}: Pembahasan koordinasi LLDIKTI mengenai tata kelola pelaporan data.</p>";
+        }
+        $longKesimpulan = '';
+        for ($j = 1; $j <= 4; $j++) {
+            $longKesimpulan .= "<p>RTL Poin {$j}: Tindak lanjut wajib diselesaikan satker pada jadwal yang telah ditetapkan.</p>";
+        }
+
+        $this->agenda->update([
+            'notulensi' => $longNotulensi,
+            'kesimpulan' => $longKesimpulan,
+        ]);
+
+        $response = $this->actingAs($this->admin)->get(route('admin.agendas.notulen', $this->agenda));
+
+        $response->assertOk();
+        $response->assertSee('id="dynamic-continuation-sheets"', false);
+        $response->assertSee('id="sheet-pengesahan-final"', false);
+        $response->assertSee('data-editor="notulensi"', false);
+        $response->assertSee('data-editor="kesimpulan"', false);
+        $response->assertSee('Paragraf pembahasan resmi 1');
+        $response->assertSee('Paragraf pembahasan resmi 6');
+        $response->assertSee('RTL Poin 1');
+        $response->assertSee('RTL Poin 4');
+
+        // Test updating via put
+        $updateResponse = $this->actingAs($this->admin)->put(
+            route('admin.agendas.update-notulen', $this->agenda),
+            [
+                'notulensi' => $longNotulensi,
+                'kesimpulan' => $longKesimpulan,
+            ]
+        );
+        $updateResponse->assertRedirect(route('admin.agendas.show', $this->agenda));
+
+        // Test PDF & Word export with multi-paragraph content
+        $pdfResponse = $this->actingAs($this->admin)->get(route('admin.reports.export.pdf', $this->agenda));
+        $pdfResponse->assertOk();
+        $this->assertStringContainsString('Paragraf pembahasan resmi 6', $pdfResponse->getContent());
+
+        $wordResponse = $this->actingAs($this->admin)->get(route('admin.reports.export.word', $this->agenda));
+        $wordResponse->assertOk();
+        $this->assertStringContainsString('Paragraf pembahasan resmi 6', $wordResponse->getContent());
+    }
+
+    public function test_notulen_workstation_enforces_bottom_margin_and_footer_locking(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('admin.agendas.notulen', $this->agenda));
+
+        $response->assertOk();
+        // Check running footer presence and layout structure
+        $response->assertSee('doc-running-footer');
+        $response->assertSee('office-paper-sheet');
+        $response->assertSee('sheet-section-kesimpulan-wrapper');
+        $response->assertSee('SIPERAPAT &bull; LLDIKTI Wilayah X', false);
     }
 }
 

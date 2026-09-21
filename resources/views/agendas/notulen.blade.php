@@ -446,13 +446,13 @@
                     </table>
 
                     <!-- Seksi II: Notulensi & Kesimpulan Rapat (Interactive WYSIWYG Editors) -->
-                    <div style="margin-top: 8pt;">
-                        <div style="font-size: 9.5pt; font-weight: bold; margin: 0 0 3pt 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif;">
+                    <div id="sheet-seksi-2-container" style="margin-top: 6pt;">
+                        <div id="sheet-seksi-2-title" style="font-size: 9.5pt; font-weight: bold; margin: 0 0 3pt 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif;">
                             II. NOTULENSI &amp; KESIMPULAN RAPAT
                         </div>
 
                         <!-- Bagian A: Catatan Jalannya Rapat (Notulensi) -->
-                        <div style="margin-bottom: 6pt;">
+                        <div id="sheet-section-notulensi-wrapper" style="margin-bottom: 6pt;">
                             <div class="flex items-center justify-between mb-1">
                                 <label for="notulensi-content" style="font-weight: bold; font-size: 8.5pt; font-family: 'Times New Roman', Times, serif;" class="text-slate-900">
                                     A. Notulensi / Catatan Jalannya Rapat:
@@ -463,8 +463,10 @@
                                 id="notulensi-content" 
                                 class="office-editable-box prose-gov" 
                                 contenteditable="true" 
+                                data-editor="notulensi"
+                                data-page="1"
                                 data-placeholder="Ketik catatan jalannya rapat, dinamika diskusi, arahan pimpinan, dan pembahasan di sini..."
-                                style="min-height: 180px;"
+                                style="min-height: 80px;"
                             >{!! old('notulensi', $agenda->notulensi) !!}</div>
                             @error('notulensi')
                                 <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>
@@ -472,7 +474,7 @@
                         </div>
 
                         <!-- Bagian B: Kesimpulan & Rencana Tindak Lanjut (RTL) -->
-                        <div>
+                        <div id="sheet-section-kesimpulan-wrapper">
                             <div class="flex items-center justify-between mb-1">
                                 <label for="kesimpulan-content" style="font-weight: bold; font-size: 8.5pt; font-family: 'Times New Roman', Times, serif;" class="text-slate-900">
                                     B. Kesimpulan &amp; Rencana Tindak Lanjut (RTL):
@@ -483,8 +485,10 @@
                                 id="kesimpulan-content" 
                                 class="office-editable-box prose-gov" 
                                 contenteditable="true" 
+                                data-editor="kesimpulan"
+                                data-page="1"
                                 data-placeholder="Ketik poin-poin kesimpulan akhir, keputusan yang disepakati, PIC penanggung jawab, dan tenggat waktu penyelesaian..."
-                                style="min-height: 140px;"
+                                style="min-height: 70px;"
                             >{!! old('kesimpulan', $agenda->kesimpulan) !!}</div>
                             @error('kesimpulan')
                                 <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>
@@ -495,33 +499,36 @@
                     <!-- Running Footer Lembar 1 -->
                     <div class="doc-running-footer">
                         <span>SIPERAPAT &bull; LLDIKTI Wilayah X</span>
-                        <span class="font-bold">Halaman 1 dari 2</span>
+                        <span class="doc-page-number font-bold">Halaman 1 dari 2</span>
                     </div>
                 </div>
 
                 <!-- ==================== PEMISAH ANTAR HALAMAN (NATURAL PAGE BREAK) ==================== -->
-                <div class="office-page-separator" aria-hidden="true">
+                <div class="office-page-separator" id="page-separator-1" aria-hidden="true">
                     <div class="office-page-gap" id="office-page-gap">
                         <div class="gap-line"></div>
                         <div class="gap-indicator">
                             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                            <span>Pemisah Halaman &bull; Menuju Lembar Pengesahan</span>
+                            <span class="gap-indicator-text">Pemisah Halaman &bull; Menuju Lembar Pengesahan</span>
                         </div>
                         <div class="gap-line"></div>
                     </div>
                 </div>
 
-                <!-- ==================== LEMBAR HALAMAN 2 (PENGESAHAN & LAMPIRAN FOTO) ==================== -->
-                <div class="office-paper-sheet paper-a4" data-page="2">
+                <!-- Wadah Lembar Lanjutan Dinamis (Sheet 2, 3, dst.) -->
+                <div id="dynamic-continuation-sheets"></div>
+
+                <!-- ==================== LEMBAR FINAL (PENGESAHAN & LAMPIRAN FOTO) ==================== -->
+                <div class="office-paper-sheet paper-a4" id="sheet-pengesahan-final" data-page="2">
                     <!-- Page Number Badge (Top Right Corner) -->
-                    <div class="absolute top-3 right-4 text-[10px] font-mono font-bold text-slate-400 select-none print:hidden">
+                    <div class="doc-badge-page absolute top-3 right-4 text-[10px] font-mono font-bold text-slate-400 select-none print:hidden">
                         HALAMAN 2
                     </div>
 
-                    <!-- Running Header Lembar 2 -->
+                    <!-- Running Header Lembar Final -->
                     <div class="doc-running-header">
                         <span class="truncate max-w-sm">Berita Acara Rapat: <strong>{{ $agenda->judul_rapat }}</strong></span>
-                        <span class="font-bold shrink-0">Halaman 2 dari 2</span>
+                        <span class="doc-page-number font-bold shrink-0">Halaman 2 dari 2</span>
                     </div>
 
                     <!-- Header Lembar Pengesahan -->
@@ -668,6 +675,12 @@
                                 @endif
                             </div>
                         @endif
+                    </div>
+
+                    <!-- Running Footer Lembar Final -->
+                    <div class="doc-running-footer">
+                        <span>SIPERAPAT &bull; LLDIKTI Wilayah X</span>
+                        <span class="doc-page-number font-bold">Halaman 2 dari 2</span>
                     </div>
                 </div>
 
