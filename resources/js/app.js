@@ -1078,42 +1078,21 @@ const OfficeWorkstation = {
         const notulensiHidden = workstation.querySelector('#notulensi-hidden');
         const kesimpulanHidden = workstation.querySelector('#kesimpulan-hidden');
 
-        const activeIndicator = workstation.querySelector('#office-active-editor-indicator');
-        const wordsCountEl = workstation.querySelector('.word-counter-words');
-        const charsCountEl = workstation.querySelector('.word-counter-chars');
-
         let activeBox = notulensiBox;
         let activeHidden = notulensiHidden;
         let savedRange = null;
 
-        const updateCounters = () => {
-            const notulText = notulensiBox ? notulensiBox.innerText.trim() : '';
-            const kesimpText = kesimpulanBox ? kesimpulanBox.innerText.trim() : '';
-            const totalText = (notulText + ' ' + kesimpText).trim();
-            const words = totalText ? totalText.split(/\s+/).filter(Boolean).length : 0;
-            const chars = totalText.length;
-            if (wordsCountEl) wordsCountEl.textContent = `${words} Kata`;
-            if (charsCountEl) charsCountEl.textContent = `${chars} Karakter`;
-        };
-
         const syncContent = () => {
             if (notulensiBox && notulensiHidden) notulensiHidden.value = notulensiBox.innerHTML;
             if (kesimpulanBox && kesimpulanHidden) kesimpulanHidden.value = kesimpulanBox.innerHTML;
-            updateCounters();
         };
 
-        const setActiveEditor = (box, hidden, name) => {
+        const setActiveEditor = (box, hidden) => {
             activeBox = box;
             activeHidden = hidden;
             if (notulensiBox) notulensiBox.classList.remove('is-active-editor');
             if (kesimpulanBox) kesimpulanBox.classList.remove('is-active-editor');
             if (box) box.classList.add('is-active-editor');
-
-            if (activeIndicator) {
-                activeIndicator.textContent = name === 'notulensi'
-                    ? 'Fokus: Catatan Jalannya Rapat (A)'
-                    : 'Fokus: Kesimpulan & RTL (B)';
-            }
         };
 
         if (notulensiBox) {

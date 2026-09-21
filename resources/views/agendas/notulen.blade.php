@@ -270,18 +270,6 @@
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
             </button>
         </div>
-
-        <!-- Right Side: Focus Indicator & Word Counter -->
-        <div class="flex items-center gap-3 ml-auto shrink-0">
-            <span id="office-active-editor-indicator" class="text-xs font-bold text-slate-800 bg-slate-100 border border-slate-300 px-2.5 py-1 rounded-lg">
-                Fokus: Catatan Jalannya Rapat (A)
-            </span>
-            <div class="hidden xl:flex items-center gap-2 text-[11px] text-slate-600 font-medium">
-                <span class="word-counter-words">0 Kata</span>
-                <span>&bull;</span>
-                <span class="word-counter-chars">0 Karakter</span>
-            </div>
-        </div>
     </div>
 
     <!-- 3. Form Binding: Hidden Inputs for Notulensi & Kesimpulan -->
@@ -695,10 +683,6 @@
                     <span>Margin: 18mm Normal</span>
                 </div>
                 <div class="flex items-center gap-3">
-                    <span class="word-counter-words">0 Kata</span>
-                    <span class="text-slate-600">&bull;</span>
-                    <span class="word-counter-chars">0 Karakter</span>
-                    <span class="text-slate-600">&bull;</span>
                     <span id="office-status-zoom">Zoom: 100%</span>
                 </div>
             </div>

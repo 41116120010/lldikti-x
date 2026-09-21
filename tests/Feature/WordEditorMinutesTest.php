@@ -156,8 +156,8 @@ class WordEditorMinutesTest extends TestCase
         $response->assertSee('word-btn');
         $response->assertSee('Kembali ke Detail Agenda');
         $response->assertSee('Simpan Notulensi');
-        $response->assertSee('0 Kata');
-        $response->assertSee('0 Karakter');
+        $response->assertDontSee('0 Kata');
+        $response->assertDontSee('0 Karakter');
 
         // Verify that the title bar header and save status badge have been removed
         $response->assertDontSee('PENGOLAH KATA RESMI');
@@ -297,7 +297,9 @@ class WordEditorMinutesTest extends TestCase
         $response->assertSee('data-zoom="75"', false);
         $response->assertSee('data-zoom="100"', false);
         $response->assertSee('data-zoom="fit"', false);
-        $response->assertSee('id="office-active-editor-indicator"', false);
+        $response->assertDontSee('id="office-active-editor-indicator"', false);
+        $response->assertDontSee('word-counter-words', false);
+        $response->assertDontSee('word-counter-chars', false);
 
         // 4. Multi-Page Discrete Sheets Structure
         $response->assertSee('data-page="1"', false);
