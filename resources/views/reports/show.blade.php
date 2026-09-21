@@ -72,16 +72,16 @@
 
             <!-- Right: Action Controls (Exports & Agenda Management Shortcut) -->
             <div class="flex flex-wrap items-center gap-2.5">
-                <!-- Document Configuration & Export Modal Button -->
-                <button 
-                    type="button" 
-                    onclick="openExportModal('modal-export-config-{{ $agenda->id }}')" 
-                    class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold text-slate-950 bg-amber-300 hover:bg-amber-400 transition shadow-sm cursor-pointer"
-                    title="Sesuaikan konfigurasi header, konten, dan footer dokumen"
-                >
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-                    <span>Sesuaikan Dokumen</span>
-                </button>
+                @can('manageMinutes', $agenda)
+                    <a 
+                        href="{{ route('admin.agendas.notulen', $agenda) }}" 
+                        class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold text-slate-950 bg-amber-300 hover:bg-amber-400 transition shadow-sm"
+                        title="Buka Pengolah Kata untuk menyusun notulensi dan menyesuaikan format dokumen"
+                    >
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                        <span>Notulensi &amp; Format Dokumen</span>
+                    </a>
+                @endcan
 
                 <!-- Direct Binary PDF Export Button -->
                 <a 
@@ -578,8 +578,6 @@
         </div>
     </div>
 </div>
-
-<x-document-export-modal :agenda="$agenda" />
 
 <script>
 function previewAttendanceMedia(mediaUrl, title) {

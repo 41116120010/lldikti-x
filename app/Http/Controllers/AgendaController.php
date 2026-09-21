@@ -11,6 +11,7 @@ use App\Models\AgendaDocumentation;
 use App\Models\Unit;
 use App\Models\User;
 use App\Services\ActivityLogger;
+use App\Services\ReportConfigService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -489,17 +490,22 @@ class AgendaController extends Controller
     }
 
     /**
-     * Update Notulensi, Kesimpulan, and Upload Documentation Photos.
+     * Update Notulensi, Kesimpulan, and Upload Documentation Photos & Sync Document Configuration (Single Action).
      */
-    public function updateNotulen(UpdateMinutesRequest $request, Agenda $agenda): RedirectResponse
+    public function updateNotulen(UpdateMinutesRequest $request, Agenda $agenda, ReportConfigService $configService): RedirectResponse
     {
         $validated = $request->validated();
 
-        DB::transaction(function () use ($request, $validated, $agenda) {
+        DB::transaction(function () use ($request, $validated, $agenda, $configService) {
             $agenda->update([
                 'notulensi' => $validated['notulensi'] ?? null,
                 'kesimpulan' => $validated['kesimpulan'] ?? null,
             ]);
+
+            // Synchronize report configuration if provided from workstation
+            if ($request->boolean('has_document_config') || $request->filled('document_title') || $request->hasFile('custom_logo') || $request->boolean('reset_custom_logo')) {
+                $configService->syncFromRequest($request, $agenda, persist: true);
+            }
 
             // Handle multi-photo documentations
             if ($request->hasFile('photos')) {
@@ -519,7 +525,7 @@ class AgendaController extends Controller
 
             ActivityLogger::log(
                 type: 'UPDATE_AGENDA_MINUTES',
-                description: "Notulensi, kesimpulan, dan dokumentasi rapat '{$agenda->judul_rapat}' diperbarui.",
+                description: "Notulensi, kesimpulan, dan konfigurasi dokumen rapat '{$agenda->judul_rapat}' diperbarui.",
                 targetModel: Agenda::class,
                 targetId: $agenda->id
             );
@@ -530,7 +536,7 @@ class AgendaController extends Controller
             : route('admin.agendas.show', $agenda);
 
         return redirect($redirectRoute)
-            ->with('success', "Notulensi dan dokumentasi rapat berhasil disimpan.");
+            ->with('success', "Notulensi dan pengaturan dokumen rapat berhasil disimpan.");
     }
 
     /**

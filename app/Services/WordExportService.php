@@ -241,10 +241,13 @@ class WordExportService
             imagedestroy($src);
 
             $encoded = base64_encode($processed ?: $binary);
-            return 'data:' . $mime . ';base64,' . $encoded;
+            $chunked = chunk_split($encoded, 1000, "\n");
+            return 'data:' . $mime . ';base64,' . "\n" . rtrim($chunked);
         } catch (\Throwable $e) {
             Log::warning('Image optimization failed, falling back to raw binary: ' . $e->getMessage());
-            return 'data:' . $mime . ';base64,' . base64_encode($binary);
+            $encoded = base64_encode($binary);
+            $chunked = chunk_split($encoded, 1000, "\n");
+            return 'data:' . $mime . ';base64,' . "\n" . rtrim($chunked);
         }
     }
 }
