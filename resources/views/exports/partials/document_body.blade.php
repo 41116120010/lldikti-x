@@ -254,18 +254,24 @@
         </tr>
         <tr style="page-break-inside: avoid; break-inside: avoid; mso-yfti-row: cantSplit;">
             <td style="text-align: center; vertical-align: top; border: none; padding: 0 6pt; font-size: 9.5pt; font-family: 'Times New Roman', Times, serif;">
-                <strong><u>{{ $config['signer1_name'] ?? $agenda->nama_pimpinan }}</u></strong><br>
-                NIP. {{ $config['signer1_nip'] ?? $agenda->nip_pimpinan }}
+                <div style="display: inline-block; text-align: left;">
+                    <strong>{{ $config['signer1_name'] ?? $agenda->nama_pimpinan }}</strong><br>
+                    NIP {{ $config['signer1_nip'] ?? $agenda->nip_pimpinan }}
+                </div>
             </td>
             @if($config['show_signer3'] ?? false)
             <td style="text-align: center; vertical-align: top; border: none; padding: 0 6pt; font-size: 9.5pt; font-family: 'Times New Roman', Times, serif;">
-                <strong><u>{{ $config['signer3_name'] ?? '-' }}</u></strong><br>
-                NIP. {{ $config['signer3_nip'] ?? '-' }}
+                <div style="display: inline-block; text-align: left;">
+                    <strong>{{ $config['signer3_name'] ?? '-' }}</strong><br>
+                    NIP {{ $config['signer3_nip'] ?? '-' }}
+                </div>
             </td>
             @endif
             <td style="text-align: center; vertical-align: top; border: none; padding: 0 6pt; font-size: 9.5pt; font-family: 'Times New Roman', Times, serif;">
-                <strong><u>{{ $config['signer2_name'] ?? $agenda->nama_notulis }}</u></strong><br>
-                NIP. {{ $config['signer2_nip'] ?? $agenda->nip_notulis }}
+                <div style="display: inline-block; text-align: left;">
+                    <strong>{{ $config['signer2_name'] ?? $agenda->nama_notulis }}</strong><br>
+                    NIP {{ $config['signer2_nip'] ?? $agenda->nip_notulis }}
+                </div>
             </td>
         </tr>
     </table>

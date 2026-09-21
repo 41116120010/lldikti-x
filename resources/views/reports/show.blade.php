@@ -318,13 +318,15 @@
                                     </div>
                                 @endif
                             </div>
-                            <div class="border-t border-slate-300 pt-2 space-y-0.5">
-                                <div class="text-xs font-bold text-slate-900">{{ $agenda->nama_pimpinan }}</div>
-                                @if($agenda->nip_pimpinan && $agenda->nip_pimpinan !== '-')
-                                    <div class="text-[10px] text-slate-500 font-mono">NIP. {{ $agenda->nip_pimpinan }}</div>
-                                @endif
+                            <div class="border-t border-slate-300 pt-2 flex flex-col items-center">
+                                <div class="inline-block text-left space-y-0.5">
+                                    <div class="text-xs font-bold text-slate-900">{{ $agenda->nama_pimpinan }}</div>
+                                    @if($agenda->nip_pimpinan && $agenda->nip_pimpinan !== '-')
+                                        <div class="text-[10px] text-slate-500 font-mono">NIP {{ $agenda->nip_pimpinan }}</div>
+                                    @endif
+                                </div>
                                 @if($pimpinanAtt)
-                                    <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                                    <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 mt-1.5">
                                         <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                                         Tervalidasi Hadir ({{ $pimpinanAtt->signed_at->format('H:i') }} WIB)
                                     </span>
@@ -343,13 +345,15 @@
                                     </div>
                                 @endif
                             </div>
-                            <div class="border-t border-slate-300 pt-2 space-y-0.5">
-                                <div class="text-xs font-bold text-slate-900">{{ $agenda->nama_notulis }}</div>
-                                @if($agenda->nip_notulis && $agenda->nip_notulis !== '-')
-                                    <div class="text-[10px] text-slate-500 font-mono">NIP. {{ $agenda->nip_notulis }}</div>
-                                @endif
+                            <div class="border-t border-slate-300 pt-2 flex flex-col items-center">
+                                <div class="inline-block text-left space-y-0.5">
+                                    <div class="text-xs font-bold text-slate-900">{{ $agenda->nama_notulis }}</div>
+                                    @if($agenda->nip_notulis && $agenda->nip_notulis !== '-')
+                                        <div class="text-[10px] text-slate-500 font-mono">NIP {{ $agenda->nip_notulis }}</div>
+                                    @endif
+                                </div>
                                 @if($notulisAtt)
-                                    <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                                    <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 mt-1.5">
                                         <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                                         Tervalidasi Hadir ({{ $notulisAtt->signed_at->format('H:i') }} WIB)
                                     </span>

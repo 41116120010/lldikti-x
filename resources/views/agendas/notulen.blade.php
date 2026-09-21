@@ -551,12 +551,16 @@
                                 </tr>
                                 <tr>
                                     <td style="text-align: center; vertical-align: top; border: none; padding: 0 8pt; font-size: 9.5pt;">
-                                        <strong><u id="sheet-signer1-name">{{ $config['signer1_name'] ?? $agenda->nama_pimpinan }}</u></strong><br>
-                                        NIP. <span id="sheet-signer1-nip">{{ $config['signer1_nip'] ?? $agenda->nip_pimpinan }}</span>
+                                        <div style="display: inline-block; text-align: left;">
+                                            <strong id="sheet-signer1-name">{{ $config['signer1_name'] ?? $agenda->nama_pimpinan }}</strong><br>
+                                            NIP <span id="sheet-signer1-nip">{{ $config['signer1_nip'] ?? $agenda->nip_pimpinan }}</span>
+                                        </div>
                                     </td>
                                     <td style="text-align: center; vertical-align: top; border: none; padding: 0 8pt; font-size: 9.5pt;">
-                                        <strong><u id="sheet-signer2-name">{{ $config['signer2_name'] ?? $agenda->nama_notulis }}</u></strong><br>
-                                        NIP. <span id="sheet-signer2-nip">{{ $config['signer2_nip'] ?? $agenda->nip_notulis }}</span>
+                                        <div style="display: inline-block; text-align: left;">
+                                            <strong id="sheet-signer2-name">{{ $config['signer2_name'] ?? $agenda->nama_notulis }}</strong><br>
+                                            NIP <span id="sheet-signer2-nip">{{ $config['signer2_nip'] ?? $agenda->nip_notulis }}</span>
+                                        </div>
                                     </td>
                                 </tr>
                             </table>
