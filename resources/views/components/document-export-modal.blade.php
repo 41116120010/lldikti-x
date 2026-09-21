@@ -34,7 +34,7 @@
         </div>
 
         <!-- Form for Generating Configured Export -->
-        <form id="{{ $id }}-form" action="{{ route('admin.reports.export.pdf', $agenda) }}" method="POST" enctype="multipart/form-data" target="_blank" class="flex flex-col flex-1 overflow-hidden m-0">
+        <form id="{{ $id }}-form" action="{{ route('admin.reports.export.pdf', $agenda) }}" method="POST" enctype="multipart/form-data" target="_self" class="flex flex-col flex-1 overflow-hidden m-0">
             @csrf
 
             <!-- Navigation Tabs Bar -->

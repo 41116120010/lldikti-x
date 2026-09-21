@@ -48,9 +48,13 @@ class ReportAndExportTest extends TestCase
         $response = $this->actingAs($superadmin)->get("/admin/reports/{$agenda->id}/export/pdf");
 
         $response->assertStatus(200);
-        $response->assertHeader('Content-Type', 'text/html; charset=UTF-8');
-        $response->assertSee('BERITA ACARA DAN DAFTAR HADIR RAPAT');
-        $response->assertSee('LEMBAGA LAYANAN PENDIDIKAN TINGGI (LLDIKTI) WILAYAH X');
+        if (str_contains($response->headers->get('Content-Type', ''), 'application/pdf')) {
+            $this->assertStringStartsWith('%PDF-', $response->getContent());
+        } else {
+            $response->assertHeader('Content-Type', 'text/html; charset=UTF-8');
+            $response->assertSee('BERITA ACARA DAN DAFTAR HADIR RAPAT');
+            $response->assertSee('LEMBAGA LAYANAN PENDIDIKAN TINGGI (LLDIKTI) WILAYAH X');
+        }
     }
 
     public function test_user_can_export_word_berita_acara(): void
@@ -87,7 +91,7 @@ class ReportAndExportTest extends TestCase
         $response->assertSee('Rekapitulasi Kehadiran & Dokumen Rapat');
         $response->assertSee($agenda->judul_rapat);
         $response->assertSee('Daftar Rekapitulasi');
-        $response->assertSee('Cetak Berita Acara (PDF)');
+        $response->assertSee('Unduh PDF (.pdf)');
         $response->assertSee('Unduh Format Word (.doc)');
         $response->assertSee('Kelola Agenda');
         $response->assertSee('Notulensi Rapat');

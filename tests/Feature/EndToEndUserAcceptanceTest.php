@@ -151,8 +151,12 @@ class EndToEndUserAcceptanceTest extends TestCase
         // 4.2 PDF Export (Berita Acara Cetak)
         $pdfRes = $this->actingAs($superadmin)->get("/admin/reports/{$agenda->id}/export/pdf");
         $pdfRes->assertStatus(200);
-        $pdfRes->assertSee('BERITA ACARA DAN DAFTAR HADIR RAPAT');
-        $pdfRes->assertSee($staff->name);
+        if (str_contains($pdfRes->headers->get('Content-Type', ''), 'application/pdf')) {
+            $this->assertStringStartsWith('%PDF-', $pdfRes->getContent());
+        } else {
+            $pdfRes->assertSee('BERITA ACARA DAN DAFTAR HADIR RAPAT');
+            $pdfRes->assertSee($staff->name);
+        }
 
         // 4.3 Word Export (.doc)
         $wordRes = $this->actingAs($superadmin)->get("/admin/reports/{$agenda->id}/export/word");

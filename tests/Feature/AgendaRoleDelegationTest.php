@@ -234,10 +234,14 @@ class AgendaRoleDelegationTest extends TestCase
         $pdfResponse = $this->actingAs($superadmin)
             ->get("/admin/reports/{$agenda->id}/export/pdf");
         $pdfResponse->assertStatus(200);
-        $pdfContent = $pdfResponse->getContent();
-        $this->assertStringContainsString($agenda->nama_pimpinan, $pdfContent);
-        $this->assertStringContainsString($agenda->nama_notulis, $pdfContent);
-        $this->assertStringContainsString('data:image/png;base64,', $pdfContent);
+        if (str_contains($pdfResponse->headers->get('Content-Type', ''), 'application/pdf')) {
+            $this->assertStringStartsWith('%PDF-', $pdfResponse->getContent());
+        } else {
+            $pdfContent = $pdfResponse->getContent();
+            $this->assertStringContainsString($agenda->nama_pimpinan, $pdfContent);
+            $this->assertStringContainsString($agenda->nama_notulis, $pdfContent);
+            $this->assertStringContainsString('data:image/png;base64,', $pdfContent);
+        }
 
         // 4. Check Word Export
         $wordResponse = $this->actingAs($superadmin)

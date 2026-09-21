@@ -1133,7 +1133,7 @@ const OfficeWorkstation = {
         const statusZoomEl = workstation.querySelector('#office-status-zoom');
 
         const titleEl = workstation.querySelector('.doc-running-header strong');
-        const agendaTitle = titleEl ? titleEl.textContent : 'Agenda Rapat';
+        const agendaTitle = workstation.dataset.agendaTitle || (titleEl ? titleEl.textContent : 'Agenda Rapat');
 
         // 1. Paper Format Switcher (A4 vs F4)
         const paperButtons = workstation.querySelectorAll('[data-paper-size]');
@@ -1655,9 +1655,6 @@ const OfficeWorkstation = {
                         sheet.className = `office-paper-sheet paper-${curFormat}`;
                         sheet.dataset.page = String(pageNum);
                         sheet.innerHTML = `
-                            <div class="doc-badge-page absolute top-3 right-4 text-[10px] font-mono font-bold text-slate-400 select-none print:hidden">
-                                HALAMAN ${pageNum}
-                            </div>
                             <div class="doc-running-header">
                                 <span class="truncate max-w-sm">Berita Acara Rapat: <strong>${agendaTitle}</strong></span>
                                 <span class="doc-page-number font-bold shrink-0">Halaman ${pageNum}</span>
@@ -1827,8 +1824,6 @@ const OfficeWorkstation = {
                     allSheets.forEach((sh, idx) => {
                         const pNum = idx + 1;
                         sh.dataset.page = String(pNum);
-                        const badge = sh.querySelector('.doc-badge-page');
-                        if (badge) badge.textContent = `HALAMAN ${pNum}`;
                         const rh = sh.querySelector('.doc-running-header .doc-page-number');
                         if (rh) rh.textContent = `Halaman ${pNum} dari ${totPages}`;
                         const rf = sh.querySelector('.doc-running-footer .doc-page-number');

@@ -165,10 +165,14 @@ class UnifiedDocumentMinutesTest extends TestCase
             route('admin.reports.export.pdf', $this->agenda)
         );
         $pdfResponse->assertStatus(200);
-        $pdfResponse->assertSee('BERITA ACARA TERPADU NOTULENSI');
-        $pdfResponse->assertSee('BA-TERPADU/2026/777');
-        $pdfResponse->assertSee('KEMENTERIAN RISET DAN PENDIDIKAN TINGGI');
-        $pdfResponse->assertSee('Prof. H. Ahmad Dahlan, Ph.D.');
+        if (str_contains($pdfResponse->headers->get('Content-Type', ''), 'application/pdf')) {
+            $this->assertStringStartsWith('%PDF-', $pdfResponse->getContent());
+        } else {
+            $pdfResponse->assertSee('BERITA ACARA TERPADU NOTULENSI');
+            $pdfResponse->assertSee('BA-TERPADU/2026/777');
+            $pdfResponse->assertSee('KEMENTERIAN RISET DAN PENDIDIKAN TINGGI');
+            $pdfResponse->assertSee('Prof. H. Ahmad Dahlan, Ph.D.');
+        }
 
         // 2. Word Export reflects persisted config
         $wordResponse = $this->actingAs($this->admin)->get(

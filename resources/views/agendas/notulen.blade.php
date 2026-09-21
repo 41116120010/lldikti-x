@@ -5,7 +5,7 @@
 @section('subtitle', 'Agenda: ' . $agenda->judul_rapat)
 
 @section('content')
-<div id="office-workstation" class="space-y-4">
+<div id="office-workstation" class="space-y-4" data-agenda-title="{{ $agenda->judul_rapat }}">
     <!-- 1. Workstation Top Control Bar -->
     <div class="bg-white border border-slate-300 rounded-2xl p-3 sm:p-4 shadow-xs flex flex-wrap items-center justify-between gap-3">
         <!-- Left: Back Navigation -->
@@ -120,7 +120,7 @@
                     class="absolute right-0 z-30 mt-2 w-56 origin-top-right rounded-xl bg-white border border-slate-200 shadow-xl py-1 text-xs"
                 >
                     <a 
-                        href="{{ route('admin.reports.export.pdf', ['agenda' => $agenda, 'download' => 'pdf']) }}" 
+                        href="{{ route('admin.reports.export.pdf', $agenda) }}" 
                         class="flex items-center gap-2 px-3.5 py-2.5 text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium"
                     >
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" class="text-rose-600"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>
@@ -132,15 +132,6 @@
                     >
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" class="text-blue-600"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
                         <span>Unduh Dokumen Word (.doc)</span>
-                    </a>
-                    <div class="h-px bg-slate-200 my-1"></div>
-                    <a 
-                        href="{{ route('admin.reports.export.pdf', $agenda) }}" 
-                        target="_blank" 
-                        class="flex items-center gap-2 px-3.5 py-2.5 text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium"
-                    >
-                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                        <span>Pratinjau / Cetak A4 Tab Baru</span>
                     </a>
                 </div>
             </div>
@@ -320,11 +311,6 @@
 
                 <!-- ==================== LEMBAR HALAMAN 1 (BERITA ACARA & NOTULENSI) ==================== -->
                 <div class="office-paper-sheet paper-a4" data-page="1">
-                    <!-- Page Number Badge (Top Right Corner) -->
-                    <div class="absolute top-3 right-4 text-[10px] font-mono font-bold text-slate-400 select-none print:hidden">
-                        HALAMAN 1
-                    </div>
-
                     <!-- Kop Surat Resmi Instansi (Single Source of Truth, 100% Margin Locked) -->
                     @php
                         $logoUrl = ($config['custom_logo_path'] ?? null) && Storage::disk('public')->exists($config['custom_logo_path'])

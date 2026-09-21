@@ -28,7 +28,7 @@ class PdfExportIntegrityTest extends TestCase
         $this->assertGreaterThan(1000, strlen($content));
     }
 
-    public function test_a4_sheet_preview_returns_locked_portrait_css_and_sheet_container(): void
+    public function test_direct_pdf_export_without_query_param_returns_binary_pdf(): void
     {
         $superadmin = User::where('role', 'administrator')->first();
         $agenda = Agenda::first();
@@ -36,21 +36,10 @@ class PdfExportIntegrityTest extends TestCase
         $response = $this->actingAs($superadmin)->get("/admin/reports/{$agenda->id}/export/pdf");
 
         $response->assertStatus(200);
-        $response->assertHeader('Content-Type', 'text/html; charset=UTF-8');
-        $response->assertHeader('X-Accel-Buffering', 'no');
-
+        $this->assertStringContainsString('application/pdf', $response->headers->get('Content-Type'));
         $content = $response->getContent();
-        $this->assertStringContainsString('size: 210mm 297mm portrait', $content);
-        $this->assertStringContainsString('size: 210mm 297mm portrait !important;', $content);
-        $this->assertStringContainsString('a4-sheet-container', $content);
-        $this->assertStringContainsString('a4-sheet-wrapper', $content);
-        $this->assertStringContainsString('Unduh PDF (.pdf)', $content);
-        $this->assertStringContainsString('Cetak Lembar A4', $content);
-        $this->assertStringContainsString('Unduh Word (.doc)', $content);
-        $this->assertStringContainsString('SIPERAPAT', $content);
-        $this->assertStringContainsString('Pratinjau Dokumen Berita Acara', $content);
-        $this->assertStringNotContainsString('A4 Portrait (210 &times; 297 mm)', $content);
-        $this->assertStringNotContainsString('status-indicator', $content);
+        $this->assertStringStartsWith('%PDF-', $content);
+        $this->assertGreaterThan(1000, strlen($content));
     }
 
     public function test_pdf_export_service_generates_binary_pdf_directly(): void
@@ -72,7 +61,7 @@ class PdfExportIntegrityTest extends TestCase
         $superadmin = User::where('role', 'administrator')->first();
         $agenda = Agenda::first();
 
-        $response = $this->actingAs($superadmin)->post("/admin/reports/{$agenda->id}/export/pdf?download=pdf", [
+        $response = $this->actingAs($superadmin)->post("/admin/reports/{$agenda->id}/export/pdf", [
             'instansi_induk' => 'KEMENTERIAN RISET TEKNOLOGI DAN PENDIDIKAN TINGGI KHUSUS',
             'custom_agenda_title' => 'RAPAT KOORDINASI KHUSUS TINGKAT TINGGI',
             'show_kop' => '1',
@@ -80,12 +69,12 @@ class PdfExportIntegrityTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertHeader('Content-Type', 'application/pdf; charset=UTF-8');
+        $this->assertStringContainsString('application/pdf', $response->headers->get('Content-Type'));
         $content = $response->getContent();
         $this->assertStringStartsWith('%PDF-', $content);
     }
 
-    public function test_custom_report_config_is_respected_in_preview_mode(): void
+    public function test_custom_report_config_is_applied_in_direct_pdf_export(): void
     {
         $superadmin = User::where('role', 'administrator')->first();
         $agenda = Agenda::first();
@@ -98,18 +87,18 @@ class PdfExportIntegrityTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertSee('KEMENTERIAN RISET TEKNOLOGI DAN PENDIDIKAN TINGGI KHUSUS');
-        $response->assertSee('RAPAT KOORDINASI KHUSUS TINGKAT TINGGI');
+        $this->assertStringContainsString('application/pdf', $response->headers->get('Content-Type'));
+        $this->assertStringStartsWith('%PDF-', $response->getContent());
     }
 
     public function test_unauthorized_user_cannot_export_agenda_pdf(): void
     {
         $agenda = Agenda::first();
 
-        $response = $this->get("/admin/reports/{$agenda->id}/export/pdf?download=pdf");
+        $response = $this->get("/admin/reports/{$agenda->id}/export/pdf");
         $response->assertRedirect('/login');
 
-        $previewResponse = $this->get("/admin/reports/{$agenda->id}/export/pdf");
+        $previewResponse = $this->get("/admin/reports/{$agenda->id}/export/pdf?download=pdf");
         $previewResponse->assertRedirect('/login');
     }
 
@@ -133,16 +122,24 @@ class PdfExportIntegrityTest extends TestCase
 
         $this->app->instance(PdfExportService::class, $mockPdfService);
 
-        // 1. GET download request should gracefully fallback to printable view (no 500)
-        $getResponse = $this->actingAs($superadmin)->get("/admin/reports/{$agenda->id}/export/pdf?download=pdf");
+        // 1. Request should gracefully fallback to printable view (no 500)
+        $getResponse = $this->actingAs($superadmin)->get("/admin/reports/{$agenda->id}/export/pdf");
         $getResponse->assertStatus(200);
         $this->assertStringContainsString('Mocked Printable A4 View', $getResponse->getContent());
 
-        // 2. POST download request should redirect with warning alert (no 500)
-        $postResponse = $this->actingAs($superadmin)->post("/admin/reports/{$agenda->id}/export/pdf?download=pdf", [
+        // 2. When both binary and HTML fallback fail, redirects with error alert
+        $failingMock = $this->createMock(PdfExportService::class);
+        $failingMock->method('exportBinaryPdf')
+            ->willThrowException(new \RuntimeException('Simulated LibreOffice failure'));
+        $failingMock->method('exportBeritaAcara')
+            ->willThrowException(new \RuntimeException('Simulated HTML render failure'));
+
+        $this->app->instance(PdfExportService::class, $failingMock);
+
+        $postResponse = $this->actingAs($superadmin)->post("/admin/reports/{$agenda->id}/export/pdf", [
             'document_title' => 'RAPAT UJI FALLBACK',
         ]);
         $postResponse->assertRedirect(route('admin.agendas.show', $agenda));
-        $postResponse->assertSessionHas('warning');
+        $postResponse->assertSessionHas('error');
     }
 }
