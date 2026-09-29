@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use Tests\Support\InspectsDocx;
 use App\Models\Agenda;
 use App\Models\Unit;
 use App\Models\User;
@@ -10,6 +11,8 @@ use Tests\TestCase;
 
 class WordEditorMinutesTest extends TestCase
 {
+    use InspectsDocx;
+
     use DatabaseTransactions;
 
     private User $admin;
@@ -199,8 +202,8 @@ class WordEditorMinutesTest extends TestCase
         // Word Export always returns HTML as .doc attachment
         $wordResponse = $this->actingAs($this->admin)->get(route('admin.reports.export.word', $this->agenda));
         $wordResponse->assertOk();
-        $this->assertStringContainsString('<b>sangat penting</b>', $wordResponse->getContent());
-        $this->assertStringContainsString('<ol><li>Tindak lanjut nomor 1</li></ol>', $wordResponse->getContent());
+        $this->assertStringContainsString('<b>sangat penting</b>', $this->documentBodyHtml($this->agenda));
+        $this->assertStringContainsString('<ol><li>Tindak lanjut nomor 1</li></ol>', $this->documentBodyHtml($this->agenda));
     }
 
     public function test_advanced_formatting_features_are_rendered_on_editor_ribbon(): void
@@ -286,7 +289,7 @@ class WordEditorMinutesTest extends TestCase
 
         $wordResponse = $this->actingAs($this->admin)->get(route('admin.reports.export.word', $this->agenda));
         $wordResponse->assertOk();
-        $this->assertStringContainsString($zwsp, $wordResponse->getContent());
+        $this->assertStringContainsString($zwsp, $this->docxXml($wordResponse->getContent()));
     }
 
     public function test_dedicated_notulen_page_renders_office_workstation_with_a4_and_f4_paper_layouts_and_page_separators(): void
@@ -391,7 +394,7 @@ class WordEditorMinutesTest extends TestCase
 
         $wordResponse = $this->actingAs($this->admin)->get(route('admin.reports.export.word', $this->agenda));
         $wordResponse->assertOk();
-        $this->assertStringContainsString('Paragraf pembahasan resmi 6', $wordResponse->getContent());
+        $this->assertStringContainsString('Paragraf pembahasan resmi 6', $this->docxXml($wordResponse->getContent()));
 
     }
 

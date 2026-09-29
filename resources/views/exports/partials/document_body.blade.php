@@ -230,8 +230,15 @@
 </div>
 
 <!-- Seksi III: Lampiran Foto Dokumentasi Kegiatan (Annex Resmi) -->
+<!-- Lampiran selalu dimulai di halaman baru. Lampiran adalah bahan
+     pendukung, bukan bagian dari naskah; bila ia berbagi halaman dengan blok
+     tanda tangan, halaman terakhir terlihat setengah kosong dan terpisah dari
+     isinya.
+     Garis pemisah atas sengaja dihapus: gunanya memisahkan lampiran dari
+     konten sebelumnya, dan pemisah halaman sudah itu. Di halaman tersendiri
+     garis itu hanya menjadi garis yatim yang melayang di atas. -->
 @if(($config['show_documentation'] ?? true) && count($documentations) > 0)
-<div class="sheet-documentation-annex" style="margin-top: 10pt; padding-top: 8pt; border-top: 1.5px solid #000000; page-break-inside: avoid; break-inside: avoid;">
+<div class="sheet-documentation-annex" style="page-break-before: always; break-before: page; margin: 0; padding: 0; border: none; page-break-inside: avoid; break-inside: avoid;">
     <div class="section-title" style="font-size: 12pt; font-weight: bold; margin-bottom: 6pt; text-transform: uppercase; font-family: 'Times New Roman', Times, serif; text-align: center; page-break-after: avoid; break-after: avoid;">
         III. LAMPIRAN FOTO DOKUMENTASI KEGIATAN
     </div>

@@ -65,8 +65,22 @@ class ReportAndExportTest extends TestCase
         $response = $this->actingAs($superadmin)->get("/admin/reports/{$agenda->id}/export/word");
 
         $response->assertStatus(200);
-        $response->assertHeader('Content-Type', 'application/vnd.ms-word; charset=UTF-8');
-        $this->assertStringContainsString('.doc', $response->headers->get('Content-Disposition'));
+        $response->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        $this->assertStringContainsString('.docx', $response->headers->get('Content-Disposition'));
+
+        // A real OpenXML package: a ZIP archive whose document part is well formed.
+        $body = $response->getContent();
+        $this->assertStringStartsWith('PK', $body);
+
+        $zip = new \ZipArchive;
+        $tmp = tempnam(sys_get_temp_dir(), 'docx_test_');
+        file_put_contents($tmp, $body);
+        $this->assertTrue($zip->open($tmp));
+        $document = $zip->getFromName('word/document.xml');
+        $this->assertNotFalse($document, 'word/document.xml wajib ada di dalam paket.');
+        $this->assertNotFalse(simplexml_load_string($document), 'word/document.xml harus XML yang valid.');
+        $zip->close();
+        @unlink($tmp);
     }
 
     public function test_user_can_export_summary_csv(): void

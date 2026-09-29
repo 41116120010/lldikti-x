@@ -2,12 +2,15 @@
 
 namespace Tests\Feature;
 
+use Tests\Support\InspectsDocx;
 use App\Models\Agenda;
 use App\Models\User;
 use Tests\TestCase;
 
 class ReportExportConfigurationTest extends TestCase
 {
+    use InspectsDocx;
+
     public function test_agenda_has_resolved_report_config_with_sensible_defaults(): void
     {
         $agenda = Agenda::first();
@@ -152,12 +155,12 @@ class ReportExportConfigurationTest extends TestCase
         $response = $this->actingAs($superadmin)->post("/admin/reports/{$agenda->id}/export/word", $customPayload);
 
         $response->assertStatus(200);
-        $response->assertHeader('Content-Type', 'application/vnd.ms-word; charset=UTF-8');
-        $this->assertStringContainsString('.doc', $response->headers->get('Content-Disposition'));
-        $response->assertSee('LAPORAN WORD REKAPITULASI AGENDA');
-        $response->assertSee('WORD/2026/001');
-        $response->assertSee('Kota Padang, 20 September 2026');
-        $response->assertSee('Inspektur Wilayah');
+        $response->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        $this->assertStringContainsString('.docx', $response->headers->get('Content-Disposition'));
+        $this->assertStringContainsString('LAPORAN WORD REKAPITULASI AGENDA', $this->docxXml($response->getContent()));
+        $this->assertStringContainsString('WORD/2026/001', $this->docxXml($response->getContent()));
+        $this->assertStringContainsString('Kota Padang, 20 September 2026', $this->docxXml($response->getContent()));
+        $this->assertStringContainsString('Inspektur Wilayah', $this->docxXml($response->getContent()));
     }
 
     public function test_user_can_save_configuration_as_default_for_agenda(): void
@@ -211,9 +214,9 @@ class ReportExportConfigurationTest extends TestCase
         // Now verify standard GET export uses this saved config!
         $getWordResponse = $this->actingAs($superadmin)->get("/admin/reports/{$agenda->id}/export/word");
         $getWordResponse->assertStatus(200);
-        $this->assertStringContainsString('BERITA ACARA TERSIMPAN PERMANEN', $getWordResponse->getContent());
-        $this->assertStringContainsString('PERM/001/2026', $getWordResponse->getContent());
-        $this->assertStringContainsString('Payakumbuh', $getWordResponse->getContent());
+        $this->assertStringContainsString('BERITA ACARA TERSIMPAN PERMANEN', $this->docxXml($getWordResponse->getContent()));
+        $this->assertStringContainsString('PERM/001/2026', $this->docxXml($getWordResponse->getContent()));
+        $this->assertStringContainsString('Payakumbuh', $this->docxXml($getWordResponse->getContent()));
 
         $getPdfResponse = $this->actingAs($superadmin)->get("/admin/reports/{$agenda->id}/export/pdf");
         $getPdfResponse->assertStatus(200);

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use Tests\Support\InspectsDocx;
 use App\Models\Agenda;
 use App\Models\Attendance;
 use App\Models\Unit;
@@ -12,6 +13,9 @@ use Tests\TestCase;
 
 class ReportExportEnhancementTest extends TestCase
 {
+    use InspectsDocx;
+
+
     public function test_export_pdf_includes_default_tut_wuri_handayani_logo(): void
     {
         $admin = User::where('role', 'administrator')->first();
@@ -23,14 +27,13 @@ class ReportExportEnhancementTest extends TestCase
         if (str_contains($response->headers->get('Content-Type', ''), 'application/pdf')) {
             $this->assertStringStartsWith('%PDF-', $response->getContent());
         } else {
-            $response->assertSee('alt="Logo Instansi"', false);
+            $this->assertGreaterThan(0, $this->docxMediaCount($response->getContent()));
         }
 
         // Verify HTML content structure via Word export (shared document body)
         $wordResponse = $this->actingAs($admin)->get("/admin/reports/{$agenda->id}/export/word");
         $wordResponse->assertStatus(200);
-        $wordResponse->assertSee('alt="Logo Instansi"', false);
-        $wordResponse->assertSee('data:image/png;base64,', false);
+        $this->assertGreaterThan(0, $this->docxMediaCount($wordResponse->getContent()), 'Logo harus tertanam di paket .docx.');
     }
 
     public function test_export_pdf_can_hide_logo_when_disabled(): void
@@ -47,10 +50,21 @@ class ReportExportEnhancementTest extends TestCase
         $response = $this->actingAs($admin)->post("/admin/reports/{$agenda->id}/export/pdf", $payload);
         $response->assertStatus(200);
 
-        // Word export confirms logo is omitted
+        // The Word export must carry one image fewer than the same document with
+        // the logo enabled. Comparing counts is what distinguishes "the logo was
+        // dropped" from "the package has no images at all": selfies and
+        // signatures are still legitimately embedded.
+        $withLogo = $this->actingAs($admin)->get("/admin/reports/{$agenda->id}/export/word");
+        $withLogo->assertStatus(200);
+
         $wordResponse = $this->actingAs($admin)->post("/admin/reports/{$agenda->id}/export/word", $payload);
         $wordResponse->assertStatus(200);
-        $wordResponse->assertDontSee('alt="Logo Instansi"', false);
+
+        $this->assertSame(
+            $this->docxMediaCount($withLogo->getContent()) - 1,
+            $this->docxMediaCount($wordResponse->getContent()),
+            'Menonaktifkan logo harus mengurangi satu gambar tertanam.'
+        );
     }
 
     public function test_export_word_includes_default_logo_and_supports_custom_logo(): void
@@ -62,7 +76,7 @@ class ReportExportEnhancementTest extends TestCase
         // 1. Default logo in Word export
         $response = $this->actingAs($admin)->get("/admin/reports/{$agenda->id}/export/word");
         $response->assertStatus(200);
-        $response->assertSee('alt="Logo Instansi"', false);
+        $this->assertGreaterThan(0, $this->docxMediaCount($response->getContent()));
 
         // 2. Upload custom logo
         $fakeLogo = UploadedFile::fake()->image('custom_logo.png', 200, 200);
@@ -149,8 +163,8 @@ class ReportExportEnhancementTest extends TestCase
             'show_selfie_photos' => '1',
         ]);
         $wordWithSelfie->assertStatus(200);
-        $wordWithSelfie->assertSee('Foto Kehadiran');
-        $wordWithSelfie->assertSee('alt="Selfie"', false);
+        $this->assertStringContainsString('Foto Kehadiran', $this->docxXml($wordWithSelfie->getContent()));
+        $this->assertStringContainsString('alt="Selfie"', $this->documentBodyHtml($agenda));
 
         $attendance->delete();
         $participantUser->delete();
@@ -229,7 +243,7 @@ class ReportExportEnhancementTest extends TestCase
         // Check that Word export reflects the newly assigned signers
         $wordResponse = $this->actingAs($admin)->get("/admin/reports/{$agenda->id}/export/word");
         $wordResponse->assertStatus(200);
-        $wordContent = $wordResponse->getContent();
+        $wordContent = $this->docxXml($wordResponse->getContent());
         $this->assertStringContainsString($pimpinanUser->name, $wordContent);
         $this->assertStringContainsString($pimpinanUser->nip, $wordContent);
         $this->assertStringContainsString($notulisUser->name, $wordContent);
@@ -274,16 +288,16 @@ class ReportExportEnhancementTest extends TestCase
         // 2. Word export by default (GET) verifies HTML layout and styling
         $wordResponse = $this->actingAs($admin)->get("/admin/reports/{$agenda->id}/export/word");
         $wordResponse->assertStatus(200);
-        $wordContent = $wordResponse->getContent();
+        $wordContent = $this->docxXml($wordResponse->getContent());
 
         // Must include Foto Kehadiran by default
         $this->assertStringContainsString('Foto Kehadiran', $wordContent);
         // Kop surat paragraph in Word must have normal font-style
-        $this->assertStringContainsString('font-style: normal;', $wordContent);
+        $this->assertStringContainsString('font-style: normal;', $this->documentBodyHtml($agenda));
         // Table must have border="1" attribute for MS Word border rendering
-        $this->assertStringContainsString('border="1" cellspacing="0" cellpadding="0"', $wordContent);
+        $this->assertStringContainsString('border="1" cellspacing="0" cellpadding="0"', $this->documentBodyHtml($agenda));
         // Empty state in Word must have colspan="7"
-        $this->assertStringContainsString('colspan="7"', $wordContent);
+        $this->assertStringContainsString('colspan="7"', $this->documentBodyHtml($agenda));
 
         // 3. When show_selfie_photos is explicitly unchecked (value '0') in Word export
         $wordWithoutSelfie = $this->actingAs($admin)->post("/admin/reports/{$agenda->id}/export/word", [
@@ -295,10 +309,17 @@ class ReportExportEnhancementTest extends TestCase
             'show_attendee_signatures' => '1',
         ]);
         $wordWithoutSelfie->assertStatus(200);
-        $wordNoSelfieContent = $wordWithoutSelfie->getContent();
+        $wordNoSelfieContent = $this->docxXml($wordWithoutSelfie->getContent());
         $this->assertStringNotContainsString('Foto Kehadiran', $wordNoSelfieContent);
         // Colspan without photo column = 6
-        $this->assertStringContainsString('colspan="6"', $wordNoSelfieContent);
+        $this->assertStringContainsString('colspan="6"', $this->documentBodyHtml($agenda, [
+            'show_selfie_photos' => '0',
+            'show_attendees' => '1',
+            'show_nip' => '1',
+            'show_unit' => '1',
+            'show_attendance_time' => '1',
+            'show_attendee_signatures' => '1',
+        ]));
 
         // PDF without selfie succeeds as well
         $pdfWithoutSelfie = $this->actingAs($admin)->post("/admin/reports/{$agenda->id}/export/pdf", [

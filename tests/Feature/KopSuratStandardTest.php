@@ -162,11 +162,11 @@ class KopSuratStandardTest extends TestCase
      */
     private function exportHtml(): string
     {
-        $response = $this->actingAs($this->superadmin)
-            ->get(route('admin.reports.export.word', $this->agenda));
-        $response->assertStatus(200);
-
-        return $response->getContent();
+        // Rendered straight from the service rather than through the word route:
+        // the word route now emits a binary .docx, while these assertions are
+        // about the letterhead markup the PDF is built from.
+        return app(\App\Services\WordExportService::class)
+            ->generateDocumentContent($this->agenda, [], 'plain');
     }
 
     /**

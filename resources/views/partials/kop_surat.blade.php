@@ -39,6 +39,10 @@
     calc(), dan app.css memaksa .office-paper-sheet table menjadi
     width:100% !important sehingga colgroup ikut diabaikan di workstation.
 --}}
+@use('App\Support\DocumentLayout')
+
+{{-- Semua angka layout berasal dari app/Support/DocumentLayout.php, yang juga
+     dibaca oleh writer .docx. Nilai tidak boleh ditulis ulang di sini. --}}
 @php
     $kopShowLogo = (bool) ($config['show_logo'] ?? true);
     $kopLogo = $kopLogo ?? null;
@@ -48,7 +52,7 @@
     // Ketiga nilai turunan hanya boleh dihitung ketika logo benar-benar ada:
     // saat logo dimatikan, $kopLogo bernilai null dan setiap pembacaan indeksnya
     // akan melempar galat.
-    $kopLogoBoxPt = 79.4;
+    $kopLogoBoxPt = DocumentLayout::LOGO_BOX_PT;
     $kopLogoWidthPt = 0;
     $kopLogoHeightPt = 0;
 
@@ -70,8 +74,8 @@
     // fixed, persentase dihitung terhadap lebar tabel sehingga blok teks
     // selalu urging di ruang yang tersisa di sebelah logo, berapa pun nilai
     // margin halaman. Angka tetap membuat kolom meluber begitu margin berubah.
-    $kopLogoCellWidth = $kopHasLogo ? '19%' : '0%';
-    $kopTextCellWidth = $kopHasLogo ? '81%' : '100%';
+    $kopLogoCellWidth = $kopHasLogo ? DocumentLayout::KOP_LOGO_COLUMN : '0%';
+    $kopTextCellWidth = $kopHasLogo ? DocumentLayout::KOP_TEXT_COLUMN : '100%';
 @endphp
 <div class="header-kop" id="sheet-header-kop" style="display: {{ ($config['show_kop'] ?? true) ? 'block' : 'none' }}; margin: 0; padding: 0; text-align: center; width: 100%;">
     <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; border-collapse: collapse; margin: 0; padding: 0;">
@@ -82,13 +86,13 @@
                 @endif
             </td>
             <td width="{{ $kopTextCellWidth }}" align="center" valign="middle" style="width: {{ $kopTextCellWidth }}; text-align: center; vertical-align: middle; border: none; padding: 0;">
-                <p id="sheet-instansi-induk" style="margin: 0; padding: 0; font-size: 16pt; line-height: 19pt; mso-line-height-rule: exactly; font-weight: normal; text-transform: uppercase; font-family: 'Times New Roman', Times, serif;">{{ $config['instansi_induk'] ?? 'KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI' }}</p>
-                <p id="sheet-instansi-pelaksana" style="margin: 0; padding: 0; font-size: 14pt; line-height: 17pt; mso-line-height-rule: exactly; font-weight: bold; text-transform: uppercase; font-family: 'Times New Roman', Times, serif;">{{ $config['instansi_pelaksana'] ?? 'LEMBAGA LAYANAN PENDIDIKAN TINGGI (LLDIKTI) WILAYAH X' }}</p>
-                <p id="sheet-alamat-kontak" style="margin: 2pt 0 0 0; padding: 0; font-size: 12pt; line-height: 14pt; mso-line-height-rule: exactly; font-weight: normal; font-style: normal; font-family: 'Times New Roman', Times, serif;">{{ $config['alamat_kontak'] ?? 'Jalan Khatib Sulaiman, Padang, Sumatera Barat' }}</p>
+                <p id="sheet-instansi-induk" style="margin: 0; padding: 0; font-size: {{ DocumentLayout::MINISTRY_SIZE_PT }}pt; line-height: {{ DocumentLayout::MINISTRY_LINE_PT }}pt; mso-line-height-rule: exactly; font-weight: normal; text-transform: uppercase; font-family: 'Times New Roman', Times, serif;">{{ $config['instansi_induk'] ?? 'KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI' }}</p>
+                <p id="sheet-instansi-pelaksana" style="margin: 0; padding: 0; font-size: {{ DocumentLayout::AGENCY_SIZE_PT }}pt; line-height: {{ DocumentLayout::AGENCY_LINE_PT }}pt; mso-line-height-rule: exactly; font-weight: bold; text-transform: uppercase; font-family: 'Times New Roman', Times, serif;">{{ $config['instansi_pelaksana'] ?? 'LEMBAGA LAYANAN PENDIDIKAN TINGGI (LLDIKTI) WILAYAH X' }}</p>
+                <p id="sheet-alamat-kontak" style="margin: 2pt 0 0 0; padding: 0; font-size: {{ DocumentLayout::ADDRESS_SIZE_PT }}pt; line-height: {{ DocumentLayout::ADDRESS_LINE_PT }}pt; mso-line-height-rule: exactly; font-weight: normal; font-style: normal; font-family: 'Times New Roman', Times, serif;">{{ $config['alamat_kontak'] ?? 'Jalan Khatib Sulaiman, Padang, Sumatera Barat' }}</p>
             </td>
         </tr>
         <tr>
-            <td colspan="2" style="border: none; border-bottom: 1pt solid #000000; mso-border-bottom-alt: solid windowtext 1pt; height: 0; font-size: 1pt; line-height: 0; mso-line-height-rule: exactly; padding: 3pt 0 0 0;">&#8203;</td>
+            <td colspan="2" style="border: none; border-bottom: {{ DocumentLayout::RULE_WEIGHT_PT }}pt solid #000000; mso-border-bottom-alt: solid windowtext {{ DocumentLayout::RULE_WEIGHT_PT }}pt; height: 0; font-size: 1pt; line-height: 0; mso-line-height-rule: exactly; padding: 3pt 0 0 0;">&#8203;</td>
         </tr>
     </table>
 </div>

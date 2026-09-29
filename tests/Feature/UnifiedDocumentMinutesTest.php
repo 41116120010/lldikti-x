@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use Tests\Support\InspectsDocx;
 use App\Models\Agenda;
 use App\Models\Unit;
 use App\Models\User;
@@ -12,6 +13,8 @@ use Tests\TestCase;
 
 class UnifiedDocumentMinutesTest extends TestCase
 {
+    use InspectsDocx;
+
     use DatabaseTransactions;
 
     private User $admin;
@@ -179,9 +182,9 @@ class UnifiedDocumentMinutesTest extends TestCase
             route('admin.reports.export.word', $this->agenda)
         );
         $wordResponse->assertStatus(200);
-        $this->assertStringContainsString('BERITA ACARA TERPADU NOTULENSI', $wordResponse->getContent());
-        $this->assertStringContainsString('BA-TERPADU/2026/777', $wordResponse->getContent());
-        $this->assertStringContainsString('Prof. H. Ahmad Dahlan, Ph.D.', $wordResponse->getContent());
+        $this->assertStringContainsString('BERITA ACARA TERPADU NOTULENSI', $this->docxXml($wordResponse->getContent()));
+        $this->assertStringContainsString('BA-TERPADU/2026/777', $this->docxXml($wordResponse->getContent()));
+        $this->assertStringContainsString('Prof. H. Ahmad Dahlan, Ph.D.', $this->docxXml($wordResponse->getContent()));
     }
 
     public function test_custom_logo_upload_and_reset_in_single_action(): void

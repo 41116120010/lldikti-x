@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\ActivityLogger;
 use App\Services\PdfExportService;
 use App\Services\ReportConfigService;
+use App\Services\DocxExportService;
 use App\Services\WordExportService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -248,7 +249,7 @@ class ReportController extends Controller
     /**
      * Export Official Meeting Minutes & Attendance to Microsoft Word (.doc).
      */
-    public function exportWord(Request $request, Agenda $agenda, WordExportService $wordService): Response|RedirectResponse
+    public function exportWord(Request $request, Agenda $agenda, DocxExportService $docxService): Response|RedirectResponse
     {
         Gate::authorize('view', $agenda);
 
@@ -263,7 +264,7 @@ class ReportController extends Controller
         );
 
         try {
-            return $wordService->exportBeritaAcara($agenda, $config);
+            return $docxService->exportBeritaAcara($agenda, $config);
         } catch (\Throwable $e) {
             Log::error('Gagal mengekspor dokumen Microsoft Word (.doc): ' . $e->getMessage(), [
                 'agenda_id' => $agenda->id,

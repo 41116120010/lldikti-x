@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use Tests\Support\InspectsDocx;
 use App\Models\Agenda;
 use App\Models\Attendance;
 use App\Models\User;
@@ -10,6 +11,8 @@ use Tests\TestCase;
 
 class AgendaRoleDelegationTest extends TestCase
 {
+    use InspectsDocx;
+
     public function test_default_role_fallback_to_creator(): void
     {
         $admin = User::where('role', 'administrator')->first();
@@ -247,10 +250,10 @@ class AgendaRoleDelegationTest extends TestCase
         $wordResponse = $this->actingAs($superadmin)
             ->get("/admin/reports/{$agenda->id}/export/word");
         $wordResponse->assertStatus(200);
-        $wordContent = $wordResponse->getContent();
+        $wordContent = $this->docxXml($wordResponse->getContent());
         $this->assertStringContainsString($agenda->nama_pimpinan, $wordContent);
         $this->assertStringContainsString($agenda->nama_notulis, $wordContent);
-        $this->assertStringContainsString('data:image/png;base64,', $wordContent);
+        $this->assertGreaterThan(0, $this->docxMediaCount($wordResponse->getContent()), 'Tanda tangan harus tertanam di paket .docx.');
     }
 
     /**

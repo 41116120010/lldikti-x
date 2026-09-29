@@ -4345,6 +4345,192 @@ pada agenda tanpa foto.
 
 `php artisan test` = **239 passed, 0 failed**. Dokumen 3 halaman, diverifikasi
 visual per halaman.
+
+# BAGIAN 8.15 — LAMPIRAN FOTO DIMULAI DI HALAMAN BARU (2026-09-29)
+
+Permintaan: Lampiran Foto Dokumentasi agar selalu berada di halaman baru,
+supaya tidak merusak kerapian halaman terakhir.
+
+## 1. Perubahan
+
+`page-break-before: always` ditambahkan pada pembungkus lampiran.
+
+Garis pemisah atas **dihapus**. Gunanya memisahkan lampiran dari konten
+sebelumnya; setelah pemisah halaman itu bekerja, garis tersebut hanya
+menjadi garis yatim yang melayang di atas halaman dengan sendirinya. Pada
+percobaan pertama garis itu masih ada dan hasilnya terlihat janggal.
+
+## 2. Alasan
+
+Lampiran adalah bahan pendukung, bukan bagian dari naskah. Sebelumnya ia
+berbagi halaman dengan blok tanda tangan, sehingga halaman penutup terlihat
+terbelah: naskahnya sudah habis di tengah halaman, lalu lampiran menempel
+di bawahnya dengan sisa ruang yang tidak berguna.
+
+Setelah dipisah, halaman penutup berakhir bersih tepat di blok tanda tangan.
+Tanda tangan adalah penutup dokumen, jadi di sanalah halaman seharusnya
+selesai.
+
+## 3. Hasil
+
+- Dokumen uji: **3 halaman menjadi 4 halaman**.
+- Halaman 3: Daftar Kehadiran, lalu blok tanda tangan, lalu habis. Ruang
+  bawah kosong 19 cm - itu akhir dokumen, bukan rongga yang salah tempat.
+- Halaman 4: judul lampiran di atas, foto di bawahnya, tanpa garis yatim.
+
+## 4. Test
+
+Assertion `page-break-before: always` ditambahkan di dalam blok bersyarat
+yang sama dengan pemeriksaan posisi lampiran, sehingga hanya diperiksa bila
+lampiran benar-benar dirender, yaitu ketika agenda memiliki foto
+dokumentasi.
+
+## 5. Catatan
+
+Menambah satu halaman adalah konsekuensi yang wajar dan disengaja: lampiran
+dipisahkan secara visual, bukan dipadatkan agar muat. Bila jumlah lampiran
+banyak, halaman ini bertambah, dan itu memang wajar untuk lampiran.
+
+`php artisan test` = **239 passed, 0 failed**.
+
+# BAGIAN 8.16 - PENYELARASAN EKSPOR .DOCX DENGAN PDF (2026-09-29)
+
+Ekspor Word sudah memakai `phpoffice/phpword` 0.18.3 dan berkaspun valid,
+tetapi tata letaknya menyimpang dari PDF. Bagian ini mencatat penyebabnya,
+perbaikannya, dan bukti ukurannya.
+
+## 1. Tiga jebakan PhpWord 0.18 yang merusak tanpa pesan
+
+Tidak satu pun dari ketiganya melempar galat. Dokumen tetap terbuka, tetap
+tampak seperti dokumen, dan pengujian yang semestinya menangkapnya belum ada.
+
+### 1.1 `Element\Table::setWidth()` adalah kode mati
+
+`$table->setWidth($twips)` kelihatan benar, dan memang menyetel
+`Element\Table::$width`. Tetapi writer meneruskannya ke field privat
+`Writer\Word2007\Style\Table::$width`, dan field itu hanya dibaca pada cabang
+gaya string. Untuk tabel bergaya array, `w:tblW` ditulis dari
+**`Style\Table::getWidth()`**. Nilai yang hanya dipasang lewat `setWidth()`
+berhenti di jalan dan tidak pernah sampai ke XML.
+
+Yang lebih menentukan, satuan bawaan `Style\Table::$unit` adalah
+`TblWidth::AUTO`, sehingga setiap tabel keluar sebagai:
+
+```xml
+<w:tblW w:w="0" w:type="auto"/>
+```
+
+`auto` berarti Word dan LibreOffice menentukan lebar tabel dari isi dan
+mengabaikan `w:tblGrid` sepenuhnya. XML-nya tetap terbaca benar: setiap
+`gridCol` berjumlah pas 9638. Yang menyempit hanya kolom yang dirender, dari
+17 cm menjadi sekitar 11 cm.
+
+Perbaikan: lebar dan satuan dipindahkan ke array gaya, satu tempat:
+
+```php
+'unit'  => TblWidth::TWIP,
+'width' => DocumentLayout::cmToTwips(DocumentLayout::contentWidthCm()),
+```
+
+Ketujuh tabel kini `w:tblW w:w="9638" w:type="dxa"`, dan lima pemanggilan
+`setWidth()` yang tidak berefek dihapus.
+
+### 1.2 Dua `<w:tbl>` bersebelahan dibaca sebagai satu tabel
+
+OOXML mewajibkan tabel diikuti paragraf, dan Word maupun LibreOffice
+memenuhinya secara harfiah. Dua elemen `<w:tbl>` dengan tiada apa pun di
+ antaranya dibaca sebagai satu tabel, memakai grid dan garis dari tabel
+pertama. Itulah sebabnya grid bergaris pada tabel kehadiran terbaca
+melintang ke blok tanda tangan yang seharusnya tanpa garis. Dua grid dengan
+jumlah kolom berbeda juga akan saling menimpa tanpa pesan.
+
+Perbaikan: `spacer()` menyisipkan paragraf kosong 1 pt di antara dua tabel.
+Cukup dua titik, `addAttendance()` dan `addSignatures()`, karena di situlah
+sebuah tabel selalu mendahului tabel lain, apa pun kombinasi
+`show_notulensi`, `show_kesimpulan`, dan `show_attendees` yang aktif. Jarak
+18 pt dari PDF dipindahkan ke spacer itu, bukan ke blok yang mengikutinya.
+
+### 1.3 Gaya paragraf yang diberikan sebagai gaya run dibuang
+
+`Text::addText($text, $fontStyle, $paragraphStyle)`. Array pada argumen kedua
+diterapkan ke `Style\Font` saja, dan kunci seperti `0` tidak ada di sana,
+sehingga hilang tanpa jejak. Kepala kehadiran dulu dipanggil sebagai
+`addText('No', $head)` dengan `$head` berisi dua array, dan hasilnya:
+
+```xml
+<w:p><w:pPr/><w:r><w:rPr/><w:t>No</w:t></w:r></w:p>
+```
+
+Kosong. Tidak tebal, bukan 9 pt, tidak rata tengah. Kunci penata yang benar di
+0.18 adalah `align`, `spacing`, dan `spaceBefore`, bukan `alignment` dan
+`space`. `style()` sudah mengembalikan dua array terpisah dan selalu dipanggil
+dengan spread, sehingga kepala sekarang melalui jalur yang sama dengan sel
+badannya.
+
+## 2. Kesalahan letak lain yang ditemukan
+
+| Gejala di DOCX | PDF | Perbaikan |
+| --- | --- | --- |
+| Blok tanda tangan 6 baris x 1 sel, para penanda turun vertikal | 3 baris x 2 atau 3 sel, berdampingan | 3 baris, satu sel per penanda per baris |
+| Teks tanda tangan menempel ke tepi sel | blok 68% atau 76% di tengah kolom | indent simetris, kiri sama dengan kanan |
+| Dua tanda tangan duduk pada ketinggian berbeda | sel rata tengah | `vAlign: center`, bukan `bottom` |
+| Kop dan tabel detail bergaris kotak | keduanya tanpa garis | `borderSize` dihapus, bukan diisi 0 |
+| Garis penutup kop hilang | garis 1 pt di bawah kop | baris kedua dengan `gridSpan` dan `borderBottom` |
+| Foto lampiran tanpa bingkai dan tanpa keterangan | bingkai slate dan keterangan miring | `borderSize` per sel plus keterangan italic |
+| Sel kosong lampiran ikut berbingkai | sel kosong tanpa garis | bingkai hanya pada sel yang berisi foto |
+| `(HADIR)` tidak pernah tampil | tampil bila tanda tangan dimatikan | `attendanceSignature()` menghormati `show_attendee_signatures` |
+
+Catatan soal `w:sz="0"`: memberi ukuran garis 0 menulis
+`w:val="single" w:sz="0"`. Word tidak menggambarnya, LibreOffice
+menggambarnya sebagai rambut. Cara yang deterministik adalah tidak menulis
+`<w:tblBorders>` sama sekali, yaitu membiarkan ukuran garis tetap null pada
+tabel tanpa garis.
+
+## 3. Bukti ukuran
+
+- Lebar tabel: 7 dari 7 tabel `w:tblW w:w="9638" w:type="dxa"`. Sebelumnya 7
+  dari 7 `w:w="0" w:type="auto"`.
+- Tabel bersebelahan: 0 pasang. Sebelumnya 1 pasang.
+- Blok tanda tangan: 3 baris, 2 sel per baris, grid 2. Sebelumnya 6 baris,
+  1 sel, grid 1.
+- Grid dan `tcW` tiap sel: 9638 atau 9639 twip, cocok dengan 17 cm.
+- Jarak baris: 37,5 px pada 150 dpi atau 18 pt, sama di PDF maupun DOCX.
+- Bingkai: 3 tabel bergaris (dua kotak notulensi dan kehadiran), 4 tanpa garis.
+- Gambar: 10 `<w:pict>` tertanam, 8 rata tengah, 2 tanda tangan blok rata kiri.
+- Indent blok tanda tangan: `w:ind w:left="771" w:right="771"` untuk dua
+  penanda tangan, yaitu 16% dari kolom 4819 twip, sesuai blok 68% pada PDF.
+
+## 4. Test
+
+`tests/Feature/DocxLayoutParityTest.php` berisi 9 test dan 47 assertion yang
+memeriksa atribut yang harus bertahan sampai `word/document.xml`:
+
+1. setiap tabel menyatakan lebar dalam twip;
+2. tidak ada dua tabel bersebelahan;
+3. hanya tiga tabel yang bergaris, dan tidak ada `w:sz="0"`;
+4. blok tanda tangan tiga baris dengan satu sel per penanda;
+5. indent blok tanda tangan simetris;
+6. sel kepala kehadiran benar-benar bergaya;
+7. garis kop adalah border sel bersarang, bukan border tabel;
+8. gambar rata tengah kecuali dua tanda tangan blok;
+9. bingkai lampiran memakai warna yang sama dengan PDF.
+
+Trait `InspectsDocx` ditambah `docxTables()`, `docxGridColumns()`,
+`docxRows()`, dan `docxTableContaining()`, supaya setiap assertion diarahkan
+pada satu tabel, bukan pada seluruh dokumen.
+
+## 5. Catatan
+
+Jumlah halaman berbeda: PDF 4 halaman, DOCX 3 halaman. Ini bukan cacat tata
+letak. Pitch baris, lebar kolom, ukuran font, dan tinggi baris identik. Dompdf
+saja yang memilih memindahkan tabel kehadiran ke halaman berikutnya meski ruang
+sepertinya cukup, dan itu pilihan pemenggal halaman miliknya sendiri, bukan
+selisih metrik. Menyeragamkan jumlah halaman berarti memaksa algoritma
+pemenggal halaman Dompdf, yang bertentangan dengan prinsip bahwa PDF adalah
+acuan yang sudah disetujui pengguna.
+
+`php artisan test` = **248 passed, 0 failed** (239 sebelumnya ditambah 9 baru).
+
 # BAGIAN 9 — CATATAN METODOLOGIS & KETERBATASAN
 
 1. **Tidak ada file yang diubah** — audit 100% read-only. 7 file sudah uncommitted sebelum audit dimulai (`notulen.blade.php`, `show.blade.php`, `binary_pdf.blade.php`, `document_body.blade.php`, `word_berita_acara.blade.php`, `reports/show.blade.php`, `SignatureColumnStandardizationTest.php`) — **tidak disentuh**.

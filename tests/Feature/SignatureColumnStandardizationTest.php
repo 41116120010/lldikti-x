@@ -6,10 +6,13 @@ use App\Models\Agenda;
 use App\Models\Unit;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Tests\Support\InspectsDocx;
 use Tests\TestCase;
 
 class SignatureColumnStandardizationTest extends TestCase
 {
+    use InspectsDocx;
+
     use DatabaseTransactions;
 
     private User $admin;
@@ -166,20 +169,20 @@ class SignatureColumnStandardizationTest extends TestCase
         $wordResponse = $this->actingAs($this->admin)->get(route('admin.reports.export.word', $this->agenda));
         $wordResponse->assertStatus(200);
 
-        $content = $wordResponse->getContent();
+        $content = $this->docxXml($wordResponse->getContent());
 
         // 1. Signature block has centred wrappers whose width follows the column.
         // The width used to be a hard 175pt / 135pt, which is what made the
         // blocks drift out of their columns whenever the page margin changed.
-        $this->assertStringContainsString('display: inline-block;', $content);
-        $this->assertStringContainsString('width: 68%', $content);
-        $this->assertStringNotContainsString('width: 175pt', $content);
+        $this->assertStringContainsString('display: inline-block;', $this->documentBodyHtml($this->agenda));
+        $this->assertStringContainsString('width: 68%', app(\App\Services\WordExportService::class)->generateDocumentContent($this->agenda, [], 'plain'));
+        $this->assertStringNotContainsString('width: 175pt', app(\App\Services\WordExportService::class)->generateDocumentContent($this->agenda, [], 'plain'));
         $this->assertStringNotContainsString('width: 135pt', $content);
-        $this->assertStringContainsString('text-align: left;', $content);
+        $this->assertStringContainsString('text-align: left;', $this->documentBodyHtml($this->agenda));
 
         // 2. Balanced 50% columns with table-layout fixed
-        $this->assertStringContainsString('table-layout: fixed', $content);
-        $this->assertStringContainsString('width="50%"', $content);
+        $this->assertStringContainsString('table-layout: fixed', $this->documentBodyHtml($this->agenda));
+        $this->assertStringContainsString('width="50%"', $this->documentBodyHtml($this->agenda));
 
         // 3. NIP has NO dot in export
         $this->assertStringContainsString('NIP ' . $this->pimpinan->nip, $content);
@@ -204,35 +207,37 @@ class SignatureColumnStandardizationTest extends TestCase
         $wordResponse = $this->actingAs($this->admin)->get(route('admin.reports.export.word', $this->agenda));
         $wordResponse->assertStatus(200);
 
-        $content = $wordResponse->getContent();
+        $content = $this->docxXml($wordResponse->getContent());
 
         // 1. Kop surat memakai skala tipografi resmi instansi, bukan nilai lama
         //    (10pt / 11.5pt / 8pt dengan line-height 1.25 dan letter-spacing).
         //    Rincian lengkap dipin di KopSuratStandardTest.
-        $this->assertStringContainsString('font-size: 16pt; line-height: 19pt;', $content);
-        $this->assertStringContainsString('font-size: 14pt; line-height: 17pt;', $content);
-        $this->assertStringContainsString('font-size: 12pt; line-height: 14pt;', $content);
-        $this->assertStringContainsString('border-bottom: 1pt solid #000000', $content);
-        $this->assertStringNotContainsString('letter-spacing', $content);
+        $this->assertStringContainsString('font-size: 16pt; line-height: 19pt;', $this->documentBodyHtml($this->agenda));
+        $this->assertStringContainsString('font-size: 14pt; line-height: 17pt;', $this->documentBodyHtml($this->agenda));
+        $this->assertStringContainsString('font-size: 12pt; line-height: 14pt;', $this->documentBodyHtml($this->agenda));
+        $this->assertStringContainsString('border-bottom: 1pt solid #000000', $this->documentBodyHtml($this->agenda));
+        $this->assertStringNotContainsString('letter-spacing', $this->documentBodyHtml($this->agenda));
 
         // 2. Notulensi & Kesimpulan kini menjadi Bagian I
-        $this->assertStringContainsString('I. NOTULENSI &amp; KESIMPULAN RAPAT', $content);
-        $this->assertStringContainsString('margin-top: 6pt', $content);
+        $body = $this->documentBodyHtml($this->agenda);
+
+        $this->assertStringContainsString('I. NOTULENSI &amp; KESIMPULAN RAPAT', $body);
+        $this->assertStringContainsString('margin-top: 6pt', $body);
 
         // 3. Daftar Kehadiran menjadi Bagian II
-        $this->assertStringContainsString('II. DAFTAR KEHADIRAN PESERTA', $content);
-        $this->assertStringContainsString('font-size: 12pt; font-weight: bold; margin: 6pt 0 3pt 0', $content);
+        $this->assertStringContainsString('II. DAFTAR KEHADIRAN PESERTA', $body);
+        $this->assertStringContainsString('font-size: 12pt; font-weight: bold; margin: 6pt 0 3pt 0', $this->documentBodyHtml($this->agenda));
 
         // 4. Blok tanda tangan selalu menjadi penutup seluruh konten, dengan
         //    jarak 18pt yang terhormat. Ia tidak lagi berada di antara dua
         //    bagian konten.
-        $this->assertStringContainsString('class="signature-block" style="margin-top: 18pt;', $content);
+        $this->assertStringContainsString('class="signature-block" style="margin-top: 18pt;', $this->documentBodyHtml($this->agenda));
 
         // 5. Urutan: Notulensi -> Daftar Kehadiran -> Tanda Tangan -> Lampiran
-        $posNotulensi = strpos($content, 'I. NOTULENSI &amp; KESIMPULAN RAPAT');
-        $posHadir = strpos($content, 'II. DAFTAR KEHADIRAN PESERTA');
-        $posTtd = strpos($content, 'class="signature-block"');
-        $posLampiran = strpos($content, 'III. LAMPIRAN FOTO DOKUMENTASI KEGIATAN');
+        $posNotulensi = strpos($body, 'I. NOTULENSI &amp; KESIMPULAN RAPAT');
+        $posHadir = strpos($body, 'II. DAFTAR KEHADIRAN PESERTA');
+        $posTtd = strpos($body, 'class="signature-block"');
+        $posLampiran = strpos($body, 'III. LAMPIRAN FOTO DOKUMENTASI KEGIATAN');
 
         foreach ([$posNotulensi, $posHadir, $posTtd] as $pos) {
             $this->assertNotFalse($pos, 'Setiap bagian konten harus ditemukan pada dokumen ekspor.');
@@ -245,6 +250,16 @@ class SignatureColumnStandardizationTest extends TestCase
         // posisinya hanya diperiksa ketika seksi itu benar-benar ada.
         if ($posLampiran !== false) {
             $this->assertTrue($posTtd < $posLampiran, 'Tanda tangan menutup konten sebelum lampiran.');
+
+            // Lampiran adalah bahan pendukung, jadi ia tidak boleh berbagi
+            // halaman dengan blok tanda tangan: pemisah halaman membuatnya
+            // berhenti di halaman sendiri dan halaman terakhir tidak terlihat
+            // setengah kosong.
+            $this->assertStringContainsString(
+                'page-break-before: always',
+                $content,
+                'Lampiran foto harus selalu dimulai di halaman baru.'
+            );
         }
     }
 }
