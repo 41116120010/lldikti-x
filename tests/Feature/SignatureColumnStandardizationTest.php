@@ -215,26 +215,36 @@ class SignatureColumnStandardizationTest extends TestCase
         $this->assertStringContainsString('border-bottom: 1pt solid #000000', $content);
         $this->assertStringNotContainsString('letter-spacing', $content);
 
-        // 2. Bab 1 (Daftar Hadir) spacing & font
-        $this->assertStringContainsString('I. DAFTAR KEHADIRAN PESERTA', $content);
-        $this->assertStringContainsString('font-size: 12pt; font-weight: bold; margin: 6pt 0 3pt 0', $content);
-
-        // 3. Bab 2 (Notulensi & Kesimpulan) spacing & font
-        $this->assertStringContainsString('II. NOTULENSI &amp; KESIMPULAN RAPAT', $content);
+        // 2. Notulensi & Kesimpulan kini menjadi Bagian I
+        $this->assertStringContainsString('I. NOTULENSI &amp; KESIMPULAN RAPAT', $content);
         $this->assertStringContainsString('margin-top: 6pt', $content);
 
-        // 4. Signature block placed right after Bab 2 with dignified 18pt margin
+        // 3. Daftar Kehadiran menjadi Bagian II
+        $this->assertStringContainsString('II. DAFTAR KEHADIRAN PESERTA', $content);
+        $this->assertStringContainsString('font-size: 12pt; font-weight: bold; margin: 6pt 0 3pt 0', $content);
+
+        // 4. Blok tanda tangan selalu menjadi penutup seluruh konten, dengan
+        //    jarak 18pt yang terhormat. Ia tidak lagi berada di antara dua
+        //    bagian konten.
         $this->assertStringContainsString('class="signature-block" style="margin-top: 18pt;', $content);
 
-        // 5. Sequence: Bab 1 -> Bab 2 -> Signature Block
-        $posBab1 = strpos($content, 'I. DAFTAR KEHADIRAN PESERTA');
-        $posBab2 = strpos($content, 'II. NOTULENSI &amp; KESIMPULAN RAPAT');
-        $posSig = strpos($content, 'class="signature-block"');
+        // 5. Urutan: Notulensi -> Daftar Kehadiran -> Tanda Tangan -> Lampiran
+        $posNotulensi = strpos($content, 'I. NOTULENSI &amp; KESIMPULAN RAPAT');
+        $posHadir = strpos($content, 'II. DAFTAR KEHADIRAN PESERTA');
+        $posTtd = strpos($content, 'class="signature-block"');
+        $posLampiran = strpos($content, 'III. LAMPIRAN FOTO DOKUMENTASI KEGIATAN');
 
-        $this->assertNotFalse($posBab1);
-        $this->assertNotFalse($posBab2);
-        $this->assertNotFalse($posSig);
-        $this->assertTrue($posBab1 < $posBab2);
-        $this->assertTrue($posBab2 < $posSig);
+        foreach ([$posNotulensi, $posHadir, $posTtd] as $pos) {
+            $this->assertNotFalse($pos, 'Setiap bagian konten harus ditemukan pada dokumen ekspor.');
+        }
+
+        $this->assertTrue($posNotulensi < $posHadir, 'Notulensi harus mendahului Daftar Kehadiran.');
+        $this->assertTrue($posHadir < $posTtd, 'Daftar Kehadiran adalah konten, jadi harus mendahului tanda tangan.');
+
+        // Lampiran hanya dirender bila agenda punya foto dokumentasi, jadi
+        // posisinya hanya diperiksa ketika seksi itu benar-benar ada.
+        if ($posLampiran !== false) {
+            $this->assertTrue($posTtd < $posLampiran, 'Tanda tangan menutup konten sebelum lampiran.');
+        }
     }
 }

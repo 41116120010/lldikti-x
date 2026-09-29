@@ -46,9 +46,34 @@
 </table>
 @endif
 
-<!-- Seksi I: Daftar Hadir Peserta -->
+<!-- Seksi I: Notulensi & Kesimpulan Rapat -->
+@if(($config['show_notulensi'] ?? true) || ($config['show_kesimpulan'] ?? true))
+<div style="margin-top: 6pt;">
+    <div class="section-title" style="font-size: 12pt; font-weight: bold; margin: 0 0 3pt 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif; page-break-after: avoid; break-after: avoid;">I. NOTULENSI &amp; KESIMPULAN RAPAT</div>
+
+    @if($config['show_notulensi'] ?? true)
+    <div style="margin-bottom: 6pt;">
+        <div style="font-weight: bold; font-size: 12pt; margin-bottom: 1.5pt; font-family: 'Times New Roman', Times, serif; page-break-after: avoid; break-after: avoid;">A. Catatan Jalannya Rapat (Notulensi):</div>
+        <div style="border: 1pt solid #000000; padding: 3pt 5pt; text-align: justify; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; font-size: 12pt; line-height: 18pt; mso-line-height-rule: exactly; background: #fafafa; font-family: 'Times New Roman', Times, serif;">
+            {!! $agenda->formatted_notulensi ?: '<span style="color: #64748b; font-style: italic;">Tidak ada catatan notulensi khusus yang dicatat.</span>' !!}
+        </div>
+    </div>
+    @endif
+
+    @if($config['show_kesimpulan'] ?? true)
+    <div>
+        <div style="font-weight: bold; font-size: 12pt; margin-bottom: 1.5pt; font-family: 'Times New Roman', Times, serif; page-break-after: avoid; break-after: avoid;">B. Kesimpulan &amp; Rencana Tindak Lanjut (RTL):</div>
+        <div style="border: 1pt solid #000000; padding: 3pt 5pt; text-align: justify; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; font-size: 12pt; line-height: 18pt; mso-line-height-rule: exactly; background: #fafafa; font-family: 'Times New Roman', Times, serif;">
+            {!! $agenda->formatted_kesimpulan ?: '<span style="color: #64748b; font-style: italic;">Tidak ada catatan kesimpulan khusus yang dicatat.</span>' !!}
+        </div>
+    </div>
+    @endif
+</div>
+@endif
+
+<!-- Seksi II: Daftar Hadir Peserta -->
 @if($config['show_attendees'] ?? true)
-<div class="section-title" style="font-size: 12pt; font-weight: bold; margin: 6pt 0 3pt 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif; page-break-after: avoid; break-after: avoid;">I. DAFTAR KEHADIRAN PESERTA ({{ $agenda->attendances->count() }} Orang)</div>
+<div class="section-title" style="font-size: 12pt; font-weight: bold; margin: 6pt 0 3pt 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif; page-break-after: avoid; break-after: avoid;">II. DAFTAR KEHADIRAN PESERTA (<{{ $agenda->attendances->count() }} Orang)</div>
 <table class="attendance-table" width="100%" border="1" cellspacing="0" cellpadding="0" bordercolor="#000000" style="width: 100%; table-layout: fixed; border-collapse: collapse; border: 1px solid #000000; margin: 0; font-size: 9pt; line-height: 11pt; font-family: 'Times New Roman', Times, serif; word-wrap: break-word; overflow-wrap: break-word;">
     <thead>
         <tr style="background-color: #f2f2f2; mso-yfti-tblheader: yes; page-break-inside: avoid; break-inside: avoid;">
@@ -117,32 +142,6 @@
     </tbody>
 </table>
 @endif
-
-<!-- Seksi II: Notulensi & Kesimpulan Rapat -->
-@if(($config['show_notulensi'] ?? true) || ($config['show_kesimpulan'] ?? true))
-<div style="margin-top: 6pt;">
-    <div class="section-title" style="font-size: 12pt; font-weight: bold; margin: 0 0 3pt 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif; page-break-after: avoid; break-after: avoid;">II. NOTULENSI &amp; KESIMPULAN RAPAT</div>
-
-    @if($config['show_notulensi'] ?? true)
-    <div style="margin-bottom: 6pt;">
-        <div style="font-weight: bold; font-size: 12pt; margin-bottom: 1.5pt; font-family: 'Times New Roman', Times, serif; page-break-after: avoid; break-after: avoid;">A. Catatan Jalannya Rapat (Notulensi):</div>
-        <div style="border: 1pt solid #000000; padding: 3pt 5pt; text-align: justify; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; font-size: 12pt; line-height: 18pt; mso-line-height-rule: exactly; background: #fafafa; font-family: 'Times New Roman', Times, serif;">
-            {!! $agenda->formatted_notulensi ?: '<span style="color: #64748b; font-style: italic;">Tidak ada catatan notulensi khusus yang dicatat.</span>' !!}
-        </div>
-    </div>
-    @endif
-
-    @if($config['show_kesimpulan'] ?? true)
-    <div>
-        <div style="font-weight: bold; font-size: 12pt; margin-bottom: 1.5pt; font-family: 'Times New Roman', Times, serif; page-break-after: avoid; break-after: avoid;">B. Kesimpulan &amp; Rencana Tindak Lanjut (RTL):</div>
-        <div style="border: 1pt solid #000000; padding: 3pt 5pt; text-align: justify; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; font-size: 12pt; line-height: 18pt; mso-line-height-rule: exactly; background: #fafafa; font-family: 'Times New Roman', Times, serif;">
-            {!! $agenda->formatted_kesimpulan ?: '<span style="color: #64748b; font-style: italic;">Tidak ada catatan kesimpulan khusus yang dicatat.</span>' !!}
-        </div>
-    </div>
-    @endif
-</div>
-@endif
-
 
 <!-- Tanda Tangan Pengesahan: kiri (Pimpinan) - tengah (Kepala LLDIKTI, hanya bila
      show_signer3 aktif) - kanan (Notulis). Urutan ini dipatok di sini. -->
@@ -229,7 +228,6 @@
         </tr>
     </table>
 </div>
-
 
 <!-- Seksi III: Lampiran Foto Dokumentasi Kegiatan (Annex Resmi) -->
 @if(($config['show_documentation'] ?? true) && count($documentations) > 0)

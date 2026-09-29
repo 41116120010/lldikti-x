@@ -4297,6 +4297,54 @@ sel `<td>` itu dihormati.
 - **Satu sumber kebenaran lebih dari dua.** Lebar yang ditulis di
   `<colgroup>` sekaligus di sel_cells akan menyimpang begitu hanya satu
   yang berubah.
+
+# BAGIAN 8.14 — URUTAN KONTEN: NOTULENSI DAHULU, DAFTAR HADIR SESUDAHNYA (2026-09-29)
+
+Permintaan: mengubah urutan konten dari **Daftar Kehadiran - Notulensi -
+Kesimpulan** menjadi **Notulensi - Kesimpulan - Daftar Kehadiran**.
+
+Blok tanda tangan **tidak** ikut dipindah. Ia tetap menutup seluruh konten,
+ditempatkan sebelum lampiran foto, sama seperti posisi aslinya.
+
+## 1. Urutan akhir
+
+| # | Bagian | Nomor |
+|---|---|---|
+| 1 | Kop surat | - |
+| 2 | Judul dan Nomor berita acara | - |
+| 3 | Tabel informasi (Perihal, Hari/Tanggal, Waktu, Tempat, Penyelenggara) | - |
+| 4 | NOTULENSI & KESIMPULAN (A. Catatan, B. Kesimpulan & RTL) | **I** |
+| 5 | DAFTAR KEHADIRAN PESERTA | **II** |
+| 6 | Blok tanda tangan (kiri - tengah bila `show_signer3` - kanan) | - |
+| 7 | LAMPIRAN FOTO DOKUMENTASI | **III** |
+
+Penomoran bagian diselaraskan mengikuti urutan barunya.
+
+## 2. Pelajaran dari salah langkah pertama
+
+Pada percobaan pertama, blok tanda tangan ikut terpindah dan mendahului Daftar
+Kehadiran. Itu salah: permintaan hanya menyangkut urutan **konten**, dan Daftar
+Kehadiran adalah konten. Blok tanda tangan harus tetap menjadi penutup.
+
+Kesalahannya adalah membundelkan blok "Daftar Kehadiran" bersama blok tanda
+tangan karena keduanya berdekatan pada berkas, lalu memindahkannya sebagai satu
+kesatuan. Yang benar adalah memindahkan hanya batas antar bagian konten dan
+meninggalkan blok tanda tangan pada tempatnya.
+
+## 3. Test
+
+`SignatureColumnStandardizationTest` kini mengunci urutan itu secara eksplisit:
+
+    Notulensi < Daftar Kehadiran < Tanda Tangan < Lampiran
+
+Posisi lampiran hanya diperiksa bila seksi itu benar-benar dirender, yaitu ketika
+agenda memiliki foto dokumentasi. Memaksanya menjadi assertion wajib akan gagal
+pada agenda tanpa foto.
+
+## 4. Hasil
+
+`php artisan test` = **239 passed, 0 failed**. Dokumen 3 halaman, diverifikasi
+visual per halaman.
 # BAGIAN 9 — CATATAN METODOLOGIS & KETERBATASAN
 
 1. **Tidak ada file yang diubah** — audit 100% read-only. 7 file sudah uncommitted sebelum audit dimulai (`notulen.blade.php`, `show.blade.php`, `binary_pdf.blade.php`, `document_body.blade.php`, `word_berita_acara.blade.php`, `reports/show.blade.php`, `SignatureColumnStandardizationTest.php`) — **tidak disentuh**.
