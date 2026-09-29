@@ -124,6 +124,22 @@ class KopSuratStandardTest extends TestCase
         $this->assertStringNotContainsString('object-fit', $kop);
     }
 
+    public function test_the_detail_table_declares_its_widths_on_the_cells_not_in_a_colgroup(): void
+    {
+        $html = $this->exportHtml();
+
+        // Dompdf ignores <colgroup>, so widths declared there silently do
+        // nothing and the three columns come out equal. That pushed the colon
+        // to the middle of the page and squeezed the values into the right
+        // third, which is what "isi terlalu mepet ke kanan" looked like.
+        // The widths therefore live on the <td> themselves.
+        $this->assertStringNotContainsString('<colgroup>', $html);
+
+        $this->assertSame(5, preg_match_all('/<td[^>]*width: 24%;/', $html), 'Kolom label harus 24%.');
+        $this->assertSame(5, preg_match_all('/<td[^>]*width: 2%;/', $html), 'Kolom titik dua harus 2%.');
+        $this->assertSame(5, preg_match_all('/<td[^>]*width: 74%;/', $html), 'Kolom isi harus 74%.');
+    }
+
     public function test_workstation_and_export_render_an_identical_letterhead(): void
     {
         $export = $this->extractKop($this->exportHtml());

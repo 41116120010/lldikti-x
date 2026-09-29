@@ -4238,6 +4238,65 @@ kunci lain. Fitur penyesuaian dokumen berfungsi persis seperti sebelumnya.
   tanggal rata kanan. Berita acara sekarang memakai judul di tengah; pola dari
   acuan belum diterapkan karena di luar lingkup permintaan.
 
+
+# BAGIAN 8.13 — KOLOM TABEL DETAIL: WIDTH DI <colgroup> DIABAIKAN (2026-09-29)
+
+Pelaporan pengguna: pada tabel Perihal, Hari/Tanggal, Waktu Pelaksanaan,
+Format & Tempat, dan Penyelenggara Rapat, isinya terlalu mepet ke kanan dan
+menyisakan ruang kosong.
+
+## 1. Diagnosis
+
+Pengukuran posisi kolom pada PDF menunjukkan ketiganya **sama besar**:
+
+| Kolom | Dideklarasikan | Dirender |
+|---|---|---|
+| Label | 24% | 33,4% |
+| Titik dua | 2% | 33,4% |
+| Isi | 74% | 33,2% |
+
+Penyebabnya: lebar kolom dideklarasikan di dalam `<colgroup>`, dan
+**Dompdf mengabaikan `<colgroup>`**. Tabel lalu jatuh ke lebar kolom sama
+rata, sehingga titik dua mendarat di tengah halaman dan isi terdesak ke
+sepertiga kanan. Kolom isi yang tersisa hanya sekitar 33% inilah yang
+membuat nilai membungkus tiga baris dan tampak tidak rapi.
+
+Ini juga berarti perbaikan lebar kolom tabel kehadiran pada Bagian 8.12
+sebenarnya **tidak pernah berlaku**, karena lebar itu pun berada di
+`<th>` sementara kolom "Nama Lengkap" tidak punya lebar, dan `<colgroup>`
+diabaikan.
+
+Perbaikan yang sama sebelumnya berhasil pada kop surat: lebar di atas
+sel `<td>` itu dihormati.
+
+## 2. Perbaikan
+
+- Lebar 24% / 2% / 74% dipindahkan ke masing-masing `<td>`.
+- `<colgroup>` dihapus dari tabel detail **dan** dari tabel tanda tangan,
+  karena keduanya menduplikasi lebar yang sama di dua tempat - sumber
+  kebocoran bila salah satunya berubah.
+- Tabel tanda tangan diverifikasi ulang secara visual setelah
+  `<colgroup>`-nya dihapus; urutan kiri - tengah - kanan tetap utuh.
+
+## 3. Hasil
+
+- Label: 24,1% · titik dua: 2,9% · isi: 73% - sesuai rencana.
+- Setiap nilai kini muat **satu baris**; "Rapat Koordinasi Evaluasi
+  Pelaporan PDDikti Semester Genap" tidak lagi membungkus tiga baris.
+- `php artisan test` = **239 passed, 0 failed**.
+- Test baru `KopSuratStandardTest` mengunci aturan ini: tidak boleh ada
+  `<colgroup>` di dokumen ekspor, dan jumlah lebar pada sel harus 5 x
+  24%, 5 x 2%, 5 x 74%. Aturan itu ditulis karena kegagalan `<colgroup>`
+  bersifat senyap - tidak ada error, hanya tata letak yang bergeser.
+
+## 4. Pelajaran
+
+- **Markup yang diabaikan mesin diam-diam.** `@page` bernama dan
+  `<colgroup>` keduanya diterima tanpa error, lalu diabaikan. Keduanya baru
+  terlihat setelah posisi diukur dari PDF, bukan dari kode.
+- **Satu sumber kebenaran lebih dari dua.** Lebar yang ditulis di
+  `<colgroup>` sekaligus di sel_cells akan menyimpang begitu hanya satu
+  yang berubah.
 # BAGIAN 9 — CATATAN METODOLOGIS & KETERBATASAN
 
 1. **Tidak ada file yang diubah** — audit 100% read-only. 7 file sudah uncommitted sebelum audit dimulai (`notulen.blade.php`, `show.blade.php`, `binary_pdf.blade.php`, `document_body.blade.php`, `word_berita_acara.blade.php`, `reports/show.blade.php`, `SignatureColumnStandardizationTest.php`) — **tidak disentuh**.

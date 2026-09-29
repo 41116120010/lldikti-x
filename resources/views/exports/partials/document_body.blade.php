@@ -15,38 +15,33 @@
 <!-- Informasi Pelaksanaan Rapat -->
 @if($config['show_meeting_info'] ?? true)
 <table class="info-table" width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; margin-bottom: 6pt; border-collapse: collapse; font-size: 12pt; border: none; font-family: 'Times New Roman', Times, serif; word-wrap: break-word; overflow-wrap: break-word;">
-    <colgroup>
-        <col style="width: 24%;">
-        <col style="width: 2%;">
-        <col style="width: 74%;">
-    </colgroup>
     <tr>
-        <td style="font-weight: bold; padding: 1.5pt 0; vertical-align: top; border: none;">Perihal / Agenda</td>
-        <td style="padding: 1.5pt 0; vertical-align: top; border: none;">:</td>
-        <td style="padding: 1.5pt 0; vertical-align: top; border: none; word-wrap: break-word; overflow-wrap: break-word;"><strong>{{ $config['custom_agenda_title'] ?? $agenda->judul_rapat }}</strong></td>
+        <td style="font-weight: bold; padding: 1.5pt 0; vertical-align: top; border: none; width: 24%;">Perihal / Agenda</td>
+        <td style="padding: 1.5pt 0; vertical-align: top; border: none; width: 2%;">:</td>
+        <td style="padding: 1.5pt 0; vertical-align: top; border: none; word-wrap: break-word; overflow-wrap: break-word; width: 74%;"><strong>{{ $config['custom_agenda_title'] ?? $agenda->judul_rapat }}</strong></td>
     </tr>
     <tr>
-        <td style="font-weight: bold; padding: 1.5pt 0; vertical-align: top; border: none;">Hari / Tanggal</td>
-        <td style="padding: 1.5pt 0; vertical-align: top; border: none;">:</td>
-        <td style="padding: 1.5pt 0; vertical-align: top; border: none;">{{ $agenda->waktu_mulai->translatedFormat('l, d F Y') }}</td>
+        <td style="font-weight: bold; padding: 1.5pt 0; vertical-align: top; border: none; width: 24%;">Hari / Tanggal</td>
+        <td style="padding: 1.5pt 0; vertical-align: top; border: none; width: 2%;">:</td>
+        <td style="padding: 1.5pt 0; vertical-align: top; border: none; width: 74%;">{{ $agenda->waktu_mulai->translatedFormat('l, d F Y') }}</td>
     </tr>
     <tr>
-        <td style="font-weight: bold; padding: 1.5pt 0; vertical-align: top; border: none;">Waktu Pelaksanaan</td>
-        <td style="padding: 1.5pt 0; vertical-align: top; border: none;">:</td>
-        <td style="padding: 1.5pt 0; vertical-align: top; border: none;">{{ $agenda->waktu_mulai->format('H:i') }} {{ $agenda->waktu_selesai ? 's.d. ' . $agenda->waktu_selesai->format('H:i') . ' WIB' : 'WIB s.d. Selesai' }}</td>
+        <td style="font-weight: bold; padding: 1.5pt 0; vertical-align: top; border: none; width: 24%;">Waktu Pelaksanaan</td>
+        <td style="padding: 1.5pt 0; vertical-align: top; border: none; width: 2%;">:</td>
+        <td style="padding: 1.5pt 0; vertical-align: top; border: none; width: 74%;">{{ $agenda->waktu_mulai->format('H:i') }} {{ $agenda->waktu_selesai ? 's.d. ' . $agenda->waktu_selesai->format('H:i') . ' WIB' : 'WIB s.d. Selesai' }}</td>
     </tr>
     <tr>
-        <td style="font-weight: bold; padding: 1.5pt 0; vertical-align: top; border: none;">Format &amp; Tempat</td>
-        <td style="padding: 1.5pt 0; vertical-align: top; border: none;">:</td>
-        <td style="padding: 1.5pt 0; vertical-align: top; border: none; word-wrap: break-word; overflow-wrap: break-word;">
+        <td style="font-weight: bold; padding: 1.5pt 0; vertical-align: top; border: none; width: 24%;">Format &amp; Tempat</td>
+        <td style="padding: 1.5pt 0; vertical-align: top; border: none; width: 2%;">:</td>
+        <td style="padding: 1.5pt 0; vertical-align: top; border: none; word-wrap: break-word; overflow-wrap: break-word; width: 74%;">
             {{ ucfirst($agenda->tipe_rapat) }} &mdash; 
             {{ $config['custom_location'] ?? ($agenda->lokasi_ruang ?? 'Daring (Online Meeting)') }}
         </td>
     </tr>
     <tr>
-        <td style="font-weight: bold; padding: 1.5pt 0; vertical-align: top; border: none;">Penyelenggara Rapat</td>
-        <td style="padding: 1.5pt 0; vertical-align: top; border: none;">:</td>
-        <td style="padding: 1.5pt 0; vertical-align: top; border: none; word-wrap: break-word; overflow-wrap: break-word;">{{ $agenda->creator?->name ?? 'Penyelenggara Rapat' }} ({{ $agenda->creator?->unit?->nama_unit ?? 'Tingkat Lembaga' }})</td>
+        <td style="font-weight: bold; padding: 1.5pt 0; vertical-align: top; border: none; width: 24%;">Penyelenggara Rapat</td>
+        <td style="padding: 1.5pt 0; vertical-align: top; border: none; width: 2%;">:</td>
+        <td style="padding: 1.5pt 0; vertical-align: top; border: none; word-wrap: break-word; overflow-wrap: break-word; width: 74%;">{{ $agenda->creator?->name ?? 'Penyelenggara Rapat' }} ({{ $agenda->creator?->unit?->nama_unit ?? 'Tingkat Lembaga' }})</td>
     </tr>
 </table>
 @endif
@@ -166,16 +161,6 @@
 @endphp
 <div class="signature-block" style="margin-top: 18pt; page-break-inside: avoid; break-inside: avoid; mso-yfti-row: cantSplit;">
     <table class="signature-table" width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; border-collapse: collapse; border: none; margin: 8pt 0 4pt 0; page-break-inside: avoid; break-inside: avoid; mso-yfti-row: cantSplit;">
-        <colgroup>
-            @if($ttdThird)
-                <col style="width: 33.3%;">
-                <col style="width: {{ $ttdCellMid }};">
-                <col style="width: 33.3%;">
-            @else
-                <col style="width: 50%;">
-                <col style="width: 50%;">
-            @endif
-        </colgroup>
         <tr style="page-break-inside: avoid; break-inside: avoid; mso-yfti-row: cantSplit;">
             <td width="{{ $ttdCell }}" style="width: {{ $ttdCell }}; text-align: center; vertical-align: top; border: none; padding: 0 4pt; font-size: 12pt; font-family: 'Times New Roman', Times, serif;">
                 <div style="display: inline-block; width: {{ $ttdInner }}; text-align: left;">
