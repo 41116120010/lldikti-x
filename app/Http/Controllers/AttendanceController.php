@@ -9,6 +9,7 @@ use App\Services\ActivityLogger;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -25,10 +26,17 @@ class AttendanceController extends Controller
     {
         $user = Auth::user();
 
-        // Ongoing agendas available for this user to attend right now
+        // The card needs the headcount and this user's own record for the "Bukti"
+        // link, so the relation is constrained to the current user and holds at
+        // most one row per agenda instead of every attendee.
         $ongoingAgendas = Agenda::visibleTo($user)
             ->where('status', 'ongoing')
-            ->with(['creator', 'units', 'attendances'])
+            ->with([
+                'creator',
+                'units',
+                'attendances' => fn ($q) => $q->where('user_id', $user->id),
+            ])
+            ->withCount('attendances')
             ->orderBy('waktu_mulai', 'desc')
             ->paginate(6, ['*'], 'page_ongoing')
             ->withQueryString();
@@ -195,7 +203,32 @@ class AttendanceController extends Controller
      */
     public function success(Agenda $agenda, Attendance $attendance): View
     {
+        // Ownership of the row: the attendance must genuinely belong to this agenda.
+        //
+        // Without this, any authenticated user could pair an arbitrary agenda ID
+        // with one of their own attendance records. The receipt then rendered that
+        // agenda's title, date and room next to their own proof of attendance —
+        // an official-looking document naming the wrong meeting, and a way to read
+        // details of meetings (including draft ones) they were never invited to.
+        //
+        // The pairing check is the whole fix, and it is deliberately not paired
+        // with AgendaPolicy::viewStaff(): holding an attendance record already
+        // proves the user attended this meeting. Blocking them once the meeting is
+        // later marked 'cancelled' — which the delete-agenda guidance explicitly
+        // recommends for a cancelled-but-held meeting — would revoke a receipt they
+        // legitimately earned.
+        //
+        // Compare as integers: with PDO::ATTR_EMULATE_PREPARES enabled (the PHP
+        // default for MySQL) primary keys arrive as numeric strings, so a strict
+        // === against an int key would reject legitimate requests.
+        abort_unless((int) $attendance->agenda_id === (int) $agenda->getKey(), 404);
+
+        // Confirms the requester owns this record, or is an admin entitled to it.
         Gate::authorize('view', $attendance);
+
+        // The receipt footer prints the meeting headcount. Resolved as a count
+        // subquery so the view does not lazy-load the whole attendances relation.
+        $agenda->loadCount('attendances');
 
         $attendance->load(['user.unit', 'agenda']);
 
@@ -226,14 +259,24 @@ class AttendanceController extends Controller
 
     /**
      * Helper to process and store Base64 Data URI or File Upload to disk safely.
+     *
+     * @param  string  $dataUri    Raw `data:image/...;base64,...` payload from the canvas.
+     * @param  \Illuminate\Http\UploadedFile|null  $file  Direct upload fallback.
+     * @param  string  $directory  Disk-relative directory.
+     * @param  string  $prefix     Human-readable filename prefix, e.g. `selfie_7`.
+     * @return string Path relative to the public disk.
      */
-    private function saveImageFile(?string $dataUri, $file, string $directory, string $prefix): string
+    private function saveImageFile(?string $dataUri, ?UploadedFile $file, string $directory, string $prefix): string
     {
         $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
 
         // 1. If uploaded as direct file
         if ($file) {
-            $ext = strtolower($file->getClientOriginalExtension());
+            // Derive the extension from the file's magic bytes, never from the
+            // client-supplied filename. getClientOriginalExtension() is fully
+            // attacker-controlled and would let a `.php` payload land under a
+            // public disk that nginx happily hands to PHP-FPM.
+            $ext = strtolower((string) $file->guessExtension());
             if (!in_array($ext, $allowedExtensions, true)) {
                 throw new \InvalidArgumentException('Tipe berkas gambar tidak diizinkan.');
             }

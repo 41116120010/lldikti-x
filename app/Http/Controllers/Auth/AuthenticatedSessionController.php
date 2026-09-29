@@ -38,7 +38,7 @@ class AuthenticatedSessionController extends Controller
         // Audit Log
         ActivityLogger::log(
             type: 'AUTH_LOGIN',
-            description: "Pengguna {$user->name} ({$user->role}) berhasil masuk ke sistem.",
+            description: "Pengguna {$user->name} ({$user->role_label}) berhasil masuk ke sistem.",
             targetModel: get_class($user),
             targetId: $user->id,
             user: $user

@@ -6,6 +6,8 @@ use App\Models\Agenda;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class AgendaConflictService
 {
@@ -13,6 +15,108 @@ class AgendaConflictService
      * Toleransi waktu lampau untuk input agenda baru (dalam menit).
      */
     public const PAST_TOLERANCE_MINUTES = 15;
+
+    /**
+     * Berapa lama menunggu mutex ruangan sebelum menyerah (detik).
+     */
+    private const LOCK_TIMEOUT_SECONDS = 5;
+
+    /**
+     * Jalankan callback di bawah mutex ruangan, lalu validasi konflik di dalamnya.
+     *
+     * Validasi konflik normally berjalan di FormRequest, yaitu SEBELUM controller
+     * membuka transaksi. Dua admin yang menyimpan jadwal ruang yang sama dalam
+     * milidetik yang sama bisa keduanya lolos validasi lalu keduanya insert — ruang
+     * ter-booking ganda. Mengulang pengecekan di dalam transaksi sambil memegang
+     * advisory lock menutup celah check-then-act tersebut.
+     *
+     * Lock diambil per nama ruang, jadi ruang yang berbeda tidak saling menunggu.
+     *
+     * @template T
+     * @param  array  $data  Input agenda.
+     * @param  int|null  $ignoreAgendaId  Agenda yang dikecualikan saat update.
+     * @param  User|null  $user  Pengguna yang melakukan aksi.
+     * @param  callable(): T  $callback  Operasi penulisan yang harus terlindungi.
+     * @return T
+     */
+    public static function runUnderRoomLock(array $data, ?int $ignoreAgendaId, ?User $user, callable $callback): mixed
+    {
+        $room = $data['lokasi_ruang'] ?? null;
+        $tipeRapat = $data['tipe_rapat'] ?? null;
+
+        // Only physical rooms need the mutex; online meetings share no resource.
+        if (! in_array($tipeRapat, ['offline', 'hybrid'], true) || blank($room)) {
+            $result = self::checkConflicts($data, $ignoreAgendaId, $user);
+            if ($result['has_conflicts']) {
+                throw ValidationException::withMessages($result['errors']);
+            }
+
+            return $callback();
+        }
+
+        $lockName = self::roomLockName($room);
+        $usesSessionLock = self::acquireRoomLock($lockName);
+
+        try {
+            $result = self::checkConflicts($data, $ignoreAgendaId, $user);
+            if ($result['has_conflicts']) {
+                throw ValidationException::withMessages($result['errors']);
+            }
+
+            return $callback();
+        } finally {
+            if ($usesSessionLock) {
+                self::releaseRoomLock($lockName);
+            }
+        }
+    }
+
+    /**
+     * Nama mutex untuk sebuah ruangan. Dihash agar bebas dari panjang & karakter
+     * nama ruangan (GET_LOCK membatasi 64 karakter).
+     */
+    private static function roomLockName(string $room): string
+    {
+        return 'siperapat:room:' . md5(Agenda::normalizeRoom($room) ?? '');
+    }
+
+    /**
+     * Ambil advisory lock. Mengembalikan true bila lock bersifat session-level dan
+     * harus dilepas manual (MySQL/MariaSQL), false untuk lock yang otomatis
+     * dilepas saat transaksi selesai (PostgreSQL).
+     */
+    private static function acquireRoomLock(string $lockName): bool
+    {
+        if (DB::connection()->getDriverName() === 'pgsql') {
+            // pg_advisory_xact_lock dilepas otomatis pada COMMIT/ROLLBACK.
+            DB::select('SELECT pg_advisory_xact_lock(hashtext(?))', [$lockName]);
+
+            return false;
+        }
+
+        $row = DB::selectOne('SELECT GET_LOCK(?, ?) AS acquired', [$lockName, self::LOCK_TIMEOUT_SECONDS]);
+
+        if (! $row || (int) $row->acquired !== 1) {
+            throw ValidationException::withMessages([
+                'lokasi_ruang' => ['Ruang sedang diakses oleh proses lain. Silakan coba kembali beberapa saat lagi.'],
+            ]);
+        }
+
+        return true;
+    }
+
+    /**
+     * Lepas session-level advisory lock. Best-effort: bila koneksi sudah hilang,
+     // MySQL akan membersihkannya sendiri saat koneksi ditutup.
+     */
+    private static function releaseRoomLock(string $lockName): void
+    {
+        try {
+            DB::selectOne('SELECT RELEASE_LOCK(?) AS released', [$lockName]);
+        } catch (\Throwable) {
+            // Lock yang bocor akan dilepas otomatis ketika koneksi database ditutup.
+        }
+    }
 
     /**
      * Check all potential conflicts for agenda creation or update.
@@ -147,12 +251,21 @@ class AgendaConflictService
      */
     public static function validateRoomConflict(?int $ignoreAgendaId, string $ruangan, Carbon $mulai, ?Carbon $selesai): ?string
     {
-        $cleanRoom = strtolower(trim($ruangan));
+        $cleanRoom = Agenda::normalizeRoom($ruangan);
+
+        // A room is only bookable if it has a name; a blank value cannot conflict.
+        if ($cleanRoom === null) {
+            return null;
+        }
 
         $query = Agenda::query()
             ->whereIn('status', ['scheduled', 'ongoing'])
             ->whereIn('tipe_rapat', ['offline', 'hybrid'])
-            ->whereRaw('LOWER(TRIM(lokasi_ruang)) = ?', [$cleanRoom]);
+            // Plain equality against the normalised column, so the
+            // (lokasi_ruang_normalized, status) index can be used. The previous
+            // LOWER(TRIM(lokasi_ruang)) = ? wrapped the column in a function and
+            // forced a full table scan on every agenda save.
+            ->where('lokasi_ruang_normalized', $cleanRoom);
 
         if ($ignoreAgendaId) {
             $query->where('id', '!=', $ignoreAgendaId);
@@ -300,10 +413,15 @@ class AgendaConflictService
                       $s1->whereNotNull('waktu_selesai')
                          ->where('waktu_selesai', '>', $mulai);
                   })
-                  // Syarat 2B: Agenda lain "Hingga Selesai" (waktu_selesai IS NULL) pada hari yang sama
+                  // Syarat 2B: Agenda lain "Hingga Selesai" (waktu_selesai IS NULL) pada hari yang sama.
+                  // A between-range on the raw column, not whereDate(): wrapping the
+                  // column in DATE() would disable the waktu_mulai index here too.
                   ->orWhere(function (Builder $s2) use ($mulai) {
                       $s2->whereNull('waktu_selesai')
-                         ->whereDate('waktu_mulai', '=', $mulai->toDateString());
+                         ->whereBetween('waktu_mulai', [
+                             $mulai->copy()->startOfDay(),
+                             $mulai->copy()->endOfDay(),
+                         ]);
                   });
               });
         });

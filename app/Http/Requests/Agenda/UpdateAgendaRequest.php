@@ -74,6 +74,8 @@ class UpdateAgendaRequest extends FormRequest
             'judul_rapat' => ['required', 'string', 'max:255'],
             'pimpinan_id' => ['nullable', 'exists:users,id'],
             'notulis_id' => ['nullable', 'exists:users,id'],
+            // Free text by design — the suggestions are rendered as a datalist, not
+            // enforced as an allowlist. See config/agenda.php.
             'jenis_rapat' => ['required', 'string', 'max:100'],
             'tipe_rapat' => ['required', 'string', Rule::in(['offline', 'online', 'hybrid'])],
             'lokasi_ruang' => ['nullable', 'string', 'max:150', Rule::requiredIf(fn () => in_array($this->input('tipe_rapat'), ['offline', 'hybrid']))],

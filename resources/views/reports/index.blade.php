@@ -147,7 +147,7 @@
                                 </td>
                                 <td class="text-center">
                                     <span class="inline-flex items-center gap-1 text-xs font-bold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
-                                        {{ $agenda->attendances->count() }} Hadir
+                                        {{ $agenda->attendances_count }} Hadir
                                     </span>
                                 </td>
                                 <td class="text-center">

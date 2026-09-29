@@ -1,3 +1,19 @@
+{{--
+    DEPRECATED - TIDAK DIRENDER.
+
+    Tidak ada kode yang memuat view ini; satu-satunya view yang dirender untuk
+    ekspor adalah exports.word_berita_acara. Berkas ini pernah punya @page dan
+    tipografi sendiri yang berbeda dari template Word, sehingga ada dua
+    geometri halaman hidup di repositori tanpa ada yang salah satunya berlaku.
+    Selain itu, siapa pun yang menyunting berkas ini tidak akan melihat
+    perubahan sama sekali karena berkas ini tidak pernah dirender.
+
+    Ekspor PDF biner memakai alur: word_berita_acara -> .doc sementara ->
+    LibreOffice headless -> .pdf (lihat PdfExportService).
+
+    Hapus berkas ini begitu tidak lagi dibutuhkan. Isi kop surat TIDAK boleh
+    disunting di sini: definisinya tunggal di partials/kop_surat.blade.php.
+--}}
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -6,7 +22,7 @@
     <style>
         @page {
             size: 210mm 297mm portrait;
-            margin: 20mm 15mm 20mm 15mm;
+            margin: 16mm 18mm 20mm 18mm;
         }
 
         * {
@@ -20,8 +36,8 @@
             background: #ffffff;
             color: #000000;
             font-family: 'Times New Roman', Times, serif;
-            font-size: 11pt;
-            line-height: 1.35;
+            font-size: 9.5pt;
+            line-height: 1.25;
         }
 
         p, div, h1, h2, h3 {
@@ -43,6 +59,19 @@
         .keep-together {
             page-break-inside: avoid;
             break-inside: avoid;
+        }
+
+        table.signature-table {
+            width: 100%;
+            table-layout: fixed;
+            margin: 8pt 0 4pt 0;
+            page-break-inside: avoid;
+        }
+
+        table.signature-table td {
+            width: 50%;
+            vertical-align: top;
+            text-align: center;
         }
     </style>
 </head>

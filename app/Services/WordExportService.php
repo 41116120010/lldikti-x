@@ -10,10 +10,22 @@ use Illuminate\Support\Facades\Storage;
 class WordExportService
 {
     /**
+     * Upper bound on the pixel dimensions accepted from an uploaded source image.
+     * Anything larger is refused before it is handed to GD.
+     */
+    private const MAX_SOURCE_DIMENSION = 4000;
+
+    /**
      * Prepare resolved data and optimized base64 media for document export.
      * Shared across Word export, Binary PDF export, and Web preview.
+     *
+     * @param  array<string,mixed>  $config  Report-config overrides for this single export.
+     * @param  string  $pageMode  'named' emits "@page Section1" for Word and the
+     *                           LibreOffice fallback; 'plain' emits a bare
+     *                           "@page", which is the only form Dompdf reads.
+     * @return array<string,mixed>
      */
-    public function prepareViewData(Agenda $agenda, array $config = []): array
+    public function prepareViewData(Agenda $agenda, array $config = [], string $pageMode = 'named'): array
     {
         @ini_set('memory_limit', '256M');
         @set_time_limit(120);
@@ -31,14 +43,21 @@ class WordExportService
 
         // Process Logo Base64 (Custom logo or default Tut Wuri Handayani)
         $logoBase64 = null;
+        // Pixel dimensions of the source logo, so the template can render it at
+        // its true aspect ratio. Word's HTML importer ignores object-fit, so a
+        // fixed width/height pair that does not match the source would stretch
+        // the emblem - the most visible element on the letterhead.
+        $logoSize = null;
         if ($resolvedConfig['show_logo'] ?? true) {
             try {
                 $customLogo = $resolvedConfig['custom_logo_path'] ?? null;
                 if ($customLogo && Storage::disk('public')->exists($customLogo)) {
                     $raw = Storage::disk('public')->get($customLogo);
+                    $logoSize = $this->assertSafeImageBinary($raw);
                     $logoBase64 = $this->optimizeAndEncodeImage($raw, 100, 'png');
                 } elseif (file_exists(public_path('images/tut-wuri-handayani.png'))) {
                     $raw = file_get_contents(public_path('images/tut-wuri-handayani.png'));
+                    $logoSize = $this->assertSafeImageBinary($raw);
                     $logoBase64 = $this->optimizeAndEncodeImage($raw, 100, 'png');
                 }
             } catch (\Throwable $e) {
@@ -120,7 +139,9 @@ class WordExportService
         return [
             'agenda' => $agenda,
             'config' => $resolvedConfig,
+            'pageMode' => $pageMode,
             'logoBase64' => $logoBase64,
+            'logoSize' => $logoSize,
             'attendances' => $attendancesWithMedia,
             'documentations' => $documentationsWithMedia,
             'pimpinanSigBase64' => $pimpinanSigBase64,
@@ -131,16 +152,21 @@ class WordExportService
 
     /**
      * Generate HTML document content with optimized media for Word or headless PDF conversion.
+     *
+     * @param  array<string,mixed>  $config  Report-config overrides for this single export.
+     * @param  string  $pageMode  'named' or 'plain'; see prepareViewData().
      */
-    public function generateDocumentContent(Agenda $agenda, array $config = []): string
+    public function generateDocumentContent(Agenda $agenda, array $config = [], string $pageMode = 'named'): string
     {
-        $data = $this->prepareViewData($agenda, $config);
+        $data = $this->prepareViewData($agenda, $config, $pageMode);
 
         return view('exports.word_berita_acara', $data)->render();
     }
 
     /**
      * Generate Microsoft Word-compatible document (.doc) for an Agenda.
+     *
+     * @param  array<string,mixed>  $config  Report-config overrides for this single export.
      */
     public function exportBeritaAcara(Agenda $agenda, array $config = []): Response
     {
@@ -158,10 +184,10 @@ class WordExportService
     /**
      * Downscale and optimize raw image binary, returning a chunked RFC 2397 Data URI.
      * Guarantees zero line-buffer overflow in MS Word / LibreOffice HTML parsers.
-     */
-    /**
-     * Downscale and optimize raw image binary, returning a chunked RFC 2397 Data URI.
-     * Guarantees zero line-buffer overflow in MS Word / LibreOffice HTML parsers.
+     *
+     * Returns null when the payload is not a genuine, within-limits raster image.
+     * Callers treat null as "omit this image" so a malformed or hostile upload can
+     * never reach GD, nor bloat the generated document.
      */
     protected function optimizeAndEncodeImage(?string $binary, int $maxDim = 160, string $format = 'png', int $quality = 80, bool $cropSquare = false): ?string
     {
@@ -169,16 +195,25 @@ class WordExportService
             return null;
         }
 
-        $mime = $format === 'jpeg' ? 'image/jpeg' : 'image/png';
+        if ($this->assertSafeImageBinary($binary) === null) {
+            return null;
+        }
 
-        if (!extension_loaded('gd')) {
-            return 'data:' . $mime . ';base64,' . base64_encode($binary);
+        $mime = $format === 'jpeg' ? 'image/jpeg' : 'image/png';
+        $encode = function (?string $payload) use ($mime): string {
+            return 'data:' . $mime . ';base64,' . "\n" . rtrim(chunk_split(base64_encode($payload), 1000, "\n"));
+        };
+
+        // GD unavailable: the binary is already verified above, so embedding it
+        // verbatim is safe. It simply will not be downscaled.
+        if (! extension_loaded('gd')) {
+            return $encode($binary);
         }
 
         try {
             $src = @imagecreatefromstring($binary);
             if (!$src) {
-                return 'data:' . $mime . ';base64,' . base64_encode($binary);
+                return null;
             }
 
             // Always ensure alpha preservation on source image
@@ -235,19 +270,69 @@ class WordExportService
                 imagejpeg($src, null, $quality);
             } else {
                 imagesavealpha($src, true);
-                imagepng($src, null, 9);
+                // Level 6 is the practical sweet spot; 9 costs a lot of CPU for
+                // a few percent of size across hundreds of signatures.
+                imagepng($src, null, 6);
             }
             $processed = ob_get_clean();
             imagedestroy($src);
 
-            $encoded = base64_encode($processed ?: $binary);
-            $chunked = chunk_split($encoded, 1000, "\n");
-            return 'data:' . $mime . ';base64,' . "\n" . rtrim($chunked);
+            return $encode($processed ?: $binary);
         } catch (\Throwable $e) {
-            Log::warning('Image optimization failed, falling back to raw binary: ' . $e->getMessage());
-            $encoded = base64_encode($binary);
-            $chunked = chunk_split($encoded, 1000, "\n");
-            return 'data:' . $mime . ';base64,' . "\n" . rtrim($chunked);
+            Log::warning('Image optimization failed, embedding verified original: ' . $e->getMessage());
+            return $encode($binary);
         }
+    }
+
+    /**
+     * Verify that a binary blob really is a supported raster image of sane dimensions.
+     *
+     * The binary originates from user uploads, so it is treated as hostile: it is
+     * sniffed rather than trusted, restricted to a known set of decoders, and capped
+     * in pixel count so a crafted header cannot trigger a huge allocation.
+     *
+     * @return array{0:int,1:int}|null Decoded width/height, or null when rejected.
+     */
+    private function assertSafeImageBinary(string $binary): ?array
+    {
+        // getimagesizefromstring() lives in ext/standard and does not require GD,
+        // but guard anyway so a stripped-down build degrades to "reject" instead
+        // of raising a fatal Error.
+        if (! function_exists('getimagesizefromstring')) {
+            Log::warning('Image header inspection unavailable; refusing to embed unverified media.', [
+                'bytes' => strlen($binary),
+            ]);
+            return null;
+        }
+
+        $info = @getimagesizefromstring($binary);
+        if ($info === false || ! isset($info[0], $info[1], $info[2])) {
+            Log::warning('Rejected non-image binary from document export', [
+                'bytes' => strlen($binary),
+            ]);
+            return null;
+        }
+
+        [$width, $height, $type] = $info;
+
+        $allowedTypes = [IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_WEBP];
+        if (! in_array($type, $allowedTypes, true)) {
+            Log::warning('Rejected unsupported image type from document export', [
+                'type' => $type,
+                'bytes' => strlen($binary),
+            ]);
+            return null;
+        }
+
+        // Reject absurd pixel counts (decompression-bomb / GD CVE mitigation).
+        if ($width <= 0 || $height <= 0 || $width > self::MAX_SOURCE_DIMENSION || $height > self::MAX_SOURCE_DIMENSION) {
+            Log::warning('Rejected out-of-bounds image dimensions from document export', [
+                'width' => $width,
+                'height' => $height,
+            ]);
+            return null;
+        }
+
+        return [$width, $height];
     }
 }

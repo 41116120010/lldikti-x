@@ -200,6 +200,11 @@ function viewPersonalLogPayload(logId) {
     window.showModal({
         title: 'Detail Rincian Aktivitas',
         message: payloadEl.innerHTML,
+        // Safe: the payload container is server-rendered through Blade's escaping,
+        // so re-serialising it can only reproduce already-escaped markup.
+        // NB: never write Blade echo syntax inside a <script> block — the
+        // compiler turns it into a call to e() with no arguments.
+        isHtml: true,
         type: 'info',
         confirmText: 'Tutup',
         autoClose: false

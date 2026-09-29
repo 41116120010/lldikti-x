@@ -164,6 +164,15 @@ class UnitController extends Controller
         Gate::authorize('update', $unit);
 
         $statusLabel = DB::transaction(function () use ($unit) {
+            /*
+             * Re-read the row under a row lock. Toggling is a read-modify-write,
+             * and $unit was hydrated before the transaction opened, so without
+             * lockForUpdate() two concurrent requests would both read the same
+             * is_active value, both flip it, and one of the two changes would be
+             * silently lost. A transaction alone does not prevent this.
+             */
+            $unit = Unit::whereKey($unit->getKey())->lockForUpdate()->firstOrFail();
+
             $unit->is_active = !$unit->is_active;
             $unit->save();
 

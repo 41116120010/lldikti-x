@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\UserRole;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -37,11 +38,22 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'role' => UserRole::class,
         ];
     }
 
     /**
+     * Display label for the role, so templates never interpolate the raw value.
+     */
+    public function getRoleLabelAttribute(): string
+    {
+        return $this->role?->label() ?? '-';
+    }
+
+    /**
      * Relationship to the user's unit.
+     *
+     * @return BelongsTo<Unit, $this>
      */
     public function unit(): BelongsTo
     {
@@ -50,6 +62,8 @@ class User extends Authenticatable
 
     /**
      * Relationship to agendas created by this user.
+     *
+     * @return HasMany<Agenda, $this>
      */
     public function createdAgendas(): HasMany
     {
@@ -58,6 +72,8 @@ class User extends Authenticatable
 
     /**
      * Relationship to attendances recorded by this user.
+     *
+     * @return HasMany<Attendance, $this>
      */
     public function attendances(): HasMany
     {
@@ -66,6 +82,8 @@ class User extends Authenticatable
 
     /**
      * Relationship to activity logs triggered by this user.
+     *
+     * @return HasMany<ActivityLog, $this>
      */
     public function activityLogs(): HasMany
     {
@@ -73,30 +91,31 @@ class User extends Authenticatable
     }
 
     /**
-     * Helper methods for roles
+     * Helper methods for roles.
+     *
+     * Three names for two concepts used to live here (isStaff and isPegawai were
+     * the same method), and callers picked whichever they remembered. One name
+     * per role now.
      */
     public function isAdministrator(): bool
     {
-        return $this->role === 'administrator';
+        return $this->role === UserRole::Administrator;
     }
 
     public function isAdmin(): bool
     {
-        return $this->role === 'admin';
+        return $this->role === UserRole::Admin;
     }
 
     public function isStaff(): bool
     {
-        return $this->role === 'staff';
-    }
-
-    public function isPegawai(): bool
-    {
-        return $this->isStaff();
+        return $this->role === UserRole::Staff;
     }
 
     /**
      * Scope for active users
+     *
+     * @param  Builder<User>  $query
      */
     public function scopeActive(Builder $query): Builder
     {
@@ -105,6 +124,8 @@ class User extends Authenticatable
 
     /**
      * Scope for users in a specific unit
+     *
+     * @param  Builder<User>  $query
      */
     public function scopeForUnit(Builder $query, ?int $unitId): Builder
     {

@@ -112,7 +112,7 @@
                                 <div class="text-[10px] text-slate-600 font-mono font-medium">NIP: {{ $userItem->nip }}</div>
                             </div>
                             <span class="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-slate-100 font-bold text-slate-800 border border-slate-300 shrink-0">
-                                {{ $userItem->role }}
+                                {{ $userItem->role_label }}
                             </span>
                         </div>
                     @empty

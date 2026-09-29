@@ -104,17 +104,17 @@
                     <label for="role" class="text-xs font-bold text-slate-900 block mb-1">Peran Pengguna (Role) <span class="text-rose-600">*</span></label>
                     @if($currentUser->isAdministrator() && $user->id !== $currentUser->id)
                         <select id="role" name="role" class="input w-full font-semibold @error('role') input-error @enderror" required>
-                            <option value="administrator" {{ old('role', $user->role) === 'administrator' ? 'selected' : '' }}>Administrator (Akses Penuh)</option>
-                            <option value="admin" {{ old('role', $user->role) === 'admin' ? 'selected' : '' }}>Admin Unit (Pengelola Unit)</option>
-                            <option value="staff" {{ old('role', $user->role) === 'staff' ? 'selected' : '' }}>Staff Pegawai (Presensi Saja)</option>
+                            <option value="administrator" {{ old('role', $user->role?->value) === 'administrator' ? 'selected' : '' }}>Administrator (Akses Penuh)</option>
+                            <option value="admin" {{ old('role', $user->role?->value) === 'admin' ? 'selected' : '' }}>Admin Unit (Pengelola Unit)</option>
+                            <option value="staff" {{ old('role', $user->role?->value) === 'staff' ? 'selected' : '' }}>Staff Pegawai (Presensi Saja)</option>
                         </select>
                     @elseif($currentUser->isAdministrator() && $user->id === $currentUser->id)
                         <input type="text" class="input w-full bg-slate-100 text-slate-900 font-bold" value="Administrator (Akun Anda Sendiri)" readonly disabled>
-                        <input type="hidden" name="role" value="{{ $user->role }}">
+                        <input type="hidden" name="role" value="{{ $user->role?->value }}">
                     @else
                         <select id="role" name="role" class="input w-full font-semibold @error('role') input-error @enderror" required>
-                            <option value="admin" {{ old('role', $user->role) === 'admin' ? 'selected' : '' }}>Admin Unit (Pengelola Unit)</option>
-                            <option value="staff" {{ old('role', $user->role) === 'staff' ? 'selected' : '' }}>Staff Pegawai (Presensi Saja)</option>
+                            <option value="admin" {{ old('role', $user->role?->value) === 'admin' ? 'selected' : '' }}>Admin Unit (Pengelola Unit)</option>
+                            <option value="staff" {{ old('role', $user->role?->value) === 'staff' ? 'selected' : '' }}>Staff Pegawai (Presensi Saja)</option>
                         </select>
                     @endif
                     @error('role')
@@ -194,7 +194,7 @@
 
             <div class="space-y-2 text-xs text-slate-200 font-medium">
                 <div>Unit: <strong class="text-white">{{ $user->unit?->nama_unit ?? 'Tingkat Lembaga' }}</strong></div>
-                <div>Peran: <span class="uppercase font-mono text-slate-100 font-bold bg-slate-800 px-2 py-0.5 rounded">{{ $user->role }}</span></div>
+                <div>Peran: <span class="uppercase font-mono text-slate-100 font-bold bg-slate-800 px-2 py-0.5 rounded">{{ $user->role_label }}</span></div>
                 <div>Status Akun: <strong class="{{ $user->is_active ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold' }}">{{ $user->is_active ? 'Aktif' : 'Non-Aktif' }}</strong></div>
                 <div>Total Hadir Rapat: <strong class="text-white">{{ $recentAttendances->total() }} kali</strong></div>
                 <div class="pt-2 border-t border-slate-800 text-[11px] text-slate-400">Terdaftar sejak: {{ $user->created_at->translatedFormat('d F Y') }}</div>

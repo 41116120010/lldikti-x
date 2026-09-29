@@ -10,24 +10,8 @@
     <div class="bg-slate-950 text-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-800 space-y-4">
         <!-- Top Row: Status Badges & Type -->
         <div class="flex flex-wrap items-center gap-2">
-            @php
-                $statusStyle = match($agenda->status) {
-                    'ongoing' => 'bg-amber-400 text-slate-950 font-bold',
-                    'completed' => 'bg-emerald-400 text-slate-950 font-bold',
-                    'draft' => 'bg-slate-800 text-slate-200 border border-slate-700',
-                    'cancelled' => 'bg-rose-400 text-slate-950 font-bold',
-                    default => 'bg-slate-800 text-white border border-slate-700 font-bold'
-                };
-                $statusText = match($agenda->status) {
-                    'ongoing' => 'Sedang Berlangsung (Presensi Dibuka)',
-                    'completed' => 'Selesai (Presensi Ditutup)',
-                    'draft' => 'Konsep',
-                    'cancelled' => 'Dibatalkan',
-                    default => 'Terjadwal'
-                };
-            @endphp
-            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs {{ $statusStyle }}">
-                {{ $statusText }}
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs {{ $agenda->status_meta['class'] }}">
+                {{ $agenda->status_meta['label'] }}
             </span>
 
             <span class="text-xs uppercase font-mono font-bold px-2.5 py-1 bg-slate-900 border border-slate-700 rounded-md text-slate-200">
@@ -454,13 +438,19 @@
                                     </div>
                                 @endif
                             </div>
-                            <div class="border-t border-slate-300 pt-2 flex flex-col items-center">
-                                <div class="inline-block text-left space-y-0.5">
-                                    <div class="text-xs font-bold text-slate-900">{{ $agenda->nama_pimpinan }}</div>
-                                    @if($agenda->nip_pimpinan && $agenda->nip_pimpinan !== '-')
-                                        <div class="text-[10px] text-slate-500 font-mono">NIP {{ $agenda->nip_pimpinan }}</div>
-                                    @endif
-                                </div>
+                            <div class="border-t border-slate-300 pt-2 flex flex-col items-center text-center">
+                                <table align="center" border="0" cellspacing="0" cellpadding="0" style="margin: 0 auto; border-collapse: collapse; border: none; text-align: left; display: inline-table;">
+                                    <tr>
+                                        <td style="border: none; padding: 0; text-align: left;">
+                                            <div class="inline-block text-left space-y-0.5" style="display: block; text-align: left;">
+                                                <div class="text-xs font-bold text-slate-900">{{ $agenda->nama_pimpinan }}</div>
+                                                @if($agenda->nip_pimpinan && $agenda->nip_pimpinan !== '-')
+                                                    <div class="text-[10px] text-slate-500 font-mono">NIP {{ $agenda->nip_pimpinan }}</div>
+                                                @endif
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </table>
                                 @if($pimpinanAtt)
                                     <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 mt-1.5">
                                         <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -481,13 +471,19 @@
                                     </div>
                                 @endif
                             </div>
-                            <div class="border-t border-slate-300 pt-2 flex flex-col items-center">
-                                <div class="inline-block text-left space-y-0.5">
-                                    <div class="text-xs font-bold text-slate-900">{{ $agenda->nama_notulis }}</div>
-                                    @if($agenda->nip_notulis && $agenda->nip_notulis !== '-')
-                                        <div class="text-[10px] text-slate-500 font-mono">NIP {{ $agenda->nip_notulis }}</div>
-                                    @endif
-                                </div>
+                            <div class="border-t border-slate-300 pt-2 flex flex-col items-center text-center">
+                                <table align="center" border="0" cellspacing="0" cellpadding="0" style="margin: 0 auto; border-collapse: collapse; border: none; text-align: left; display: inline-table;">
+                                    <tr>
+                                        <td style="border: none; padding: 0; text-align: left;">
+                                            <div class="inline-block text-left space-y-0.5" style="display: block; text-align: left;">
+                                                <div class="text-xs font-bold text-slate-900">{{ $agenda->nama_notulis }}</div>
+                                                @if($agenda->nip_notulis && $agenda->nip_notulis !== '-')
+                                                    <div class="text-[10px] text-slate-500 font-mono">NIP {{ $agenda->nip_notulis }}</div>
+                                                @endif
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </table>
                                 @if($notulisAtt)
                                     <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 mt-1.5">
                                         <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -544,6 +540,7 @@
                                         src="{{ Storage::disk('public')->url($doc->file_path) }}" 
                                         alt="{{ $doc->caption ?? 'Dokumentasi Rapat' }}" 
                                         class="w-full h-28 object-cover group-hover:scale-105 transition duration-300"
+                                        loading="lazy" decoding="async"
                                     >
                                 @elseif($isPdf)
                                     <div class="w-full h-28 flex items-center justify-center bg-slate-50">

@@ -22,7 +22,7 @@
                                 <span class="w-6 h-6 rounded-full bg-slate-950 text-white font-bold text-xs flex items-center justify-center">1</span>
                                 <h3 class="font-bold text-slate-950 text-sm">Foto Selfie Wajah</h3>
                             </div>
-                            <span id="selfie-status-badge" class="text-[11px] font-bold text-slate-600">Belum Diambil</span>
+                            <span id="selfie-status-badge" role="status" aria-live="polite" class="text-[11px] font-bold text-slate-600">Belum Diambil</span>
                         </div>
 
                         <!-- Camera Viewport with Oval Frame Guide -->
@@ -39,7 +39,7 @@
                             </div>
 
                             <!-- Captured Preview Image -->
-                            <img id="selfie-preview" class="hidden w-full h-full object-cover">
+                            <img id="selfie-preview" class="hidden w-full h-full object-cover" alt="Pratinjau foto selfie yang baru diambil">
 
                             <!-- Hidden Canvas for Client-side Compression -->
                             <canvas id="selfie-canvas" class="hidden"></canvas>
@@ -75,7 +75,7 @@
                                 <span class="w-6 h-6 rounded-full bg-slate-950 text-white font-bold text-xs flex items-center justify-center">2</span>
                                 <h3 class="font-bold text-slate-950 text-sm">Tanda Tangan Digital</h3>
                             </div>
-                            <span id="signature-status-badge" class="text-[11px] font-bold text-slate-600">Belum Ditandatangani</span>
+                            <span id="signature-status-badge" role="status" aria-live="polite" class="text-[11px] font-bold text-slate-600">Belum Ditandatangani</span>
                         </div>
 
                         <!-- Canvas Signature Pad -->
@@ -418,6 +418,7 @@ function initAttendanceCheckIn() {
                 window.showModal({
                     title: 'Kondisi Belum Terpenuhi',
                     message: 'Mohon ambil <strong>foto selfie wajah</strong> Anda terlebih dahulu menggunakan kamera atau unggah berkas foto.',
+                    isHtml: true,
                     type: 'warning',
                     confirmText: 'Lengkapi Foto'
                 });
@@ -429,6 +430,7 @@ function initAttendanceCheckIn() {
                 window.showModal({
                     title: 'Kondisi Belum Terpenuhi',
                     message: 'Mohon bubuhkan <strong>tanda tangan digital</strong> Anda pada area kanvas yang tersedia.',
+                    isHtml: true,
                     type: 'warning',
                     confirmText: 'Lengkapi Tanda Tangan'
                 });

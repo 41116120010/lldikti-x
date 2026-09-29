@@ -9,6 +9,19 @@
  * 6. WebRTC Camera & Signature Pad Lifecycle Handling
  */
 
+/**
+ * Escape a string for safe interpolation into an HTML template literal.
+ * Only used for the handful of call sites that deliberately opt into isHtml;
+ * every other value is written with textContent instead.
+ */
+const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (ch) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+}[ch]));
+
 // --- 1. PROGRESS BAR CONTROLLER ---
 const ProgressBar = {
     el: null,
@@ -152,12 +165,13 @@ function initGlobalListeners() {
     window.showModal = ({
         title = 'Pemberitahuan',
         message = '',
+        errors = null,
         type = 'info',
         confirmText = 'Tutup',
         cancelText = null,
         onConfirm = null,
         onCancel = null,
-        isHtml = true,
+        isHtml = false,
         autoClose = null,
         autoCloseDelay = null
     }) => {
@@ -226,31 +240,56 @@ function initGlobalListeners() {
         if (cancelText) {
             actionsHtml = `
                 <div class="modal-actions mt-5 flex items-center justify-end gap-2.5">
-                    <button type="button" class="button secondary text-xs px-4 py-2" id="modal-cancel-btn">${cancelText}</button>
-                    <button type="button" class="button ${btnColor} text-xs px-4 py-2 font-semibold" id="modal-confirm-btn">${buttonDisplay}</button>
+                    <button type="button" class="button secondary text-xs px-4 py-2" id="modal-cancel-btn"></button>
+                    <button type="button" class="button ${btnColor} text-xs px-4 py-2 font-semibold" id="modal-confirm-btn"></button>
                 </div>
                 ${timerHintHtml}
             `;
         } else {
             actionsHtml = `
                 <div class="modal-actions mt-5 flex flex-col sm:flex-row items-center justify-end gap-2">
-                    <button type="button" class="button ${btnColor} text-xs px-5 py-2.5 w-full sm:w-auto font-semibold" id="modal-confirm-btn">${buttonDisplay}</button>
+                    <button type="button" class="button ${btnColor} text-xs px-5 py-2.5 w-full sm:w-auto font-semibold" id="modal-confirm-btn"></button>
                 </div>
                 ${timerHintHtml}
             `;
         }
 
+        // Only our own markup is written through innerHTML. Every value that may
+        // carry user-supplied text (title, message, validation errors, button
+        // labels) is assigned afterwards through textContent, so it can never be
+        // parsed as HTML — including flash messages that echo back a value the
+        // user typed, e.g. an agenda title.
         modalContent.innerHTML = `
             <div class="text-center sm:text-left">
                 ${iconSvg}
-                <h3 class="text-base font-bold ${headerColor} mb-2 text-center">${title}</h3>
-                <div class="text-xs text-slate-600 leading-relaxed text-center">${isHtml ? message : document.createTextNode(message).data}</div>
+                <h3 class="text-base font-bold ${headerColor} mb-2 text-center" id="modal-title-text"></h3>
+                <div id="modal-message" class="text-xs text-slate-600 leading-relaxed text-center"></div>
                 ${actionsHtml}
             </div>
         `;
 
+        modalContent.querySelector('#modal-title-text').textContent = title;
+
+        const messageEl = modalContent.querySelector('#modal-message');
+        if (isHtml) {
+            messageEl.innerHTML = message;
+        } else if (Array.isArray(errors) && errors.length) {
+            const list = document.createElement('ul');
+            list.className = 'list-disc list-inside text-left space-y-0.5';
+            errors.forEach((line) => {
+                const item = document.createElement('li');
+                item.textContent = line;
+                list.appendChild(item);
+            });
+            messageEl.appendChild(list);
+        } else {
+            messageEl.textContent = message;
+        }
+
         const confirmBtn = modalContent.querySelector('#modal-confirm-btn');
         const cancelBtn = modalContent.querySelector('#modal-cancel-btn');
+        if (confirmBtn) confirmBtn.textContent = buttonDisplay;
+        if (cancelBtn) cancelBtn.textContent = cancelText;
         modalHintEl = modalContent.querySelector('#modal-timer-hint');
         const statusSecEl = modalContent.querySelector('#modal-timer-sec');
 
@@ -363,10 +402,24 @@ function initGlobalListeners() {
         const message = flashData.dataset.message || '';
         const autoClose = flashData.dataset.autoClose !== 'false';
         const autoCloseDelay = flashData.dataset.delay ? parseInt(flashData.dataset.delay, 10) : null;
-        if (message) {
+
+        // Validation errors arrive as a JSON array so the layout never has to
+        // assemble them into an HTML string.
+        let errors = null;
+        if (flashData.dataset.errors) {
+            try {
+                const parsed = JSON.parse(flashData.dataset.errors);
+                if (Array.isArray(parsed)) errors = parsed;
+            } catch (err) {
+                console.warn('[Flash] Unable to parse validation errors payload.', err);
+            }
+        }
+
+        if (message || (Array.isArray(errors) && errors.length)) {
             window.showModal({
                 title: title,
                 message: message,
+                errors: errors,
                 type: type,
                 confirmText: 'Mengerti & Tutup',
                 autoClose: autoClose,
@@ -416,7 +469,8 @@ function initGlobalListeners() {
 
                 window.showModal({
                     title: 'Kondisi Belum Terpenuhi',
-                    message: `Mohon lengkapi data wajib pada formulir: <strong>${label}</strong> sebelum menyimpan data.`,
+                    message: `Mohon lengkapi data wajib pada formulir: <strong>${escapeHtml(label)}</strong> sebelum menyimpan data.`,
+                    isHtml: true,
                     type: 'warning',
                     confirmText: 'Periksa Kembali'
                 });
@@ -2317,10 +2371,22 @@ const SeamlessNavigation = {
             const message = newFlashData.dataset.message || '';
             const autoClose = newFlashData.dataset.autoClose !== 'false';
             const autoCloseDelay = newFlashData.dataset.delay ? parseInt(newFlashData.dataset.delay, 10) : null;
-            if (message && window.showModal) {
+
+            let errors = null;
+            if (newFlashData.dataset.errors) {
+                try {
+                    const parsed = JSON.parse(newFlashData.dataset.errors);
+                    if (Array.isArray(parsed)) errors = parsed;
+                } catch (err) {
+                    console.warn('[Flash] Unable to parse validation errors payload.', err);
+                }
+            }
+
+            if ((message || (Array.isArray(errors) && errors.length)) && window.showModal) {
                 window.showModal({
                     title: title,
                     message: message,
+                    errors: errors,
                     type: type,
                     confirmText: 'Mengerti & Tutup',
                     autoClose: autoClose,

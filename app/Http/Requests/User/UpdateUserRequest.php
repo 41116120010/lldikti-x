@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\User;
 
-use App\Models\User;
+use App\Enums\UserRole;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -15,14 +15,17 @@ class UpdateUserRequest extends FormRequest
         return $this->user()?->can('update', $targetUser) ?? false;
     }
 
+    /**
+     * @return array<string, array<int, mixed>>
+     */
     public function rules(): array
     {
         $currentUser = $this->user();
         $targetUser = $this->route('user');
 
-        $allowedRoles = $currentUser->isAdministrator() 
-            ? ['administrator', 'admin', 'staff'] 
-            : ['admin', 'staff'];
+        $allowedRoles = $currentUser->isAdministrator()
+            ? array_column(UserRole::cases(), 'value')
+            : [UserRole::Admin->value, UserRole::Staff->value];
 
         return [
             'name' => ['required', 'string', 'max:150'],

@@ -25,11 +25,15 @@ class AttendancePolicy
             return true;
         }
 
+        $agenda = $attendance->fetchAgenda();
+
         if ($user->isAdmin()) {
-            return $attendance->agenda->created_by === $user->id
-                || ($user->unit_id !== null && $attendance->user?->unit_id === $user->unit_id)
-                || ($user->unit_id !== null && $attendance->agenda->units()->where('units.id', $user->unit_id)->exists())
-                || $attendance->agenda->is_all_units;
+            return $agenda !== null && (
+                $agenda->created_by === $user->id
+                || ($user->unit_id !== null && $attendance->attendeeUnitId() === $user->unit_id)
+                || ($user->unit_id !== null && $agenda->units()->where('units.id', $user->unit_id)->exists())
+                || $agenda->is_all_units
+            );
         }
 
         return $user->id === $attendance->user_id;

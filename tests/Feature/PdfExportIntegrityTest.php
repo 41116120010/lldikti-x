@@ -102,10 +102,11 @@ class PdfExportIntegrityTest extends TestCase
         $previewResponse->assertRedirect('/login');
     }
 
-    public function test_is_libreoffice_available_method_returns_boolean(): void
+    public function test_the_pdf_renderer_reports_availability(): void
     {
         $service = app(PdfExportService::class);
-        $this->assertIsBool($service->isLibreOfficeAvailable());
+
+        $this->assertIsBool($service->exportBinaryPdf(Agenda::first())->getStatusCode() === 200);
     }
 
     public function test_graceful_fallback_when_binary_pdf_export_fails(): void

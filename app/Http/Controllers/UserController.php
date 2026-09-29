@@ -122,7 +122,7 @@ class UserController extends Controller
 
             ActivityLogger::log(
                 type: 'CREATE_USER',
-                description: "Pengguna baru '{$user->name}' (NIP: {$user->nip}, Role: {$user->role}) berhasil didaftarkan.",
+                description: "Pengguna baru '{$user->name}' (NIP: {$user->nip}, Role: {$user->role_label}) berhasil didaftarkan.",
                 targetModel: User::class,
                 targetId: $user->id,
                 properties: $user->only(['name', 'nip', 'username', 'email', 'role', 'unit_id', 'is_active'])
@@ -244,6 +244,14 @@ class UserController extends Controller
         }
 
         $statusLabel = DB::transaction(function () use ($user) {
+            /*
+             * Re-read the row under a row lock. Toggling is a read-modify-write
+             * and $user was hydrated before the transaction opened, so two
+             * concurrent requests could both read the same is_active, both flip
+             * it, and one change would be silently lost.
+             */
+            $user = User::whereKey($user->getKey())->lockForUpdate()->firstOrFail();
+
             $user->is_active = !$user->is_active;
             $user->save();
 

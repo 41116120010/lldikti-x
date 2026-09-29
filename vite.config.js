@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
-import { bunny } from 'laravel-vite-plugin/fonts';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
@@ -8,11 +7,10 @@ export default defineConfig({
         laravel({
             input: ['resources/css/app.css', 'resources/js/app.js'],
             refresh: true,
-            fonts: [
-                bunny('Instrument Sans', {
-                    weights: [400, 500, 600],
-                }),
-            ],
+            // The `fonts` option used to download Instrument Sans (400/500/600,
+            // ~77 KB across four files) which @theme never referenced, so nothing
+            // was ever rendered with it. app.css loads Plus Jakarta Sans and
+            // IBM Plex Mono instead — see the preconnect hints in the layouts.
         }),
         tailwindcss(),
     ],

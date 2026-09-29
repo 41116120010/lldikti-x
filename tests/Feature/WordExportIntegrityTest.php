@@ -57,8 +57,9 @@ class WordExportIntegrityTest extends TestCase
         $response = $service->exportBeritaAcara($agenda);
         $content = $response->getContent();
 
-        // Kop Surat double border
-        $this->assertStringContainsString('border-bottom: 2.25pt double #000000', $content);
+        // Kop Surat: garis pemisah solid dan tipis, mengikuti surat resmi instansi
+        $this->assertStringContainsString('border-bottom: 1pt solid #000000', $content);
+        $this->assertStringNotContainsString('2.25pt double', $content);
         $this->assertStringContainsString('LEMBAGA LAYANAN PENDIDIKAN TINGGI (LLDIKTI) WILAYAH X', $content);
 
         // Document title & table width
@@ -96,28 +97,19 @@ class WordExportIntegrityTest extends TestCase
         $this->assertLessThan(32000, $maxLineLen, "A line with length {$maxLineLen} exceeds safe parser line buffer threshold!");
     }
 
-    public function test_word_export_converts_cleanly_via_headless_libreoffice(): void
+    public function test_word_export_html_renders_cleanly_into_a_pdf(): void
     {
         $agenda = Agenda::first();
         $service = new WordExportService();
-        $response = $service->exportBeritaAcara($agenda);
 
-        $tmpDoc = tempnam(sys_get_temp_dir(), 'word_test_') . '.doc';
-        file_put_contents($tmpDoc, $response->getContent());
+        // The same HTML the .doc download serves must also be renderable by the
+        // PDF engine, otherwise the two formats drift apart.
+        $html = $service->generateDocumentContent($agenda, [], 'plain');
 
-        $tmpOutDir = sys_get_temp_dir();
-        $process = exec("libreoffice -env:UserInstallation=file:///tmp/libreoffice_test --headless --convert-to pdf {$tmpDoc} --outdir {$tmpOutDir} 2>&1", $output, $returnCode);
+        $pdf = app(\App\Services\DompdfRenderer::class)->render($html);
 
-        // Clean up temporary doc
-        @unlink($tmpDoc);
-        $pdfPath = preg_replace('/\.doc$/', '.pdf', $tmpDoc);
-        if (file_exists($pdfPath)) {
-            @unlink($pdfPath);
-        }
-
-        $outputStr = implode("\n", $output);
-        $this->assertSame(0, $returnCode, "LibreOffice conversion failed: {$outputStr}");
-        $this->assertStringContainsString('writer_web_pdf_Export', $outputStr, "LibreOffice did not use the HTML/Web document filter: {$outputStr}");
+        $this->assertStringStartsWith('%PDF', $pdf);
+        $this->assertGreaterThan(1000, strlen($pdf), 'PDF hasil render terlalu kecil untuk berisi dokumen.');
     }
 
     public function test_word_export_resilience_when_attendance_media_files_are_missing_or_corrupted(): void

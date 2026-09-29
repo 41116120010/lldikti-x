@@ -16,6 +16,12 @@
     <meta name="robots" content="@yield('meta_robots', 'noindex, nofollow, noarchive')">
     <link rel="canonical" href="{{ url()->current() }}">
 
+    <!-- Webfonts: preconnect first so the DNS lookup and TLS handshake overlap
+         with the rest of the document instead of blocking first paint. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap">
+
     <!-- Geo Location Metadata -->
     <meta name="geo.region" content="ID-SB">
     <meta name="geo.placename" content="Padang">
@@ -101,7 +107,7 @@
                     </div>
                 </div>
 
-                <button id="mobile-sidebar-close" type="button" class="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200" aria-label="Tutup Menu">
+                <button id="mobile-sidebar-close" type="button" class="lg:hidden w-11 h-11 -mr-2 flex items-center justify-center rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200" aria-label="Tutup Menu">
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
             </div>
@@ -178,7 +184,7 @@
             <!-- Topbar Header -->
             <header class="topbar" id="app-topbar" role="banner">
                 <div class="flex items-center gap-3" id="topbar-heading-container">
-                    <button id="mobile-sidebar-toggle" type="button" class="lg:hidden w-9 h-9 flex items-center justify-center rounded-lg bg-slate-100 text-slate-900 hover:bg-slate-200 border border-slate-300 shadow-xs cursor-pointer" aria-label="Buka Menu Navigasi">
+                    <button id="mobile-sidebar-toggle" type="button" class="lg:hidden w-11 h-11 flex items-center justify-center rounded-lg bg-slate-100 text-slate-900 hover:bg-slate-200 border border-slate-300 shadow-xs cursor-pointer shrink-0" aria-label="Buka Menu Navigasi">
                         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
                     </button>
                     <div>
@@ -192,9 +198,10 @@
                     <button
                         type="button"
                         id="user-profile-dropdown-btn"
-                        class="flex items-center gap-2.5 p-1 pl-2.5 rounded-xl hover:bg-slate-100 transition border border-transparent hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-950/20 cursor-pointer select-none"
+                        class="flex items-center gap-2.5 p-1 pl-2.5 rounded-xl hover:bg-slate-100 transition border border-transparent hover:border-slate-300 cursor-pointer select-none"
                         aria-expanded="false"
                         aria-haspopup="true"
+                        aria-controls="user-profile-dropdown-menu"
                         aria-label="Menu Profil Pengguna"
                     >
                         <div class="text-right hidden sm:block leading-tight">
@@ -217,13 +224,20 @@
                         <svg class="text-slate-700 transition-transform duration-200" id="user-profile-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                     </button>
 
-                    <!-- Dropdown Menu Box -->
+                    {{--
+                        Disclosure pattern, not role="menu".
+
+                        role="menu" + role="menuitem" tells assistive tech that Tab must
+                        skip the items and that arrow keys navigate them — but this
+                        dropdown has no arrow-key handler, so a keyboard user tabbing
+                        from the trigger would jump straight past the whole menu. A
+                        pattern that is declared but not implemented is worse than no
+                        role at all. The plain disclosure keeps every item in the tab
+                        order and is announced correctly.
+                    --}}
                     <div
                         id="user-profile-dropdown-menu"
                         class="hidden absolute right-0 mt-2 w-72 bg-white rounded-2xl border border-slate-300 shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150"
-                        role="menu"
-                        aria-orientation="vertical"
-                        aria-labelledby="user-profile-dropdown-btn"
                     >
                         <!-- Dropdown Header Profile Info -->
                         <div class="px-4 py-3 border-b border-slate-200">
@@ -276,11 +290,11 @@
 
                         <!-- Dropdown Action Links -->
                         <div class="py-1">
-                            <a href="{{ route('profile.edit') }}" class="flex items-center gap-2.5 px-4 py-2 text-xs text-slate-900 hover:bg-slate-100 transition font-bold" role="menuitem">
+                            <a href="{{ route('profile.edit') }}" class="flex items-center gap-2.5 px-4 min-h-11 py-2.5 text-xs text-slate-900 hover:bg-slate-100 transition font-bold">
                                 <svg class="text-slate-700" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                                 <span>Pengaturan Profil Akun</span>
                             </a>
-                            <a href="{{ route('profile.logs') }}" class="flex items-center gap-2.5 px-4 py-2 text-xs text-slate-900 hover:bg-slate-100 transition font-bold" role="menuitem">
+                            <a href="{{ route('profile.logs') }}" class="flex items-center gap-2.5 px-4 min-h-11 py-2.5 text-xs text-slate-900 hover:bg-slate-100 transition font-bold">
                                 <svg class="text-slate-700" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                                 <span>Log Aktivitas Saya</span>
                             </a>
@@ -298,7 +312,7 @@
                                 data-confirm-btn="Ya, Keluar"
                             >
                                 @csrf
-                                <button type="submit" class="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs text-rose-700 hover:bg-rose-50 transition text-left font-bold cursor-pointer" role="menuitem">
+                                <button type="submit" class="w-full flex items-center gap-2.5 px-4 min-h-11 py-2.5 text-xs text-rose-700 hover:bg-rose-50 transition text-left font-bold cursor-pointer">
                                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                                     <span>Keluar dari Sistem</span>
                                 </button>
@@ -348,7 +362,10 @@
     @elseif (session('warning'))
         <div id="flash-modal-data" data-type="warning" data-title="Pemberitahuan" data-message="{{ session('warning') }}" data-auto-close="true" class="hidden"></div>
     @elseif ($errors->any())
-        <div id="flash-modal-data" data-type="warning" data-title="Kondisi Belum Terpenuhi" data-message="&bull; {{ implode('<br>&bull; ', array_map('e', $errors->all())) }}" data-auto-close="true" class="hidden"></div>
+        {{-- Errors are passed as a JSON array and rendered as text nodes by app.js.
+             Building them into an HTML string here would re-open the stored-XSS
+             path whenever a rejected value is echoed back in the message. --}}
+        <div id="flash-modal-data" data-type="warning" data-title="Kondisi Belum Terpenuhi" data-errors="{{ json_encode(array_values($errors->all()), JSON_UNESCAPED_UNICODE) }}" data-auto-close="true" class="hidden"></div>
     @endif
 
     <!-- Global Modal Structure -->

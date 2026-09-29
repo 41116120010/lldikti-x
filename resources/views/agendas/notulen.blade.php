@@ -11,7 +11,7 @@
         <!-- Left: Back Navigation -->
         <div class="flex items-center gap-3">
             <a 
-                href="{{ auth()->user()->isPegawai() ? route('agendas.show', $agenda) : route('admin.agendas.show', $agenda) }}" 
+                href="{{ auth()->user()->isStaff() ? route('agendas.show', $agenda) : route('admin.agendas.show', $agenda) }}"
                 class="button secondary text-xs font-bold inline-flex items-center gap-1.5"
                 title="Kembali ke halaman rincian agenda rapat"
             >
@@ -311,48 +311,45 @@
 
                 <!-- ==================== LEMBAR HALAMAN 1 (BERITA ACARA & NOTULENSI) ==================== -->
                 <div class="office-paper-sheet paper-a4" data-page="1">
-                    <!-- Kop Surat Resmi Instansi (Single Source of Truth, 100% Margin Locked) -->
+                    <!-- Kop Surat Resmi Instansi - definisi tunggal, sama persis dengan ekspor Word/PDF -->
                     @php
-                        $logoUrl = ($config['custom_logo_path'] ?? null) && Storage::disk('public')->exists($config['custom_logo_path'])
-                            ? Storage::disk('public')->url($config['custom_logo_path'])
-                            : asset('images/tut-wuri-handayani.png');
+                        $kopLogoSrc = null;
+                        $kopLogoSize = null;
+
+                        if ($config['show_logo'] ?? true) {
+                            $kopSourceFile = null;
+
+                            $customLogo = $config['custom_logo_path'] ?? null;
+                            if ($customLogo && Storage::disk('public')->exists($customLogo)) {
+                                $kopLogoSrc = Storage::disk('public')->url($customLogo);
+                                $kopSourceFile = Storage::disk('public')->path($customLogo);
+                            } else {
+                                $bundledLogo = public_path('images/tut-wuri-handayani.png');
+                                if (is_file($bundledLogo)) {
+                                    $kopLogoSrc = asset('images/tut-wuri-handayani.png');
+                                    $kopSourceFile = $bundledLogo;
+                                }
+                            }
+
+                            // Rasio asli logo agar tidak terdistorsi. Importer Word
+                            // mengabaikan object-fit, sehingga lebar dan tinggi
+                            // harus benar-benar sesuai proporsi berkas.
+                            if ($kopSourceFile !== null && is_file($kopSourceFile)) {
+                                $kopInfo = @getimagesize($kopSourceFile);
+                                if (!empty($kopInfo) && $kopInfo[0] > 0 && $kopInfo[1] > 0) {
+                                    $kopLogoSize = [$kopInfo[0], $kopInfo[1]];
+                                }
+                            }
+                        }
                     @endphp
-                    <div class="header-kop" id="sheet-header-kop" style="margin-bottom: 6pt; text-align: center; width: 100%; {{ ($config['show_kop'] ?? true) ? '' : 'display: none;' }}">
-                        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; border-collapse: collapse; border: none; margin: 0; padding: 0; table-layout: fixed;">
-                            <colgroup>
-                                <col style="width: 64px;">
-                                <col style="width: calc(100% - 128px);">
-                                <col style="width: 64px;">
-                            </colgroup>
-                            <tr>
-                                <td align="center" valign="middle" style="width: 64px; text-align: center; vertical-align: middle; border: none; padding: 0 0 4px 0;">
-                                    <img id="sheet-logo-img" src="{{ $logoUrl }}" alt="Logo Instansi" width="52" height="52" style="width: 52px; height: 52px; max-height: 52px; max-width: 52px; object-fit: contain; display: {{ ($config['show_logo'] ?? true) ? 'block' : 'none' }}; margin: 0 auto; border: none;">
-                                </td>
-                                <td align="center" valign="middle" style="text-align: center; vertical-align: middle; border: none; padding: 0 4px 4px 4px;">
-                                    <h3 id="sheet-instansi-induk" style="margin: 0; font-size: 10pt; font-weight: bold; text-transform: uppercase; letter-spacing: 0.3px; font-family: 'Times New Roman', Times, serif; line-height: 1.25;">
-                                        {{ $config['instansi_induk'] ?? 'KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI' }}
-                                    </h3>
-                                    <h2 id="sheet-instansi-pelaksana" style="margin: 2px 0; font-size: 11.5pt; font-weight: bold; text-transform: uppercase; letter-spacing: 0.3px; font-family: 'Times New Roman', Times, serif; line-height: 1.25;">
-                                        {{ $config['instansi_pelaksana'] ?? 'LEMBAGA LAYANAN PENDIDIKAN TINGGI (LLDIKTI) WILAYAH X' }}
-                                    </h2>
-                                    <p id="sheet-alamat-kontak" style="margin: 0; font-size: 8pt; font-style: normal; font-family: 'Times New Roman', Times, serif; line-height: 1.25;">
-                                        {{ $config['alamat_kontak'] ?? 'Jalan Khatib Sulaiman, Padang, Sumatera Barat • Laman: lldikti10.kemdikbud.go.id' }}
-                                    </p>
-                                </td>
-                                <td style="width: 64px; border: none; padding: 0 0 4px 0;">&nbsp;</td>
-                            </tr>
-                            <tr>
-                                <td colspan="3" style="border: none; border-bottom: 2.25pt double #000000; height: 2px; font-size: 1pt; line-height: 1pt; padding: 0 0 2pt 0;">&nbsp;</td>
-                            </tr>
-                        </table>
-                    </div>
+                    @include('partials.kop_surat', ['kopLogoSrc' => $kopLogoSrc, 'kopLogo' => $kopLogoSize])
 
                     <!-- Judul Dokumen & Nomor Berita Acara -->
-                    <div class="doc-title" style="text-align: center; margin: 6pt 0 6pt 0;">
+                    <div class="doc-title" style="text-align: center; margin: 12pt 0 6pt 0;">
                         <h1 id="sheet-document-title" style="font-size: 11.5pt; font-weight: bold; text-decoration: underline; margin: 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif;">
                             {{ $config['document_title'] ?? 'BERITA ACARA DAN DAFTAR HADIR RAPAT' }}
                         </h1>
-                        <div id="sheet-document-number-wrapper" style="font-size: 9pt; font-family: 'Courier New', Courier, monospace; margin-top: 2px; {{ ($config['show_document_number'] ?? true) ? '' : 'display: none;' }}">
+                        <div id="sheet-document-number-wrapper" style="font-size: 9pt; font-family: 'Times New Roman', Times, serif; margin-top: 2px; {{ ($config['show_document_number'] ?? true) ? '' : 'display: none;' }}">
                             Nomor: <span id="sheet-document-number">{{ $config['document_number'] ?? ('BA-RAPAT/' . date('Y') . '/' . str_pad($agenda->id, 4, '0', STR_PAD_LEFT)) }}</span>
                         </div>
                     </div>
@@ -421,9 +418,9 @@
                                 <tr>
                                     <td style="text-align: center;">{{ $index + 1 }}</td>
                                     <td style="padding: 3pt 5pt;"><strong>{{ $att->user->name }}</strong></td>
-                                    <td style="padding: 3pt 4pt; font-family: monospace; font-size: 8pt;">{{ $att->user->nip }}</td>
+                                    <td style="padding: 3pt 4pt; font-family: 'Times New Roman', Times, serif; font-size: 8pt;">{{ $att->user->nip }}</td>
                                     <td style="padding: 3pt 4pt; font-size: 8pt;">{{ $att->user->unit?->kode_unit ?? 'Pusat' }}</td>
-                                    <td style="text-align: center; font-size: 8pt; font-family: monospace;">{{ $att->signed_at->format('H:i') }}</td>
+                                    <td style="text-align: center; font-size: 8pt; font-family: 'Times New Roman', Times, serif;">{{ $att->signed_at->format('H:i') }}</td>
                                     <td style="text-align: center; padding: 2pt;">
                                         @if($att->selfie_path)
                                             <img src="{{ Storage::disk('public')->url($att->selfie_path) }}" alt="Selfie" width="26" height="26" style="width: 26px; height: 26px; object-fit: cover; border-radius: 2px; border: 1px solid #cbd5e1; display: inline-block; vertical-align: middle;">
@@ -471,7 +468,7 @@
                                 data-page="1"
                                 data-placeholder="Ketik catatan jalannya rapat, dinamika diskusi, arahan pimpinan, dan pembahasan di sini..."
                                 style="min-height: 80px;"
-                            >{!! old('notulensi', $agenda->notulensi) !!}</div>
+                            >{!! \App\Support\Html::sanitize(old('notulensi', $agenda->notulensi)) !!}</div>
                             @error('notulensi')
                                 <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>
                             @enderror
@@ -493,7 +490,7 @@
                                 data-page="1"
                                 data-placeholder="Ketik poin-poin kesimpulan akhir, keputusan yang disepakati, PIC penanggung jawab, dan tenggat waktu penyelesaian..."
                                 style="min-height: 70px;"
-                            >{!! old('kesimpulan', $agenda->kesimpulan) !!}</div>
+                            >{!! \App\Support\Html::sanitize(old('kesimpulan', $agenda->kesimpulan)) !!}</div>
                             @error('kesimpulan')
                                 <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>
                             @enderror
@@ -501,7 +498,7 @@
                     </div>
 
                     <!-- Blok Pengesahan & Tanda Tangan (Dynamic Word Signature Flow) -->
-                    <div id="sheet-pengesahan-final" class="sheet-signature-wrapper" style="margin-top: 10pt;">
+                    <div id="sheet-pengesahan-final" class="sheet-signature-wrapper" style="margin-top: 18pt;">
                         <!-- Header if on standalone page -->
                         <div id="sheet-signature-standalone-header" style="display: none; text-align: center; margin-bottom: 8pt; padding-bottom: 4pt; border-bottom: 1.5pt solid #000;">
                             <h2 style="font-size: 11pt; font-weight: bold; text-transform: uppercase; margin: 0; font-family: 'Times New Roman', Times, serif;">
@@ -524,43 +521,55 @@
                                     <col style="width: 50%;">
                                 </colgroup>
                                 <tr>
-                                    <td style="text-align: center; vertical-align: top; border: none; padding: 0 8pt; font-size: 9.5pt;">
-                                        Mengetahui,<br>
-                                        <strong id="sheet-signer1-role">{{ $config['signer1_role'] ?? 'Pemimpin Rapat' }}</strong>
+                                    <td width="50%" style="width: 50%; text-align: center; vertical-align: top; border: none; padding: 0 8pt;">
+                                        <table align="center" border="0" cellspacing="0" cellpadding="0" style="margin: 0 auto; border-collapse: collapse; border: none; text-align: left; display: inline-table;">
+                                            <tr>
+                                                <td style="border: none; padding: 0; text-align: left; font-size: 9.5pt; font-family: 'Times New Roman', Times, serif; white-space: nowrap;">
+                                                    Mengetahui,<br>
+                                                    <strong id="sheet-signer1-role">{{ $config['signer1_role'] ?? 'Pemimpin Rapat' }}</strong>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="border: none; padding: 2pt 0; height: 36pt; text-align: left; vertical-align: middle;">
+                                                    @if($pimpinanAtt && $pimpinanAtt->signature_path)
+                                                        <img src="{{ Storage::disk('public')->url($pimpinanAtt->signature_path) }}" alt="TTD Pimpinan" width="95" height="32" style="width: 95px; height: 32px; object-fit: contain; display: block; border: none;">
+                                                    @else
+                                                        <span style="font-size: 7.5pt; color: #64748b; font-style: italic;">(Tanda tangan tercatat saat presensi)</span>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="border: none; padding: 0; text-align: left; font-size: 9.5pt; font-family: 'Times New Roman', Times, serif; white-space: nowrap;">
+                                                    <strong id="sheet-signer1-name">{{ $config['signer1_name'] ?? $agenda->nama_pimpinan }}</strong><br>
+                                                    NIP <span id="sheet-signer1-nip">{{ $config['signer1_nip'] ?? $agenda->nip_pimpinan }}</span>
+                                                </td>
+                                            </tr>
+                                        </table>
                                     </td>
-                                    <td style="text-align: center; vertical-align: top; border: none; padding: 0 8pt; font-size: 9.5pt;">
-                                        <span id="sheet-signing-city">{{ $config['signing_city'] ?? 'Padang' }}</span>, <span id="sheet-signing-date">{{ $config['signing_date'] ?? ($agenda->waktu_mulai ? $agenda->waktu_mulai->translatedFormat('d F Y') : now()->translatedFormat('d F Y')) }}</span><br>
-                                        <strong id="sheet-signer2-role">{{ $config['signer2_role'] ?? 'Notulis Rapat' }}</strong>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td style="height: 36pt; text-align: center; vertical-align: middle; border: none; padding: 2pt 0;">
-                                        @if($pimpinanAtt && $pimpinanAtt->signature_path)
-                                            <img src="{{ Storage::disk('public')->url($pimpinanAtt->signature_path) }}" alt="TTD Pimpinan" width="95" height="32" style="width: 95px; height: 32px; object-fit: contain; display: block; margin: 0 auto; border: none;">
-                                        @else
-                                            <span style="font-size: 7.5pt; color: #64748b; font-style: italic;">(Tanda tangan tercatat saat presensi)</span>
-                                        @endif
-                                    </td>
-                                    <td style="height: 36pt; text-align: center; vertical-align: middle; border: none; padding: 2pt 0;">
-                                        @if($notulisAtt && $notulisAtt->signature_path)
-                                            <img src="{{ Storage::disk('public')->url($notulisAtt->signature_path) }}" alt="TTD Notulis" width="95" height="32" style="width: 95px; height: 32px; object-fit: contain; display: block; margin: 0 auto; border: none;">
-                                        @else
-                                            <span style="font-size: 7.5pt; color: #64748b; font-style: italic;">(Tanda tangan tercatat saat presensi)</span>
-                                        @endif
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td style="text-align: center; vertical-align: top; border: none; padding: 0 8pt; font-size: 9.5pt;">
-                                        <div style="display: inline-block; text-align: left;">
-                                            <strong id="sheet-signer1-name">{{ $config['signer1_name'] ?? $agenda->nama_pimpinan }}</strong><br>
-                                            NIP <span id="sheet-signer1-nip">{{ $config['signer1_nip'] ?? $agenda->nip_pimpinan }}</span>
-                                        </div>
-                                    </td>
-                                    <td style="text-align: center; vertical-align: top; border: none; padding: 0 8pt; font-size: 9.5pt;">
-                                        <div style="display: inline-block; text-align: left;">
-                                            <strong id="sheet-signer2-name">{{ $config['signer2_name'] ?? $agenda->nama_notulis }}</strong><br>
-                                            NIP <span id="sheet-signer2-nip">{{ $config['signer2_nip'] ?? $agenda->nip_notulis }}</span>
-                                        </div>
+                                    <td width="50%" style="width: 50%; text-align: center; vertical-align: top; border: none; padding: 0 8pt;">
+                                        <table align="center" border="0" cellspacing="0" cellpadding="0" style="margin: 0 auto; border-collapse: collapse; border: none; text-align: left; display: inline-table;">
+                                            <tr>
+                                                <td style="border: none; padding: 0; text-align: left; font-size: 9.5pt; font-family: 'Times New Roman', Times, serif; white-space: nowrap;">
+                                                    <span id="sheet-signing-city">{{ $config['signing_city'] ?? 'Padang' }}</span>, <span id="sheet-signing-date">{{ $config['signing_date'] ?? ($agenda->waktu_mulai ? $agenda->waktu_mulai->translatedFormat('d F Y') : now()->translatedFormat('d F Y')) }}</span><br>
+                                                    <strong id="sheet-signer2-role">{{ $config['signer2_role'] ?? 'Notulis Rapat' }}</strong>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="border: none; padding: 2pt 0; height: 36pt; text-align: left; vertical-align: middle;">
+                                                    @if($notulisAtt && $notulisAtt->signature_path)
+                                                        <img src="{{ Storage::disk('public')->url($notulisAtt->signature_path) }}" alt="TTD Notulis" width="95" height="32" style="width: 95px; height: 32px; object-fit: contain; display: block; border: none;">
+                                                    @else
+                                                        <span style="font-size: 7.5pt; color: #64748b; font-style: italic;">(Tanda tangan tercatat saat presensi)</span>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="border: none; padding: 0; text-align: left; font-size: 9.5pt; font-family: 'Times New Roman', Times, serif; white-space: nowrap;">
+                                                    <strong id="sheet-signer2-name">{{ $config['signer2_name'] ?? $agenda->nama_notulis }}</strong><br>
+                                                    NIP <span id="sheet-signer2-nip">{{ $config['signer2_nip'] ?? $agenda->nip_notulis }}</span>
+                                                </td>
+                                            </tr>
+                                        </table>
                                     </td>
                                 </tr>
                             </table>
@@ -1289,8 +1298,17 @@
         const kopEl = document.getElementById('sheet-header-kop');
         if (kopEl) kopEl.style.display = isChecked('show_kop') ? '' : 'none';
 
+        const showLogo = isChecked('show_logo');
         const logoEl = document.getElementById('sheet-logo-img');
-        if (logoEl) logoEl.style.display = isChecked('show_logo') ? 'block' : 'none';
+        if (logoEl) logoEl.style.display = showLogo ? 'block' : 'none';
+
+        // Saat logo disembunyikan, sel sisi di template ekspor disempitkan ke nol
+        // lebar agar blok teks tetap di sumbu halaman. Terapkan hal yang sama di
+        // sini, kalau tidak pratinjau layar tidak akan sama dengan dokumen cetak.
+        for (const cellId of ['sheet-logo-cell', 'sheet-logo-cell-right']) {
+            const cell = document.getElementById(cellId);
+            if (cell) cell.style.width = showLogo ? '76pt' : '0pt';
+        }
 
         const indukEl = document.getElementById('sheet-instansi-induk');
         if (indukEl && val('instansi_induk')) indukEl.textContent = val('instansi_induk');

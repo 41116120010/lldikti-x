@@ -89,8 +89,10 @@ class SignatureColumnStandardizationTest extends TestCase
         $response->assertSee('NIP ' . $this->notulis->nip);
         $response->assertDontSee('NIP. ' . $this->notulis->nip);
 
-        // 3. Straight vertical alignment wrapper (inline-block text-left)
+        // 3. Straight vertical alignment wrapper (inline-block text-left) within centered table
         $response->assertSee('class="inline-block text-left space-y-0.5"', false);
+        $response->assertSee('align="center"', false);
+        $response->assertSee('display: inline-table', false);
 
         // 4. Name is NOT underlined
         $response->assertDontSee('<u>' . $this->pimpinan->name . '</u>', false);
@@ -113,8 +115,10 @@ class SignatureColumnStandardizationTest extends TestCase
         $response->assertSee('NIP ' . $this->notulis->nip);
         $response->assertDontSee('NIP. ' . $this->notulis->nip);
 
-        // 3. Straight vertical alignment wrapper (inline-block text-left)
+        // 3. Straight vertical alignment wrapper (inline-block text-left) within centered table
         $response->assertSee('class="inline-block text-left space-y-0.5"', false);
+        $response->assertSee('align="center"', false);
+        $response->assertSee('display: inline-table', false);
 
         // 4. Name is NOT underlined
         $response->assertDontSee('<u>' . $this->pimpinan->name . '</u>', false);
@@ -143,8 +147,18 @@ class SignatureColumnStandardizationTest extends TestCase
         $response->assertDontSee('NIP. <span id="sheet-signer1-nip">', false);
         $response->assertDontSee('NIP. <span id="sheet-signer2-nip">', false);
 
-        // 4. Straight vertical alignment wrapper (display: inline-block; text-align: left;)
-        $response->assertSee('display: inline-block; text-align: left;', false);
+        // 4. Straight vertical alignment with centered table structure and fixed 50% width
+        $response->assertSee('align="center"', false);
+        $response->assertSee('margin: 0 auto', false);
+        $response->assertSee('text-align: left;', false);
+        $response->assertSee('table-layout: fixed', false);
+        $response->assertSee('width="50%"', false);
+        $response->assertSee('margin-top: 18pt;', false);
+
+        // 5. Poin 66: Verify that Mengetahui, role, name, and NIP are in a unified nested table (sharing exact vertical alignment)
+        $content = $response->getContent();
+        $this->assertMatchesRegularExpression('/<table[^>]*align="center"[^>]*>[\s\S]*?Mengetahui,[\s\S]*?sheet-signer1-role[\s\S]*?sheet-signer1-name[\s\S]*?sheet-signer1-nip[\s\S]*?<\/table>/', $content);
+        $this->assertMatchesRegularExpression('/<table[^>]*align="center"[^>]*>[\s\S]*?sheet-signing-city[\s\S]*?sheet-signer2-role[\s\S]*?sheet-signer2-name[\s\S]*?sheet-signer2-nip[\s\S]*?<\/table>/', $content);
     }
 
     public function test_document_body_export_signature_block_format(): void
@@ -154,17 +168,73 @@ class SignatureColumnStandardizationTest extends TestCase
 
         $content = $wordResponse->getContent();
 
-        // 1. Signature block has straight vertical alignment
-        $this->assertStringContainsString('display: inline-block; text-align: left;', $content);
+        // 1. Signature block has centred wrappers whose width follows the column.
+        // The width used to be a hard 175pt / 135pt, which is what made the
+        // blocks drift out of their columns whenever the page margin changed.
+        $this->assertStringContainsString('display: inline-block;', $content);
+        $this->assertStringContainsString('width: 68%', $content);
+        $this->assertStringNotContainsString('width: 175pt', $content);
+        $this->assertStringNotContainsString('width: 135pt', $content);
+        $this->assertStringContainsString('text-align: left;', $content);
 
-        // 2. NIP has NO dot in export
+        // 2. Balanced 50% columns with table-layout fixed
+        $this->assertStringContainsString('table-layout: fixed', $content);
+        $this->assertStringContainsString('width="50%"', $content);
+
+        // 3. NIP has NO dot in export
         $this->assertStringContainsString('NIP ' . $this->pimpinan->nip, $content);
         $this->assertStringContainsString('NIP ' . $this->notulis->nip, $content);
         $this->assertStringNotContainsString('NIP. ' . $this->pimpinan->nip, $content);
         $this->assertStringNotContainsString('NIP. ' . $this->notulis->nip, $content);
 
-        // 3. Names have NO underline in export
+        // 4. Names have NO underline in export
         $this->assertStringNotContainsString('<u>' . $this->pimpinan->name . '</u>', $content);
         $this->assertStringNotContainsString('<u>' . $this->notulis->name . '</u>', $content);
+
+        // 5. Poin 66: In Word/PDF export, Mengetahui, role, and name/NIP are in symmetrical aligned wrappers
+        $this->assertStringContainsString('Mengetahui,', $content);
+        $this->assertStringContainsString('Pemimpin Rapat', $content);
+        $this->assertStringContainsString($this->pimpinan->name, $content);
+        $this->assertStringContainsString('Notulis Rapat', $content);
+        $this->assertStringContainsString($this->notulis->name, $content);
+    }
+
+    public function test_export_document_layout_and_spacing_synchronization(): void
+    {
+        $wordResponse = $this->actingAs($this->admin)->get(route('admin.reports.export.word', $this->agenda));
+        $wordResponse->assertStatus(200);
+
+        $content = $wordResponse->getContent();
+
+        // 1. Kop surat memakai skala tipografi resmi instansi, bukan nilai lama
+        //    (10pt / 11.5pt / 8pt dengan line-height 1.25 dan letter-spacing).
+        //    Rincian lengkap dipin di KopSuratStandardTest.
+        $this->assertStringContainsString('font-size: 16pt; line-height: 19pt;', $content);
+        $this->assertStringContainsString('font-size: 14pt; line-height: 17pt;', $content);
+        $this->assertStringContainsString('font-size: 12pt; line-height: 14pt;', $content);
+        $this->assertStringContainsString('border-bottom: 1pt solid #000000', $content);
+        $this->assertStringNotContainsString('letter-spacing', $content);
+
+        // 2. Bab 1 (Daftar Hadir) spacing & font
+        $this->assertStringContainsString('I. DAFTAR KEHADIRAN PESERTA', $content);
+        $this->assertStringContainsString('font-size: 12pt; font-weight: bold; margin: 6pt 0 3pt 0', $content);
+
+        // 3. Bab 2 (Notulensi & Kesimpulan) spacing & font
+        $this->assertStringContainsString('II. NOTULENSI &amp; KESIMPULAN RAPAT', $content);
+        $this->assertStringContainsString('margin-top: 6pt', $content);
+
+        // 4. Signature block placed right after Bab 2 with dignified 18pt margin
+        $this->assertStringContainsString('class="signature-block" style="margin-top: 18pt;', $content);
+
+        // 5. Sequence: Bab 1 -> Bab 2 -> Signature Block
+        $posBab1 = strpos($content, 'I. DAFTAR KEHADIRAN PESERTA');
+        $posBab2 = strpos($content, 'II. NOTULENSI &amp; KESIMPULAN RAPAT');
+        $posSig = strpos($content, 'class="signature-block"');
+
+        $this->assertNotFalse($posBab1);
+        $this->assertNotFalse($posBab2);
+        $this->assertNotFalse($posSig);
+        $this->assertTrue($posBab1 < $posBab2);
+        $this->assertTrue($posBab2 < $posSig);
     }
 }

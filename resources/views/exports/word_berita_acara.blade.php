@@ -13,22 +13,50 @@
     </xml>
     <![endif]-->
     <style>
+        /* Margin halaman mengikuti pedoman format kop surat dinas:
+             - atas 2,5 cm supaya kop tidak masuk area non-cetak printer
+             - bawah 2,5 cm
+             - kanan 2 cm
+             - KIRI 3 cm, lebih lebar karena ruang itu dipakai untuk jilid dan
+               pengarsipan
+
+           Bentuk @page sengaja ditulis berbeda untuk tiap mesin, karena tidak
+           ada satu bentuk yang dipahami keduanya:
+
+             - 'plain'  -> @page polos. Ini satu-satunya bentuk yang dibaca
+                           Dompdf, dan Dompdf adalah mesin utama.
+             - 'named'  -> @page Section1, konstruk MS Office. Word
+                           understands it; LibreOffice membuang named page
+                           seluruhnya, sehingga margin di blok itu tidak
+                           berlaku pada jalur cadangan. Bukti: mengganti margin
+                           menjadi 5 cm di keempat sisi pada jalur itu
+                           menghasilkan PDF yang byte-identical.
+
+           Bentuk polos tidak boleh dipakai pada jalur LibreOffice: diuji
+           menggantung sampai melewati batas waktu pada lebar konten normal. */
+        @if(($pageMode ?? 'named') === 'plain')
+        @page {
+            size: 595.3pt 841.9pt; /* A4 Portrait: 21.0cm x 29.7cm */
+            margin: {{ config('export.page.top', '1.5cm') }} {{ config('export.page.right', '2cm') }} {{ config('export.page.bottom', '1.5cm') }} {{ config('export.page.left', '2cm') }};
+        }
+        @else
         @page Section1 {
             size: 595.3pt 841.9pt; /* A4 Portrait: 21.0cm x 29.7cm */
-            margin: 1.2cm 1.5cm 1.2cm 1.8cm;
-            mso-header-margin: 0pt;
-            mso-footer-margin: 0pt;
+            margin: {{ config('export.page.top', '1.5cm') }} {{ config('export.page.right', '2cm') }} {{ config('export.page.bottom', '1.5cm') }} {{ config('export.page.left', '2cm') }};
+            mso-header-margin: 1.25cm;
+            mso-footer-margin: 1.25cm;
             mso-paper-source: 0;
         }
 
         div.Section1 {
             page: Section1;
         }
+        @endif
 
         body {
             font-family: 'Times New Roman', Times, serif;
-            font-size: 9.5pt;
-            line-height: 1.25;
+            font-size: 12pt;
+            line-height: 18pt; mso-line-height-rule: exactly;
             color: #000000;
             background: #ffffff;
             margin: 0;
@@ -58,19 +86,10 @@
             mso-padding-alt: 0pt 0pt 0pt 0pt;
         }
 
-        table.header-kop {
-            width: 100%;
-            margin-bottom: 6pt;
-        }
-
-        table.header-kop td {
-            vertical-align: middle;
-        }
-
         table.info-table {
             width: 100%;
-            margin-bottom: 5pt;
-            font-size: 9.5pt;
+            margin-bottom: 6pt;
+            font-size: 12pt;
         }
 
         table.info-table td {
@@ -82,8 +101,9 @@
         table.attendance-table {
             width: 100%;
             border: 1pt solid #000000;
-            margin-top: 2pt;
-            font-size: 8.5pt;
+            margin-top: 0pt;
+            font-size: 9pt;
+            line-height: 11pt;
         }
 
         table.attendance-table th {
@@ -101,15 +121,17 @@
 
         table.signature-table {
             width: 100%;
-            margin-top: 4pt;
+            table-layout: fixed;
+            margin: 8pt 0 4pt 0;
             page-break-inside: avoid;
             mso-yfti-row: cantSplit;
         }
 
         table.signature-table td {
+            width: 50%;
             vertical-align: top;
             text-align: center;
-            font-size: 9.5pt;
+            font-size: 12pt;
             border: none;
         }
 

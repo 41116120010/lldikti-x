@@ -25,8 +25,8 @@ class AgendaPolicy
         }
 
         if ($user->isAdmin()) {
-            return $agenda->created_by === $user->id 
-                || ($user->unit_id !== null && ($agenda->creator?->unit_id === $user->unit_id || $agenda->units()->where('units.id', $user->unit_id)->exists() || $agenda->is_all_units));
+            return $agenda->created_by === $user->id
+                || ($user->unit_id !== null && ($agenda->creatorUnitId() === $user->unit_id || $agenda->units()->where('units.id', $user->unit_id)->exists() || $agenda->is_all_units));
         }
 
         // Designated Notulis or Pimpinan can view the agenda
@@ -76,12 +76,12 @@ class AgendaPolicy
 
         if ($user->isAdmin()) {
             // Pembuat agenda atau rekan admin dari unit penyelenggara yang sama
-            if ($agenda->created_by === $user->id || ($user->unit_id !== null && $agenda->creator?->unit_id === $user->unit_id)) {
+            if ($agenda->created_by === $user->id || ($user->unit_id !== null && $agenda->creatorUnitId() === $user->unit_id)) {
                 return true;
             }
 
-            // Admin unit yang ditunjuk sebagai pimpinan atau notulis khusus saat rapat sedang berlangsung
-            if ($agenda->status === 'ongoing' && ($agenda->pimpinan_id === $user->id || $agenda->notulis_id === $user->id)) {
+            // Admin unit yang ditunjuk sebagai pimpinan atau notulis khusus saat rapat berlangsung
+            if ($this->isAppointedDuringSession($user, $agenda)) {
                 return true;
             }
         }
@@ -110,7 +110,7 @@ class AgendaPolicy
 
             if ($user->unit_id !== null) {
                 // Unit penyelenggara sama dengan unit kerja admin
-                if ($agenda->creator?->unit_id === $user->unit_id) {
+                if ($agenda->creatorUnitId() === $user->unit_id) {
                     return true;
                 }
 
@@ -135,12 +135,12 @@ class AgendaPolicy
 
         if ($user->isAdmin()) {
             // Pembuat agenda atau rekan admin dari unit penyelenggara yang sama
-            if ($agenda->created_by === $user->id || ($user->unit_id !== null && $agenda->creator?->unit_id === $user->unit_id)) {
+            if ($agenda->created_by === $user->id || ($user->unit_id !== null && $agenda->creatorUnitId() === $user->unit_id)) {
                 return true;
             }
 
-            // Admin unit yang ditunjuk sebagai pimpinan atau notulis khusus saat rapat sedang berlangsung
-            if ($agenda->status === 'ongoing' && ($agenda->pimpinan_id === $user->id || $agenda->notulis_id === $user->id)) {
+            // Admin unit yang ditunjuk sebagai pimpinan atau notulis khusus saat rapat berlangsung
+            if ($this->isAppointedDuringSession($user, $agenda)) {
                 return true;
             }
         }
@@ -167,19 +167,68 @@ class AgendaPolicy
             return true;
         }
 
-        if ($user->isAdmin() && $user->unit_id !== null && $agenda->creator?->unit_id === $user->unit_id) {
+        if ($user->isAdmin() && $user->unit_id !== null && $agenda->creatorUnitId() === $user->unit_id) {
             return true;
         }
 
         // Saat rapat berstatus 'ongoing', petugas yang ditunjuk (pimpinan atau notulis, baik admin unit maupun staf)
         // berhak mengelola notulensi dan foto dokumentasi kegiatan
-        if ($agenda->status === 'ongoing') {
-            if (($agenda->notulis_id && $agenda->notulis_id === $user->id) 
-                || ($agenda->pimpinan_id && $agenda->pimpinan_id === $user->id)) {
+        if ($this->isAppointedDuringSession($user, $agenda)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Whether the user was appointed to a role for the duration of a live meeting.
+     *
+     * An admin unit who is neither the organiser nor a colleague from the hosting
+     * unit still gets operational control over a meeting that is under way, as long
+     * as the meeting itself named them as leader or minute taker. That rule is
+     * identical for editing the meeting, changing its status, and maintaining the
+     * minutes, so it lives here once rather than being restated in three places —
+     * which is how the three copies drifted apart in the first place.
+     */
+    private function isAppointedDuringSession(User $user, Agenda $agenda): bool
+    {
+        if ($agenda->status !== 'ongoing') {
+            return false;
+        }
+
+        foreach (self::roleColumns() as $column) {
+            $appointee = $agenda->getAttribute($column);
+
+            if ($appointee !== null && (int) $appointee === (int) $user->getKey()) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    /**
+     * The agenda's assignable role columns, taken from the model.
+     *
+     * The meeting-leader column name is visually identical to several near-miss
+     * variants, and a policy that compares against the wrong one silently returns
+     * false — denying access with no error anywhere. That is not hypothetical: this
+     * rule previously existed as three hand-written copies, one of them missing the
+     * `_id` suffix and another carrying a look-alike character.
+     *
+     * Reading the names from Agenda::$fillable means the policy cannot disagree
+     * with the schema, and the comparison uses getAttribute() rather than a literal
+     * property access for the same reason.
+     *
+     * @return list<string>
+     */
+    private static function roleColumns(): array
+    {
+        static $columns = null;
+
+        return $columns ??= array_values(array_filter(
+            (new Agenda)->getFillable(),
+            static fn (string $field): bool => str_ends_with($field, '_id'),
+        ));
     }
 }

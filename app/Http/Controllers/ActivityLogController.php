@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\FiltersByDateRange;
 use App\Models\ActivityLog;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -11,6 +12,7 @@ use Illuminate\View\View;
 
 class ActivityLogController extends Controller
 {
+    use FiltersByDateRange;
     /**
      * Display a listing of system activity logs.
      */
@@ -31,13 +33,13 @@ class ActivityLogController extends Controller
             $query->where('user_id', $userId);
         }
 
-        // Filter by Date Range
-        if ($startDate = $request->input('start_date')) {
-            $query->whereDate('created_at', '>=', $startDate);
-        }
-        if ($endDate = $request->input('end_date')) {
-            $query->whereDate('created_at', '<=', $endDate);
-        }
+        // Filter by Date Range (timestamp comparison — keeps created_at index usable)
+        $this->applyDateRange(
+            $query,
+            'created_at',
+            $request->input('start_date'),
+            $request->input('end_date'),
+        );
 
         // Search in description or IP
         if ($search = $request->input('search')) {
@@ -52,8 +54,20 @@ class ActivityLogController extends Controller
         }
 
         $logs = $query->paginate(15)->withQueryString();
-        $activityTypes = ActivityLog::distinct()->pluck('activity_type');
-        $users = User::orderBy('name')->get(['id', 'name', 'nip']);
+
+        // Both dropdowns are bounded. Loading every employee in the agency to
+        // populate a <select> grows linearly with headcount and turns a routine
+        // page view into a full table read.
+        $activityTypes = ActivityLog::query()
+            ->distinct()
+            ->orderBy('activity_type')
+            ->limit(50)
+            ->pluck('activity_type');
+
+        $users = User::query()
+            ->orderBy('name')
+            ->limit(500)
+            ->get(['id', 'name', 'nip']);
 
         return view('logs.index', compact('logs', 'activityTypes', 'users'));
     }

@@ -125,20 +125,41 @@ class UserManagementTest extends TestCase
     public function test_user_status_can_be_toggled(): void
     {
         $superadmin = User::where('role', 'administrator')->first();
-        $user = User::where('username', 'faisal_rahman')->first();
 
-        if ($user) {
-            $response = $this->actingAs($superadmin)->patch("/admin/users/{$user->id}/toggle-status");
+        // Own fixture. This test used to look up "faisal_rahman" — a user created
+        // by an earlier test in this class. That test's transaction had already
+        // rolled back by the time this one ran, so the lookup returned null, the
+        // `if ($user)` guard skipped the entire body, and the toggle went untested
+        // while PHPUnit only warned that the test "did not perform any assertions".
+        $user = User::create([
+            'unit_id' => Unit::where('kode_unit', 'POKJA-AKM')->value('id'),
+            'name' => 'Pegawai Uji Status',
+            'nip' => '199707072020071111',
+            'username' => 'user_status_uji',
+            'email' => 'user_status_uji@lldikti.test',
+            'password' => Hash::make('Password123!'),
+            'role' => 'staff',
+            'is_active' => true,
+        ]);
 
-            $response->assertRedirect();
-            $this->assertDatabaseHas('users', [
-                'id' => $user->id,
-                'is_active' => false,
-            ]);
+        $response = $this->actingAs($superadmin)->patch("/admin/users/{$user->id}/toggle-status");
 
-            // Clean up test user
-            $user->delete();
-        }
+        $response->assertRedirect();
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'is_active' => false,
+        ]);
+
+        // A second toggle must restore the flag, so the endpoint is a true flip
+        // rather than a one-way deactivate.
+        $this->actingAs($superadmin)->patch("/admin/users/{$user->id}/toggle-status");
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'is_active' => true,
+        ]);
+
+        // No manual cleanup: the user is rolled back with the test transaction.
     }
 
     public function test_administrator_can_filter_users_without_unit(): void

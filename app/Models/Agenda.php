@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Html;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -44,7 +45,7 @@ class Agenda extends Model
         ];
     }
 
-    protected static function boot()
+    protected static function boot(): void
     {
         parent::boot();
 
@@ -74,11 +75,38 @@ class Agenda extends Model
 
                 $agenda->report_config = $config;
             }
+
+            // Keep the sargable room key in sync whenever the room actually changes.
+            // Intentionally not fillable: this is derived server-side and must never
+            // be settable through mass assignment.
+            if ($agenda->isDirty('lokasi_ruang')) {
+                $agenda->lokasi_ruang_normalized = self::normalizeRoom($agenda->lokasi_ruang);
+            }
         });
     }
 
     /**
+     * Canonical form of a physical room name, used for conflict matching.
+     *
+     * Kept as a single definition so AgendaConflictService and the write path agree.
+     * The migration that backfills lokasi_ruang_normalized mirrors this logic on
+     * purpose — migrations must not depend on mutable application code.
+     */
+    public static function normalizeRoom(?string $room): ?string
+    {
+        if ($room === null) {
+            return null;
+        }
+
+        $normalized = mb_strtolower(trim($room));
+
+        return $normalized === '' ? null : mb_substr($normalized, 0, 150);
+    }
+
+    /**
      * Relationship to the user who created the agenda.
+     *
+     * @return BelongsTo<User, $this>
      */
     public function creator(): BelongsTo
     {
@@ -87,6 +115,8 @@ class Agenda extends Model
 
     /**
      * Relationship to the designated meeting leader.
+     *
+     * @return BelongsTo<User, $this>
      */
     public function pimpinan(): BelongsTo
     {
@@ -95,6 +125,8 @@ class Agenda extends Model
 
     /**
      * Relationship to the designated meeting minute taker.
+     *
+     * @return BelongsTo<User, $this>
      */
     public function notulis(): BelongsTo
     {
@@ -112,6 +144,8 @@ class Agenda extends Model
 
     /**
      * Relationship to attendances recorded for this agenda.
+     *
+     * @return HasMany<Attendance, $this>
      */
     public function attendances(): HasMany
     {
@@ -128,6 +162,8 @@ class Agenda extends Model
 
     /**
      * Scope for draft/concept agendas.
+     *
+     * @param  Builder<Agenda>  $query
      */
     public function scopeDraft(Builder $query): Builder
     {
@@ -136,6 +172,8 @@ class Agenda extends Model
 
     /**
      * Scope for ongoing agendas.
+     *
+     * @param  Builder<Agenda>  $query
      */
     public function scopeOngoing(Builder $query): Builder
     {
@@ -144,6 +182,8 @@ class Agenda extends Model
 
     /**
      * Scope for scheduled agendas (pure status check).
+     *
+     * @param  Builder<Agenda>  $query
      */
     public function scopeScheduled(Builder $query): Builder
     {
@@ -152,6 +192,8 @@ class Agenda extends Model
 
     /**
      * Scope for upcoming scheduled agendas that have not passed yet.
+     *
+     * @param  Builder<Agenda>  $query
      */
     public function scopeUpcoming(Builder $query): Builder
     {
@@ -169,6 +211,8 @@ class Agenda extends Model
 
     /**
      * Scope for active/relevant agendas on the dashboard (ongoing right now OR upcoming).
+     *
+     * @param  Builder<Agenda>  $query
      */
     public function scopeRelevantForDashboard(Builder $query): Builder
     {
@@ -182,6 +226,8 @@ class Agenda extends Model
 
     /**
      * Scope for completed agendas.
+     *
+     * @param  Builder<Agenda>  $query
      */
     public function scopeCompleted(Builder $query): Builder
     {
@@ -190,6 +236,8 @@ class Agenda extends Model
 
     /**
      * Scope for agendas visible to a specific user based on unit & permissions.
+     *
+     * @param  Builder<Agenda>  $query
      */
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
@@ -206,6 +254,26 @@ class Agenda extends Model
                 });
             }
         });
+    }
+
+    /**
+     * Unit kerja milik pembuat agenda, atau null bila tidak diketahui.
+     *
+     * Policies need this on every authorisation check, and reading $agenda->creator
+     * there would lazy-load the relation — one extra query per check, plus a
+     * lazy-loading violation once the strict guard is enabled. This mirrors the
+     * relationLoaded() pattern already used by isUserEligible(): use the loaded
+     * relation when it is available, otherwise ask the database directly.
+     */
+    public function creatorUnitId(): ?int
+    {
+        if ($this->relationLoaded('creator')) {
+            return $this->creator?->unit_id;
+        }
+
+        $unitId = $this->creator()->value('unit_id');
+
+        return $unitId === null ? null : (int) $unitId;
     }
 
     /**
@@ -303,37 +371,115 @@ class Agenda extends Model
     }
 
     /**
-     * Get the formatted notulensi (rich HTML or safe nl2br for legacy text).
+     * Get the formatted notulensi, sanitised for safe raw rendering.
+     *
+     * Sanitising lives here, in the accessor, rather than in a FormRequest. An
+     * accessor is the choke point every read path goes through — a seeder, an
+     * import, a future endpoint, or a row that predates the current validation
+     * rules. Sanitising on write meant any of those could store markup that the
+     * template then emitted through {!! !!} unfiltered.
      */
     public function getFormattedNotulensiAttribute(): ?string
     {
-        if (!$this->notulensi) {
-            return null;
-        }
-
-        // If it already contains HTML tags, return as rich formatted content
-        if ($this->notulensi !== strip_tags($this->notulensi)) {
-            return self::wrapLongWordsWithZeroWidthSpace($this->notulensi);
-        }
-
-        // Otherwise legacy plain text, convert newlines safely
-        return self::wrapLongWordsWithZeroWidthSpace(nl2br(e($this->notulensi)));
+        return self::renderSafeRichText($this->notulensi);
     }
 
     /**
-     * Get the formatted kesimpulan (rich HTML or safe nl2br for legacy text).
+     * Get the formatted kesimpulan, sanitised for safe raw rendering.
      */
     public function getFormattedKesimpulanAttribute(): ?string
     {
-        if (!$this->kesimpulan) {
+        return self::renderSafeRichText($this->kesimpulan);
+    }
+
+    /**
+     * Shared render path for both rich-text fields.
+     */
+    private static function renderSafeRichText(?string $raw): ?string
+    {
+        if ($raw === null || $raw === '') {
             return null;
         }
 
-        if ($this->kesimpulan !== strip_tags($this->kesimpulan)) {
-            return self::wrapLongWordsWithZeroWidthSpace($this->kesimpulan);
+        // Legacy rows may hold plain text rather than markup.
+        if ($raw === strip_tags($raw)) {
+            return self::wrapLongWordsWithZeroWidthSpace(nl2br(e($raw)));
         }
 
-        return self::wrapLongWordsWithZeroWidthSpace(nl2br(e($this->kesimpulan)));
+        $safe = Html::sanitize($raw);
+
+        return $safe === null ? null : self::wrapLongWordsWithZeroWidthSpace($safe);
+    }
+
+    /**
+     * Label dan warna badge untuk status agenda.
+     *
+     * consolidated here after the same match() block was duplicated across five
+     * templates with three different results. staff_show.blade.php in particular
+     * had no 'cancelled' case, so a cancelled meeting rendered in neutral grey —
+     * the most safety-critical status to communicate was the one hardest to spot.
+     *
+     * @return array{label: string, class: string}
+     */
+    public function getStatusMetaAttribute(): array
+    {
+        return match ($this->status) {
+            'ongoing' => [
+                'label' => 'Sedang Berlangsung (Presensi Dibuka)',
+                'class' => 'bg-amber-400 text-slate-950 font-bold',
+            ],
+            'completed' => [
+                'label' => 'Selesai (Presensi Ditutup)',
+                'class' => 'bg-emerald-400 text-slate-950 font-bold',
+            ],
+            'draft' => [
+                'label' => 'Konsep',
+                'class' => 'bg-slate-800 text-slate-200 border border-slate-700',
+            ],
+            'cancelled' => [
+                'label' => 'Dibatalkan',
+                'class' => 'bg-rose-400 text-slate-950 font-bold',
+            ],
+            default => [
+                'label' => 'Terjadwal',
+                'class' => 'bg-slate-800 text-white border border-slate-700 font-bold',
+            ],
+        };
+    }
+
+    /**
+     * Status badge in the light card palette used by list and dashboard views.
+     *
+     * Kept alongside status_meta so both surfaces stay in step. The card variant
+     * previously had a 'cancelled' label with no matching colour arm, which meant
+     * a cancelled meeting showed the word "Dibatalkan" on a neutral grey chip.
+     *
+     * @return array{label: string, class: string}
+     */
+    public function getStatusMetaSoftAttribute(): array
+    {
+        return match ($this->status) {
+            'ongoing' => [
+                'label' => 'Sedang Berlangsung',
+                'class' => 'bg-amber-100 text-amber-900 border-amber-300 font-bold',
+            ],
+            'completed' => [
+                'label' => 'Selesai',
+                'class' => 'bg-emerald-100 text-emerald-900 border-emerald-300 font-bold',
+            ],
+            'draft' => [
+                'label' => 'Konsep',
+                'class' => 'bg-slate-100 text-slate-800 border-slate-300 font-semibold',
+            ],
+            'cancelled' => [
+                'label' => 'Dibatalkan',
+                'class' => 'bg-rose-100 text-rose-900 border-rose-300 font-bold',
+            ],
+            default => [
+                'label' => 'Terjadwal',
+                'class' => 'bg-slate-100 text-slate-900 border-slate-300 font-bold',
+            ],
+        };
     }
 
     /**
@@ -451,6 +597,7 @@ class Agenda extends Model
 
     /**
      * Get system default report configuration for this agenda.
+     * @return array<string,mixed>
      */
     public function getDefaultReportConfig(): array
     {

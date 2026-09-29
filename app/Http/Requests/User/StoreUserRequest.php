@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\User;
 
+use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -14,12 +15,15 @@ class StoreUserRequest extends FormRequest
         return $this->user()?->can('create', User::class) ?? false;
     }
 
+    /**
+     * @return array<string, array<int, mixed>>
+     */
     public function rules(): array
     {
         $currentUser = $this->user();
-        $allowedRoles = $currentUser->isAdministrator() 
-            ? ['administrator', 'admin', 'staff'] 
-            : ['admin', 'staff'];
+        $allowedRoles = $currentUser->isAdministrator()
+            ? array_column(UserRole::cases(), 'value')
+            : [UserRole::Admin->value, UserRole::Staff->value];
 
         return [
             'name' => ['required', 'string', 'max:150'],

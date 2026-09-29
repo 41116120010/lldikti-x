@@ -25,7 +25,12 @@ Route::get('/', function () {
 // Guest Authentication Routes
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
-    Route::post('/login', [AuthenticatedSessionController::class, 'store'])->name('login.attempt');
+    // Coarse IP-level limit in front of the per-identifier limit in LoginRequest.
+    // The inner limiter keys on login-value + IP, so an attacker rotating NIPs could
+    // otherwise get unlimited attempts per identifier from a single address.
+    Route::post('/login', [AuthenticatedSessionController::class, 'store'])
+        ->middleware('throttle:10,1')
+        ->name('login.attempt');
 });
 
 // Authenticated Routes
@@ -67,8 +72,14 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [ReportController::class, 'index'])->name('index');
         Route::get('/summary/csv', [ReportController::class, 'exportSummaryCsv'])->name('summary.csv');
         Route::get('/{agenda}', [ReportController::class, 'show'])->name('show');
-        Route::match(['get', 'post'], '/{agenda}/export/pdf', [ReportController::class, 'exportPdf'])->name('export.pdf');
-        Route::match(['get', 'post'], '/{agenda}/export/word', [ReportController::class, 'exportWord'])->name('export.word');
+        // Export spawns a real LibreOffice process server-side. Throttling keeps a
+        // single admin (or a stuck browser loop) from exhausting PHP-FPM workers.
+        Route::match(['get', 'post'], '/{agenda}/export/pdf', [ReportController::class, 'exportPdf'])
+            ->middleware('throttle:5,1')
+            ->name('export.pdf');
+        Route::match(['get', 'post'], '/{agenda}/export/word', [ReportController::class, 'exportWord'])
+            ->middleware('throttle:5,1')
+            ->name('export.word');
         Route::post('/{agenda}/report-config/reset', [ReportController::class, 'resetReportConfig'])->name('report-config.reset');
     });
 

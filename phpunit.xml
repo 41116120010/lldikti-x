@@ -3,6 +3,9 @@
          xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
          bootstrap="vendor/autoload.php"
          colors="true"
+         failOnRisky="true"
+         failOnWarning="true"
+         beStrictAboutOutputDuringTests="true"
 >
     <testsuites>
         <testsuite name="Unit">
@@ -17,22 +20,31 @@
             <directory>app</directory>
         </include>
     </source>
+    <!--
+        CATATAN KEAMANAN (P0 audit):
+        Kredensial database, socket path absolut, dan username TIDAK lagi di-hardcode
+        di file ini. Nilai diambil dari .env / .env.testing milik-each developer.
+
+        Test suite memakai DatabaseTransactions dan bergantung pada data hasil seeder
+        (User::where('role', 'administrator')->first(), Unit::skip(1)->first(), dll),
+        sehingga memindahkannya ke SQLite :memory: + RefreshDatabase memerlukan
+        penulisan ulang seluruh call site factory — lihat AUDIT_CODEBASE.md §2.23 (P1).
+
+        Untuk mencegah test suite tidak sengaja memutasi database yang tidak
+        Disposable, Tests\TestCase sekarang menolak jalan bila nama database bukan
+        database uji. Lihat tests/TestCase.php.
+    -->
     <php>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_TIMEZONE" value="Asia/Jakarta"/>
         <env name="APP_LOCALE" value="id"/>
         <env name="APP_FALLBACK_LOCALE" value="id"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
-        <env name="BCRYPT_ROUNDS" value="4"/>
+        <!-- 4 rounds membuat hash test sangat rapuh; 10 adalah baseline yang wajar
+             dan tetap menjaga suite tetap cepat. -->
+        <env name="BCRYPT_ROUNDS" value="10"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
-        <env name="DB_CONNECTION" value="mysql"/>
-        <env name="DB_HOST" value="127.0.0.1"/>
-        <env name="DB_PORT" value="3307"/>
-        <env name="DB_DATABASE" value="lldikti_db"/>
-        <env name="DB_USERNAME" value="daffiq"/>
-        <env name="DB_PASSWORD" value=""/>
-        <env name="DB_SOCKET" value="/home/daffiq/Documents/Semester-5/lldikti-x/lldikti-x/database/mariadb.sock"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>

@@ -6,12 +6,29 @@ use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class LoginRequest extends FormRequest
 {
+    /**
+     * A syntactically valid bcrypt hash of an unguessable value, used purely to
+     * burn the same CPU a real verification would when the identifier is unknown.
+     * It is never compared against user input successfully and grants no access.
+     */
+    private const DUMMY_HASH = '$2y$12$usesomesillystringfore7hnbRJHxXVLeakoG8K30oukPsA.ztMG';
+
+    /**
+     * Maximum failed attempts per identifier+IP before a temporary lockout.
+     */
+    private const MAX_ATTEMPTS = 5;
+
+    /**
+     * How long the lockout lasts, in seconds.
+     */
+    private const DECAY_SECONDS = 60;
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -55,7 +72,7 @@ class LoginRequest extends FormRequest
         $this->ensureIsNotRateLimited();
 
         $rawInput = trim($this->input('login'));
-        $password = $this->input('password');
+        $password = (string) $this->input('password');
         $remember = $this->boolean('remember');
 
         // Check if raw input stripped of spaces consists solely of digits (NIP format)
@@ -68,23 +85,39 @@ class LoginRequest extends FormRequest
             $loginValue = $rawInput;
         }
 
-        // Check if user exists and is active
         $user = User::where($field, $loginValue)->first();
 
-        if ($user && !$user->is_active) {
+        /*
+         * Always run a real hash comparison, even when no account matches.
+         *
+         * Auth::attempt() short-circuits when the identifier is unknown, so it
+         * returns in ~1ms for a bad NIP but takes ~100ms for a valid one. That gap
+         * is trivially measurable and lets an attacker enumerate which NIPs and
+         * usernames exist in the agency without ever seeing an error message.
+         * Verifying against a throwaway bcrypt hash when $user is null keeps the
+         * cost identical on both paths.
+         */
+        $hash = $user?->getAuthPassword() ?? self::DUMMY_HASH;
+        $passwordMatches = Hash::check($password, $hash);
+
+        $isActive = (bool) ($user?->is_active ?? false);
+
+        if ($user === null || ! $passwordMatches || ! $isActive) {
             RateLimiter::hit($this->throttleKey());
+
+            /*
+             * One message for every failure mode: unknown identifier, wrong
+             * password, and deactivated account. Distinguishing them would tell an
+             * attacker which NIPs are registered and which are active, and the
+             * deactivation hint is an invitation to probe for a way to re-enable
+             * an account.
+             */
             throw ValidationException::withMessages([
-                'login' => 'Akun Anda berstatus non-aktif. Silakan hubungi Administrator.',
+                'login' => 'Kredensial tidak valid atau akun sedang dinonaktifkan.',
             ]);
         }
 
-        if (! Auth::attempt([$field => $loginValue, 'password' => $password], $remember)) {
-            RateLimiter::hit($this->throttleKey());
-
-            throw ValidationException::withMessages([
-                'login' => trans('auth.failed'),
-            ]);
-        }
+        Auth::login($user, $remember);
 
         RateLimiter::clear($this->throttleKey());
     }
@@ -96,7 +129,7 @@ class LoginRequest extends FormRequest
      */
     public function ensureIsNotRateLimited(): void
     {
-        if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
+        if (! RateLimiter::tooManyAttempts($this->throttleKey(), self::MAX_ATTEMPTS)) {
             return;
         }
 

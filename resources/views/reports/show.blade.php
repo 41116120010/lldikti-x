@@ -10,24 +10,8 @@
     <div class="bg-slate-950 text-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-800 space-y-4">
         <!-- Top Row: Meeting Type & Status Badges -->
         <div class="flex flex-wrap items-center gap-2">
-            @php
-                $statusStyle = match($agenda->status) {
-                    'ongoing' => 'bg-amber-400 text-slate-950 font-bold',
-                    'completed' => 'bg-emerald-400 text-slate-950 font-bold',
-                    'draft' => 'bg-slate-800 text-slate-200 border border-slate-700',
-                    'cancelled' => 'bg-rose-400 text-slate-950 font-bold',
-                    default => 'bg-slate-800 text-white border border-slate-700 font-bold'
-                };
-                $statusText = match($agenda->status) {
-                    'ongoing' => 'Sedang Berlangsung (Presensi Dibuka)',
-                    'completed' => 'Selesai (Presensi Ditutup)',
-                    'draft' => 'Konsep',
-                    'cancelled' => 'Dibatalkan',
-                    default => 'Terjadwal'
-                };
-            @endphp
-            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs {{ $statusStyle }}">
-                {{ $statusText }}
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs {{ $agenda->status_meta['class'] }}">
+                {{ $agenda->status_meta['label'] }}
             </span>
 
             <span class="text-xs uppercase font-mono font-bold px-2.5 py-1 bg-slate-900 border border-slate-700 rounded-md text-slate-200">
@@ -318,13 +302,19 @@
                                     </div>
                                 @endif
                             </div>
-                            <div class="border-t border-slate-300 pt-2 flex flex-col items-center">
-                                <div class="inline-block text-left space-y-0.5">
-                                    <div class="text-xs font-bold text-slate-900">{{ $agenda->nama_pimpinan }}</div>
-                                    @if($agenda->nip_pimpinan && $agenda->nip_pimpinan !== '-')
-                                        <div class="text-[10px] text-slate-500 font-mono">NIP {{ $agenda->nip_pimpinan }}</div>
-                                    @endif
-                                </div>
+                            <div class="border-t border-slate-300 pt-2 flex flex-col items-center text-center">
+                                <table align="center" border="0" cellspacing="0" cellpadding="0" style="margin: 0 auto; border-collapse: collapse; border: none; text-align: left; display: inline-table;">
+                                    <tr>
+                                        <td style="border: none; padding: 0; text-align: left;">
+                                            <div class="inline-block text-left space-y-0.5" style="display: block; text-align: left;">
+                                                <div class="text-xs font-bold text-slate-900">{{ $agenda->nama_pimpinan }}</div>
+                                                @if($agenda->nip_pimpinan && $agenda->nip_pimpinan !== '-')
+                                                    <div class="text-[10px] text-slate-500 font-mono">NIP {{ $agenda->nip_pimpinan }}</div>
+                                                @endif
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </table>
                                 @if($pimpinanAtt)
                                     <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 mt-1.5">
                                         <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -345,13 +335,19 @@
                                     </div>
                                 @endif
                             </div>
-                            <div class="border-t border-slate-300 pt-2 flex flex-col items-center">
-                                <div class="inline-block text-left space-y-0.5">
-                                    <div class="text-xs font-bold text-slate-900">{{ $agenda->nama_notulis }}</div>
-                                    @if($agenda->nip_notulis && $agenda->nip_notulis !== '-')
-                                        <div class="text-[10px] text-slate-500 font-mono">NIP {{ $agenda->nip_notulis }}</div>
-                                    @endif
-                                </div>
+                            <div class="border-t border-slate-300 pt-2 flex flex-col items-center text-center">
+                                <table align="center" border="0" cellspacing="0" cellpadding="0" style="margin: 0 auto; border-collapse: collapse; border: none; text-align: left; display: inline-table;">
+                                    <tr>
+                                        <td style="border: none; padding: 0; text-align: left;">
+                                            <div class="inline-block text-left space-y-0.5" style="display: block; text-align: left;">
+                                                <div class="text-xs font-bold text-slate-900">{{ $agenda->nama_notulis }}</div>
+                                                @if($agenda->nip_notulis && $agenda->nip_notulis !== '-')
+                                                    <div class="text-[10px] text-slate-500 font-mono">NIP {{ $agenda->nip_notulis }}</div>
+                                                @endif
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </table>
                                 @if($notulisAtt)
                                     <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 mt-1.5">
                                         <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -408,20 +404,22 @@
                                 <button 
                                     type="button" 
                                     class="w-10 h-10 rounded-lg overflow-hidden border border-slate-300 mx-auto shadow-xs block cursor-pointer hover:opacity-80 transition"
-                                    onclick="previewAttendanceMedia('{{ Storage::disk('public')->url($att->selfie_path) }}', 'Foto Selfie: {{ addslashes($att->user->name) }}')"
+                                    data-preview-media="{{ Storage::disk('public')->url($att->selfie_path) }}"
+                                    data-preview-title="Foto Selfie: {{ $att->user->name }}"
                                     title="Klik untuk memperbesar Foto Selfie"
                                 >
-                                    <img src="{{ Storage::disk('public')->url($att->selfie_path) }}" alt="Selfie" class="w-full h-full object-cover">
+                                    <img src="{{ Storage::disk('public')->url($att->selfie_path) }}" alt="Foto selfie {{ $att->user->name }}" class="w-full h-full object-cover" loading="lazy" decoding="async">
                                 </button>
                             </td>
                             <td class="text-center">
                                 <button 
                                     type="button" 
                                     class="w-16 h-10 rounded-lg overflow-hidden border border-slate-300 bg-white mx-auto shadow-xs flex items-center justify-center p-1 cursor-pointer hover:opacity-80 transition"
-                                    onclick="previewAttendanceMedia('{{ Storage::disk('public')->url($att->signature_path) }}', 'Tanda Tangan: {{ addslashes($att->user->name) }}')"
+                                    data-preview-media="{{ Storage::disk('public')->url($att->signature_path) }}"
+                                    data-preview-title="Tanda Tangan: {{ $att->user->name }}"
                                     title="Klik untuk memperbesar Tanda Tangan"
                                 >
-                                    <img src="{{ Storage::disk('public')->url($att->signature_path) }}" alt="TTD" class="max-w-full max-h-full object-contain">
+                                    <img src="{{ Storage::disk('public')->url($att->signature_path) }}" alt="Tanda tangan {{ $att->user->name }}" class="max-w-full max-h-full object-contain" loading="lazy" decoding="async">
                                 </button>
                             </td>
                         </tr>
@@ -477,6 +475,7 @@
                                         src="{{ Storage::disk('public')->url($doc->file_path) }}" 
                                         alt="{{ $doc->caption ?? 'Dokumentasi Rapat' }}" 
                                         class="w-full h-28 object-cover group-hover:scale-105 transition duration-300"
+                                        loading="lazy" decoding="async"
                                     >
                                 @elseif($isPdf)
                                     <div class="w-full h-28 flex items-center justify-center bg-slate-50">
@@ -541,25 +540,52 @@
 </div>
 
 <script>
-function previewAttendanceMedia(mediaUrl, title) {
-    if (typeof window.showModal === 'function') {
-        window.showModal({
-            title: title,
-            message: `
-                <div class="text-center p-2">
-                    <div class="max-w-xs sm:max-w-sm mx-auto rounded-xl overflow-hidden border border-slate-300 shadow-md bg-white">
-                        <img src="${mediaUrl}" alt="${title}" class="w-full h-auto object-contain max-h-96">
-                    </div>
+/*
+ * Media preview is driven by data-preview-* attributes rather than an inline
+ * onclick handler. The previous form interpolated the employee's name into a
+ * JavaScript string literal inside an HTML attribute, so a name containing an
+ * apostrophe could terminate the literal and inject arbitrary script.
+ */
+(function () {
+    const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (ch) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+    }[ch]));
+
+    const previewAttendanceMedia = (mediaUrl, title) => {
+        const markup = `
+            <div class="text-center p-2">
+                <div class="max-w-xs sm:max-w-sm mx-auto rounded-xl overflow-hidden border border-slate-300 shadow-md bg-white">
+                    <img src="${escapeHtml(mediaUrl)}" alt="${escapeHtml(title)}" class="w-full h-auto object-contain max-h-96">
                 </div>
-            `,
-            type: 'info',
-            confirmText: 'Tutup',
-            autoClose: false
+            </div>
+        `;
+
+        if (typeof window.showModal === 'function') {
+            window.showModal({
+                title: title,
+                message: markup,
+                isHtml: true,
+                type: 'info',
+                confirmText: 'Tutup',
+                autoClose: false,
+            });
+        } else {
+            window.open(mediaUrl, '_blank', 'noopener');
+        }
+    };
+
+    document.querySelectorAll('[data-preview-media]').forEach((button) => {
+        if (button.dataset.previewBound === 'true') return;
+        button.dataset.previewBound = 'true';
+        button.addEventListener('click', () => {
+            previewAttendanceMedia(button.dataset.previewMedia, button.dataset.previewTitle);
         });
-    } else {
-        window.open(mediaUrl, '_blank');
-    }
-}
+    });
+})();
 </script>
 @endsection
 

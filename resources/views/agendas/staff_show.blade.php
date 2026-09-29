@@ -10,20 +10,10 @@
     <div class="bg-slate-950 text-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-800 space-y-4">
         <!-- Top Row: Meeting Type & Status Badges -->
         <div class="flex flex-wrap items-center gap-2">
-            @php
-                $statusStyle = match($agenda->status) {
-                    'ongoing' => 'bg-amber-400 text-slate-950 font-bold',
-                    'completed' => 'bg-emerald-400 text-slate-950 font-bold',
-                    default => 'bg-slate-800 text-white border border-slate-700 font-bold'
-                };
-                $statusText = match($agenda->status) {
-                    'ongoing' => 'Sedang Berlangsung (Presensi Dibuka)',
-                    'completed' => 'Selesai',
-                    default => 'Terjadwal'
-                };
-            @endphp
-            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs {{ $statusStyle }}">
-                {{ $statusText }}
+            {{-- Single source of truth on the model: this view previously had no
+                 'cancelled' case, so a cancelled meeting looked like a normal one. --}}
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs {{ $agenda->status_meta['class'] }}">
+                {{ $agenda->status_meta['label'] }}
             </span>
 
             <span class="text-xs uppercase font-mono font-bold px-2.5 py-1 bg-slate-900 border border-slate-700 rounded-md text-slate-200">

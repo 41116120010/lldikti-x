@@ -78,21 +78,23 @@
                                     <!-- Selfie Thumb (Clickable) -->
                                     <button 
                                         type="button" 
-                                        onclick="previewAttendanceMedia('{{ Storage::disk('public')->url($att->selfie_path) }}', 'Foto Selfie Wajah')"
+                                        data-preview-media="{{ Storage::disk('public')->url($att->selfie_path) }}"
+                                        data-preview-title="Foto Selfie Wajah"
                                         class="w-8 h-8 rounded-lg overflow-hidden border border-slate-400 shadow-xs hover:border-slate-950 hover:ring-2 hover:ring-slate-400 transition cursor-pointer" 
                                         title="Klik untuk memperbesar Foto Selfie"
                                     >
-                                        <img src="{{ Storage::disk('public')->url($att->selfie_path) }}" alt="Selfie" class="w-full h-full object-cover">
+                                        <img src="{{ Storage::disk('public')->url($att->selfie_path) }}" alt="Foto selfie" class="w-full h-full object-cover" loading="lazy" decoding="async">
                                     </button>
 
                                     <!-- Signature Thumb (Clickable) -->
                                     <button 
                                         type="button" 
-                                        onclick="previewAttendanceMedia('{{ Storage::disk('public')->url($att->signature_path) }}', 'Tanda Tangan Digital')"
-                                        class="w-8 h-8 rounded-lg overflow-hidden border border-slate-400 bg-white shadow-xs p-0.5 hover:border-slate-950 hover:ring-2 hover:ring-slate-400 transition cursor-pointer" 
+                                        data-preview-media="{{ Storage::disk('public')->url($att->signature_path) }}"
+                                        data-preview-title="Tanda Tangan Digital"
+                                        class="w-8 h-8 rounded-lg overflow-hidden border border-slate-400 bg-white shadow-xs p-0.5 hover:border-slate-950 hover:ring-2 hover:ring-slate-400 transition cursor-pointer"
                                         title="Klik untuk memperbesar Tanda Tangan"
                                     >
-                                        <img src="{{ Storage::disk('public')->url($att->signature_path) }}" alt="TTD" class="w-full h-full object-contain">
+                                        <img src="{{ Storage::disk('public')->url($att->signature_path) }}" alt="Tanda tangan digital" class="w-full h-full object-contain" loading="lazy" decoding="async">
                                     </button>
                                 </div>
                             </td>
@@ -127,20 +129,49 @@
 </div>
 
 <script>
-function previewAttendanceMedia(mediaUrl, title) {
-    window.showModal({
-        title: title,
-        message: `
+/*
+ * Media preview is driven by data-preview-* attributes rather than an inline
+ * onclick handler, keeping the markup free of JavaScript string literals.
+ */
+(function () {
+    const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (ch) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+    }[ch]));
+
+    const previewAttendanceMedia = (mediaUrl, title) => {
+        const markup = `
             <div class="text-center p-2">
                 <div class="max-w-xs mx-auto rounded-xl overflow-hidden border border-slate-300 shadow-md bg-white">
-                    <img src="${mediaUrl}" alt="${title}" class="w-full h-auto object-contain max-h-80">
+                    <img src="${escapeHtml(mediaUrl)}" alt="${escapeHtml(title)}" class="w-full h-auto object-contain max-h-80">
                 </div>
             </div>
-        `,
-        type: 'info',
-        confirmText: 'Tutup',
-        autoClose: false
+        `;
+
+        if (typeof window.showModal === 'function') {
+            window.showModal({
+                title: title,
+                message: markup,
+                isHtml: true,
+                type: 'info',
+                confirmText: 'Tutup',
+                autoClose: false
+            });
+        } else {
+            window.open(mediaUrl, '_blank', 'noopener');
+        }
+    };
+
+    document.querySelectorAll('[data-preview-media]').forEach((button) => {
+        if (button.dataset.previewBound === 'true') return;
+        button.dataset.previewBound = 'true';
+        button.addEventListener('click', () => {
+            previewAttendanceMedia(button.dataset.previewMedia, button.dataset.previewTitle);
+        });
     });
-}
+})();
 </script>
 @endsection

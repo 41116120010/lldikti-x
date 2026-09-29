@@ -50,7 +50,7 @@
         <!-- Kolom Waktu Mulai -->
         <div class="p-4 rounded-xl border border-slate-300 bg-slate-50/70 space-y-3 shadow-xs">
             <div>
-                <label class="text-xs font-bold text-slate-950 flex items-center gap-1.5">
+                <label for="waktu_mulai_group" class="text-xs font-bold text-slate-950 flex items-center gap-1.5">
                     <span>Waktu Mulai Rapat</span>
                     <span class="text-rose-600 font-black">*</span>
                 </label>
@@ -91,7 +91,7 @@
         <!-- Kolom Waktu Selesai -->
         <div class="p-4 rounded-xl border border-slate-300 bg-slate-50/70 space-y-3 shadow-xs">
             <div>
-                <label class="text-xs font-bold text-slate-950 flex items-center gap-1.5">
+                <label for="waktu_selesai_group" class="text-xs font-bold text-slate-950 flex items-center gap-1.5">
                     <span>Waktu Selesai Rapat</span>
                 </label>
             </div>
@@ -153,7 +153,7 @@
                 <circle cx="12" cy="12" r="10"/>
                 <polyline points="12 6 12 12 16 14"/>
             </svg>
-            <span id="preview_text">Menghitung jadwal rapat...</span>
+            <span id="preview_text" role="status" aria-live="polite">Menghitung jadwal rapat...</span>
         </div>
         <div class="flex items-center gap-2 self-end sm:self-auto shrink-0">
             <span id="preview_duration_badge" class="font-mono text-[11px] font-extrabold text-blue-900 bg-blue-100 px-2.5 py-0.5 rounded-md border border-blue-300">
@@ -167,10 +167,10 @@
     <input type="hidden" id="waktu_selesai" name="waktu_selesai" value="{{ $isSampaiSelesai ? '' : $valSelesai }}">
 
     @error('waktu_mulai')
-        <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>
+        <p class="text-xs text-rose-700 font-bold mt-1" role="alert">{{ $message }}</p>
     @enderror
     @error('waktu_selesai')
-        <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>
+        <p class="text-xs text-rose-700 font-bold mt-1" role="alert">{{ $message }}</p>
     @enderror
 </div>
 

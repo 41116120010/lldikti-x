@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\FiltersByDateRange;
 use App\Http\Requests\Profile\UpdateProfileRequest;
 use App\Models\ActivityLog;
 use App\Models\User;
@@ -15,6 +16,8 @@ use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
+    use FiltersByDateRange;
+
     /**
      * Display the user's profile edit form.
      */
@@ -84,13 +87,13 @@ class ProfileController extends Controller
             $query->where('activity_type', $type);
         }
 
-        // Filter by Date Range
-        if ($startDate = $request->input('start_date')) {
-            $query->whereDate('created_at', '>=', $startDate);
-        }
-        if ($endDate = $request->input('end_date')) {
-            $query->whereDate('created_at', '<=', $endDate);
-        }
+        // Filter by Date Range (timestamp comparison — keeps created_at index usable)
+        $this->applyDateRange(
+            $query,
+            'created_at',
+            $request->input('start_date'),
+            $request->input('end_date'),
+        );
 
         // Search in description or IP
         if ($search = $request->input('search')) {

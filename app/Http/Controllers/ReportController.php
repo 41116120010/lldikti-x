@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\FiltersByDateRange;
 use App\Models\Agenda;
 use App\Models\Attendance;
 use App\Models\Unit;
@@ -16,12 +17,13 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportController extends Controller
 {
+    use FiltersByDateRange;
+
     /**
      * Display the Executive Reporting & Meeting Recap Dashboard.
      */
@@ -29,16 +31,22 @@ class ReportController extends Controller
     {
         $user = Auth::user();
 
-        // Base scoped agenda query
-        $query = Agenda::visibleTo($user)->with(['creator.unit', 'units', 'attendances']);
+        // Base scoped agenda query.
+        // 'attendances' is intentionally NOT eager loaded: the view only needs the
+        // tally, which withCount() resolves in a single subquery. Loading the full
+        // relation would drag selfie_path, signature_path, ip_address and
+        // user_agent (TEXT) for every attendee just to render a number.
+        $query = Agenda::visibleTo($user)
+            ->with(['creator.unit', 'units'])
+            ->withCount('attendances');
 
-        // Filter: Date Range
-        if ($startDate = $request->input('start_date')) {
-            $query->whereDate('waktu_mulai', '>=', $startDate);
-        }
-        if ($endDate = $request->input('end_date')) {
-            $query->whereDate('waktu_mulai', '<=', $endDate);
-        }
+        // Filter: Date Range (timestamp comparison — keeps the index usable)
+        $this->applyDateRange(
+            $query,
+            'waktu_mulai',
+            $request->input('start_date'),
+            $request->input('end_date'),
+        );
 
         // Filter: Status
         if ($status = $request->input('status')) {
@@ -66,27 +74,49 @@ class ReportController extends Controller
 
         $agendas = $query->orderBy('waktu_mulai', 'desc')->paginate(10)->withQueryString();
 
-        // Direct database aggregate calculations (O(1) memory footprint)
+        // Direct database aggregate calculations (O(1) memory footprint).
+        // The three simple status tallies collapse into a single pass; `upcoming`
+        // keeps its own query because its predicate is not a plain equality.
         $baseScopedQuery = Agenda::visibleTo($user);
-        $totalAgendas = (clone $baseScopedQuery)->count();
-        $completedAgendas = (clone $baseScopedQuery)->where('status', 'completed')->count();
-        $ongoingAgendas = (clone $baseScopedQuery)->where('status', 'ongoing')->count();
-        $totalPresensi = Attendance::whereIn('agenda_id', (clone $baseScopedQuery)->select('id'))->count();
-        $avgPresensi = $totalAgendas > 0 ? round($totalPresensi / $totalAgendas, 1) : 0;
+        $agendaCounts = (clone $baseScopedQuery)
+            ->selectRaw('COUNT(*) AS total')
+            ->selectRaw("SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed")
+            ->selectRaw("SUM(CASE WHEN status = 'ongoing' THEN 1 ELSE 0 END) AS ongoing")
+            ->first();
 
-        // Eliminate N+1 query: Fetch unit attendance stats with a single group-by aggregation
-        $attendanceCountsByUnit = Attendance::query()
-            ->join('users', 'attendances.user_id', '=', 'users.id')
-            ->whereNotNull('users.unit_id')
-            ->selectRaw('users.unit_id, count(*) as total')
-            ->groupBy('users.unit_id')
-            ->pluck('total', 'users.unit_id');
+        $totalAgendas = (int) ($agendaCounts->total ?? 0);
+        $completedAgendas = (int) ($agendaCounts->completed ?? 0);
+        $ongoingAgendas = (int) ($agendaCounts->ongoing ?? 0);
+
+        // Correlated EXISTS instead of `whereIn('agenda_id', <subquery>)`, which
+        // forced MySQL to materialise the entire scoped agenda id list.
+        $totalPresensi = Attendance::whereHas('agenda', fn ($q) => $q->visibleTo($user))->count();
+        $avgPresensi = $totalAgendas > 0 ? round($totalPresensi / $totalAgendas, 1) : 0;
 
         $units = $user->isAdministrator() ? Unit::active()->orderBy('nama_unit')->get() : collect();
         $unitStats = null;
         $memberStats = null;
 
         if ($user->isAdministrator()) {
+            // Eliminate N+1 query: Fetch unit attendance stats with a single group-by
+            // aggregation. Scoped to the requested window and to the Administrator
+            // branch that actually consumes it — previously this ran for every role
+            // on every page load, scanning the whole attendances table.
+            $unitAttendanceQuery = Attendance::query()
+                ->join('users', 'attendances.user_id', '=', 'users.id')
+                ->whereNotNull('users.unit_id')
+                ->selectRaw('users.unit_id, count(*) as total')
+                ->groupBy('users.unit_id');
+
+            $this->applyDateRange(
+                $unitAttendanceQuery,
+                'attendances.signed_at',
+                $request->input('start_date'),
+                $request->input('end_date'),
+            );
+
+            $attendanceCountsByUnit = $unitAttendanceQuery->pluck('total', 'users.unit_id');
+
             // Paginate unit participation stats (5 per page) for Administrator
             $unitStats = Unit::active()
                 ->withCount('users')
@@ -101,14 +131,21 @@ class ReportController extends Controller
                     ];
                 });
         } elseif ($user->isAdmin() && $user->unit_id) {
-            // Paginate unit member participation stats (5 per page) for Admin Unit
-            $memberAttendanceCounts = Attendance::query()
+            $memberAttendanceQuery = Attendance::query()
                 ->whereHas('user', function ($q) use ($user) {
                     $q->where('unit_id', $user->unit_id);
                 })
                 ->selectRaw('user_id, count(*) as total')
-                ->groupBy('user_id')
-                ->pluck('total', 'user_id');
+                ->groupBy('user_id');
+
+            $this->applyDateRange(
+                $memberAttendanceQuery,
+                'signed_at',
+                $request->input('start_date'),
+                $request->input('end_date'),
+            );
+
+            $memberAttendanceCounts = $memberAttendanceQuery->pluck('total', 'user_id');
 
             $memberStats = User::forUnit($user->unit_id)
                 ->orderBy('name')
@@ -241,7 +278,7 @@ class ReportController extends Controller
     /**
      * Reset report configuration for an agenda to system defaults.
      */
-    public function resetReportConfig(Agenda $agenda)
+    public function resetReportConfig(Agenda $agenda): RedirectResponse
     {
         Gate::authorize('update', $agenda);
 
@@ -259,6 +296,8 @@ class ReportController extends Controller
 
     /**
      * Extract, validate, and sanitize custom report configuration from request.
+     *
+     * @return array<string,mixed>
      */
     protected function extractReportConfig(Request $request, Agenda $agenda): array
     {
@@ -284,7 +323,7 @@ class ReportController extends Controller
     public function exportSummaryCsv(Request $request): StreamedResponse
     {
         $user = Auth::user();
-        $query = Agenda::visibleTo($user)->with('creator')->withCount('attendances');
+        $query = Agenda::visibleTo($user)->with('creator:id,name')->withCount('attendances');
 
         ActivityLogger::log(
             type: 'EXPORT_CSV',
@@ -292,12 +331,13 @@ class ReportController extends Controller
             targetModel: Agenda::class
         );
 
-        if ($startDate = $request->input('start_date')) {
-            $query->whereDate('waktu_mulai', '>=', $startDate);
-        }
-        if ($endDate = $request->input('end_date')) {
-            $query->whereDate('waktu_mulai', '<=', $endDate);
-        }
+        $this->applyDateRange(
+            $query,
+            'waktu_mulai',
+            $request->input('start_date'),
+            $request->input('end_date'),
+        );
+
         if ($status = $request->input('status')) {
             if ($status !== 'all') {
                 $query->where('status', $status);
@@ -342,28 +382,39 @@ class ReportController extends Controller
             ]);
 
             $index = 0;
-            // Use cursor() to stream records efficiently without memory bloat
-            foreach ($query->orderBy('waktu_mulai', 'desc')->cursor() as $agenda) {
-                $index++;
 
-                // Sanitize potential CSV Formula Injection characters (=, +, -, @, \t, \r)
-                $safeTitle = $this->sanitizeCsvValue($agenda->judul_rapat);
-                $safeLocation = $this->sanitizeCsvValue($agenda->lokasi_ruang ?? 'Daring / Online');
-                $safeCreator = $this->sanitizeCsvValue($agenda->creator?->name ?? 'Sistem');
+            /*
+             * chunk() is used instead of cursor() on purpose.
+             *
+             * Eloquent's cursor() never invokes eagerLoadRelations(), so the
+             * `with('creator')` above was silently discarded and every row issued
+             * its own `SELECT * FROM users WHERE id = ?` — one query per agenda.
+             * chunk() goes through get(), which does honour eager loading, keeps
+             * the requested ordering, and still bounds memory to $chunkSize rows.
+             */
+            $query->orderBy('waktu_mulai', 'desc')->chunk(500, function ($agendas) use ($file, &$index) {
+                foreach ($agendas as $agenda) {
+                    $index++;
 
-                fputcsv($file, [
-                    $index,
-                    $safeTitle,
-                    ucfirst($agenda->jenis_rapat),
-                    strtoupper($agenda->tipe_rapat),
-                    $safeLocation,
-                    $agenda->waktu_mulai->format('d/m/Y H:i'),
-                    $agenda->waktu_selesai ? $agenda->waktu_selesai->format('d/m/Y H:i') : '-',
-                    ucfirst($agenda->status),
-                    $safeCreator,
-                    $agenda->attendances_count,
-                ]);
-            }
+                    // Sanitize potential CSV Formula Injection characters (=, +, -, @, \t, \r)
+                    $safeTitle = $this->sanitizeCsvValue($agenda->judul_rapat);
+                    $safeLocation = $this->sanitizeCsvValue($agenda->lokasi_ruang ?? 'Daring / Online');
+                    $safeCreator = $this->sanitizeCsvValue($agenda->creator?->name ?? 'Sistem');
+
+                    fputcsv($file, [
+                        $index,
+                        $safeTitle,
+                        ucfirst($agenda->jenis_rapat),
+                        strtoupper($agenda->tipe_rapat),
+                        $safeLocation,
+                        $agenda->waktu_mulai->format('d/m/Y H:i'),
+                        $agenda->waktu_selesai ? $agenda->waktu_selesai->format('d/m/Y H:i') : '-',
+                        ucfirst($agenda->status),
+                        $safeCreator,
+                        $agenda->attendances_count,
+                    ]);
+                }
+            });
 
             fclose($file);
         };

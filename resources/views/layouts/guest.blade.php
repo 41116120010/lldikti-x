@@ -15,6 +15,12 @@
     <meta name="publisher" content="LLDIKTI Wilayah X Kemendiktisaintek">
     <meta name="robots" content="@yield('meta_robots', 'index, follow, max-snippet:-1, max-image-preview:large')">
     <link rel="canonical" href="{{ url()->current() }}">
+
+    <!-- Webfonts: preconnect first so the DNS lookup and TLS handshake overlap
+         with the rest of the document instead of blocking first paint. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap">
     
     <!-- Geo Location Metadata -->
     <meta name="geo.region" content="ID-SB">
@@ -93,7 +99,10 @@
     @elseif (session('warning'))
         <div id="flash-modal-data" data-type="warning" data-title="Pemberitahuan" data-message="{{ session('warning') }}" data-auto-close="true" class="hidden"></div>
     @elseif ($errors->any())
-        <div id="flash-modal-data" data-type="warning" data-title="Kondisi Belum Terpenuhi" data-message="&bull; {{ implode('<br>&bull; ', array_map('e', $errors->all())) }}" data-auto-close="true" class="hidden"></div>
+        {{-- Errors are passed as a JSON array and rendered as text nodes by app.js.
+             Building them into an HTML string here would re-open the stored-XSS
+             path whenever a rejected value is echoed back in the message. --}}
+        <div id="flash-modal-data" data-type="warning" data-title="Kondisi Belum Terpenuhi" data-errors="{{ json_encode(array_values($errors->all()), JSON_UNESCAPED_UNICODE) }}" data-auto-close="true" class="hidden"></div>
     @endif
 
     <!-- Global Modal Structure -->

@@ -241,7 +241,25 @@ class AgendaManagementTest extends TestCase
     public function test_staff_can_view_agenda_details_via_non_admin_route_and_cannot_view_attendees(): void
     {
         $staff = User::where('role', 'staff')->first();
-        $agenda = Agenda::where('is_all_units', true)->first();
+
+        // Build the meeting this test needs rather than borrowing one from the seed.
+        // `Agenda::where('is_all_units', true)->first()` returns whichever universal
+        // meeting happens to hold the lowest id, and the dashboard lists only live or
+        // upcoming ones — so the moment that row was marked finished during UAT this
+        // assertion failed for reasons that had nothing to do with staff access.
+        // A meeting created here is ongoing, so it sorts ahead of the seeded backlog.
+        $agenda = Agenda::create([
+            'created_by' => User::where('role', 'administrator')->value('id'),
+            'judul_rapat' => 'Rapat Detail Staff ' . uniqid(),
+            'slug' => 'rapat-detail-staff-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Uji Detail Staff',
+            'waktu_mulai' => now()->subMinutes(30),
+            'waktu_selesai' => now()->addHour(),
+            'is_all_units' => true,
+            'status' => 'ongoing',
+        ]);
 
         // Check dashboard displays non-admin link for staff
         $dashboardResponse = $this->actingAs($staff)->get('/dashboard');

@@ -60,21 +60,16 @@
                             id="jenis_rapat" 
                             name="jenis_rapat" 
                             list="jenis_rapat_suggestions"
-                            value="{{ old('jenis_rapat', 'Rapat Koordinasi') }}" 
+                            value="{{ old('jenis_rapat', config('agenda.jenis_rapat_default')) }}" 
                             class="input w-full font-semibold @error('jenis_rapat') input-error @enderror" 
                             placeholder="Contoh: Rapat Koordinasi, Workshop, Rapat Pleno, dsb."
                             maxlength="100"
                             required
                         >
                         <datalist id="jenis_rapat_suggestions">
-                            <option value="Rapat Koordinasi">
-                            <option value="Rapat Pleno">
-                            <option value="Rapat Evaluasi & Monev">
-                            <option value="Konsinyasi / FGD">
-                            <option value="Rapat Terbatas / Pimpinan">
-                            <option value="Sosialisasi / Bimtek">
-                            <option value="Workshop / Lokakarya">
-                            <option value="Pertemuan Lainnya">
+                            @foreach (config('agenda.jenis_rapat_suggestions') as $suggestion)
+                                <option value="{{ $suggestion }}">
+                            @endforeach
                         </datalist>
                         <p class="text-[11px] text-slate-500 mt-1 font-medium">Ketik jenis pertemuan bebas atau pilih dari daftar saran.</p>
                         @error('jenis_rapat')

@@ -28,14 +28,56 @@ class Attendance extends Model
         ];
     }
 
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\Agenda, \App\Models\Attendance>
+     */
     public function agenda(): BelongsTo
     {
         return $this->belongsTo(Agenda::class);
     }
 
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\User, \App\Models\Attendance>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Unit kerja milik pegawai yang melakukan presensi ini.
+     *
+     * Used by AttendancePolicy on every authorisation check. Reading $attendance->user
+     * there would lazy-load the relation on each call; this uses the loaded relation
+     * when present and otherwise asks the database once, so the policy never
+     * triggers an N+1 or a lazy-loading violation.
+     */
+    public function attendeeUnitId(): ?int
+    {
+        if ($this->relationLoaded('user')) {
+            return $this->user?->unit_id;
+        }
+
+        $unitId = $this->user()->value('unit_id');
+
+        return $unitId === null ? null : (int) $unitId;
+    }
+
+    /**
+     * The agenda this attendance belongs to, resolved without a lazy load.
+     *
+     * Used by AttendancePolicy on every authorisation check. Reaching for
+     * $attendance->agenda there would lazy-load the relation, which adds a query
+     * per check and trips the strict lazy-loading guard. This uses the loaded
+     * relation when present and otherwise fetches the row once.
+     */
+    public function fetchAgenda(): ?Agenda
+    {
+        if ($this->relationLoaded('agenda')) {
+            return $this->agenda;
+        }
+
+        return $this->agenda()->first();
     }
 
     /**

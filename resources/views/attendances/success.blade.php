@@ -129,7 +129,7 @@
                 @if(Auth::user()->isAdministrator() || Auth::user()->isAdmin())
                     <div class="flex items-center justify-between">
                         <span class="text-slate-700 font-medium">Total Hadir Rapat:</span>
-                        <span class="font-mono font-bold text-slate-950">{{ $agenda->attendances->count() }} Pegawai</span>
+                        <span class="font-mono font-bold text-slate-950">{{ $agenda->attendances_count }} Pegawai</span>
                     </div>
                 @endif
             </div>
