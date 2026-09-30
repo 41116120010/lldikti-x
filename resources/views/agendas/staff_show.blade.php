@@ -195,18 +195,43 @@
                         @if($documentations->count() > 0)
                             <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                 @foreach($documentations as $doc)
-                                    <div class="group relative bg-slate-100 rounded-xl overflow-hidden border border-slate-300">
-                                        <img 
-                                            src="{{ Storage::disk('public')->url($doc->file_path) }}" 
-                                            alt="{{ $doc->caption ?? 'Dokumentasi Rapat' }}" 
-                                            class="w-full h-36 object-cover group-hover:scale-105 transition duration-300"
-                                        >
-                                        @if($doc->caption)
-                                            <div class="p-2 text-[11px] text-slate-800 font-semibold bg-white border-t border-slate-200 truncate" title="{{ $doc->caption }}">
-                                                {{ $doc->caption }}
+                                    @php
+                                        $ext = strtolower(pathinfo($doc->file_path, PATHINFO_EXTENSION));
+                                        $isPdf = $ext === 'pdf';
+                                        $isVideo = in_array($ext, ['mp4', 'mov', 'avi', 'webm']);
+                                        $docType = $isPdf ? 'pdf' : ($isVideo ? 'video' : 'image');
+                                    @endphp
+                                    <button 
+                                        type="button"
+                                        class="group text-left relative bg-slate-100 rounded-xl overflow-hidden border border-slate-300 cursor-pointer block focus:outline-hidden focus:ring-2 focus:ring-slate-900 transition shadow-xs hover:shadow-md"
+                                        data-doc-modal-trigger
+                                        data-doc-gallery="staff-agenda-docs"
+                                        data-doc-url="{{ Storage::disk('public')->url($doc->file_path) }}"
+                                        data-doc-caption="{{ $doc->caption ?? basename($doc->file_path) }}"
+                                        data-doc-agenda="{{ $agenda->judul_rapat }}"
+                                        data-doc-date="{{ $doc->created_at ? $doc->created_at->format('d/m/Y H:i') . ' WIB' : '' }}"
+                                        data-doc-type="{{ $docType }}"
+                                        aria-label="Lihat dokumentasi {{ $doc->caption ?? basename($doc->file_path) }}"
+                                    >
+                                        <div class="relative overflow-hidden">
+                                            <img 
+                                                src="{{ Storage::disk('public')->url($doc->file_path) }}" 
+                                                alt="{{ $doc->caption ?? 'Dokumentasi Rapat' }}" 
+                                                class="w-full h-36 object-cover group-hover:scale-105 transition duration-300"
+                                                loading="lazy" decoding="async"
+                                            >
+                                            <div class="absolute inset-0 bg-slate-950/0 group-hover:bg-slate-950/30 transition flex items-center justify-center">
+                                                <div class="px-2.5 py-1 rounded-full bg-slate-900/80 text-white text-[11px] font-bold flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition shadow-lg">
+                                                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                                                    <span>Lihat Foto</span>
+                                                </div>
                                             </div>
-                                        @endif
-                                    </div>
+                                        </div>
+                                        <div class="p-2 text-[11px] text-slate-800 font-semibold bg-white border-t border-slate-200 truncate flex items-center justify-between" title="{{ $doc->caption ?? 'Dokumentasi Rapat' }}">
+                                            <span class="truncate">{{ $doc->caption ?? 'Dokumentasi Rapat' }}</span>
+                                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-400 shrink-0 ml-1"><polyline points="9 18 15 12 9 6"/></svg>
+                                        </div>
+                                    </button>
                                 @endforeach
                             </div>
                         @else
@@ -345,4 +370,5 @@
 </div>
 
 @include('attendances.partials.selfie_preview_modal')
+@include('agendas.partials.documentation_preview_modal')
 @endsection

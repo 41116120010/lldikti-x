@@ -18,6 +18,9 @@ class AgendaSeeder extends Seeder
         $adminAkm   = User::where('username', 'admin_akademik')->first();
         $adminKlb   = User::where('username', 'admin_kelembagaan')->first();
 
+        $adminTu    = User::where('username', 'admin_tu')->first();
+        $staffAhmad = User::where('username', 'staff_ahmad')->first();
+
         $unitAkm = Unit::where('kode_unit', 'POKJA-AKM')->first();
         $unitKlb = Unit::where('kode_unit', 'POKJA-KLB')->first();
         $unitMutu = Unit::where('kode_unit', 'POKJA-MUTU')->first();
@@ -40,6 +43,59 @@ class AgendaSeeder extends Seeder
                 'waktu_selesai' => now()->addHours(2),
                 'is_all_units' => true,
                 'status' => 'ongoing',
+                'pimpinan_id' => $superadmin->id,
+                'notulis_id' => $adminKlb?->id ?? $superadmin->id,
+            ]
+        );
+        $agenda1->report_config = $agenda1->getDefaultReportConfig();
+        $agenda1->save();
+
+        // Seed 3 attendances (including pimpinan and notulis) with existing sample images
+        $attendees = [
+            [
+                'user' => $superadmin,
+                'selfie' => 'attendances/1/selfies/selfie_1_lkfmLfAzYBJ0Gtjt.jpg',
+                'signature' => 'attendances/1/signatures/sig_1_8nvcY3uYgJ91PT85.png',
+            ],
+            [
+                'user' => $adminKlb,
+                'selfie' => 'attendances/1/selfies/selfie_3_wsLRV1qcTkA7PBmC.jpg',
+                'signature' => 'attendances/1/signatures/sig_3_G5j7mN0Unn14OQM8.png',
+            ],
+            [
+                'user' => $staffAhmad,
+                'selfie' => 'attendances/1/selfies/selfie_6_PZjFUOK4TRUXWo9X.jpg',
+                'signature' => 'attendances/1/signatures/sig_6_ZVglWrZg1XrWtR4e.png',
+            ],
+        ];
+
+        foreach ($attendees as $att) {
+            if ($att['user']) {
+                \App\Models\Attendance::updateOrCreate(
+                    [
+                        'agenda_id' => $agenda1->id,
+                        'user_id' => $att['user']->id,
+                    ],
+                    [
+                        'selfie_path' => $att['selfie'],
+                        'signature_path' => $att['signature'],
+                        'signed_at' => now()->subMinutes(30),
+                        'ip_address' => '127.0.0.1',
+                        'user_agent' => 'Mozilla/5.0 (Enterprise SIPERAPAT)',
+                    ]
+                );
+            }
+        }
+
+        // Seed documentation for agenda1 to satisfy annex parity
+        \App\Models\AgendaDocumentation::updateOrCreate(
+            [
+                'agenda_id' => $agenda1->id,
+                'file_path' => 'documentations/1/jsObY4pNbzLxPC9joeLqsjn9AcJ5kAbv.jpg',
+            ],
+            [
+                'caption' => 'Sesi Pembahasan Evaluasi PDDikti Semester Genap',
+                'sort_order' => 1,
             ]
         );
 

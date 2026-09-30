@@ -389,7 +389,47 @@
             </h3>
             <div class="space-y-2 text-xs text-slate-200 font-medium">
                 <div>Total Presensi Tercatat: <strong class="text-white">{{ $agenda->attendances()->count() }} orang</strong></div>
-                <div>Dokumentasi Foto: <strong class="text-white">{{ $agenda->documentations()->count() }} berkas</strong></div>
+                <div class="flex items-center justify-between">
+                    <div>Dokumentasi Foto: <strong class="text-white">{{ $agenda->documentations()->count() }} berkas</strong></div>
+                    @if($agenda->documentations()->count() > 0)
+                        @php
+                            $firstDoc = $agenda->documentations()->first();
+                        @endphp
+                        @if($firstDoc)
+                            <button 
+                                type="button" 
+                                class="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 underline cursor-pointer"
+                                data-doc-modal-trigger
+                                data-doc-gallery="edit-agenda-docs"
+                                data-doc-url="{{ Storage::disk('public')->url($firstDoc->file_path) }}"
+                                data-doc-caption="{{ $firstDoc->caption ?? basename($firstDoc->file_path) }}"
+                                data-doc-agenda="{{ $agenda->judul_rapat }}"
+                                data-doc-date="{{ $firstDoc->created_at ? $firstDoc->created_at->format('d/m/Y H:i') . ' WIB' : '' }}"
+                            >
+                                Lihat Galeri
+                            </button>
+                        @endif
+                    @endif
+                </div>
+                @if($agenda->documentations()->count() > 0)
+                    <div class="flex gap-1.5 pt-1 overflow-x-auto pb-1">
+                        @foreach($agenda->documentations()->take(4)->get() as $d)
+                            <button
+                                type="button"
+                                class="w-10 h-10 rounded-lg overflow-hidden border border-slate-700 hover:border-emerald-400 shrink-0 cursor-pointer transition"
+                                data-doc-modal-trigger
+                                data-doc-gallery="edit-agenda-docs"
+                                data-doc-url="{{ Storage::disk('public')->url($d->file_path) }}"
+                                data-doc-caption="{{ $d->caption ?? basename($d->file_path) }}"
+                                data-doc-agenda="{{ $agenda->judul_rapat }}"
+                                data-doc-date="{{ $d->created_at ? $d->created_at->format('d/m/Y H:i') . ' WIB' : '' }}"
+                                title="{{ $d->caption ?? 'Dokumentasi' }}"
+                            >
+                                <img src="{{ Storage::disk('public')->url($d->file_path) }}" alt="Dokumentasi" class="w-full h-full object-cover">
+                            </button>
+                        @endforeach
+                    </div>
+                @endif
                 <div>Notulensi: <strong class="{{ $agenda->notulensi ? 'text-emerald-400 font-bold' : 'text-slate-400' }}">{{ $agenda->notulensi ? 'Tersedia' : 'Belum Diisi' }}</strong></div>
                 <div class="pt-2 border-t border-slate-800 text-[11px] text-slate-400">Dibuat oleh: {{ $agenda->creator?->name ?? 'Sistem' }}</div>
             </div>
@@ -559,4 +599,6 @@ window.addEventListener('page:loaded', initAgendaEditForm);
 @if($agenda->surat_edaran_path)
     @include('agendas.partials.surat_edaran_preview', ['agenda' => $agenda, 'modalOnly' => true])
 @endif
+
+@include('agendas.partials.documentation_preview_modal')
 @endsection

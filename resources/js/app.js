@@ -1004,11 +1004,16 @@ const PhotoPreviewUploader = {
                 const card = document.createElement('div');
                 card.className = 'relative group bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs hover:border-slate-300 transition';
                 card.innerHTML = `
-                    <div class="aspect-4/3 relative bg-slate-100 overflow-hidden flex items-center justify-center">
-                        <img src="${url}" alt="${file.name}" class="w-full h-24 sm:h-28 object-cover">
+                    <div class="aspect-4/3 relative bg-slate-100 overflow-hidden flex items-center justify-center cursor-pointer group/thumb" title="Klik untuk pratinjau perbesar">
+                        <img src="${url}" alt="${file.name}" class="w-full h-24 sm:h-28 object-cover group-hover/thumb:scale-105 transition duration-300">
+                        <div class="absolute inset-0 bg-slate-950/0 group-hover/thumb:bg-slate-950/25 transition flex items-center justify-center">
+                            <div class="w-7 h-7 rounded-full bg-slate-900/80 text-white flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition shadow-md">
+                                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                            </div>
+                        </div>
                         <button 
                             type="button" 
-                            class="photo-preview-remove absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shadow-md transition cursor-pointer"
+                            class="photo-preview-remove absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shadow-md transition cursor-pointer z-10"
                             title="Hapus foto ini dari antrean upload"
                             aria-label="Hapus foto ${file.name}"
                             data-index="${index}"
@@ -1024,6 +1029,26 @@ const PhotoPreviewUploader = {
                         <div class="text-[10px] text-slate-500 font-mono font-medium">${formatSize(file.size)}</div>
                     </div>
                 `;
+
+                const thumbArea = card.querySelector('.group\\/thumb');
+                if (thumbArea) {
+                    thumbArea.addEventListener('click', (e) => {
+                        if (e.target.closest('.photo-preview-remove')) return;
+                        if (window.documentationPreviewModal) {
+                            window.documentationPreviewModal.open({
+                                items: [{
+                                    url: url,
+                                    caption: file.name,
+                                    agendaTitle: 'Pratinjau Antrean Berkas',
+                                    date: formatSize(file.size),
+                                    downloadUrl: url,
+                                    fileType: 'image'
+                                }],
+                                currentIndex: 0
+                            });
+                        }
+                    });
+                }
 
                 const removeBtn = card.querySelector('.photo-preview-remove');
                 removeBtn.addEventListener('click', (e) => {

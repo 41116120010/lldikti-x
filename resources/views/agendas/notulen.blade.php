@@ -727,7 +727,17 @@
                                     <tr>
                                         @foreach($chunk as $doc)
                                             <td width="50%" align="center" valign="top" style="padding: 4pt; border: none;">
-                                                <div style="border: 1px solid #94a3b8; padding: 3pt; background: #ffffff; text-align: center;">
+                                                <div 
+                                                    class="cursor-pointer group/doc hover:opacity-90 transition"
+                                                    data-doc-modal-trigger
+                                                    data-doc-gallery="notulen-sheet-docs"
+                                                    data-doc-url="{{ Storage::disk('public')->url($doc->file_path) }}"
+                                                    data-doc-caption="{{ $doc->caption ?? basename($doc->file_path) }}"
+                                                    data-doc-agenda="{{ $agenda->judul_rapat }}"
+                                                    data-doc-date="{{ $doc->created_at ? $doc->created_at->format('d/m/Y H:i') . ' WIB' : '' }}"
+                                                    style="border: 1px solid #94a3b8; padding: 3pt; background: #ffffff; text-align: center;"
+                                                    title="Klik untuk pratinjau foto perbesar"
+                                                >
                                                     <img src="{{ Storage::disk('public')->url($doc->file_path) }}" alt="Foto Dokumentasi" style="width: 100%; max-height: 120px; object-fit: contain; display: block; margin: 0 auto;">
                                                     @if($doc->caption)
                                                         <div style="font-size: 7.5pt; color: #334155; margin-top: 2pt; font-style: italic; font-family: 'Times New Roman', Times, serif;">{{ $doc->caption }}</div>
@@ -874,11 +884,58 @@
                             </div>
                             <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                 @foreach($documentations as $doc)
-                                    <div class="relative group bg-slate-50 rounded-xl overflow-hidden border border-slate-300">
-                                        <img src="{{ Storage::disk('public')->url($doc->file_path) }}" alt="Dokumentasi Rapat" class="w-full h-24 object-cover">
-                                        <div class="p-1.5 bg-white text-[10px] text-slate-900 font-bold truncate border-t border-slate-200 flex items-center justify-between">
-                                            <span class="truncate">{{ $doc->caption ?? 'Dokumentasi' }}</span>
-                                            <a href="{{ Storage::disk('public')->url($doc->file_path) }}" target="_blank" class="text-blue-600 hover:underline shrink-0 ml-1">Lihat</a>
+                                    <div class="relative group bg-slate-50 rounded-xl overflow-hidden border border-slate-300 shadow-xs flex flex-col justify-between">
+                                        <button 
+                                            type="button"
+                                            class="w-full text-left relative block cursor-pointer group/thumb focus:outline-hidden"
+                                            data-doc-modal-trigger
+                                            data-doc-gallery="modal-stored-docs"
+                                            data-doc-url="{{ Storage::disk('public')->url($doc->file_path) }}"
+                                            data-doc-caption="{{ $doc->caption ?? basename($doc->file_path) }}"
+                                            data-doc-agenda="{{ $agenda->judul_rapat }}"
+                                            data-doc-date="{{ $doc->created_at ? $doc->created_at->format('d/m/Y H:i') . ' WIB' : '' }}"
+                                            aria-label="Lihat foto {{ $doc->caption ?? basename($doc->file_path) }}"
+                                        >
+                                            <img src="{{ Storage::disk('public')->url($doc->file_path) }}" alt="Dokumentasi Rapat" class="w-full h-24 object-cover group-hover/thumb:scale-105 transition duration-300">
+                                            <div class="absolute inset-0 bg-slate-950/0 group-hover/thumb:bg-slate-950/20 transition flex items-center justify-center">
+                                                <div class="w-7 h-7 rounded-full bg-slate-900/80 text-white flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition shadow-md">
+                                                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                                                </div>
+                                            </div>
+                                        </button>
+                                        <div class="p-1.5 bg-white text-[10px] text-slate-900 font-bold border-t border-slate-200 flex items-center justify-between gap-1">
+                                            <span class="truncate flex-1" title="{{ $doc->caption ?? 'Dokumentasi' }}">{{ $doc->caption ?? 'Dokumentasi' }}</span>
+                                            <div class="flex items-center gap-1 shrink-0">
+                                                <button 
+                                                    type="button" 
+                                                    class="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-[10px] font-semibold"
+                                                    data-doc-modal-trigger
+                                                    data-doc-gallery="modal-stored-docs"
+                                                    data-doc-url="{{ Storage::disk('public')->url($doc->file_path) }}"
+                                                    data-doc-caption="{{ $doc->caption ?? basename($doc->file_path) }}"
+                                                    data-doc-agenda="{{ $agenda->judul_rapat }}"
+                                                    data-doc-date="{{ $doc->created_at ? $doc->created_at->format('d/m/Y H:i') . ' WIB' : '' }}"
+                                                >
+                                                    Lihat
+                                                </button>
+                                                <form 
+                                                    action="{{ route('admin.agendas.delete-documentation', [$agenda, $doc]) }}" 
+                                                    method="POST" 
+                                                    class="inline"
+                                                    onsubmit="return confirm('Apakah Anda yakin ingin menghapus foto dokumentasi ini?')"
+                                                >
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button 
+                                                        type="submit" 
+                                                        class="text-rose-600 hover:text-rose-800 p-0.5 rounded hover:bg-rose-50 transition cursor-pointer" 
+                                                        title="Hapus foto dari database"
+                                                        aria-label="Hapus foto {{ $doc->caption ?? 'Dokumentasi' }}"
+                                                    >
+                                                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                                                    </button>
+                                                </form>
+                                            </div>
                                         </div>
                                     </div>
                                 @endforeach
@@ -1571,5 +1628,6 @@
 @endif
 
 @include('attendances.partials.selfie_preview_modal')
+@include('agendas.partials.documentation_preview_modal')
 @endsection
 

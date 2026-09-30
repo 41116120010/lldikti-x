@@ -565,44 +565,61 @@
                 <div class="flex gap-4 overflow-x-auto pb-2">
                     @foreach($documentations as $doc)
                         <div class="shrink-0 w-40 group">
-                            <div class="relative bg-slate-100 rounded-xl overflow-hidden border border-slate-300">
-                                @php
-                                    $ext = strtolower(pathinfo($doc->file_path, PATHINFO_EXTENSION));
-                                    $isImage = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']);
-                                    $isPdf = $ext === 'pdf';
-                                    $isVideo = in_array($ext, ['mp4', 'mov', 'avi', 'webm']);
-                                @endphp
+                            @php
+                                $ext = strtolower(pathinfo($doc->file_path, PATHINFO_EXTENSION));
+                                $isImage = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']);
+                                $isPdf = $ext === 'pdf';
+                                $isVideo = in_array($ext, ['mp4', 'mov', 'avi', 'webm']);
+                                $docType = $isPdf ? 'pdf' : ($isVideo ? 'video' : 'image');
+                            @endphp
 
+                            <button 
+                                type="button"
+                                class="w-full text-left relative bg-slate-100 rounded-xl overflow-hidden border border-slate-300 block cursor-pointer group/thumb focus:outline-hidden focus:ring-2 focus:ring-slate-900"
+                                data-doc-modal-trigger
+                                data-doc-gallery="agenda-docs"
+                                data-doc-url="{{ Storage::disk('public')->url($doc->file_path) }}"
+                                data-doc-caption="{{ $doc->caption ?? basename($doc->file_path) }}"
+                                data-doc-agenda="{{ $agenda->judul_rapat }}"
+                                data-doc-date="{{ $doc->created_at ? $doc->created_at->format('d/m/Y H:i') . ' WIB' : '' }}"
+                                data-doc-type="{{ $docType }}"
+                                aria-label="Lihat foto {{ $doc->caption ?? basename($doc->file_path) }}"
+                            >
                                 @if($isImage)
                                     <img 
                                         src="{{ Storage::disk('public')->url($doc->file_path) }}" 
                                         alt="{{ $doc->caption ?? 'Dokumentasi Rapat' }}" 
-                                        class="w-full h-28 object-cover group-hover:scale-105 transition duration-300"
+                                        class="w-full h-28 object-cover group-hover/thumb:scale-105 transition duration-300"
                                         loading="lazy" decoding="async"
                                     >
+                                    <div class="absolute inset-0 bg-slate-950/0 group-hover/thumb:bg-slate-950/25 transition flex items-center justify-center">
+                                        <div class="w-8 h-8 rounded-full bg-slate-900/80 text-white flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition shadow-md">
+                                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                                        </div>
+                                    </div>
                                 @elseif($isPdf)
-                                    <div class="w-full h-28 flex items-center justify-center bg-slate-50">
+                                    <div class="w-full h-28 flex items-center justify-center bg-slate-50 group-hover/thumb:bg-slate-100 transition">
                                         <div class="text-center">
                                             <span class="inline-block px-2 py-0.5 bg-rose-500 text-white text-[10px] font-bold rounded mb-1">PDF</span>
                                             <div class="text-[10px] text-slate-500 font-medium px-2 truncate">{{ basename($doc->file_path) }}</div>
                                         </div>
                                     </div>
                                 @elseif($isVideo)
-                                    <div class="w-full h-28 flex items-center justify-center bg-slate-900">
+                                    <div class="w-full h-28 flex items-center justify-center bg-slate-900 group-hover/thumb:bg-slate-800 transition">
                                         <div class="text-center">
                                             <span class="inline-block px-2 py-0.5 bg-rose-500 text-white text-[10px] font-bold rounded mb-1">VID</span>
                                             <div class="text-[10px] text-slate-400 font-medium px-2 truncate">{{ basename($doc->file_path) }}</div>
                                         </div>
                                     </div>
                                 @else
-                                    <div class="w-full h-28 flex items-center justify-center bg-slate-50">
+                                    <div class="w-full h-28 flex items-center justify-center bg-slate-50 group-hover/thumb:bg-slate-100 transition">
                                         <div class="text-center">
                                             <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-400 mx-auto"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                                             <div class="text-[10px] text-slate-500 font-medium px-2 mt-1 truncate">{{ basename($doc->file_path) }}</div>
                                         </div>
                                     </div>
                                 @endif
-                            </div>
+                            </button>
 
                             <div class="mt-2 px-0.5">
                                 <div class="text-[11px] text-slate-800 font-semibold truncate" title="{{ $doc->caption ?? basename($doc->file_path) }}">
@@ -614,17 +631,24 @@
                             </div>
 
                             <div class="mt-1.5 flex items-center gap-1">
-                                <a 
-                                    href="{{ Storage::disk('public')->url($doc->file_path) }}" 
-                                    target="_blank" 
-                                    class="flex-1 text-center px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold rounded border border-slate-200 transition"
+                                <button 
+                                    type="button" 
+                                    class="flex-1 text-center px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold rounded border border-slate-200 transition cursor-pointer"
+                                    data-doc-modal-trigger
+                                    data-doc-gallery="agenda-docs"
+                                    data-doc-url="{{ Storage::disk('public')->url($doc->file_path) }}"
+                                    data-doc-caption="{{ $doc->caption ?? basename($doc->file_path) }}"
+                                    data-doc-agenda="{{ $agenda->judul_rapat }}"
+                                    data-doc-date="{{ $doc->created_at ? $doc->created_at->format('d/m/Y H:i') . ' WIB' : '' }}"
+                                    data-doc-type="{{ $docType }}"
                                 >
-                                    Preview
-                                </a>
+                                    Pratinjau
+                                </button>
                                 <a 
                                     href="{{ Storage::disk('public')->url($doc->file_path) }}" 
                                     download 
                                     class="px-1.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded border border-slate-200 transition"
+                                    title="Unduh Berkas"
                                 >
                                     <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                                 </a>
@@ -766,4 +790,5 @@
 @endcan
 
 @include('attendances.partials.selfie_preview_modal')
+@include('agendas.partials.documentation_preview_modal')
 @endsection
