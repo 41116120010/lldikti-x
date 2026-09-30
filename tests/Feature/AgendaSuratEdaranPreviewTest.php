@@ -278,4 +278,162 @@ class AgendaSuratEdaranPreviewTest extends TestCase
         $response->assertSee('modal-surat-preview-' . $agenda->id);
         $response->assertSee('surat_tu.pdf');
     }
+
+    public function test_admin_agenda_edit_shows_active_surat_preview_card_and_modal_dialog(): void
+    {
+        $superadmin = $this->getOrCreateSuperadmin();
+
+        $agenda = Agenda::create([
+            'judul_rapat' => 'Rapat Koordinasi Edit Preview',
+            'tanggal_rapat' => now()->toDateString(),
+            'waktu_mulai' => now()->addHour(),
+            'lokasi_ruang' => 'Ruang Rapat A',
+            'status' => 'scheduled',
+            'created_by' => $superadmin->id,
+            'is_all_units' => true,
+            'surat_edaran_path' => 'surat_edaran/surat_aktif.pdf',
+        ]);
+
+        $response = $this->actingAs($superadmin)->get("/admin/agendas/{$agenda->id}/edit");
+
+        $response->assertStatus(200);
+        $response->assertSee('Berkas Undangan Aktif Terlampir');
+        $response->assertSee('Pratinjau Berkas');
+        $response->assertSee('Unduh');
+        $response->assertSee('surat-edaran-client-preview');
+        $response->assertSee('modal-surat-preview-' . $agenda->id);
+        $response->assertSee('handleSuratEdaranChange', false);
+    }
+
+    public function test_admin_agenda_create_contains_client_side_preview_container_and_handlers(): void
+    {
+        $superadmin = $this->getOrCreateSuperadmin();
+
+        $response = $this->actingAs($superadmin)->get('/admin/agendas/create');
+
+        $response->assertStatus(200);
+        $response->assertSee('Unggah Dokumen Undangan Resmi');
+        $response->assertSee('surat-edaran-client-preview');
+        $response->assertSee('preview-icon-box');
+        $response->assertSee('preview-filename');
+        $response->assertSee('handleSuratEdaranChange', false);
+        $response->assertSee('clearSuratEdaranInput', false);
+    }
+
+    public function test_notulen_workstation_shows_surat_undangan_trigger_and_modal_when_surat_exists(): void
+    {
+        $superadmin = $this->getOrCreateSuperadmin();
+
+        $agenda = Agenda::create([
+            'judul_rapat' => 'Rapat Notulensi Dengan Surat',
+            'tanggal_rapat' => now()->toDateString(),
+            'waktu_mulai' => now()->subHour(),
+            'lokasi_ruang' => 'Ruang Notulensi',
+            'status' => 'ongoing',
+            'created_by' => $superadmin->id,
+            'is_all_units' => true,
+            'surat_edaran_path' => 'surat_edaran/undangan_notulen.pdf',
+        ]);
+
+        $response = $this->actingAs($superadmin)->get("/admin/agendas/{$agenda->id}/notulen");
+
+        $response->assertStatus(200);
+        $response->assertSee('Surat Undangan');
+        $response->assertSee('modal-surat-preview-' . $agenda->id);
+        $response->assertSee('suratEdaranImageViewer', false);
+    }
+
+    public function test_notulen_workstation_does_not_show_surat_trigger_when_no_surat(): void
+    {
+        $superadmin = $this->getOrCreateSuperadmin();
+
+        $agenda = Agenda::create([
+            'judul_rapat' => 'Rapat Notulensi Tanpa Surat',
+            'tanggal_rapat' => now()->toDateString(),
+            'waktu_mulai' => now()->subHour(),
+            'lokasi_ruang' => 'Ruang Notulensi 2',
+            'status' => 'ongoing',
+            'created_by' => $superadmin->id,
+            'is_all_units' => true,
+            'surat_edaran_path' => null,
+        ]);
+
+        $response = $this->actingAs($superadmin)->get("/admin/agendas/{$agenda->id}/notulen");
+
+        $response->assertStatus(200);
+        $response->assertDontSee('modal-surat-preview-' . $agenda->id);
+    }
+
+    public function test_attendance_checkin_shows_surat_undangan_trigger_and_modal_when_surat_exists(): void
+    {
+        $superadmin = $this->getOrCreateSuperadmin();
+
+        $agenda = Agenda::create([
+            'judul_rapat' => 'Rapat Presensi Terbuka',
+            'tanggal_rapat' => now()->toDateString(),
+            'waktu_mulai' => now()->subMinutes(10),
+            'lokasi_ruang' => 'Ruang Sidang Bersama',
+            'status' => 'ongoing',
+            'created_by' => $superadmin->id,
+            'is_all_units' => true,
+            'surat_edaran_path' => 'surat_edaran/undangan_terbuka.png',
+        ]);
+
+        $response = $this->actingAs($superadmin)->get(route('attendances.create', $agenda));
+
+        $response->assertStatus(200);
+        $response->assertSee('Lihat Surat Undangan Resmi');
+        $response->assertSee('modal-surat-preview-' . $agenda->id);
+        $response->assertSee('undangan_terbuka.png');
+        $response->assertSee('suratEdaranImageViewer', false);
+    }
+
+    public function test_attendance_checkin_does_not_show_surat_trigger_when_no_surat(): void
+    {
+        $superadmin = $this->getOrCreateSuperadmin();
+
+        $agenda = Agenda::create([
+            'judul_rapat' => 'Rapat Presensi Tanpa Undangan',
+            'tanggal_rapat' => now()->toDateString(),
+            'waktu_mulai' => now()->subMinutes(10),
+            'lokasi_ruang' => 'Ruang 4',
+            'status' => 'ongoing',
+            'created_by' => $superadmin->id,
+            'is_all_units' => true,
+            'surat_edaran_path' => null,
+        ]);
+
+        $response = $this->actingAs($superadmin)->get(route('attendances.create', $agenda));
+
+        $response->assertStatus(200);
+        $response->assertDontSee('Lihat Surat Undangan Resmi');
+        $response->assertDontSee('modal-surat-preview-' . $agenda->id);
+    }
+
+    public function test_report_detail_shows_surat_edaran_preview_and_interactive_controls(): void
+    {
+        $superadmin = $this->getOrCreateSuperadmin();
+
+        $agenda = Agenda::create([
+            'judul_rapat' => 'Rapat Laporan Akhir',
+            'tanggal_rapat' => now()->toDateString(),
+            'waktu_mulai' => now()->subHours(2),
+            'waktu_selesai' => now()->subHour(),
+            'lokasi_ruang' => 'Ruang Laporan',
+            'status' => 'completed',
+            'created_by' => $superadmin->id,
+            'is_all_units' => true,
+            'surat_edaran_path' => 'surat_edaran/laporan_lampiran.jpg',
+        ]);
+
+        $response = $this->actingAs($superadmin)->get("/admin/reports/{$agenda->id}");
+
+        $response->assertStatus(200);
+        $response->assertSee('Surat Edaran / Undangan');
+        $response->assertSee('GAMBAR');
+        $response->assertSee('modal-surat-preview-' . $agenda->id);
+        $response->assertSee('suratEdaranImageViewer', false);
+        $response->assertSee('suratEdaranImageViewer.zoomIn', false);
+        $response->assertSee('suratEdaranImageViewer.rotate', false);
+    }
 }

@@ -267,6 +267,40 @@
                         <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>
                     @enderror
                 </div>
+
+                <!-- Live Client-side Preview Container -->
+                <div id="surat-edaran-client-preview" class="hidden p-3.5 bg-slate-50 border border-slate-300 rounded-xl space-y-3">
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <!-- Thumbnail / Format Icon Container -->
+                            <div id="preview-icon-box" class="w-12 h-12 rounded-lg bg-slate-200 border border-slate-300 flex items-center justify-center shrink-0 overflow-hidden">
+                                <!-- Dynamic Icon / Thumbnail injected here -->
+                            </div>
+                            <div class="min-w-0">
+                                <div id="preview-filename" class="text-xs font-bold text-slate-900 truncate">nama_dokumen.pdf</div>
+                                <div class="flex items-center gap-2 text-[11px] text-slate-600 font-medium mt-0.5">
+                                    <span id="preview-filesize">0 KB</span>
+                                    <span>&bull;</span>
+                                    <span id="preview-filetype" class="uppercase font-mono font-bold text-slate-700">PDF</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button 
+                            type="button" 
+                            onclick="clearSuratEdaranInput()" 
+                            class="button small secondary text-xs font-bold text-rose-700 border-rose-200 hover:bg-rose-50 flex items-center gap-1.5 shrink-0 min-h-[36px] cursor-pointer"
+                            title="Batalkan pilihan berkas ini"
+                        >
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            <span>Batal</span>
+                        </button>
+                    </div>
+
+                    <!-- Image Preview Viewport (visible only for image uploads) -->
+                    <div id="preview-image-viewport" class="hidden rounded-lg border border-slate-200 bg-white p-2 flex items-center justify-center max-h-56 overflow-hidden">
+                        <img id="preview-image-img" src="" alt="Pratinjau Gambar Berkas" class="max-h-52 w-auto object-contain rounded">
+                    </div>
+                </div>
             </div>
 
             <!-- Status Rapat & Action Buttons -->
@@ -359,10 +393,86 @@ function toggleUnitList(show) {
     }
 }
 
+function handleSuratEdaranChange(event) {
+    const fileInput = event.target;
+    const previewContainer = document.getElementById('surat-edaran-client-preview');
+    const iconBox = document.getElementById('preview-icon-box');
+    const filenameEl = document.getElementById('preview-filename');
+    const filesizeEl = document.getElementById('preview-filesize');
+    const filetypeEl = document.getElementById('preview-filetype');
+    const imageViewport = document.getElementById('preview-image-viewport');
+    const imageImg = document.getElementById('preview-image-img');
+
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        if (previewContainer) previewContainer.classList.add('hidden');
+        return;
+    }
+
+    const file = fileInput.files[0];
+    const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
+    const sizeInKB = Math.round(file.size / 1024);
+    const sizeText = file.size > 1024 * 1024 ? `${sizeInMB} MB` : `${sizeInKB} KB`;
+
+    filenameEl.textContent = file.name;
+    filesizeEl.textContent = sizeText;
+
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    const isImage = file.type.startsWith('image/');
+
+    if (isImage) {
+        filetypeEl.textContent = 'Gambar (' + (file.name.split('.').pop() || 'IMG').toUpperCase() + ')';
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            imageImg.src = e.target.result;
+            imageViewport.classList.remove('hidden');
+            iconBox.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover">`;
+        };
+        reader.readAsDataURL(file);
+    } else if (isPdf) {
+        filetypeEl.textContent = 'Dokumen PDF';
+        imageViewport.classList.add('hidden');
+        imageImg.src = '';
+        iconBox.innerHTML = `
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" class="text-rose-600">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+            </svg>
+        `;
+    } else {
+        filetypeEl.textContent = (file.name.split('.').pop() || 'BERKAS').toUpperCase();
+        imageViewport.classList.add('hidden');
+        imageImg.src = '';
+        iconBox.innerHTML = `
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-600">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+            </svg>
+        `;
+    }
+
+    previewContainer.classList.remove('hidden');
+}
+
+function clearSuratEdaranInput() {
+    const fileInput = document.getElementById('surat_edaran');
+    const previewContainer = document.getElementById('surat-edaran-client-preview');
+    const imageViewport = document.getElementById('preview-image-viewport');
+    const imageImg = document.getElementById('preview-image-img');
+
+    if (fileInput) fileInput.value = '';
+    if (previewContainer) previewContainer.classList.add('hidden');
+    if (imageViewport) imageViewport.classList.add('hidden');
+    if (imageImg) imageImg.src = '';
+}
+
 function initAgendaForm() {
     const tipeRapat = document.getElementById('tipe_rapat');
     if (tipeRapat) {
         toggleFormatFields(tipeRapat.value);
+    }
+
+    const suratEdaranInput = document.getElementById('surat_edaran');
+    if (suratEdaranInput && !suratEdaranInput.dataset.previewBound) {
+        suratEdaranInput.dataset.previewBound = 'true';
+        suratEdaranInput.addEventListener('change', handleSuratEdaranChange);
     }
 }
 

@@ -216,8 +216,8 @@ class DocumentOptionEffectivenessTest extends TestCase
 
         // The block itself is untouched: same three rows, same names, same NIPs.
         $this->assertCount(3, $this->docxRows($without));
-        $this->assertStringContainsString('Ahmad Syukron', $without);
-        $this->assertStringContainsString('Dewi Lestari', $without);
+        $this->assertStringContainsString($agenda->nama_pimpinan, $without);
+        $this->assertStringContainsString($agenda->nama_notulis, $without);
     }
 
     public function test_the_two_formats_print_the_same_number_of_images(): void

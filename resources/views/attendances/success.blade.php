@@ -63,12 +63,33 @@
                 <div class="space-y-3">
                     <div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-700 font-mono">Bukti Autentikasi Kehadiran:</div>
                     <div class="grid grid-cols-2 gap-4">
-                        <!-- Selfie Thumbnail -->
+                        <!-- Selfie Thumbnail (Interactive Click to Preview) -->
                         <div class="p-3 bg-slate-50 rounded-xl border border-slate-300 text-center space-y-2 print:border-slate-300">
-                            <div class="text-[11px] font-bold text-slate-900">Foto Selfie Wajah</div>
-                            <div class="w-full aspect-[4/3] max-w-[200px] mx-auto rounded-lg overflow-hidden bg-slate-200 border border-slate-300">
-                                <img src="{{ Storage::disk('public')->url($attendance->selfie_path) }}" alt="Foto Selfie" class="w-full h-full object-cover">
+                            <div class="text-[11px] font-bold text-slate-900 flex items-center justify-center gap-1.5">
+                                <span>Foto Selfie Wajah</span>
+                                <span class="print:hidden text-[10px] text-slate-500 font-normal">(Klik perbesar)</span>
                             </div>
+                            <button 
+                                type="button" 
+                                data-selfie-modal-trigger
+                                data-selfie-url="{{ Storage::disk('public')->url($attendance->selfie_path) }}"
+                                data-user-name="{{ $attendance->user->name }}"
+                                data-user-nip="{{ $attendance->user->nip ?? '-' }}"
+                                data-unit-name="{{ $attendance->user->unit?->kode_unit ? $attendance->user->unit->kode_unit . ' — ' . $attendance->user->unit->nama_unit : 'Tingkat Lembaga' }}"
+                                data-signed-at="{{ $attendance->signed_at->format('d/m/Y H:i:s') }} WIB"
+                                data-ip-address="{{ $attendance->ip_address ?? '127.0.0.1' }}"
+                                class="group relative w-full aspect-[4/3] max-w-[200px] mx-auto rounded-lg overflow-hidden bg-slate-200 border border-slate-300 hover:border-slate-900 hover:ring-2 hover:ring-slate-400 block cursor-pointer transition shadow-2xs"
+                                title="Klik untuk memperbesar & memverifikasi Foto Selfie"
+                                aria-label="Perbesar Foto Selfie"
+                            >
+                                <img src="{{ Storage::disk('public')->url($attendance->selfie_path) }}" alt="Foto Selfie" class="w-full h-full object-cover group-hover:scale-105 transition duration-200">
+                                <div class="absolute inset-0 bg-slate-950/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none print:hidden">
+                                    <span class="bg-slate-900/90 text-white text-[10px] font-bold px-2 py-1 rounded-md flex items-center gap-1 shadow-xs">
+                                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                                        <span>Perbesar</span>
+                                    </span>
+                                </div>
+                            </button>
                         </div>
 
                         <!-- Signature Thumbnail -->
@@ -169,4 +190,6 @@
     }
 }
 </style>
+
+@include('attendances.partials.selfie_preview_modal')
 @endsection

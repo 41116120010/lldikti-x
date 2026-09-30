@@ -290,14 +290,52 @@
                     <!-- Attendee List -->
                     <div class="p-4 divide-y divide-slate-200">
                         @forelse($attendances as $attendance)
-                            <div class="py-2.5 first:pt-0 last:pb-0 flex items-center gap-2.5 text-xs">
-                                <div class="w-7 h-7 rounded-full bg-slate-900 text-white font-bold flex items-center justify-center text-[10px] shrink-0">
-                                    {{ substr($attendance->user->name, 0, 2) }}
+                            <div class="py-2.5 first:pt-0 last:pb-0 flex items-center justify-between gap-2.5 text-xs group">
+                                <div class="flex items-center gap-2.5 min-w-0">
+                                    @if($attendance->selfie_path)
+                                        <button 
+                                            type="button" 
+                                            data-selfie-modal-trigger
+                                            data-selfie-url="{{ Storage::disk('public')->url($attendance->selfie_path) }}"
+                                            data-user-name="{{ $attendance->user->name }}"
+                                            data-user-nip="{{ $attendance->user->nip ?? '-' }}"
+                                            data-unit-name="{{ $attendance->user->unit?->kode_unit ? $attendance->user->unit->kode_unit . ' — ' . $attendance->user->unit->nama_unit : 'Tingkat Lembaga' }}"
+                                            data-signed-at="{{ $attendance->signed_at->format('d/m/Y H:i:s') }} WIB"
+                                            data-ip-address="{{ $attendance->ip_address ?? '127.0.0.1' }}"
+                                            class="w-8 h-8 rounded-full overflow-hidden border border-slate-300 hover:border-slate-800 hover:ring-2 hover:ring-slate-400 transition shrink-0 cursor-pointer shadow-2xs"
+                                            title="Klik untuk memverifikasi foto selfie {{ $attendance->user->name }}"
+                                            aria-label="Verifikasi foto selfie {{ $attendance->user->name }}"
+                                        >
+                                            <img src="{{ Storage::disk('public')->url($attendance->selfie_path) }}" alt="{{ $attendance->user->name }}" class="w-full h-full object-cover" loading="lazy" decoding="async">
+                                        </button>
+                                    @else
+                                        <div class="w-8 h-8 rounded-full bg-slate-900 text-white font-bold flex items-center justify-center text-[10px] shrink-0">
+                                            {{ substr($attendance->user->name, 0, 2) }}
+                                        </div>
+                                    @endif
+                                    <div class="min-w-0">
+                                        <div class="font-bold text-slate-900 truncate">{{ $attendance->user->name }}</div>
+                                        <div class="text-[10px] text-slate-500 font-medium">{{ $attendance->user->unit?->kode_unit ?? 'Pusat' }}</div>
+                                    </div>
                                 </div>
-                                <div class="min-w-0">
-                                    <div class="font-bold text-slate-900 truncate">{{ $attendance->user->name }}</div>
-                                    <div class="text-[10px] text-slate-500 font-medium">{{ $attendance->user->unit?->kode_unit ?? 'Pusat' }}</div>
-                                </div>
+
+                                @if($attendance->selfie_path)
+                                    <button 
+                                        type="button" 
+                                        data-selfie-modal-trigger
+                                        data-selfie-url="{{ Storage::disk('public')->url($attendance->selfie_path) }}"
+                                        data-user-name="{{ $attendance->user->name }}"
+                                        data-user-nip="{{ $attendance->user->nip ?? '-' }}"
+                                        data-unit-name="{{ $attendance->user->unit?->kode_unit ? $attendance->user->unit->kode_unit . ' — ' . $attendance->user->unit->nama_unit : 'Tingkat Lembaga' }}"
+                                        data-signed-at="{{ $attendance->signed_at->format('d/m/Y H:i:s') }} WIB"
+                                        data-ip-address="{{ $attendance->ip_address ?? '127.0.0.1' }}"
+                                        class="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-800 transition cursor-pointer shrink-0"
+                                        title="Pratinjau Foto Selfie"
+                                        aria-label="Pratinjau Foto Selfie"
+                                    >
+                                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 4h-3.5L14 2H10L8.5 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/></svg>
+                                    </button>
+                                @endif
                             </div>
                         @empty
                             <div class="text-center py-6 text-xs text-slate-500 font-medium">
@@ -726,4 +764,6 @@
     @endif
 </script>
 @endcan
+
+@include('attendances.partials.selfie_preview_modal')
 @endsection

@@ -237,14 +237,51 @@
                 </div>
                 <div class="p-5 space-y-3">
                     @if($myAttendance)
-                        <div class="p-4 bg-emerald-50 border border-emerald-300 rounded-xl space-y-2">
-                            <div class="flex items-center gap-2 text-emerald-900 font-bold text-xs">
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-                                <span>Anda Telah Mengisi Presensi</span>
+                        <div class="p-4 bg-emerald-50 border border-emerald-300 rounded-xl space-y-3">
+                            <div class="flex items-center justify-between gap-2">
+                                <div class="flex items-center gap-2 text-emerald-900 font-bold text-xs">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                                    <span>Presensi Sah Terverifikasi</span>
+                                </div>
+                                <span class="text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded border border-emerald-300">
+                                    HADIR
+                                </span>
                             </div>
-                            <div class="text-[11px] text-emerald-950 font-mono">
-                                Waktu Hadir: {{ $myAttendance->signed_at->translatedFormat('d F Y, H:i') }} WIB
-                            </div>
+
+                            @if($myAttendance->selfie_path)
+                                <div class="flex items-center gap-3 pt-1">
+                                    <button 
+                                        type="button" 
+                                        data-selfie-modal-trigger
+                                        data-selfie-url="{{ Storage::disk('public')->url($myAttendance->selfie_path) }}"
+                                        data-user-name="{{ Auth::user()->name }}"
+                                        data-user-nip="{{ Auth::user()->nip ?? '-' }}"
+                                        data-unit-name="{{ Auth::user()->unit?->kode_unit ? Auth::user()->unit->kode_unit . ' — ' . Auth::user()->unit->nama_unit : 'Tingkat Lembaga' }}"
+                                        data-signed-at="{{ $myAttendance->signed_at->format('d/m/Y H:i:s') }} WIB"
+                                        data-ip-address="{{ $myAttendance->ip_address ?? '127.0.0.1' }}"
+                                        class="w-12 h-12 rounded-xl overflow-hidden border border-emerald-300 hover:border-emerald-700 hover:ring-2 hover:ring-emerald-400 transition shrink-0 cursor-pointer shadow-2xs relative group"
+                                        title="Klik untuk memperbesar Foto Selfie Anda"
+                                        aria-label="Perbesar Foto Selfie Anda"
+                                    >
+                                        <img src="{{ Storage::disk('public')->url($myAttendance->selfie_path) }}" alt="Foto Selfie Saya" class="w-full h-full object-cover">
+                                        <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="white" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                                        </div>
+                                    </button>
+                                    <div class="min-w-0 text-xs">
+                                        <div class="text-[11px] text-emerald-950 font-mono font-semibold">
+                                            {{ $myAttendance->signed_at->translatedFormat('d F Y') }} &bull; {{ $myAttendance->signed_at->format('H:i') }} WIB
+                                        </div>
+                                        <div class="text-[10px] text-emerald-800 font-medium">
+                                            Foto Selfie Terekam
+                                        </div>
+                                    </div>
+                                </div>
+                            @else
+                                <div class="text-[11px] text-emerald-950 font-mono">
+                                    Waktu Hadir: {{ $myAttendance->signed_at->translatedFormat('d F Y, H:i') }} WIB
+                                </div>
+                            @endif
                         </div>
                         <a href="{{ route('attendances.success', [$agenda, $myAttendance]) }}" class="button small secondary w-full flex items-center justify-center gap-1.5 text-xs font-bold">
                             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -306,4 +343,6 @@
         </div>
     </div>
 </div>
+
+@include('attendances.partials.selfie_preview_modal')
 @endsection

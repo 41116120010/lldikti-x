@@ -53,9 +53,17 @@
                             <span>Ambil Foto Wajah</span>
                         </button>
 
-                        <button type="button" id="btn-retake-selfie" class="hidden button secondary w-full text-xs font-bold h-10 cursor-pointer">
-                            Ambil Ulang Foto
-                        </button>
+                        <div id="selfie-actions-after-capture" class="hidden grid grid-cols-2 gap-2">
+                            <button type="button" id="btn-inspect-selfie" class="button secondary w-full text-xs font-bold h-10 cursor-pointer flex items-center justify-center gap-1.5" title="Periksa / Perbesar Foto Selfie">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                                <span>Periksa Foto</span>
+                            </button>
+
+                            <button type="button" id="btn-retake-selfie" class="button secondary w-full text-xs font-bold h-10 cursor-pointer flex items-center justify-center gap-1.5">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                                <span>Ambil Ulang</span>
+                            </button>
+                        </div>
 
                         <!-- Fallback Upload Button -->
                         <div class="pt-2 border-t border-slate-200 text-center">
@@ -145,6 +153,25 @@
                     <span>Penyelenggara: <b class="text-slate-950">{{ $agenda->creator?->name ?? 'Penyelenggara Rapat' }}</b></span>
                 </div>
             </div>
+
+            @if($agenda->surat_edaran_path)
+                <div class="pt-3 border-t border-slate-200">
+                    <button 
+                        type="button" 
+                        onclick="openSuratEdaranModal('modal-surat-preview-{{ $agenda->id }}')" 
+                        class="w-full min-h-[44px] py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 border border-slate-300 font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-2xs"
+                        title="Buka pratinjau surat undangan resmi rapat"
+                    >
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y1="13"/><line x1="16" y1="17" x2="8" y1="17"/>
+                        </svg>
+                        <span>Lihat Surat Undangan Resmi</span>
+                        <span class="px-1.5 py-0.2 rounded text-[10px] font-bold uppercase {{ $agenda->is_surat_edaran_pdf ? 'bg-rose-100 text-rose-800' : 'bg-blue-100 text-blue-800' }}">
+                            {{ $agenda->surat_edaran_extension }}
+                        </span>
+                    </button>
+                </div>
+            @endif
         </div>
 
         <!-- Verification Guide Card -->
@@ -177,6 +204,8 @@ function initAttendanceCheckIn() {
     const guide = document.getElementById('camera-guide');
     const btnCapture = document.getElementById('btn-capture-selfie');
     const btnRetake = document.getElementById('btn-retake-selfie');
+    const btnInspect = document.getElementById('btn-inspect-selfie');
+    const actionsAfterCapture = document.getElementById('selfie-actions-after-capture');
     const selfieDataInput = document.getElementById('selfie_data');
     const selfieBadge = document.getElementById('selfie-status-badge');
     const fallbackFileInput = document.getElementById('fallback-selfie-file');
@@ -250,6 +279,7 @@ function initAttendanceCheckIn() {
         if (guide) guide.classList.add('hidden');
 
         btnCapture.classList.add('hidden');
+        if (actionsAfterCapture) actionsAfterCapture.classList.remove('hidden');
         btnRetake.classList.remove('hidden');
 
         selfieBadge.textContent = 'Foto Terverifikasi';
@@ -263,11 +293,36 @@ function initAttendanceCheckIn() {
         if (guide) guide.classList.remove('hidden');
 
         btnCapture.classList.remove('hidden');
+        if (actionsAfterCapture) actionsAfterCapture.classList.add('hidden');
         btnRetake.classList.add('hidden');
 
         selfieBadge.textContent = 'Belum Diambil';
         selfieBadge.className = 'text-[11px] font-semibold text-slate-400';
     });
+
+    // Inspect/Preview Selfie in Standard Lightbox Modal
+    function openSelfieInspection() {
+        if (!preview.src || preview.classList.contains('hidden')) return;
+        if (window.selfiePreviewModal) {
+            window.selfiePreviewModal.open({
+                url: preview.src,
+                name: @json($user->name),
+                nip: @json($user->nip ?? '-'),
+                unit: @json($user->unit?->kode_unit ? $user->unit->kode_unit . ' — ' . $user->unit->nama_unit : 'Tingkat Lembaga'),
+                signedAt: 'Pratinjau Foto Sebelum Dikirim',
+                ip: 'Perekaman Lokal Perangkat'
+            });
+        }
+    }
+
+    if (btnInspect) {
+        btnInspect.addEventListener('click', openSelfieInspection);
+    }
+    if (preview) {
+        preview.addEventListener('click', openSelfieInspection);
+        preview.style.cursor = 'pointer';
+        preview.title = 'Klik untuk memperbesar atau memeriksa hasil foto';
+    }
 
     // Fallback file input handler
     if (fallbackFileInput) {
@@ -295,6 +350,7 @@ function initAttendanceCheckIn() {
                     if (guide) guide.classList.add('hidden');
 
                     btnCapture.classList.add('hidden');
+                    if (actionsAfterCapture) actionsAfterCapture.classList.remove('hidden');
                     btnRetake.classList.remove('hidden');
 
                     selfieBadge.textContent = 'Berkas Foto Siap';
@@ -454,4 +510,10 @@ if (document.readyState !== 'loading') {
 }
 window.addEventListener('page:loaded', initAttendanceCheckIn);
 </script>
+
+@if($agenda->surat_edaran_path)
+    @include('agendas.partials.surat_edaran_preview', ['agenda' => $agenda, 'modalOnly' => true])
+@endif
+
+@include('attendances.partials.selfie_preview_modal')
 @endsection

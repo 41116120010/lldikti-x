@@ -97,6 +97,24 @@
                 </span>
             </button>
 
+            <!-- 1.4 Surat Undangan / Edaran Modal Trigger (if attached) -->
+            @if($agenda->surat_edaran_path)
+            <button 
+                type="button" 
+                onclick="openSuratEdaranModal('modal-surat-preview-{{ $agenda->id }}')" 
+                class="button flex items-center gap-2 text-xs font-semibold shadow-xs cursor-pointer border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 min-h-[36px]"
+                title="Buka pratinjau surat undangan / edaran resmi rapat ini"
+            >
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y1="13"/><line x1="16" y1="17" x2="8" y1="17"/>
+                </svg>
+                <span>Surat Undangan</span>
+                <span class="px-1.5 py-0.2 rounded text-[10px] font-bold uppercase {{ $agenda->is_surat_edaran_pdf ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-blue-50 text-blue-700 border border-blue-200' }}">
+                    {{ $agenda->surat_edaran_extension }}
+                </span>
+            </button>
+            @endif
+
             <!-- Quick Export Dropdown -->
             <div class="relative inline-block text-left" x-data="{ open: false }" @click.outside="open = false">
                 <button 
@@ -532,7 +550,22 @@
                                     @if($config['show_selfie_photos'] ?? true)
                                         <td style="text-align: center; vertical-align: middle; padding: 1.5pt;">
                                             @if($att->selfie_path)
-                                                <img src="{{ Storage::disk('public')->url($att->selfie_path) }}" alt="Selfie" width="26" height="26" style="width: 26px; height: 26px; object-fit: cover; border-radius: 2px; border: 1px solid #cbd5e1; display: inline-block; vertical-align: middle;">
+                                                <button 
+                                                    type="button" 
+                                                    data-selfie-modal-trigger
+                                                    data-selfie-url="{{ Storage::disk('public')->url($att->selfie_path) }}"
+                                                    data-user-name="{{ $att->user->name }}"
+                                                    data-user-nip="{{ $att->user->nip ?? '-' }}"
+                                                    data-unit-name="{{ $att->user->unit?->kode_unit ? $att->user->unit->kode_unit . ' — ' . $att->user->unit->nama_unit : 'Tingkat Lembaga' }}"
+                                                    data-signed-at="{{ $att->signed_at?->format('d/m/Y H:i:s') ?? '-' }} WIB"
+                                                    data-ip-address="{{ $att->ip_address ?? '127.0.0.1' }}"
+                                                    class="inline-block p-0 m-0 border-0 bg-transparent cursor-pointer hover:opacity-80 transition"
+                                                    style="vertical-align: middle; line-height: 0;"
+                                                    title="Klik untuk memverifikasi foto selfie {{ $att->user->name }}"
+                                                    aria-label="Verifikasi foto selfie {{ $att->user->name }}"
+                                                >
+                                                    <img src="{{ Storage::disk('public')->url($att->selfie_path) }}" alt="Selfie" width="26" height="26" style="width: 26px; height: 26px; object-fit: cover; border-radius: 2px; border: 1px solid #cbd5e1; display: inline-block; vertical-align: middle;">
+                                                </button>
                                             @else
                                                 <span style="font-size: 7pt; color: #94a3b8; font-style: italic;">Tanpa Foto</span>
                                             @endif
@@ -1532,5 +1565,11 @@
         });
     });
 </script>
+
+@if($agenda->surat_edaran_path)
+    @include('agendas.partials.surat_edaran_preview', ['agenda' => $agenda, 'modalOnly' => true])
+@endif
+
+@include('attendances.partials.selfie_preview_modal')
 @endsection
 

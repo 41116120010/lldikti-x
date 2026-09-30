@@ -251,24 +251,63 @@
             </div>
 
             <!-- 4. Berkas Surat Edaran Section -->
-            <div class="space-y-3 pt-4 border-t border-slate-200">
+            <div class="space-y-4 pt-4 border-t border-slate-200">
                 <h3 class="text-sm font-extrabold uppercase tracking-wider text-slate-900">4. Berkas Surat Edaran / Undangan Rapat</h3>
 
                 @if($agenda->surat_edaran_path)
-                    <div class="p-3.5 bg-slate-100 border border-slate-300 rounded-xl flex items-center justify-between gap-3 text-xs">
-                        <div class="flex items-center gap-2.5 text-slate-950 font-bold">
-                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                            <span>Surat edaran resmi saat ini terlampir</span>
+                    <div class="p-4 bg-slate-50 border border-slate-300 rounded-2xl space-y-3">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <div class="w-11 h-11 rounded-xl bg-slate-900 text-white flex items-center justify-center shrink-0 shadow-xs">
+                                    @if($agenda->is_surat_edaran_pdf)
+                                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y1="13"/><line x1="16" y1="17" x2="8" y1="17"/></svg>
+                                    @elseif($agenda->is_surat_edaran_image)
+                                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                                    @else
+                                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                    @endif
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs font-bold text-slate-950">Berkas Undangan Aktif Terlampir</span>
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase {{ $agenda->is_surat_edaran_pdf ? 'bg-rose-100 text-rose-800' : ($agenda->is_surat_edaran_image ? 'bg-blue-100 text-blue-800' : 'bg-slate-200 text-slate-800') }}">
+                                            {{ $agenda->surat_edaran_extension ?? 'BERKAS' }}
+                                        </span>
+                                    </div>
+                                    <p class="text-[11px] text-slate-500 font-medium mt-0.5 truncate">
+                                        Tersedia untuk dilihat langsung oleh seluruh peserta rapat.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-2 shrink-0">
+                                <button 
+                                    type="button" 
+                                    onclick="openSuratEdaranModal('modal-surat-preview-{{ $agenda->id }}')" 
+                                    class="button small bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs min-h-[36px] cursor-pointer"
+                                    title="Buka pratinjau surat edaran aktif"
+                                >
+                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+                                    <span>Pratinjau Berkas</span>
+                                </button>
+                                <a 
+                                    href="{{ $agenda->surat_edaran_url }}" 
+                                    download 
+                                    class="button small secondary font-bold text-xs flex items-center gap-1.5 min-h-[36px]"
+                                    title="Unduh berkas aktif"
+                                >
+                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                    <span>Unduh</span>
+                                </a>
+                            </div>
                         </div>
-                        <a href="{{ Storage::disk('public')->url($agenda->surat_edaran_path) }}" target="_blank" rel="noopener noreferrer" class="button small secondary text-xs font-bold flex items-center gap-1.5">
-                            <span>Lihat Dokumen</span>
-                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
-                        </a>
                     </div>
                 @endif
 
                 <div class="field">
-                    <label for="surat_edaran" class="text-xs font-bold text-slate-900 block mb-1">Unggah Surat Undangan Baru (Kosongkan jika tidak diganti)</label>
+                    <label for="surat_edaran" class="text-xs font-bold text-slate-900 block mb-1">
+                        {{ $agenda->surat_edaran_path ? 'Unggah Surat Undangan Pengganti (Kosongkan jika tidak diganti)' : 'Unggah Surat Undangan / Edaran Resmi (PDF / Gambar)' }}
+                    </label>
                     <input 
                         type="file" 
                         id="surat_edaran" 
@@ -280,6 +319,37 @@
                     @error('surat_edaran')
                         <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>
                     @enderror
+                </div>
+
+                <!-- Live Client-side Preview Container for Newly Selected File -->
+                <div id="surat-edaran-client-preview" class="hidden p-3.5 bg-slate-50 border border-slate-300 rounded-xl space-y-3">
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div id="preview-icon-box" class="w-12 h-12 rounded-lg bg-slate-200 border border-slate-300 flex items-center justify-center shrink-0 overflow-hidden"></div>
+                            <div class="min-w-0">
+                                <div id="preview-filename" class="text-xs font-bold text-slate-900 truncate">nama_dokumen.pdf</div>
+                                <div class="flex items-center gap-2 text-[11px] text-slate-600 font-medium mt-0.5">
+                                    <span id="preview-filesize">0 KB</span>
+                                    <span>&bull;</span>
+                                    <span id="preview-filetype" class="uppercase font-mono font-bold text-slate-700">PDF</span>
+                                    <span class="text-amber-700 font-semibold">(Berkas Baru Terpilih)</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button 
+                            type="button" 
+                            onclick="clearSuratEdaranInput()" 
+                            class="button small secondary text-xs font-bold text-rose-700 border-rose-200 hover:bg-rose-50 flex items-center gap-1.5 shrink-0 min-h-[36px] cursor-pointer"
+                            title="Batalkan pilihan berkas ini"
+                        >
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            <span>Batal</span>
+                        </button>
+                    </div>
+
+                    <div id="preview-image-viewport" class="hidden rounded-lg border border-slate-200 bg-white p-2 flex items-center justify-center max-h-56 overflow-hidden">
+                        <img id="preview-image-img" src="" alt="Pratinjau Gambar Berkas Baru" class="max-h-52 w-auto object-contain rounded">
+                    </div>
                 </div>
             </div>
 
@@ -395,10 +465,86 @@ function toggleUnitList(show) {
     }
 }
 
+function handleSuratEdaranChange(event) {
+    const fileInput = event.target;
+    const previewContainer = document.getElementById('surat-edaran-client-preview');
+    const iconBox = document.getElementById('preview-icon-box');
+    const filenameEl = document.getElementById('preview-filename');
+    const filesizeEl = document.getElementById('preview-filesize');
+    const filetypeEl = document.getElementById('preview-filetype');
+    const imageViewport = document.getElementById('preview-image-viewport');
+    const imageImg = document.getElementById('preview-image-img');
+
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        if (previewContainer) previewContainer.classList.add('hidden');
+        return;
+    }
+
+    const file = fileInput.files[0];
+    const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
+    const sizeInKB = Math.round(file.size / 1024);
+    const sizeText = file.size > 1024 * 1024 ? `${sizeInMB} MB` : `${sizeInKB} KB`;
+
+    filenameEl.textContent = file.name;
+    filesizeEl.textContent = sizeText;
+
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    const isImage = file.type.startsWith('image/');
+
+    if (isImage) {
+        filetypeEl.textContent = 'Gambar (' + (file.name.split('.').pop() || 'IMG').toUpperCase() + ')';
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            imageImg.src = e.target.result;
+            imageViewport.classList.remove('hidden');
+            iconBox.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover">`;
+        };
+        reader.readAsDataURL(file);
+    } else if (isPdf) {
+        filetypeEl.textContent = 'Dokumen PDF';
+        imageViewport.classList.add('hidden');
+        imageImg.src = '';
+        iconBox.innerHTML = `
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" class="text-rose-600">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+            </svg>
+        `;
+    } else {
+        filetypeEl.textContent = (file.name.split('.').pop() || 'BERKAS').toUpperCase();
+        imageViewport.classList.add('hidden');
+        imageImg.src = '';
+        iconBox.innerHTML = `
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-600">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+            </svg>
+        `;
+    }
+
+    previewContainer.classList.remove('hidden');
+}
+
+function clearSuratEdaranInput() {
+    const fileInput = document.getElementById('surat_edaran');
+    const previewContainer = document.getElementById('surat-edaran-client-preview');
+    const imageViewport = document.getElementById('preview-image-viewport');
+    const imageImg = document.getElementById('preview-image-img');
+
+    if (fileInput) fileInput.value = '';
+    if (previewContainer) previewContainer.classList.add('hidden');
+    if (imageViewport) imageViewport.classList.add('hidden');
+    if (imageImg) imageImg.src = '';
+}
+
 function initAgendaEditForm() {
     const tipeRapat = document.getElementById('tipe_rapat');
     if (tipeRapat) {
         toggleFormatFields(tipeRapat.value);
+    }
+
+    const suratEdaranInput = document.getElementById('surat_edaran');
+    if (suratEdaranInput && !suratEdaranInput.dataset.previewBound) {
+        suratEdaranInput.dataset.previewBound = 'true';
+        suratEdaranInput.addEventListener('change', handleSuratEdaranChange);
     }
 }
 
@@ -409,4 +555,8 @@ if (document.readyState !== 'loading') {
 }
 window.addEventListener('page:loaded', initAgendaEditForm);
 </script>
+
+@if($agenda->surat_edaran_path)
+    @include('agendas.partials.surat_edaran_preview', ['agenda' => $agenda, 'modalOnly' => true])
+@endif
 @endsection

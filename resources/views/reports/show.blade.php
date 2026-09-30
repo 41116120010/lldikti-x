@@ -403,10 +403,16 @@
                             <td class="text-center">
                                 <button 
                                     type="button" 
-                                    class="w-10 h-10 rounded-lg overflow-hidden border border-slate-300 mx-auto shadow-xs block cursor-pointer hover:opacity-80 transition"
-                                    data-preview-media="{{ Storage::disk('public')->url($att->selfie_path) }}"
-                                    data-preview-title="Foto Selfie: {{ $att->user->name }}"
-                                    title="Klik untuk memperbesar Foto Selfie"
+                                    class="w-10 h-10 rounded-lg overflow-hidden border border-slate-300 hover:border-slate-800 hover:ring-2 hover:ring-slate-400 mx-auto shadow-xs block cursor-pointer transition"
+                                    data-selfie-modal-trigger
+                                    data-selfie-url="{{ Storage::disk('public')->url($att->selfie_path) }}"
+                                    data-user-name="{{ $att->user->name }}"
+                                    data-user-nip="{{ $att->user->nip ?? '-' }}"
+                                    data-unit-name="{{ $att->user->unit?->kode_unit ? $att->user->unit->kode_unit . ' — ' . $att->user->unit->nama_unit : 'Tingkat Lembaga' }}"
+                                    data-signed-at="{{ $att->signed_at->format('d/m/Y H:i:s') }} WIB"
+                                    data-ip-address="{{ $att->ip_address ?? '127.0.0.1' }}"
+                                    title="Klik untuk memverifikasi & memperbesar Foto Selfie"
+                                    aria-label="Verifikasi Foto Selfie {{ $att->user->name }}"
                                 >
                                     <img src="{{ Storage::disk('public')->url($att->selfie_path) }}" alt="Foto selfie {{ $att->user->name }}" class="w-full h-full object-cover" loading="lazy" decoding="async">
                                 </button>
@@ -587,5 +593,7 @@
     });
 })();
 </script>
+
+@include('attendances.partials.selfie_preview_modal')
 @endsection
 

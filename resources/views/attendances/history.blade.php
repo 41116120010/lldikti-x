@@ -78,10 +78,16 @@
                                     <!-- Selfie Thumb (Clickable) -->
                                     <button 
                                         type="button" 
-                                        data-preview-media="{{ Storage::disk('public')->url($att->selfie_path) }}"
-                                        data-preview-title="Foto Selfie Wajah"
+                                        data-selfie-modal-trigger
+                                        data-selfie-url="{{ Storage::disk('public')->url($att->selfie_path) }}"
+                                        data-user-name="{{ Auth::user()->name }}"
+                                        data-user-nip="{{ Auth::user()->nip ?? '-' }}"
+                                        data-unit-name="{{ Auth::user()->unit?->kode_unit ? Auth::user()->unit->kode_unit . ' — ' . Auth::user()->unit->nama_unit : 'Tingkat Lembaga' }}"
+                                        data-signed-at="{{ $att->signed_at->format('d/m/Y H:i:s') }} WIB"
+                                        data-ip-address="{{ $att->ip_address ?? '127.0.0.1' }}"
                                         class="w-8 h-8 rounded-lg overflow-hidden border border-slate-400 shadow-xs hover:border-slate-950 hover:ring-2 hover:ring-slate-400 transition cursor-pointer" 
-                                        title="Klik untuk memperbesar Foto Selfie"
+                                        title="Klik untuk memverifikasi & memperbesar Foto Selfie"
+                                        aria-label="Verifikasi Foto Selfie Anda"
                                     >
                                         <img src="{{ Storage::disk('public')->url($att->selfie_path) }}" alt="Foto selfie" class="w-full h-full object-cover" loading="lazy" decoding="async">
                                     </button>
@@ -174,4 +180,6 @@
     });
 })();
 </script>
+
+@include('attendances.partials.selfie_preview_modal')
 @endsection

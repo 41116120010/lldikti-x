@@ -47,7 +47,7 @@ return new class extends Migration
         }
 
         if ($cleared > 0) {
-            $this->info("Catatan kaki sistem dikosongkan pada {$cleared} agenda.");
+            \Illuminate\Support\Facades\Log::info("Catatan kaki sistem dikosongkan pada {$cleared} agenda.");
         }
     }
 
@@ -80,7 +80,7 @@ return new class extends Migration
         }
 
         if ($restored > 0) {
-            $this->info("Catatan kaki sistem dipulihkan pada {$restored} agenda.");
+            \Illuminate\Support\Facades\Log::info("Catatan kaki sistem dipulihkan pada {$restored} agenda.");
         }
     }
 };
