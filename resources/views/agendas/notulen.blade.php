@@ -345,92 +345,202 @@
                     @include('partials.kop_surat', ['kopLogoSrc' => $kopLogoSrc, 'kopLogo' => $kopLogoSize])
 
                     <!-- Judul Dokumen & Nomor Berita Acara -->
-                    <div class="doc-title" style="text-align: center; margin: 12pt 0 6pt 0;">
-                        <h1 id="sheet-document-title" style="font-size: 11.5pt; font-weight: bold; text-decoration: underline; margin: 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif;">
+                    <div class="doc-title" style="text-align: center; margin: {{ \App\Support\DocumentLayout::DOC_TITLE_GAP_TOP_PT }}pt 0 {{ \App\Support\DocumentLayout::DOC_TITLE_GAP_BOTTOM_PT }}pt 0;">
+                        <h1 id="sheet-document-title" style="font-size: {{ \App\Support\DocumentLayout::DOCUMENT_TITLE_SIZE_PT }}pt; font-weight: bold; text-decoration: underline; margin: 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif;">
                             {{ $config['document_title'] ?? 'BERITA ACARA DAN DAFTAR HADIR RAPAT' }}
                         </h1>
-                        <div id="sheet-document-number-wrapper" style="font-size: 9pt; font-family: 'Times New Roman', Times, serif; margin-top: 2px; {{ ($config['show_document_number'] ?? true) ? '' : 'display: none;' }}">
+                        <div id="sheet-document-number-wrapper" style="font-size: {{ \App\Support\DocumentLayout::BODY_SIZE_PT }}pt; font-family: 'Times New Roman', Times, serif; margin-top: 2px; {{ ($config['show_document_number'] ?? true) ? '' : 'display: none;' }}">
                             Nomor: <span id="sheet-document-number">{{ $config['document_number'] ?? ('BA-RAPAT/' . date('Y') . '/' . str_pad($agenda->id, 4, '0', STR_PAD_LEFT)) }}</span>
                         </div>
                     </div>
 
                     <!-- Informasi Pelaksanaan Rapat -->
-                    <table class="info-table" width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; margin-bottom: 6pt; border-collapse: collapse; font-size: 9pt; border: none; font-family: 'Times New Roman', Times, serif;">
-                        <colgroup>
-                            <col style="width: 24%;">
-                            <col style="width: 2%;">
-                            <col style="width: 74%;">
-                        </colgroup>
+                    @if($config['show_meeting_info'] ?? true)
+                    <table id="sheet-meeting-info" class="info-table" width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; margin-bottom: {{ \App\Support\DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt; border-collapse: collapse; font-size: {{ \App\Support\DocumentLayout::INFO_SIZE_PT }}pt; border: none; font-family: 'Times New Roman', Times, serif;">
                         <tr>
-                            <td style="font-weight: bold; padding: 1.5pt 0; vertical-align: top; border: none;">Perihal / Agenda</td>
-                            <td style="padding: 1.5pt 0; vertical-align: top; border: none;">:</td>
-                            <td style="padding: 1.5pt 0; vertical-align: top; border: none;"><strong>{{ $agenda->judul_rapat }}</strong></td>
+                            <td style="font-weight: bold; padding: {{ \App\Support\DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ \App\Support\DocumentLayout::DETAIL_LABEL_COLUMN }};">Perihal / Agenda</td>
+                            <td style="padding: {{ \App\Support\DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ \App\Support\DocumentLayout::DETAIL_COLON_COLUMN }};">:</td>
+                            <td style="padding: {{ \App\Support\DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; word-wrap: break-word; overflow-wrap: break-word; width: {{ \App\Support\DocumentLayout::DETAIL_VALUE_COLUMN }};"><strong>{{ $config['custom_agenda_title'] ?? $agenda->judul_rapat }}</strong></td>
                         </tr>
                         <tr>
-                            <td style="font-weight: bold; padding: 1.5pt 0; vertical-align: top; border: none;">Hari / Tanggal</td>
-                            <td style="padding: 1.5pt 0; vertical-align: top; border: none;">:</td>
-                            <td style="padding: 1.5pt 0; vertical-align: top; border: none;">{{ $agenda->waktu_mulai->translatedFormat('l, d F Y') }}</td>
+                            <td style="font-weight: bold; padding: {{ \App\Support\DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ \App\Support\DocumentLayout::DETAIL_LABEL_COLUMN }};">Hari / Tanggal</td>
+                            <td style="padding: {{ \App\Support\DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ \App\Support\DocumentLayout::DETAIL_COLON_COLUMN }};">:</td>
+                            <td style="padding: {{ \App\Support\DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; word-wrap: break-word; overflow-wrap: break-word; width: {{ \App\Support\DocumentLayout::DETAIL_VALUE_COLUMN }};">{{ $agenda->waktu_mulai->translatedFormat('l, d F Y') }}</td>
                         </tr>
                         <tr>
-                            <td style="font-weight: bold; padding: 1.5pt 0; vertical-align: top; border: none;">Waktu Pelaksanaan</td>
-                            <td style="padding: 1.5pt 0; vertical-align: top; border: none;">:</td>
-                            <td style="padding: 1.5pt 0; vertical-align: top; border: none;">{{ $agenda->waktu_mulai->format('H:i') }} {{ $agenda->waktu_selesai ? 's.d. ' . $agenda->waktu_selesai->format('H:i') . ' WIB' : 'WIB s.d. Selesai' }}</td>
+                            <td style="font-weight: bold; padding: {{ \App\Support\DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ \App\Support\DocumentLayout::DETAIL_LABEL_COLUMN }};">Waktu Pelaksanaan</td>
+                            <td style="padding: {{ \App\Support\DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ \App\Support\DocumentLayout::DETAIL_COLON_COLUMN }};">:</td>
+                            <td style="padding: {{ \App\Support\DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; word-wrap: break-word; overflow-wrap: break-word; width: {{ \App\Support\DocumentLayout::DETAIL_VALUE_COLUMN }};">{{ $agenda->waktu_mulai->format('H:i') }} {{ $agenda->waktu_selesai ? 's.d. ' . $agenda->waktu_selesai->format('H:i') . ' WIB' : 'WIB s.d. Selesai' }}</td>
                         </tr>
                         <tr>
-                            <td style="font-weight: bold; padding: 1.5pt 0; vertical-align: top; border: none;">Format &amp; Tempat</td>
-                            <td style="padding: 1.5pt 0; vertical-align: top; border: none;">:</td>
-                            <td style="padding: 1.5pt 0; vertical-align: top; border: none;">{{ ucfirst($agenda->tipe_rapat) }} &mdash; {{ $agenda->lokasi_ruang ?? 'Daring (Online Meeting)' }}</td>
+                            <td style="font-weight: bold; padding: {{ \App\Support\DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ \App\Support\DocumentLayout::DETAIL_LABEL_COLUMN }};">Format &amp; Tempat</td>
+                            <td style="padding: {{ \App\Support\DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ \App\Support\DocumentLayout::DETAIL_COLON_COLUMN }};">:</td>
+                            <td style="padding: {{ \App\Support\DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; word-wrap: break-word; overflow-wrap: break-word; width: {{ \App\Support\DocumentLayout::DETAIL_VALUE_COLUMN }};">{{ ucfirst($agenda->tipe_rapat) }} &mdash; {{ $config['custom_location'] ?? ($agenda->lokasi_ruang ?? 'Daring (Online Meeting)') }}</td>
                         </tr>
                         <tr>
-                            <td style="font-weight: bold; padding: 1.5pt 0; vertical-align: top; border: none;">Penyelenggara Rapat</td>
-                            <td style="padding: 1.5pt 0; vertical-align: top; border: none;">:</td>
-                            <td style="padding: 1.5pt 0; vertical-align: top; border: none;">{{ $agenda->creator?->name ?? 'Penyelenggara Rapat' }} ({{ $agenda->creator?->unit?->nama_unit ?? 'Tingkat Lembaga' }})</td>
+                            <td style="font-weight: bold; padding: {{ \App\Support\DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ \App\Support\DocumentLayout::DETAIL_LABEL_COLUMN }};">Penyelenggara Rapat</td>
+                            <td style="padding: {{ \App\Support\DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ \App\Support\DocumentLayout::DETAIL_COLON_COLUMN }};">:</td>
+                            <td style="padding: {{ \App\Support\DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; word-wrap: break-word; overflow-wrap: break-word; width: {{ \App\Support\DocumentLayout::DETAIL_VALUE_COLUMN }};">{{ $agenda->creator?->name ?? 'Penyelenggara Rapat' }} ({{ $agenda->creator?->unit?->nama_unit ?? 'Tingkat Lembaga' }})</td>
                         </tr>
                     </table>
+                    @endif
 
-                    <!-- Seksi I: Daftar Kehadiran Peserta (Spreadsheet / Word Table) -->
-                    <div style="font-size: 9.5pt; font-weight: bold; margin: 6pt 0 3pt 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif;">
-                        I. DAFTAR KEHADIRAN PESERTA ({{ $attendances->count() }} Orang)
+                    <!-- Seksi I: Notulensi & Kesimpulan Rapat (Interactive WYSIWYG Editors) -->
+                    @if(($config['show_notulensi'] ?? true) || ($config['show_kesimpulan'] ?? true))
+                    <div id="sheet-seksi-1-container" style="margin-top: {{ \App\Support\DocumentLayout::SECTION_GAP_TOP_PT }}pt;">
+                        <div id="sheet-seksi-1-title" class="section-title" style="font-size: {{ \App\Support\DocumentLayout::SECTION_SIZE_PT }}pt; font-weight: bold; margin: 0 0 {{ \App\Support\DocumentLayout::SECTION_GAP_BOTTOM_PT }}pt 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif;">
+                            I. NOTULENSI &amp; KESIMPULAN RAPAT
+                        </div>
+
+                        <!-- Bagian A: Catatan Jalannya Rapat (Notulensi) -->
+                        @if($config['show_notulensi'] ?? true)
+                        <div id="sheet-section-notulensi-wrapper" style="margin-bottom: {{ \App\Support\DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt;">
+                            <div class="flex items-center justify-between mb-1">
+                                <label for="notulensi-content" style="font-weight: bold; font-size: {{ \App\Support\DocumentLayout::SUBHEADING_SIZE_PT }}pt; font-family: 'Times New Roman', Times, serif;" class="text-slate-900">
+                                    A. Catatan Jalannya Rapat (Notulensi):
+                                </label>
+                                <span class="text-[10px] text-slate-500 italic">Klik kolom di bawah untuk mulai mengetik</span>
+                            </div>
+                            <div
+                                id="notulensi-content"
+                                class="office-editable-box prose-gov"
+                                contenteditable="true"
+                                data-editor="notulensi"
+                                data-page="1"
+                                data-placeholder="Ketik catatan jalannya rapat, dinamika diskusi, arahan pimpinan, dan pembahasan di sini..."
+                                style="min-height: 80px; font-size: {{ \App\Support\DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ \App\Support\DocumentLayout::BODY_LINE_PT }}pt; text-align: justify; background: #{{ \App\Support\DocumentLayout::PROSE_BOX_FILL }}; border: {{ \App\Support\DocumentLayout::BORDER_PT }}pt solid #{{ \App\Support\DocumentLayout::BORDER_COLOR }}; border-radius: 0; padding: {{ \App\Support\DocumentLayout::PROSE_PAD_TOP_PT }}pt {{ \App\Support\DocumentLayout::PROSE_PAD_SIDE_PT }}pt;"
+                            >{!! \App\Support\Html::sanitize(old('notulensi', $agenda->notulensi)) !!}</div>
+                            @error('notulensi')
+                                <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        @endif
+
+                        <!-- Bagian B: Kesimpulan & Rencana Tindak Lanjut (RTL) -->
+                        @if($config['show_kesimpulan'] ?? true)
+                        <div id="sheet-section-kesimpulan-wrapper">
+                            <div class="flex items-center justify-between mb-1">
+                                <label for="kesimpulan-content" style="font-weight: bold; font-size: {{ \App\Support\DocumentLayout::SUBHEADING_SIZE_PT }}pt; font-family: 'Times New Roman', Times, serif;" class="text-slate-900">
+                                    B. Kesimpulan &amp; Rencana Tindak Lanjut (RTL):
+                                </label>
+                                <span class="text-[10px] text-slate-500 italic">Klik kolom di bawah untuk mulai mengetik</span>
+                            </div>
+                            <div
+                                id="kesimpulan-content"
+                                class="office-editable-box prose-gov"
+                                contenteditable="true"
+                                data-editor="kesimpulan"
+                                data-page="1"
+                                data-placeholder="Ketik poin-poin kesimpulan akhir, keputusan yang disepakati, PIC penanggung jawab, dan tenggat waktu penyelesaian..."
+                                style="min-height: 70px; font-size: {{ \App\Support\DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ \App\Support\DocumentLayout::BODY_LINE_PT }}pt; text-align: justify; background: #{{ \App\Support\DocumentLayout::PROSE_BOX_FILL }}; border: {{ \App\Support\DocumentLayout::BORDER_PT }}pt solid #{{ \App\Support\DocumentLayout::BORDER_COLOR }}; border-radius: 0; padding: {{ \App\Support\DocumentLayout::PROSE_PAD_TOP_PT }}pt {{ \App\Support\DocumentLayout::PROSE_PAD_SIDE_PT }}pt;"
+                            >{!! \App\Support\Html::sanitize(old('kesimpulan', $agenda->kesimpulan)) !!}</div>
+                            @error('kesimpulan')
+                                <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        @endif
                     </div>
-                    <table class="doc-spreadsheet-table" width="100%" border="1" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; border-collapse: collapse; border: 1px solid #000000;">
+                    @endif
+
+                    <!-- Seksi II: Daftar Kehadiran Peserta (Spreadsheet / Word Table) -->
+                    @if($config['show_attendees'] ?? true)
+                    <div id="sheet-seksi-2-container" class="section-title" style="font-size: {{ \App\Support\DocumentLayout::SECTION_SIZE_PT }}pt; font-weight: bold; margin: {{ \App\Support\DocumentLayout::SECTION_GAP_TOP_PT }}pt 0 {{ \App\Support\DocumentLayout::SECTION_GAP_BOTTOM_PT }}pt 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif;">
+                        II. DAFTAR KEHADIRAN PESERTA ({{ $attendances->count() }} Orang)
+                    </div>
+                    @php
+                        // Lebar kolom dihitung sekali di sini, mengikuti urutan yang
+                        // sama dengan writer .docx: kolom nama mengambil sisa dari
+                        // lebar cetakan. Menyalin persentase tetap per kolom
+                        // itulah yang membuat pratinjau dan dokumen cetak tidak
+                        // pernah bisa sama begitu lebar kolom berubah.
+                        $presenceColumns = \App\Support\DocumentLayout::attendanceColumns();
+                        $presenceWidths = [
+                            'no' => $presenceColumns[0],
+                            'nip' => $presenceColumns[1],
+                            'unit' => $presenceColumns[2],
+                            'time' => $presenceColumns[3],
+                            'photo' => $presenceColumns[4],
+                            'sign' => $presenceColumns[5],
+                        ];
+                        $presenceUsed = (float) rtrim($presenceWidths['no'], '%')
+                            + (float) rtrim($presenceWidths['sign'], '%');
+                        foreach ([
+                            'nip' => 'show_nip',
+                            'unit' => 'show_unit',
+                            'time' => 'show_attendance_time',
+                            'photo' => 'show_selfie_photos',
+                        ] as $presenceKey => $presenceOption) {
+                            if ($config[$presenceOption] ?? true) {
+                                $presenceUsed += (float) rtrim($presenceWidths[$presenceKey], '%');
+                            }
+                        }
+                        $presenceWidths['name'] = max(0, 100 - $presenceUsed).'%';
+
+                        $presenceHeaderPad = fn (string $side): string => '3pt '.$side;
+                    @endphp
+                    <table class="doc-spreadsheet-table attendance-table" width="100%" border="1" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; border-collapse: collapse; border: {{ \App\Support\DocumentLayout::BORDER_PT }}px solid #{{ \App\Support\DocumentLayout::BORDER_COLOR }}; font-size: {{ \App\Support\DocumentLayout::ATTENDANCE_SIZE_PT }}pt; line-height: {{ \App\Support\DocumentLayout::ATTENDANCE_LINE_PT }}pt; font-family: 'Times New Roman', Times, serif;">
                         <colgroup>
-                            <col style="width: 5%;">
-                            <col style="width: 27%;">
-                            <col style="width: 21%;">
-                            <col style="width: 17%;">
-                            <col style="width: 10%;">
-                            <col style="width: 8%;">
-                            <col style="width: 12%;">
+                            <col style="width: {{ $presenceWidths['no'] }};">
+                            <col style="width: {{ $presenceWidths['name'] }};">
+                            @if($config['show_nip'] ?? true)
+                                <col style="width: {{ $presenceWidths['nip'] }};">
+                            @endif
+                            @if($config['show_unit'] ?? true)
+                                <col style="width: {{ $presenceWidths['unit'] }};">
+                            @endif
+                            @if($config['show_attendance_time'] ?? true)
+                                <col style="width: {{ $presenceWidths['time'] }};">
+                            @endif
+                            @if($config['show_selfie_photos'] ?? true)
+                                <col style="width: {{ $presenceWidths['photo'] }};">
+                            @endif
+                            <col style="width: {{ $presenceWidths['sign'] }};">
                         </colgroup>
                         <thead>
-                            <tr>
-                                <th>No</th>
-                                <th style="text-align: left; padding-left: 5pt;">Nama Lengkap</th>
-                                <th style="text-align: left; padding-left: 4pt;">NIP</th>
-                                <th style="text-align: left; padding-left: 4pt;">Unit Kerja</th>
-                                <th>Waktu</th>
-                                <th>Foto</th>
-                                <th>Tanda Tangan</th>
+                            <tr style="background-color: #{{ \App\Support\DocumentLayout::ATTENDANCE_HEADER_FILL }};">
+                                <th style="text-align: center;">No</th>
+                                <th style="text-align: left;">Nama Lengkap</th>
+                                @if($config['show_nip'] ?? true)
+                                    <th style="text-align: left;">NIP</th>
+                                @endif
+                                @if($config['show_unit'] ?? true)
+                                    <th style="text-align: left;">Unit Kerja / Pokja</th>
+                                @endif
+                                @if($config['show_attendance_time'] ?? true)
+                                    <th style="text-align: center;">Waktu</th>
+                                @endif
+                                @if($config['show_selfie_photos'] ?? true)
+                                    <th style="text-align: center;">Foto Kehadiran</th>
+                                @endif
+                                <th style="text-align: center;">Tanda Tangan</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($attendances as $index => $att)
                                 <tr>
-                                    <td style="text-align: center;">{{ $index + 1 }}</td>
-                                    <td style="padding: 3pt 5pt;"><strong>{{ $att->user->name }}</strong></td>
-                                    <td style="padding: 3pt 4pt; font-family: 'Times New Roman', Times, serif; font-size: 8pt;">{{ $att->user->nip }}</td>
-                                    <td style="padding: 3pt 4pt; font-size: 8pt;">{{ $att->user->unit?->kode_unit ?? 'Pusat' }}</td>
-                                    <td style="text-align: center; font-size: 8pt; font-family: 'Times New Roman', Times, serif;">{{ $att->signed_at->format('H:i') }}</td>
-                                    <td style="text-align: center; padding: 2pt;">
-                                        @if($att->selfie_path)
-                                            <img src="{{ Storage::disk('public')->url($att->selfie_path) }}" alt="Selfie" width="26" height="26" style="width: 26px; height: 26px; object-fit: cover; border-radius: 2px; border: 1px solid #cbd5e1; display: inline-block; vertical-align: middle;">
-                                        @else
-                                            <span style="font-size: 7pt; color: #94a3b8; font-style: italic;">Tanpa Foto</span>
-                                        @endif
-                                    </td>
-                                    <td style="text-align: center; padding: 2pt;">
-                                        @if($att->signature_path)
-                                            <img src="{{ Storage::disk('public')->url($att->signature_path) }}" alt="TTD" width="70" height="22" style="width: 70px; height: 22px; max-height: 24px; object-fit: contain; display: block; margin: 0 auto; border: none;">
+                                    <td style="text-align: center; vertical-align: middle;">{{ $index + 1 }}</td>
+                                    <td style="vertical-align: middle; padding: 2pt 4pt;"><strong>{{ $att->user->name }}</strong></td>
+                                    @if($config['show_nip'] ?? true)
+                                        <td style="vertical-align: middle; padding: 2pt 3pt;">{{ $att->user->nip }}</td>
+                                    @endif
+                                    @if($config['show_unit'] ?? true)
+                                        <td style="vertical-align: middle; padding: 2pt 3pt;">{{ $att->user->unit?->kode_unit ?? 'Pusat' }}</td>
+                                    @endif
+                                    @if($config['show_attendance_time'] ?? true)
+                                        <td style="text-align: center; vertical-align: middle; padding: 2pt 2pt;">{{ $att->signed_at?->format('H:i') ?? '-' }}</td>
+                                    @endif
+                                    @if($config['show_selfie_photos'] ?? true)
+                                        <td style="text-align: center; vertical-align: middle; padding: 1.5pt;">
+                                            @if($att->selfie_path)
+                                                <img src="{{ Storage::disk('public')->url($att->selfie_path) }}" alt="Selfie" width="26" height="26" style="width: 26px; height: 26px; object-fit: cover; border-radius: 2px; border: 1px solid #cbd5e1; display: inline-block; vertical-align: middle;">
+                                            @else
+                                                <span style="font-size: 7pt; color: #94a3b8; font-style: italic;">Tanpa Foto</span>
+                                            @endif
+                                        </td>
+                                    @endif
+                                    <td style="text-align: center; vertical-align: middle; padding: 1.5pt;">
+                                        @if(($config['show_attendee_signatures'] ?? true) && $att->signature_path)
+                                            <img src="{{ Storage::disk('public')->url($att->signature_path) }}" alt="TTD" width="75" height="22" style="width: 75px; height: 22px; max-height: 24px; object-fit: contain; display: block; margin: 0 auto; border: none;">
                                         @else
                                             <span style="font-size: 7.5pt; color: #166534; font-weight: bold;">(HADIR)</span>
                                         @endif
@@ -438,64 +548,14 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" style="text-align: center; padding: 8px; font-style: italic; color: #64748b;">
+                                    <td colspan="{{ 2 + ($config['show_nip'] ?? true ? 1 : 0) + ($config['show_unit'] ?? true ? 1 : 0) + ($config['show_attendance_time'] ?? true ? 1 : 0) + ($config['show_selfie_photos'] ?? true ? 1 : 0) }}" style="text-align: center; padding: 8pt; font-style: italic; color: #64748b;">
                                         Belum ada peserta yang mengisi presensi rapat.
                                     </td>
                                 </tr>
                             @endforelse
                         </tbody>
                     </table>
-
-                    <!-- Seksi II: Notulensi & Kesimpulan Rapat (Interactive WYSIWYG Editors) -->
-                    <div id="sheet-seksi-2-container" style="margin-top: 6pt;">
-                        <div id="sheet-seksi-2-title" style="font-size: 9.5pt; font-weight: bold; margin: 0 0 3pt 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif;">
-                            II. NOTULENSI &amp; KESIMPULAN RAPAT
-                        </div>
-
-                        <!-- Bagian A: Catatan Jalannya Rapat (Notulensi) -->
-                        <div id="sheet-section-notulensi-wrapper" style="margin-bottom: 6pt;">
-                            <div class="flex items-center justify-between mb-1">
-                                <label for="notulensi-content" style="font-weight: bold; font-size: 8.5pt; font-family: 'Times New Roman', Times, serif;" class="text-slate-900">
-                                    A. Notulensi / Catatan Jalannya Rapat:
-                                </label>
-                                <span class="text-[10px] text-slate-500 italic">Klik kolom di bawah untuk mulai mengetik</span>
-                            </div>
-                            <div 
-                                id="notulensi-content" 
-                                class="office-editable-box prose-gov" 
-                                contenteditable="true" 
-                                data-editor="notulensi"
-                                data-page="1"
-                                data-placeholder="Ketik catatan jalannya rapat, dinamika diskusi, arahan pimpinan, dan pembahasan di sini..."
-                                style="min-height: 80px;"
-                            >{!! \App\Support\Html::sanitize(old('notulensi', $agenda->notulensi)) !!}</div>
-                            @error('notulensi')
-                                <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <!-- Bagian B: Kesimpulan & Rencana Tindak Lanjut (RTL) -->
-                        <div id="sheet-section-kesimpulan-wrapper">
-                            <div class="flex items-center justify-between mb-1">
-                                <label for="kesimpulan-content" style="font-weight: bold; font-size: 8.5pt; font-family: 'Times New Roman', Times, serif;" class="text-slate-900">
-                                    B. Kesimpulan &amp; Rencana Tindak Lanjut (RTL):
-                                </label>
-                                <span class="text-[10px] text-slate-500 italic">Klik kolom di bawah untuk mulai mengetik</span>
-                            </div>
-                            <div 
-                                id="kesimpulan-content" 
-                                class="office-editable-box prose-gov" 
-                                contenteditable="true" 
-                                data-editor="kesimpulan"
-                                data-page="1"
-                                data-placeholder="Ketik poin-poin kesimpulan akhir, keputusan yang disepakati, PIC penanggung jawab, dan tenggat waktu penyelesaian..."
-                                style="min-height: 70px;"
-                            >{!! \App\Support\Html::sanitize(old('kesimpulan', $agenda->kesimpulan)) !!}</div>
-                            @error('kesimpulan')
-                                <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>
-                            @enderror
-                        </div>
-                    </div>
+                    @endif
 
                     <!-- Blok Pengesahan & Tanda Tangan (Dynamic Word Signature Flow) -->
                     <div id="sheet-pengesahan-final" class="sheet-signature-wrapper" style="margin-top: 18pt;">
@@ -509,82 +569,124 @@
                             </div>
                         </div>
 
-                        <!-- Tanda Tangan Pengesahan (Pemimpin Rapat & Notulis) -->
+                        <!-- Tanda Tangan Pengesahan. Satu loop untuk semua penanda
+                             tangan, dengan tiga baris: label, tanda tangan, nama.
+                             Duplikat per penanda tangan seperti sebelumnya justru
+                             membuat kolom ketiga mustahil ditambahkan tanpa
+                             menyalin blok yang sama sekali lagi. -->
                         @php
                             $pimpinanAtt = $agenda->pimpinan_attendance;
                             $notulisAtt = $agenda->notulis_attendance;
+
+                            $signatureSigners = [[
+                                'label' => 'Mengetahui,',
+                                'role' => $config['signer1_role'] ?? 'Pemimpin Rapat',
+                                'roleId' => 'sheet-signer1-role',
+                                'name' => $config['signer1_name'] ?? $agenda->nama_pimpinan,
+                                'nameId' => 'sheet-signer1-name',
+                                'nip' => $config['signer1_nip'] ?? $agenda->nip_pimpinan,
+                                'nipId' => 'sheet-signer1-nip',
+                                'mark' => $pimpinanAtt?->signature_path,
+                                'markId' => 'sheet-signer1-mark',
+                                'showMark' => $config['show_signer1_signature'] ?? true,
+                            ]];
+
+                            if ($config['show_signer3'] ?? false) {
+                                $signatureSigners[] = [
+                                    'label' => 'Menyetujui,',
+                                    'role' => $config['signer3_role'] ?? 'Kepala LLDIKTI',
+                                    'roleId' => null,
+                                    'name' => $config['signer3_name'] ?? '-',
+                                    'nameId' => null,
+                                    'nip' => $config['signer3_nip'] ?? '-',
+                                    'nipId' => null,
+                                    'mark' => null,
+                                    'markId' => 'sheet-signer3-mark',
+                                    'showMark' => false,
+                                ];
+                            }
+
+                            $signatureSigners[] = [
+                                'label' => '<span id="sheet-signing-city">'
+                                    .e($config['signing_city'] ?? 'Padang').'</span>, '
+                                    .'<span id="sheet-signing-date">'
+                                    .e($config['signing_date'] ?? ($agenda->waktu_mulai ? $agenda->waktu_mulai->translatedFormat('d F Y') : now()->translatedFormat('d F Y')))
+                                    .'</span>',
+                                'role' => $config['signer2_role'] ?? 'Notulis Rapat',
+                                'roleId' => 'sheet-signer2-role',
+                                'name' => $config['signer2_name'] ?? $agenda->nama_notulis,
+                                'nameId' => 'sheet-signer2-name',
+                                'nip' => $config['signer2_nip'] ?? $agenda->nip_notulis,
+                                'nipId' => 'sheet-signer2-nip',
+                                'mark' => $notulisAtt?->signature_path,
+                                'markId' => 'sheet-signer2-mark',
+                                'showMark' => $config['show_signer2_signature'] ?? true,
+                            ];
+
+                            $signatureCount = count($signatureSigners);
+                            $signatureColWidth = $signatureCount >= 3 ? '33.4%' : '50%';
+                            $signatureInner = $signatureCount >= 3
+                                ? \App\Support\DocumentLayout::TTD_INNER_WIDTH_THREE_COLUMN
+                                : \App\Support\DocumentLayout::TTD_INNER_WIDTH_TWO_COLUMN;
+                            $signatureFont = 'font-size: '.\App\Support\DocumentLayout::BODY_SIZE_PT
+                                .'pt; font-family: \'Times New Roman\', Times, serif;';
                         @endphp
-                        <div class="signature-block" style="margin: 8pt 0 4pt 0;">
-                            <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; border-collapse: collapse; border: none; font-family: 'Times New Roman', Times, serif;">
+                        <div class="signature-block" style="margin-top: {{ \App\Support\DocumentLayout::TTD_GAP_PT }}pt; page-break-inside: avoid; break-inside: avoid;">
+                            <table class="signature-table" width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; border-collapse: collapse; border: none; font-family: 'Times New Roman', Times, serif;">
                                 <colgroup>
-                                    <col style="width: 50%;">
-                                    <col style="width: 50%;">
+                                    @foreach($signatureSigners as $signatureSigner)
+                                        <col style="width: {{ $signatureColWidth }};">
+                                    @endforeach
                                 </colgroup>
                                 <tr>
-                                    <td width="50%" style="width: 50%; text-align: center; vertical-align: top; border: none; padding: 0 8pt;">
-                                        <table align="center" border="0" cellspacing="0" cellpadding="0" style="margin: 0 auto; border-collapse: collapse; border: none; text-align: left; display: inline-table;">
-                                            <tr>
-                                                <td style="border: none; padding: 0; text-align: left; font-size: 9.5pt; font-family: 'Times New Roman', Times, serif; white-space: nowrap;">
-                                                    Mengetahui,<br>
-                                                    <strong id="sheet-signer1-role">{{ $config['signer1_role'] ?? 'Pemimpin Rapat' }}</strong>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td style="border: none; padding: 2pt 0; height: 36pt; text-align: left; vertical-align: middle;">
-                                                    @if($pimpinanAtt && $pimpinanAtt->signature_path)
-                                                        <img src="{{ Storage::disk('public')->url($pimpinanAtt->signature_path) }}" alt="TTD Pimpinan" width="95" height="32" style="width: 95px; height: 32px; object-fit: contain; display: block; border: none;">
-                                                    @else
-                                                        <span style="font-size: 7.5pt; color: #64748b; font-style: italic;">(Tanda tangan tercatat saat presensi)</span>
-                                                    @endif
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td style="border: none; padding: 0; text-align: left; font-size: 9.5pt; font-family: 'Times New Roman', Times, serif; white-space: nowrap;">
-                                                    <strong id="sheet-signer1-name">{{ $config['signer1_name'] ?? $agenda->nama_pimpinan }}</strong><br>
-                                                    NIP <span id="sheet-signer1-nip">{{ $config['signer1_nip'] ?? $agenda->nip_pimpinan }}</span>
-                                                </td>
-                                            </tr>
-                                        </table>
-                                    </td>
-                                    <td width="50%" style="width: 50%; text-align: center; vertical-align: top; border: none; padding: 0 8pt;">
-                                        <table align="center" border="0" cellspacing="0" cellpadding="0" style="margin: 0 auto; border-collapse: collapse; border: none; text-align: left; display: inline-table;">
-                                            <tr>
-                                                <td style="border: none; padding: 0; text-align: left; font-size: 9.5pt; font-family: 'Times New Roman', Times, serif; white-space: nowrap;">
-                                                    <span id="sheet-signing-city">{{ $config['signing_city'] ?? 'Padang' }}</span>, <span id="sheet-signing-date">{{ $config['signing_date'] ?? ($agenda->waktu_mulai ? $agenda->waktu_mulai->translatedFormat('d F Y') : now()->translatedFormat('d F Y')) }}</span><br>
-                                                    <strong id="sheet-signer2-role">{{ $config['signer2_role'] ?? 'Notulis Rapat' }}</strong>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td style="border: none; padding: 2pt 0; height: 36pt; text-align: left; vertical-align: middle;">
-                                                    @if($notulisAtt && $notulisAtt->signature_path)
-                                                        <img src="{{ Storage::disk('public')->url($notulisAtt->signature_path) }}" alt="TTD Notulis" width="95" height="32" style="width: 95px; height: 32px; object-fit: contain; display: block; border: none;">
-                                                    @else
-                                                        <span style="font-size: 7.5pt; color: #64748b; font-style: italic;">(Tanda tangan tercatat saat presensi)</span>
-                                                    @endif
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td style="border: none; padding: 0; text-align: left; font-size: 9.5pt; font-family: 'Times New Roman', Times, serif; white-space: nowrap;">
-                                                    <strong id="sheet-signer2-name">{{ $config['signer2_name'] ?? $agenda->nama_notulis }}</strong><br>
-                                                    NIP <span id="sheet-signer2-nip">{{ $config['signer2_nip'] ?? $agenda->nip_notulis }}</span>
-                                                </td>
-                                            </tr>
-                                        </table>
-                                    </td>
+                                    @foreach($signatureSigners as $signatureSigner)
+                                        <td style="width: {{ $signatureColWidth }}; text-align: center; vertical-align: top; border: none; padding: 0 4pt;">
+                                            <div style="display: inline-block; width: {{ $signatureInner }}; text-align: left;">
+                                                <span style="{{ $signatureFont }}">{!! $signatureSigner['label'] !!}</span><br>
+                                                <strong style="{{ $signatureFont }}">@if($signatureSigner['roleId'])<span id="{{ $signatureSigner['roleId'] }}">@endif{{ $signatureSigner['role'] }}@if($signatureSigner['roleId'])</span>@endif</strong>
+                                            </div>
+                                        </td>
+                                    @endforeach
+                                </tr>
+                                <tr>
+                                    @foreach($signatureSigners as $signatureSigner)
+                                        <td style="width: {{ $signatureColWidth }}; text-align: center; vertical-align: middle; border: none; padding: 1pt 0; height: {{ \App\Support\DocumentLayout::TTD_ROW_HEIGHT_PT }}pt;">
+                                            <div id="{{ $signatureSigner['markId'] }}" style="display: inline-block; width: {{ $signatureInner }}; text-align: left;">
+                                                @if($signatureSigner['showMark'] && $signatureSigner['mark'])
+                                                    <img src="{{ Storage::disk('public')->url($signatureSigner['mark']) }}" alt="TTD" width="95" height="32" style="width: 95px; height: 32px; max-height: 34px; max-width: 100px; object-fit: contain; display: block; border: none;">
+                                                @endif
+                                            </div>
+                                        </td>
+                                    @endforeach
+                                </tr>
+                                <tr>
+                                    @foreach($signatureSigners as $signatureSigner)
+                                        <td style="width: {{ $signatureColWidth }}; text-align: center; vertical-align: top; border: none; padding: 0 4pt;">
+                                            <div style="display: inline-block; width: {{ $signatureInner }}; text-align: left; {{ $signatureFont }}">
+                                                <strong>@if($signatureSigner['nameId'])<span id="{{ $signatureSigner['nameId'] }}">@endif{{ $signatureSigner['name'] }}@if($signatureSigner['nameId'])</span>@endif</strong><br>
+                                                NIP @if($signatureSigner['nipId'])<span id="{{ $signatureSigner['nipId'] }}">@endif{{ $signatureSigner['nip'] }}@if($signatureSigner['nipId'])</span>@endif
+                                            </div>
+                                        </td>
+                                    @endforeach
                                 </tr>
                             </table>
                         </div>
 
-                        <!-- Catatan Kaki Dokumen Resmi -->
-                        <div style="margin: 8pt 0 4pt 0; padding-top: 3pt; border-top: 1px solid #cbd5e1; font-size: 7.5pt; color: #64748b; text-align: center; font-family: 'Times New Roman', Times, serif;">
-                            <span id="sheet-footer-note">{{ $config['footer_note'] ?? 'Dokumen ini diterbitkan secara resmi melalui Sistem Informasi Presensi Rapat (SIPERAPAT) LLDIKTI Wilayah X' }}</span> &bull; <span>Dicetak pada {{ now()->translatedFormat('d F Y H:i') }} WIB</span>
+                        <!-- Catatan Kaki Dokumen Resmi. Kosong secara bawaan:
+                             tidak ada kalimat sistem dan tidak ada stempel waktu
+                             cetak. Blok hanya muncul bila petugas menyalakan
+                             sakelar dan benar-benar menulis sesuatu. -->
+                        @if(($config['show_footer_note'] ?? false) && trim((string) ($config['footer_note'] ?? '')) !== '')
+                        <div id="sheet-footer-note-block" class="document-footer-note" style="margin: {{ \App\Support\DocumentLayout::FOOTER_NOTE_GAP_PT }}pt 0 0 0; padding-top: {{ \App\Support\DocumentLayout::FOOTER_NOTE_PAD_TOP_PT }}pt; border-top: {{ \App\Support\DocumentLayout::FOOTER_NOTE_RULE_PT }}pt solid #{{ \App\Support\DocumentLayout::FOOTER_NOTE_RULE_COLOR }}; font-size: {{ \App\Support\DocumentLayout::FOOTER_NOTE_SIZE_PT }}pt; color: #{{ \App\Support\DocumentLayout::FOOTER_NOTE_COLOR }}; text-align: center; font-family: 'Times New Roman', Times, serif; page-break-inside: avoid; break-inside: avoid;">
+                            <span id="sheet-footer-note">{{ $config['footer_note'] ?? '' }}</span>
                         </div>
+                        @endif
                     </div>
 
                     <!-- Lampiran Bersih Foto Dokumentasi pada Lembar Cetak (Hanya Tampil Jika Foto Ada & Opsi Aktif) -->
                     @if($documentations->count() > 0)
                         <div id="sheet-documentation-annex" class="sheet-documentation-annex" style="margin-top: 10pt; padding-top: 8pt; border-top: 1.5px solid #000; {{ ($config['show_documentation'] ?? true) ? '' : 'display: none;' }}">
-                            <div style="font-size: 9.5pt; font-weight: bold; margin-bottom: 6pt; text-transform: uppercase; font-family: 'Times New Roman', Times, serif; text-align: center;">
+                            <div style="font-size: {{ \App\Support\DocumentLayout::SECTION_SIZE_PT }}pt; font-weight: bold; margin-bottom: {{ \App\Support\DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt; text-transform: uppercase; font-family: 'Times New Roman', Times, serif; text-align: center;">
                                 III. LAMPIRAN FOTO DOKUMENTASI KEGIATAN
                             </div>
                             <table width="100%" border="0" cellspacing="0" cellpadding="4" style="width: 100%; border-collapse: collapse;">
@@ -957,11 +1059,36 @@
                             </div>
                         </div>
 
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                                <div>
+                                    <div class="font-bold text-slate-900">Seksi I A: Catatan Jalannya Rapat (Notulensi)</div>
+                                    <div class="text-[11px] text-slate-500">Mencantumkan seluruh notulensi hasil ketikan notulis</div>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="hidden" name="show_notulensi" value="0">
+                                    <input type="checkbox" name="show_notulensi" value="1" class="sr-only peer" @checked($config['show_notulensi'] ?? true)>
+                                    <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-slate-900"></div>
+                                </label>
+                            </div>
+
+                            <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                                <div>
+                                    <div class="font-bold text-slate-900">Seksi I B: Kesimpulan &amp; Rencana Tindak Lanjut (RTL)</div>
+                                    <div class="text-[11px] text-slate-500">Mencantumkan kesimpulan pokok dan tindak lanjut kedinasan</div>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="hidden" name="show_kesimpulan" value="0">
+                                    <input type="checkbox" name="show_kesimpulan" value="1" class="sr-only peer" @checked($config['show_kesimpulan'] ?? true)>
+                                    <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-slate-900"></div>
+                                </label>
+                            </div>
+
                         <!-- Attendance Table Settings -->
                         <div class="p-4 border border-slate-200 rounded-xl space-y-3 bg-white">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <div class="font-bold text-slate-900">Seksi I: Tabel Kehadiran Peserta</div>
+                                    <div class="font-bold text-slate-900">Seksi II: Tabel Kehadiran Peserta</div>
                                     <div class="text-[11px] text-slate-500">Menampilkan daftar pegawai yang telah mengisi presensi resmi rapat ini</div>
                                 </div>
                                 <label class="relative inline-flex items-center cursor-pointer">
@@ -999,33 +1126,6 @@
                                 </label>
                             </div>
                         </div>
-
-                        <!-- Minutes, Conclusions & Documentation Toggles -->
-                        <div class="space-y-2">
-                            <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                                <div>
-                                    <div class="font-bold text-slate-900">Seksi II A: Catatan Jalannya Rapat (Notulensi)</div>
-                                    <div class="text-[11px] text-slate-500">Mencantumkan seluruh notulensi hasil ketikan notulis</div>
-                                </div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="hidden" name="show_notulensi" value="0">
-                                    <input type="checkbox" name="show_notulensi" value="1" class="sr-only peer" @checked($config['show_notulensi'] ?? true)>
-                                    <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-slate-900"></div>
-                                </label>
-                            </div>
-
-                            <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                                <div>
-                                    <div class="font-bold text-slate-900">Seksi II B: Kesimpulan &amp; Rencana Tindak Lanjut (RTL)</div>
-                                    <div class="text-[11px] text-slate-500">Mencantumkan kesimpulan pokok dan tindak lanjut kedinasan</div>
-                                </div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="hidden" name="show_kesimpulan" value="0">
-                                    <input type="checkbox" name="show_kesimpulan" value="1" class="sr-only peer" @checked($config['show_kesimpulan'] ?? true)>
-                                    <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-slate-900"></div>
-                                </label>
-                            </div>
-
                             <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
                                 <div>
                                     <div class="font-bold text-slate-900">Seksi III: Lampiran Foto Dokumentasi Kegiatan</div>
@@ -1038,6 +1138,7 @@
                                 </label>
                             </div>
                         </div>
+
                     </div>
 
                     {{-- ====== TAB 3: FOOTER & PENGESAHAN ====== --}}
@@ -1167,11 +1268,11 @@
                                 <label class="font-bold text-slate-900 block">Teks Catatan Kaki Dokumen</label>
                                 <label class="flex items-center gap-1 text-[11px] text-slate-500 cursor-pointer">
                                     <input type="hidden" name="show_footer_note" value="0">
-                                    <input type="checkbox" name="show_footer_note" value="1" class="rounded border-slate-300 text-slate-900" @checked($config['show_footer_note'] ?? true)>
+                                    <input type="checkbox" name="show_footer_note" value="1" class="rounded border-slate-300 text-slate-900" @checked($config['show_footer_note'] ?? false)>
                                     <span>Tampilkan</span>
                                 </label>
                             </div>
-                            <input type="text" name="footer_note" value="{{ old('footer_note', $config['footer_note'] ?? 'Dokumen ini diterbitkan secara resmi melalui Sistem Informasi Presensi Rapat (SIPERAPAT) LLDIKTI Wilayah X') }}" class="w-full text-xs rounded-xl border-slate-300 focus:border-slate-900 focus:ring-slate-900 py-2.5 px-3">
+                            <input type="text" name="footer_note" value="{{ old('footer_note', $config['footer_note'] ?? '') }}" placeholder="Kosongkan bila dokumen tidak perlu catatan kaki" class="w-full text-xs rounded-xl border-slate-300 focus:border-slate-900 focus:ring-slate-900 py-2.5 px-3">
                         </div>
                     </div>
 
@@ -1289,10 +1390,30 @@
             return input ? input.value : '';
         };
 
+        // Pratinjau harus mengikuti centang seketika, bukan hanya setelah
+        // disimpan. Sebagian besar toggle dulu hanya ada di formulir, jadi
+        // petugas mencentang sesuatu, melihat lembar tidak berubah, dan
+        // menyimpulkan toggle itu rusak. Yang ditoggle di bawah memakai id
+        // yang sama dengan blok di server, sehingga keduanya tidak mungkin
+        // merujuk elemen yang berbeda.
+        const setVisible = (id, visible) => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = visible ? '' : 'none';
+        };
+
         const isChecked = (name) => {
             const input = modal.querySelector(`input[type="checkbox"][name="${name}"]`);
             return input ? input.checked : true;
         };
+
+        // Bagian-bagian dokumen
+        setVisible('sheet-seksi-1-container', isChecked('show_notulensi') || isChecked('show_kesimpulan'));
+        setVisible('sheet-section-notulensi-wrapper', isChecked('show_notulensi'));
+        setVisible('sheet-section-kesimpulan-wrapper', isChecked('show_kesimpulan'));
+        setVisible('sheet-seksi-2-container', isChecked('show_attendees'));
+        setVisible('sheet-meeting-info', isChecked('show_meeting_info'));
+        setVisible('sheet-documentation-annex', isChecked('show_documentation'));
+        setVisible('sheet-footer-note-block', isChecked('show_footer_note'));
 
         // Header Kop
         const kopEl = document.getElementById('sheet-header-kop');
@@ -1329,6 +1450,18 @@
         const numEl = document.getElementById('sheet-document-number');
         if (numEl && val('document_number')) numEl.textContent = val('document_number');
 
+        // Tanda tangan blok. Kolom ketiga tidak bisa hanya disembunyikan lewat
+        // style, karena jumlah kolomnya menentukan lebar kolom lainnya, jadi
+        // penampilannya memang perlu halaman dimuat ulang.
+        for (const markId of ['sheet-signer1-mark', 'sheet-signer2-mark']) {
+            const mark = document.getElementById(markId);
+            if (mark) {
+                mark.style.display = markId === 'sheet-signer1-mark'
+                    ? (isChecked('show_signer1_signature') ? '' : 'none')
+                    : (isChecked('show_signer2_signature') ? '' : 'none');
+            }
+        }
+
         // Signers & Footer
         const cityEl = document.getElementById('sheet-signing-city');
         if (cityEl && val('signing_city')) cityEl.textContent = val('signing_city');
@@ -1353,6 +1486,15 @@
 
         const nip2El = document.getElementById('sheet-signer2-nip');
         if (nip2El && val('signer2_nip')) nip2El.textContent = val('signer2_nip');
+
+        const role3El = document.getElementById('sheet-signer3-role');
+        if (role3El && val('signer3_role')) role3El.textContent = val('signer3_role');
+
+        const name3El = document.getElementById('sheet-signer3-name');
+        if (name3El && val('signer3_name')) name3El.textContent = val('signer3_name');
+
+        const nip3El = document.getElementById('sheet-signer3-nip');
+        if (nip3El && val('signer3_nip')) nip3El.textContent = val('signer3_nip');
 
         const footerNoteEl = document.getElementById('sheet-footer-note');
         if (footerNoteEl && val('footer_note')) footerNoteEl.textContent = val('footer_note');

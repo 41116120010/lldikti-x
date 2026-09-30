@@ -52,7 +52,7 @@ class Agenda extends Model
         static::creating(function ($agenda) {
             if (empty($agenda->slug)) {
                 $baseSlug = Str::slug($agenda->judul_rapat);
-                $uniqueSlug = $baseSlug . '-' . Str::lower(Str::random(6));
+                $uniqueSlug = $baseSlug.'-'.Str::lower(Str::random(6));
                 $agenda->slug = $uniqueSlug;
             }
         });
@@ -218,9 +218,9 @@ class Agenda extends Model
     {
         return $query->where(function (Builder $q) {
             $q->where('status', 'ongoing')
-              ->orWhere(function (Builder $sub) {
-                  $sub->upcoming();
-              });
+                ->orWhere(function (Builder $sub) {
+                    $sub->upcoming();
+                });
         });
     }
 
@@ -290,7 +290,7 @@ class Agenda extends Model
             return true;
         }
 
-        if (!$user->unit_id) {
+        if (! $user->unit_id) {
             return false;
         }
 
@@ -357,8 +357,8 @@ class Agenda extends Model
                     foreach ($entityParts as $j => $entityPart) {
                         // Even indices are raw text; odd indices are entities
                         if ($j % 2 === 0 && $entityPart !== '') {
-                            $entityParts[$j] = preg_replace_callback('/([^\s]{' . $threshold . '})/u', function ($m) use ($zwsp) {
-                                return $m[1] . $zwsp;
+                            $entityParts[$j] = preg_replace_callback('/([^\s]{'.$threshold.'})/u', function ($m) use ($zwsp) {
+                                return $m[1].$zwsp;
                             }, $entityPart);
                         }
                     }
@@ -487,17 +487,17 @@ class Agenda extends Model
      */
     public function getRentangWaktuAttribute(): string
     {
-        if (!$this->waktu_mulai) {
+        if (! $this->waktu_mulai) {
             return '-';
         }
 
         $mulai = $this->waktu_mulai->format('H:i');
 
         if ($this->waktu_selesai) {
-            return $mulai . ' - ' . $this->waktu_selesai->format('H:i') . ' WIB';
+            return $mulai.' - '.$this->waktu_selesai->format('H:i').' WIB';
         }
 
-        return $mulai . ' WIB s.d. Selesai';
+        return $mulai.' WIB s.d. Selesai';
     }
 
     /**
@@ -505,12 +505,13 @@ class Agenda extends Model
      */
     public function getJadwalLengkapAttribute(): string
     {
-        if (!$this->waktu_mulai) {
+        if (! $this->waktu_mulai) {
             return '-';
         }
 
         $tanggal = $this->waktu_mulai->translatedFormat('l, d M Y');
-        return $tanggal . ' • ' . $this->rentang_waktu;
+
+        return $tanggal.' • '.$this->rentang_waktu;
     }
 
     /**
@@ -567,7 +568,7 @@ class Agenda extends Model
     public function getPimpinanAttendanceAttribute(): ?Attendance
     {
         $pimpinanId = $this->effective_pimpinan?->id;
-        if (!$pimpinanId) {
+        if (! $pimpinanId) {
             return null;
         }
 
@@ -584,7 +585,7 @@ class Agenda extends Model
     public function getNotulisAttendanceAttribute(): ?Attendance
     {
         $notulisId = $this->effective_notulis?->id;
-        if (!$notulisId) {
+        if (! $notulisId) {
             return null;
         }
 
@@ -597,6 +598,7 @@ class Agenda extends Model
 
     /**
      * Get system default report configuration for this agenda.
+     *
      * @return array<string,mixed>
      */
     public function getDefaultReportConfig(): array
@@ -611,7 +613,7 @@ class Agenda extends Model
             'alamat_kontak' => 'Jalan Khatib Sulaiman, Padang, Sumatera Barat • Laman: lldikti10.kemdikbud.go.id',
             'document_title' => 'BERITA ACARA DAN DAFTAR HADIR RAPAT',
             'show_document_number' => true,
-            'document_number' => 'BA-RAPAT/' . ($this->waktu_mulai ? $this->waktu_mulai->format('Y') : date('Y')) . '/' . str_pad($this->id, 4, '0', STR_PAD_LEFT),
+            'document_number' => 'BA-RAPAT/'.($this->waktu_mulai ? $this->waktu_mulai->format('Y') : date('Y')).'/'.str_pad($this->id, 4, '0', STR_PAD_LEFT),
 
             // Content
             'show_meeting_info' => true,
@@ -642,8 +644,11 @@ class Agenda extends Model
             'signer3_role' => 'Kepala Lembaga Layanan Pendidikan Tinggi Wilayah X',
             'signer3_name' => '',
             'signer3_nip' => '-',
-            'show_footer_note' => true,
-            'footer_note' => 'Dokumen ini diterbitkan secara resmi melalui Sistem Informasi Presensi Rapat (SIPERAPAT) LLDIKTI Wilayah X',
+            'show_footer_note' => false,
+            // Kosong secara sengaja. Dokumen ini tidak lagi mencantumkan
+            // kalimat resmi SIPERAPAT maupun stempel waktu cetak;-petugas
+            // menuliskan catatannya sendiri bila memang diperlukan.
+            'footer_note' => '',
         ];
     }
 
@@ -681,11 +686,11 @@ class Agenda extends Model
      */
     public function getSuratEdaranUrlAttribute(): ?string
     {
-        if (!$this->surat_edaran_path) {
+        if (! $this->surat_edaran_path) {
             return null;
         }
 
-        return '/storage/' . ltrim($this->surat_edaran_path, '/');
+        return '/storage/'.ltrim($this->surat_edaran_path, '/');
     }
 
     /**

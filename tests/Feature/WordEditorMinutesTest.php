@@ -2,21 +2,22 @@
 
 namespace Tests\Feature;
 
-use Tests\Support\InspectsDocx;
 use App\Models\Agenda;
 use App\Models\Unit;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Tests\Support\InspectsDocx;
 use Tests\TestCase;
 
 class WordEditorMinutesTest extends TestCase
 {
+    use DatabaseTransactions;
     use InspectsDocx;
 
-    use DatabaseTransactions;
-
     private User $admin;
+
     private User $staff;
+
     private Agenda $agenda;
 
     protected function setUp(): void
@@ -25,8 +26,8 @@ class WordEditorMinutesTest extends TestCase
 
         $this->admin = User::where('role', 'administrator')->first() ?? User::create([
             'name' => 'Admin Test Editor',
-            'username' => 'admin_test_editor_' . uniqid(),
-            'email' => 'admin_editor_' . uniqid() . '@lldikti.test',
+            'username' => 'admin_test_editor_'.uniqid(),
+            'email' => 'admin_editor_'.uniqid().'@lldikti.test',
             'nip' => '198801012010011001',
             'password' => bcrypt('password'),
             'role' => 'administrator',
@@ -35,8 +36,8 @@ class WordEditorMinutesTest extends TestCase
 
         $this->staff = User::where('role', 'staff')->first() ?? User::create([
             'name' => 'Pegawai Test Editor',
-            'username' => 'staff_test_editor_' . uniqid(),
-            'email' => 'staff_editor_' . uniqid() . '@lldikti.test',
+            'username' => 'staff_test_editor_'.uniqid(),
+            'email' => 'staff_editor_'.uniqid().'@lldikti.test',
             'nip' => '199505052020011002',
             'password' => bcrypt('password'),
             'role' => 'staff',
@@ -49,7 +50,7 @@ class WordEditorMinutesTest extends TestCase
             'unit_id' => $unit?->id,
             'created_by' => $this->admin->id,
             'judul_rapat' => 'Rapat Koordinasi Uji Editor Word',
-            'slug' => 'rapat-koordinasi-uji-editor-word-' . uniqid(),
+            'slug' => 'rapat-koordinasi-uji-editor-word-'.uniqid(),
             'deskripsi' => 'Pengujian toolbar editor Word pada notulensi rapat.',
             'tanggal' => now()->toDateString(),
             'waktu_mulai' => now()->setTime(9, 0),
@@ -70,19 +71,19 @@ class WordEditorMinutesTest extends TestCase
 
         // 2. Legacy plain text conversion with line breaks
         $this->agenda->notulensi = "Poin pertama\nPoin kedua\nPoin ketiga";
-        $this->assertStringContainsString("<br />", $this->agenda->formatted_notulensi);
-        $this->assertStringContainsString("Poin pertama", $this->agenda->formatted_notulensi);
+        $this->assertStringContainsString('<br />', $this->agenda->formatted_notulensi);
+        $this->assertStringContainsString('Poin pertama', $this->agenda->formatted_notulensi);
 
         // 3. Rich HTML text preserved
-        $richHtml = "<h2>Agenda Pokok</h2><ul><li>Diskusi Anggaran</li><li>Timeline Pelaksanaan</li></ul>";
+        $richHtml = '<h2>Agenda Pokok</h2><ul><li>Diskusi Anggaran</li><li>Timeline Pelaksanaan</li></ul>';
         $this->agenda->notulensi = $richHtml;
         $this->assertSame($richHtml, $this->agenda->formatted_notulensi);
     }
 
     public function test_admin_can_update_minutes_with_rich_text_formatting(): void
     {
-        $richNotulensi = "<h2>Jalannya Rapat</h2><p>Pimpinan membuka rapat dengan <b>tegas</b> dan <i>lugas</i>.</p><ul><li>Poin A: Realisasi anggaran 90%</li><li>Poin B: Evaluasi server</li></ul>";
-        $richKesimpulan = "<blockquote>Arahan Pimpinan: Percepat integrasi data minggu ini.</blockquote><ol><li>RTL 1: Penyiapan API</li></ol>";
+        $richNotulensi = '<h2>Jalannya Rapat</h2><p>Pimpinan membuka rapat dengan <b>tegas</b> dan <i>lugas</i>.</p><ul><li>Poin A: Realisasi anggaran 90%</li><li>Poin B: Evaluasi server</li></ul>';
+        $richKesimpulan = '<blockquote>Arahan Pimpinan: Percepat integrasi data minggu ini.</blockquote><ol><li>RTL 1: Penyiapan API</li></ol>';
 
         $response = $this->actingAs($this->admin)->put(
             route('admin.agendas.update-notulen', $this->agenda),
@@ -253,11 +254,11 @@ class WordEditorMinutesTest extends TestCase
         $longUrl = 'https://lldikti3.kemdikbud.go.id/portal/v2/dokumen/verifikasi/token_kehadiran_rapat_koordinasi_bidang_kelembagaan_dan_sumber_daya_2026.pdf';
         $longHash = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
         $normalIndonesian = 'Pimpinan rapat mempertanggungjawabkannya sesuai ketentuan tata naskah dinas.';
-        $htmlWithLinksAndEntities = '<p>Dokumen dapat diunduh pada <a href="' . $longUrl . '">' . $longUrl . '</a>&nbsp;dengan verifikasi hash ' . $longHash . '.</p>';
+        $htmlWithLinksAndEntities = '<p>Dokumen dapat diunduh pada <a href="'.$longUrl.'">'.$longUrl.'</a>&nbsp;dengan verifikasi hash '.$longHash.'.</p>';
 
         $this->agenda->update([
             'notulensi' => $htmlWithLinksAndEntities,
-            'kesimpulan' => $normalIndonesian . ' ' . $longUrl,
+            'kesimpulan' => $normalIndonesian.' '.$longUrl,
         ]);
 
         $formattedNotulensi = $this->agenda->formatted_notulensi;
@@ -269,7 +270,7 @@ class WordEditorMinutesTest extends TestCase
         $this->assertStringContainsString($zwsp, $formattedKesimpulan);
 
         // 2. HTML attribute values (such as href="https://...") MUST NOT be corrupted by ZWSP
-        $this->assertStringContainsString('href="' . $longUrl . '"', $formattedNotulensi);
+        $this->assertStringContainsString('href="'.$longUrl.'"', $formattedNotulensi);
 
         // 3. Normal Indonesian words (even long ones like "mempertanggungjawabkannya" ~25 chars) must not be split
         $this->assertStringContainsString('mempertanggungjawabkannya', $formattedKesimpulan);
@@ -322,14 +323,33 @@ class WordEditorMinutesTest extends TestCase
         $response->assertSee('Pemisah Halaman');
         $response->assertSee('Menuju Lembar Pengesahan');
 
-        // 5. Official Format Elements pre-rendered on sheets
+        // 5. Official Format Elements pre-rendered on sheets.
+        // Urutan seksi mengikuti dokumen yang diekspor: notulensi dulu, baru
+        // daftar hadir. Halaman pengisian pernah menampilkan kebalikannya,
+        // sehingga petugas menyusun dokumen dalam urutan yang tidak akan
+        // pernah keluar dari ekspornya.
         $response->assertSee('KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI');
         $response->assertSee('(LLDIKTI) WILAYAH X');
         $response->assertSee('BERITA ACARA');
-        $response->assertSee('I. DAFTAR KEHADIRAN PESERTA');
-        $response->assertSee('II. NOTULENSI &amp; KESIMPULAN RAPAT', false);
+        $response->assertSee('I. NOTULENSI &amp; KESIMPULAN RAPAT', false);
+        $response->assertSee('II. DAFTAR KEHADIRAN PESERTA');
         $response->assertSee('LEMBAR PENGESAHAN BERITA ACARA', false);
         $response->assertSee('Lampiran Foto');
+
+        // Penanda posisi memakai id wadah, bukan judul seksi. "I. DAFTAR
+        // KEHADIRAN" adalah potongan dari "II. DAFTAR KEHADIRAN", jadi pencarian
+        // berdasarkan teks akan selalu menemukan yang kedua lebih dulu.
+        $content = $response->getContent();
+        $notulensiAt = strpos($content, 'id="sheet-seksi-1-container"');
+        $attendanceAt = strpos($content, 'id="sheet-seksi-2-container"');
+
+        $this->assertNotFalse($notulensiAt, 'Wadah seksi notulensi tidak ditemukan pada lembar.');
+        $this->assertNotFalse($attendanceAt, 'Wadah seksi kehadiran tidak ditemukan pada lembar.');
+        $this->assertLessThan(
+            $attendanceAt,
+            $notulensiAt,
+            'Notulensi harus tampil sebelum daftar kehadiran pada lembar.'
+        );
 
         // 6. Interactive Editable Sections inside document
         $response->assertSee('id="notulensi-content"', false);
@@ -449,4 +469,3 @@ class WordEditorMinutesTest extends TestCase
         $response->assertSee('openDokumentasiModal()', false);
     }
 }
-

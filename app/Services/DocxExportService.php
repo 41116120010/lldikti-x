@@ -105,6 +105,7 @@ class DocxExportService
         $this->addMinutes($section, $data);
         $this->addAttendance($section, $data);
         $this->addSignatures($section, $data);
+        $this->addFooterNote($section, $data);
         $this->addPhotoAnnex($section, $data);
 
         $file = tempnam(sys_get_temp_dir(), 'siperapat_docx_');
@@ -484,7 +485,15 @@ class DocxExportService
             'role' => $config['signer1_role'] ?? 'Pemimpin Rapat',
             'name' => $config['signer1_name'] ?? $agenda->nama_pimpinan,
             'nip' => $config['signer1_nip'] ?? $agenda->nip_pimpinan,
-            'image' => $data['pimpinanSigBase64'] ?? null,
+            // The officer can switch a mark off on the workstation page. Reading
+            // the base64 straight into the document ignored that switch, so the
+            // PDF dropped the mark and the .docx printed it anyway - two copies
+            // of one signed record disagreeing about what had been signed.
+            // Absent data and a switched-off mark mean the same thing here: no
+            // image, which leaves the cell empty exactly as the PDF does.
+            'image' => ($config['show_signer1_signature'] ?? true)
+                ? ($data['pimpinanSigBase64'] ?? null)
+                : null,
         ]];
 
         if ($config['show_signer3'] ?? false) {
@@ -503,7 +512,9 @@ class DocxExportService
             'role' => $config['signer2_role'] ?? 'Notulis Rapat',
             'name' => $config['signer2_name'] ?? $agenda->nama_notulis,
             'nip' => $config['signer2_nip'] ?? $agenda->nip_notulis,
-            'image' => $data['notulisSigBase64'] ?? null,
+            'image' => ($config['show_signer2_signature'] ?? true)
+                ? ($data['notulisSigBase64'] ?? null)
+                : null,
         ];
 
         $contentCm = DocumentLayout::contentWidthCm();
@@ -562,6 +573,55 @@ class DocxExportService
                 DocumentLayout::BODY_SIZE_PT, false, DocumentLayout::BODY_LINE_PT, 'left', false, 0, $indentTwips
             ));
         }
+    }
+
+    // -----------------------------------------------------------------
+    // Document footer note
+    // -----------------------------------------------------------------
+
+    /**
+     * The office note printed under the signature block.
+     *
+     * The toggle and the text behind it were editable on the workstation page
+     * and stored with the agenda, but neither renderer read them: the note was
+     * visible while it was being typed, survived a save, and then vanished from
+     * the exported document. An option that silently does nothing is worse than
+     * one that is missing, because the preview confirms it before it is lost.
+     *
+     * The separator rule is a one cell table because Style\Paragraph in this
+     * version of PhpWord has no border at all, and a paragraph is the only
+     * other way to draw a line. The table is a single column spanning the full
+     * measure, so it is visually one rule and one centred line of text.
+     *
+     * @param  array<string,mixed>  $data
+     */
+    private function addFooterNote(mixed $section, array $data): void
+    {
+        $config = $data['config'];
+        $text = $this->plain($config['footer_note'] ?? '');
+
+        // Tanpa catatan yang ditulis petugas, blok dilewati seluruhnya.
+        // Menyisakan garis pemisah tanpa teks di bawahnya lebih buruk daripada
+        // tidak ada blok sama sekali.
+        if (! ($config['show_footer_note'] ?? false) || $text === '') {
+            return;
+        }
+
+        $this->spacer($section, DocumentLayout::FOOTER_NOTE_GAP_PT);
+
+        $table = $section->addTable(array_merge($this->tableStyle(), [
+            'cellMarginTop' => DocumentLayout::ptToTwips(DocumentLayout::FOOTER_NOTE_PAD_TOP_PT),
+        ]));
+
+        $table->addRow(null, $this->rowStyle())->addCell(
+            DocumentLayout::cmToTwips(DocumentLayout::contentWidthCm()),
+            [
+                'borderTopSize' => DocumentLayout::ptToBorderEighths(DocumentLayout::FOOTER_NOTE_RULE_PT),
+                'borderTopColor' => DocumentLayout::FOOTER_NOTE_RULE_COLOR,
+            ]
+        )->addText($text, ...$this->style(
+            DocumentLayout::FOOTER_NOTE_SIZE_PT, false, null, 'center'
+        ));
     }
 
     // -----------------------------------------------------------------

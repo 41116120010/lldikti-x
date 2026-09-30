@@ -5,19 +5,22 @@ namespace Tests\Feature;
 use App\Models\Agenda;
 use App\Models\Unit;
 use App\Models\User;
+use App\Services\WordExportService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\Support\InspectsDocx;
 use Tests\TestCase;
 
 class SignatureColumnStandardizationTest extends TestCase
 {
+    use DatabaseTransactions;
     use InspectsDocx;
 
-    use DatabaseTransactions;
-
     private User $admin;
+
     private User $pimpinan;
+
     private User $notulis;
+
     private Agenda $agenda;
 
     protected function setUp(): void
@@ -26,8 +29,8 @@ class SignatureColumnStandardizationTest extends TestCase
 
         $this->admin = User::where('role', 'administrator')->first() ?? User::create([
             'name' => 'Admin Signature Test',
-            'username' => 'admin_sig_test_' . uniqid(),
-            'email' => 'admin_sig_' . uniqid() . '@lldikti.test',
+            'username' => 'admin_sig_test_'.uniqid(),
+            'email' => 'admin_sig_'.uniqid().'@lldikti.test',
             'nip' => '198001012005011001',
             'password' => bcrypt('password'),
             'role' => 'administrator',
@@ -36,8 +39,8 @@ class SignatureColumnStandardizationTest extends TestCase
 
         $this->pimpinan = User::create([
             'name' => 'Dr. H. Hendra Suherman, S.T., M.T.',
-            'username' => 'pimpinan_' . uniqid(),
-            'email' => 'pimpinan_' . uniqid() . '@lldikti.test',
+            'username' => 'pimpinan_'.uniqid(),
+            'email' => 'pimpinan_'.uniqid().'@lldikti.test',
             'nip' => '197405151999031002',
             'password' => bcrypt('password'),
             'role' => 'staff',
@@ -46,8 +49,8 @@ class SignatureColumnStandardizationTest extends TestCase
 
         $this->notulis = User::create([
             'name' => 'Rina Kartika, S.Kom., M.Cs.',
-            'username' => 'notulis_' . uniqid(),
-            'email' => 'notulis_' . uniqid() . '@lldikti.test',
+            'username' => 'notulis_'.uniqid(),
+            'email' => 'notulis_'.uniqid().'@lldikti.test',
             'nip' => '199208182018012003',
             'password' => bcrypt('password'),
             'role' => 'staff',
@@ -62,7 +65,7 @@ class SignatureColumnStandardizationTest extends TestCase
             'pimpinan_id' => $this->pimpinan->id,
             'notulis_id' => $this->notulis->id,
             'judul_rapat' => 'Rapat Uji Standardisasi Kolom Tanda Tangan',
-            'slug' => 'rapat-uji-ttd-' . uniqid(),
+            'slug' => 'rapat-uji-ttd-'.uniqid(),
             'deskripsi' => 'Pengujian format sejajar lurus, NIP tanpa titik, dan nama tanpa garis bawah.',
             'tanggal' => now()->toDateString(),
             'waktu_mulai' => now()->setTime(9, 0),
@@ -84,13 +87,13 @@ class SignatureColumnStandardizationTest extends TestCase
 
         // 1. Leader signature block
         $response->assertSee($this->pimpinan->name);
-        $response->assertSee('NIP ' . $this->pimpinan->nip);
-        $response->assertDontSee('NIP. ' . $this->pimpinan->nip);
+        $response->assertSee('NIP '.$this->pimpinan->nip);
+        $response->assertDontSee('NIP. '.$this->pimpinan->nip);
 
         // 2. Notulis signature block
         $response->assertSee($this->notulis->name);
-        $response->assertSee('NIP ' . $this->notulis->nip);
-        $response->assertDontSee('NIP. ' . $this->notulis->nip);
+        $response->assertSee('NIP '.$this->notulis->nip);
+        $response->assertDontSee('NIP. '.$this->notulis->nip);
 
         // 3. Straight vertical alignment wrapper (inline-block text-left) within centered table
         $response->assertSee('class="inline-block text-left space-y-0.5"', false);
@@ -98,8 +101,8 @@ class SignatureColumnStandardizationTest extends TestCase
         $response->assertSee('display: inline-table', false);
 
         // 4. Name is NOT underlined
-        $response->assertDontSee('<u>' . $this->pimpinan->name . '</u>', false);
-        $response->assertDontSee('<u>' . $this->notulis->name . '</u>', false);
+        $response->assertDontSee('<u>'.$this->pimpinan->name.'</u>', false);
+        $response->assertDontSee('<u>'.$this->notulis->name.'</u>', false);
     }
 
     public function test_reports_show_signature_block_format(): void
@@ -110,13 +113,13 @@ class SignatureColumnStandardizationTest extends TestCase
 
         // 1. Leader signature block
         $response->assertSee($this->pimpinan->name);
-        $response->assertSee('NIP ' . $this->pimpinan->nip);
-        $response->assertDontSee('NIP. ' . $this->pimpinan->nip);
+        $response->assertSee('NIP '.$this->pimpinan->nip);
+        $response->assertDontSee('NIP. '.$this->pimpinan->nip);
 
         // 2. Notulis signature block
         $response->assertSee($this->notulis->name);
-        $response->assertSee('NIP ' . $this->notulis->nip);
-        $response->assertDontSee('NIP. ' . $this->notulis->nip);
+        $response->assertSee('NIP '.$this->notulis->nip);
+        $response->assertDontSee('NIP. '.$this->notulis->nip);
 
         // 3. Straight vertical alignment wrapper (inline-block text-left) within centered table
         $response->assertSee('class="inline-block text-left space-y-0.5"', false);
@@ -124,8 +127,8 @@ class SignatureColumnStandardizationTest extends TestCase
         $response->assertSee('display: inline-table', false);
 
         // 4. Name is NOT underlined
-        $response->assertDontSee('<u>' . $this->pimpinan->name . '</u>', false);
-        $response->assertDontSee('<u>' . $this->notulis->name . '</u>', false);
+        $response->assertDontSee('<u>'.$this->pimpinan->name.'</u>', false);
+        $response->assertDontSee('<u>'.$this->notulis->name.'</u>', false);
     }
 
     public function test_notulen_workstation_signature_block_format(): void
@@ -150,18 +153,48 @@ class SignatureColumnStandardizationTest extends TestCase
         $response->assertDontSee('NIP. <span id="sheet-signer1-nip">', false);
         $response->assertDontSee('NIP. <span id="sheet-signer2-nip">', false);
 
-        // 4. Straight vertical alignment with centered table structure and fixed 50% width
-        $response->assertSee('align="center"', false);
-        $response->assertSee('margin: 0 auto', false);
+        // 4. The block is laid out exactly as the exported document lays it out:
+        // a centred column, an inner block of 68 % of that column, and text
+        // held against the inner block's left edge. It used to be a nested
+        // table with width="50%" attributes, which is a shape the export does
+        // not have - the workstation was showing a different document.
+        $response->assertSee('display: inline-block;', false);
+        $response->assertSee('width: 68%', false);
         $response->assertSee('text-align: left;', false);
         $response->assertSee('table-layout: fixed', false);
-        $response->assertSee('width="50%"', false);
         $response->assertSee('margin-top: 18pt;', false);
+        $response->assertDontSee('width="50%"', false);
 
-        // 5. Poin 66: Verify that Mengetahui, role, name, and NIP are in a unified nested table (sharing exact vertical alignment)
+        // 5. One cell per signer, and the label, role, name and NIP of each
+        // share that cell so the vertical alignment cannot drift between them.
         $content = $response->getContent();
-        $this->assertMatchesRegularExpression('/<table[^>]*align="center"[^>]*>[\s\S]*?Mengetahui,[\s\S]*?sheet-signer1-role[\s\S]*?sheet-signer1-name[\s\S]*?sheet-signer1-nip[\s\S]*?<\/table>/', $content);
-        $this->assertMatchesRegularExpression('/<table[^>]*align="center"[^>]*>[\s\S]*?sheet-signing-city[\s\S]*?sheet-signer2-role[\s\S]*?sheet-signer2-name[\s\S]*?sheet-signer2-nip[\s\S]*?<\/table>/', $content);
+
+        $this->assertMatchesRegularExpression(
+            '/Mengetahui,[\s\S]*?sheet-signer1-role[\s\S]*?sheet-signer1-name[\s\S]*?sheet-signer1-nip[\s\S]*?<\/td>/',
+            $content
+        );
+        $this->assertMatchesRegularExpression(
+            '/sheet-signing-city[\s\S]*?sheet-signer2-role[\s\S]*?sheet-signer2-name[\s\S]*?sheet-signer2-nip[\s\S]*?<\/td>/',
+            $content
+        );
+
+        // 6. The workstation block and the exported block must agree, otherwise
+        // the parity work is undone the next time either side is edited.
+        $export = app(WordExportService::class)
+            ->generateDocumentContent($this->agenda, [], 'plain');
+
+        foreach (['display: inline-block;', 'width: 68%', 'width: 50%'] as $shared) {
+            $this->assertStringContainsString(
+                $shared,
+                $content,
+                "Pratinjau harus memakai bentuk yang sama dengan ekspor: {$shared}"
+            );
+            $this->assertStringContainsString(
+                $shared,
+                $export,
+                "Ekspor harus memakai bentuk yang sama dengan pratinjau: {$shared}"
+            );
+        }
     }
 
     public function test_document_body_export_signature_block_format(): void
@@ -175,8 +208,8 @@ class SignatureColumnStandardizationTest extends TestCase
         // The width used to be a hard 175pt / 135pt, which is what made the
         // blocks drift out of their columns whenever the page margin changed.
         $this->assertStringContainsString('display: inline-block;', $this->documentBodyHtml($this->agenda));
-        $this->assertStringContainsString('width: 68%', app(\App\Services\WordExportService::class)->generateDocumentContent($this->agenda, [], 'plain'));
-        $this->assertStringNotContainsString('width: 175pt', app(\App\Services\WordExportService::class)->generateDocumentContent($this->agenda, [], 'plain'));
+        $this->assertStringContainsString('width: 68%', app(WordExportService::class)->generateDocumentContent($this->agenda, [], 'plain'));
+        $this->assertStringNotContainsString('width: 175pt', app(WordExportService::class)->generateDocumentContent($this->agenda, [], 'plain'));
         $this->assertStringNotContainsString('width: 135pt', $content);
         $this->assertStringContainsString('text-align: left;', $this->documentBodyHtml($this->agenda));
 
@@ -185,14 +218,14 @@ class SignatureColumnStandardizationTest extends TestCase
         $this->assertStringContainsString('width="50%"', $this->documentBodyHtml($this->agenda));
 
         // 3. NIP has NO dot in export
-        $this->assertStringContainsString('NIP ' . $this->pimpinan->nip, $content);
-        $this->assertStringContainsString('NIP ' . $this->notulis->nip, $content);
-        $this->assertStringNotContainsString('NIP. ' . $this->pimpinan->nip, $content);
-        $this->assertStringNotContainsString('NIP. ' . $this->notulis->nip, $content);
+        $this->assertStringContainsString('NIP '.$this->pimpinan->nip, $content);
+        $this->assertStringContainsString('NIP '.$this->notulis->nip, $content);
+        $this->assertStringNotContainsString('NIP. '.$this->pimpinan->nip, $content);
+        $this->assertStringNotContainsString('NIP. '.$this->notulis->nip, $content);
 
         // 4. Names have NO underline in export
-        $this->assertStringNotContainsString('<u>' . $this->pimpinan->name . '</u>', $content);
-        $this->assertStringNotContainsString('<u>' . $this->notulis->name . '</u>', $content);
+        $this->assertStringNotContainsString('<u>'.$this->pimpinan->name.'</u>', $content);
+        $this->assertStringNotContainsString('<u>'.$this->notulis->name.'</u>', $content);
 
         // 5. Poin 66: In Word/PDF export, Mengetahui, role, and name/NIP are in symmetrical aligned wrappers
         $this->assertStringContainsString('Mengetahui,', $content);

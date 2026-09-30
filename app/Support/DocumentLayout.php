@@ -119,6 +119,50 @@ final class DocumentLayout
 
     public const DOCUMENT_TITLE_SIZE_PT = 14.0;
 
+    /**
+     * Clear space and internal gaps, in points.
+     *
+     * Both the workstation sheet and the exported document put these on the
+     * page. They live here so a change of margin does not have to be chased
+     * through two templates that were free to drift apart: the numbers used to
+     * be typed into each one separately, which is how the preview ended up
+     * showing a document that was not the one being exported.
+     */
+    public const DOC_TITLE_GAP_TOP_PT = 12.0;
+
+    public const DOC_TITLE_GAP_BOTTOM_PT = 6.0;
+
+    public const SECTION_GAP_TOP_PT = 6.0;
+
+    public const SECTION_GAP_BOTTOM_PT = 3.0;
+
+    public const SUBHEADING_GAP_BOTTOM_PT = 1.5;
+
+    public const BLOCK_GAP_BOTTOM_PT = 6.0;
+
+    // ---------------------------------------------------------------------
+    // Section titles and the meeting detail table
+    // ---------------------------------------------------------------------
+
+    /** The "I. NOTULENSI ..." style headings. */
+    public const SECTION_SIZE_PT = 12.0;
+
+    /** The "A. Catatan Jalannya Rapat (Notulensi):" style headings. */
+    public const SUBHEADING_SIZE_PT = 12.0;
+
+    /** The Perihal / Hari / Waktu / Format / Penyelenggara table. */
+    public const INFO_SIZE_PT = 12.0;
+
+    public const INFO_CELL_PAD_PT = 1.5;
+
+    // ---------------------------------------------------------------------
+    // Prose boxes around the minutes and the conclusion
+    // ---------------------------------------------------------------------
+
+    public const PROSE_PAD_TOP_PT = 3.0;
+
+    public const PROSE_PAD_SIDE_PT = 5.0;
+
     // ---------------------------------------------------------------------
     // Detail table (Perihal, Hari/Tanggal, ...)
     // ---------------------------------------------------------------------
@@ -202,6 +246,25 @@ final class DocumentLayout
     public const PHOTO_FRAME_COLOR = '94a3b8';
 
     public const PHOTO_CAPTION_SIZE_PT = 7.5;
+
+    // ---------------------------------------------------------------------
+    // Document footer note
+    // ---------------------------------------------------------------------
+
+    /** The office note printed under the signature block. */
+    public const FOOTER_NOTE_SIZE_PT = 7.5;
+
+    public const FOOTER_NOTE_COLOR = '64748b';
+
+    /** Hairline that separates the note from the signature block above it. */
+    public const FOOTER_NOTE_RULE_PT = 0.75;
+
+    public const FOOTER_NOTE_RULE_COLOR = 'cbd5e1';
+
+    /** Clear space above the rule, and between the rule and the note. */
+    public const FOOTER_NOTE_GAP_PT = 8.0;
+
+    public const FOOTER_NOTE_PAD_TOP_PT = 3.0;
 
     // ---------------------------------------------------------------------
     // Helpers

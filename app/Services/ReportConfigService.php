@@ -55,7 +55,7 @@ class ReportConfigService
         }
 
         // 2. Build sanitized config array with fallback to resolved defaults
-        $defaultNumber = 'BA-RAPAT/' . ($agenda->waktu_mulai ? $agenda->waktu_mulai->format('Y') : date('Y')) . '/' . str_pad((string) $agenda->id, 4, '0', STR_PAD_LEFT);
+        $defaultNumber = 'BA-RAPAT/'.($agenda->waktu_mulai ? $agenda->waktu_mulai->format('Y') : date('Y')).'/'.str_pad((string) $agenda->id, 4, '0', STR_PAD_LEFT);
         $defaultSigningDate = $agenda->waktu_mulai ? $agenda->waktu_mulai->translatedFormat('d F Y') : now()->translatedFormat('d F Y');
 
         return [
@@ -99,8 +99,10 @@ class ReportConfigService
             'signer3_role' => strip_tags($request->input('signer3_role', $resolved['signer3_role'] ?? 'Kepala Lembaga Layanan Pendidikan Tinggi Wilayah X')),
             'signer3_name' => strip_tags($request->input('signer3_name', $resolved['signer3_name'] ?? '')),
             'signer3_nip' => strip_tags($request->input('signer3_nip', $resolved['signer3_nip'] ?? '-')),
-            'show_footer_note' => $request->boolean('show_footer_note', $resolved['show_footer_note'] ?? true),
-            'footer_note' => strip_tags($request->input('footer_note', $resolved['footer_note'] ?? 'Dokumen ini diterbitkan secara resmi melalui Sistem Informasi Presensi Rapat (SIPERAPAT) LLDIKTI Wilayah X')),
+            'show_footer_note' => $request->boolean('show_footer_note', $resolved['show_footer_note'] ?? false),
+            // Tidak ada teks bawaan. Kolom ini hanya memuat apa yang benar-benar
+            // ditulis petugas, tidak ada kalimat sistem yang disisipkan.
+            'footer_note' => strip_tags($request->input('footer_note', $resolved['footer_note'] ?? '')),
         ];
     }
 }

@@ -1,46 +1,48 @@
 {{-- resources/views/exports/partials/document_body.blade.php --}}
 {{-- Single Source of Truth untuk Berita Acara & Daftar Hadir Resmi --}}
 
+@use('App\Support\DocumentLayout')
+
 <!-- Kop Surat Resmi Instansi - definisi tunggal di resources/views/partials/kop_surat.blade.php -->
 @include('partials.kop_surat', ['kopLogoSrc' => $logoBase64 ?? null, 'kopLogo' => $logoSize ?? null])
 
 <!-- Judul Dokumen & Nomor Berita Acara -->
-<div class="doc-title" style="text-align: center; margin: 12pt 0 6pt 0;">
-    <h1 style="font-size: 14pt; font-weight: bold; text-decoration: underline; margin: 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif;">{{ $config['document_title'] ?? 'BERITA ACARA DAN DAFTAR HADIR RAPAT' }}</h1>
+<div class="doc-title" style="text-align: center; margin: {{ DocumentLayout::DOC_TITLE_GAP_TOP_PT }}pt 0 {{ DocumentLayout::DOC_TITLE_GAP_BOTTOM_PT }}pt 0;">
+    <h1 style="font-size: {{ DocumentLayout::DOCUMENT_TITLE_SIZE_PT }}pt; font-weight: bold; text-decoration: underline; margin: 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif;">{{ $config['document_title'] ?? 'BERITA ACARA DAN DAFTAR HADIR RAPAT' }}</h1>
     @if($config['show_document_number'] ?? true)
-    <div style="font-size: 12pt; font-family: 'Times New Roman', Times, serif; margin-top: 2px;">Nomor: {{ $config['document_number'] ?? ('BA-RAPAT/' . date('Y') . '/' . str_pad($agenda->id, 4, '0', STR_PAD_LEFT)) }}</div>
+    <div style="font-size: {{ DocumentLayout::BODY_SIZE_PT }}pt; font-family: 'Times New Roman', Times, serif; margin-top: 2px;">Nomor: {{ $config['document_number'] ?? ('BA-RAPAT/' . date('Y') . '/' . str_pad($agenda->id, 4, '0', STR_PAD_LEFT)) }}</div>
     @endif
 </div>
 
 <!-- Informasi Pelaksanaan Rapat -->
 @if($config['show_meeting_info'] ?? true)
-<table class="info-table" width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; margin-bottom: 6pt; border-collapse: collapse; font-size: 12pt; border: none; font-family: 'Times New Roman', Times, serif; word-wrap: break-word; overflow-wrap: break-word;">
+<table class="info-table" width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; margin-bottom: {{ DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt; border-collapse: collapse; font-size: {{ DocumentLayout::INFO_SIZE_PT }}pt; border: none; font-family: 'Times New Roman', Times, serif; word-wrap: break-word; overflow-wrap: break-word;">
     <tr>
-        <td style="font-weight: bold; padding: 1.5pt 0; vertical-align: top; border: none; width: 24%;">Perihal / Agenda</td>
-        <td style="padding: 1.5pt 0; vertical-align: top; border: none; width: 2%;">:</td>
-        <td style="padding: 1.5pt 0; vertical-align: top; border: none; word-wrap: break-word; overflow-wrap: break-word; width: 74%;"><strong>{{ $config['custom_agenda_title'] ?? $agenda->judul_rapat }}</strong></td>
+        <td style="font-weight: bold; padding: {{ DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ DocumentLayout::DETAIL_LABEL_COLUMN }};">Perihal / Agenda</td>
+        <td style="padding: {{ DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ DocumentLayout::DETAIL_COLON_COLUMN }};">:</td>
+        <td style="padding: {{ DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; word-wrap: break-word; overflow-wrap: break-word; width: {{ DocumentLayout::DETAIL_VALUE_COLUMN }};"><strong>{{ $config['custom_agenda_title'] ?? $agenda->judul_rapat }}</strong></td>
     </tr>
     <tr>
-        <td style="font-weight: bold; padding: 1.5pt 0; vertical-align: top; border: none; width: 24%;">Hari / Tanggal</td>
-        <td style="padding: 1.5pt 0; vertical-align: top; border: none; width: 2%;">:</td>
-        <td style="padding: 1.5pt 0; vertical-align: top; border: none; width: 74%;">{{ $agenda->waktu_mulai->translatedFormat('l, d F Y') }}</td>
+        <td style="font-weight: bold; padding: {{ DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ DocumentLayout::DETAIL_LABEL_COLUMN }};">Hari / Tanggal</td>
+        <td style="padding: {{ DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ DocumentLayout::DETAIL_COLON_COLUMN }};">:</td>
+        <td style="padding: {{ DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ DocumentLayout::DETAIL_VALUE_COLUMN }};">{{ $agenda->waktu_mulai->translatedFormat('l, d F Y') }}</td>
     </tr>
     <tr>
-        <td style="font-weight: bold; padding: 1.5pt 0; vertical-align: top; border: none; width: 24%;">Waktu Pelaksanaan</td>
-        <td style="padding: 1.5pt 0; vertical-align: top; border: none; width: 2%;">:</td>
-        <td style="padding: 1.5pt 0; vertical-align: top; border: none; width: 74%;">{{ $agenda->waktu_mulai->format('H:i') }} {{ $agenda->waktu_selesai ? 's.d. ' . $agenda->waktu_selesai->format('H:i') . ' WIB' : 'WIB s.d. Selesai' }}</td>
+        <td style="font-weight: bold; padding: {{ DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ DocumentLayout::DETAIL_LABEL_COLUMN }};">Waktu Pelaksanaan</td>
+        <td style="padding: {{ DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ DocumentLayout::DETAIL_COLON_COLUMN }};">:</td>
+        <td style="padding: {{ DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ DocumentLayout::DETAIL_VALUE_COLUMN }};">{{ $agenda->waktu_mulai->format('H:i') }} {{ $agenda->waktu_selesai ? 's.d. ' . $agenda->waktu_selesai->format('H:i') . ' WIB' : 'WIB s.d. Selesai' }}</td>
     </tr>
     <tr>
-        <td style="font-weight: bold; padding: 1.5pt 0; vertical-align: top; border: none; width: 24%;">Format &amp; Tempat</td>
-        <td style="padding: 1.5pt 0; vertical-align: top; border: none; width: 2%;">:</td>
-        <td style="padding: 1.5pt 0; vertical-align: top; border: none; word-wrap: break-word; overflow-wrap: break-word; width: 74%;">
-            {{ ucfirst($agenda->tipe_rapat) }} &mdash; 
+        <td style="font-weight: bold; padding: {{ DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ DocumentLayout::DETAIL_LABEL_COLUMN }};">Format &amp; Tempat</td>
+        <td style="padding: {{ DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ DocumentLayout::DETAIL_COLON_COLUMN }};">:</td>
+        <td style="padding: {{ DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; word-wrap: break-word; overflow-wrap: break-word; width: {{ DocumentLayout::DETAIL_VALUE_COLUMN }};">
+            {{ ucfirst($agenda->tipe_rapat) }} &mdash;
             {{ $config['custom_location'] ?? ($agenda->lokasi_ruang ?? 'Daring (Online Meeting)') }}
         </td>
     </tr>
     <tr>
-        <td style="font-weight: bold; padding: 1.5pt 0; vertical-align: top; border: none; width: 24%;">Penyelenggara Rapat</td>
-        <td style="padding: 1.5pt 0; vertical-align: top; border: none; width: 2%;">:</td>
+        <td style="font-weight: bold; padding: {{ DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ DocumentLayout::DETAIL_LABEL_COLUMN }};">Penyelenggara Rapat</td>
+        <td style="padding: {{ DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ DocumentLayout::DETAIL_COLON_COLUMN }};">:</td>
         <td style="padding: 1.5pt 0; vertical-align: top; border: none; word-wrap: break-word; overflow-wrap: break-word; width: 74%;">{{ $agenda->creator?->name ?? 'Penyelenggara Rapat' }} ({{ $agenda->creator?->unit?->nama_unit ?? 'Tingkat Lembaga' }})</td>
     </tr>
 </table>
@@ -48,13 +50,13 @@
 
 <!-- Seksi I: Notulensi & Kesimpulan Rapat -->
 @if(($config['show_notulensi'] ?? true) || ($config['show_kesimpulan'] ?? true))
-<div style="margin-top: 6pt;">
-    <div class="section-title" style="font-size: 12pt; font-weight: bold; margin: 0 0 3pt 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif; page-break-after: avoid; break-after: avoid;">I. NOTULENSI &amp; KESIMPULAN RAPAT</div>
+<div style="margin-top: {{ DocumentLayout::SECTION_GAP_TOP_PT }}pt;">
+    <div class="section-title" style="font-size: {{ DocumentLayout::SECTION_SIZE_PT }}pt; font-weight: bold; margin: 0 0 {{ DocumentLayout::SECTION_GAP_BOTTOM_PT }}pt 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif; page-break-after: avoid; break-after: avoid;">I. NOTULENSI &amp; KESIMPULAN RAPAT</div>
 
     @if($config['show_notulensi'] ?? true)
-    <div style="margin-bottom: 6pt;">
-        <div style="font-weight: bold; font-size: 12pt; margin-bottom: 1.5pt; font-family: 'Times New Roman', Times, serif; page-break-after: avoid; break-after: avoid;">A. Catatan Jalannya Rapat (Notulensi):</div>
-        <div style="border: 1pt solid #000000; padding: 3pt 5pt; text-align: justify; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; font-size: 12pt; line-height: 18pt; mso-line-height-rule: exactly; background: #fafafa; font-family: 'Times New Roman', Times, serif;">
+    <div style="margin-bottom: {{ DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt;">
+        <div style="font-weight: bold; font-size: {{ DocumentLayout::SUBHEADING_SIZE_PT }}pt; margin-bottom: {{ DocumentLayout::SUBHEADING_GAP_BOTTOM_PT }}pt; font-family: 'Times New Roman', Times, serif; page-break-after: avoid; break-after: avoid;">A. Catatan Jalannya Rapat (Notulensi):</div>
+        <div style="border: {{ DocumentLayout::BORDER_PT }}pt solid #{{ DocumentLayout::BORDER_COLOR }}; padding: {{ DocumentLayout::PROSE_PAD_TOP_PT }}pt {{ DocumentLayout::PROSE_PAD_SIDE_PT }}pt; text-align: justify; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; font-size: {{ DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ DocumentLayout::BODY_LINE_PT }}pt; mso-line-height-rule: exactly; background: #{{ DocumentLayout::PROSE_BOX_FILL }}; font-family: 'Times New Roman', Times, serif;">
             {!! $agenda->formatted_notulensi ?: '<span style="color: #64748b; font-style: italic;">Tidak ada catatan notulensi khusus yang dicatat.</span>' !!}
         </div>
     </div>
@@ -62,8 +64,8 @@
 
     @if($config['show_kesimpulan'] ?? true)
     <div>
-        <div style="font-weight: bold; font-size: 12pt; margin-bottom: 1.5pt; font-family: 'Times New Roman', Times, serif; page-break-after: avoid; break-after: avoid;">B. Kesimpulan &amp; Rencana Tindak Lanjut (RTL):</div>
-        <div style="border: 1pt solid #000000; padding: 3pt 5pt; text-align: justify; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; font-size: 12pt; line-height: 18pt; mso-line-height-rule: exactly; background: #fafafa; font-family: 'Times New Roman', Times, serif;">
+        <div style="font-weight: bold; font-size: {{ DocumentLayout::SUBHEADING_SIZE_PT }}pt; margin-bottom: {{ DocumentLayout::SUBHEADING_GAP_BOTTOM_PT }}pt; font-family: 'Times New Roman', Times, serif; page-break-after: avoid; break-after: avoid;">B. Kesimpulan &amp; Rencana Tindak Lanjut (RTL):</div>
+        <div style="border: {{ DocumentLayout::BORDER_PT }}pt solid #{{ DocumentLayout::BORDER_COLOR }}; padding: {{ DocumentLayout::PROSE_PAD_TOP_PT }}pt {{ DocumentLayout::PROSE_PAD_SIDE_PT }}pt; text-align: justify; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; font-size: {{ DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ DocumentLayout::BODY_LINE_PT }}pt; mso-line-height-rule: exactly; background: #{{ DocumentLayout::PROSE_BOX_FILL }}; font-family: 'Times New Roman', Times, serif;">
             {!! $agenda->formatted_kesimpulan ?: '<span style="color: #64748b; font-style: italic;">Tidak ada catatan kesimpulan khusus yang dicatat.</span>' !!}
         </div>
     </div>
@@ -73,8 +75,8 @@
 
 <!-- Seksi II: Daftar Hadir Peserta -->
 @if($config['show_attendees'] ?? true)
-<div class="section-title" style="font-size: 12pt; font-weight: bold; margin: 6pt 0 3pt 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif; page-break-after: avoid; break-after: avoid;">II. DAFTAR KEHADIRAN PESERTA (<{{ $agenda->attendances->count() }} Orang)</div>
-<table class="attendance-table" width="100%" border="1" cellspacing="0" cellpadding="0" bordercolor="#000000" style="width: 100%; table-layout: fixed; border-collapse: collapse; border: 1px solid #000000; margin: 0; font-size: 9pt; line-height: 11pt; font-family: 'Times New Roman', Times, serif; word-wrap: break-word; overflow-wrap: break-word;">
+<div class="section-title" style="font-size: {{ DocumentLayout::SECTION_SIZE_PT }}pt; font-weight: bold; margin: {{ DocumentLayout::SECTION_GAP_TOP_PT }}pt 0 {{ DocumentLayout::SECTION_GAP_BOTTOM_PT }}pt 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif; page-break-after: avoid; break-after: avoid;">II. DAFTAR KEHADIRAN PESERTA (<{{ $agenda->attendances->count() }} Orang)</div>
+<table class="attendance-table" width="100%" border="1" cellspacing="0" cellpadding="0" bordercolor="#{{ DocumentLayout::BORDER_COLOR }}" style="width: 100%; table-layout: fixed; border-collapse: collapse; border: {{ DocumentLayout::BORDER_PT }}px solid #{{ DocumentLayout::BORDER_COLOR }}; margin: 0; font-size: {{ DocumentLayout::ATTENDANCE_SIZE_PT }}pt; line-height: {{ DocumentLayout::ATTENDANCE_LINE_PT }}pt; font-family: 'Times New Roman', Times, serif; word-wrap: break-word; overflow-wrap: break-word;">
     <thead>
         <tr style="background-color: #f2f2f2; mso-yfti-tblheader: yes; page-break-inside: avoid; break-inside: avoid;">
             <th style="border: 1px solid #000000; padding: 3pt 2pt; text-align: center; width: 4%; font-weight: bold;">No</th>
@@ -228,6 +230,17 @@
         </tr>
     </table>
 </div>
+
+<!-- Catatan kaki dokumen resmi. Hanya memuat apa yang ditulis petugas:
+     tidak ada kalimat bawaan dari sistem dan tidak ada stempel waktu cetak,
+     karena keduanya muncul di kertas tanpa diminta. Blok juga dilewati
+     sama sekali bila kolomnya kosong, supaya tidak tersisa garis pemisah
+     tanpa teks di bawahnya. -->
+@if(($config['show_footer_note'] ?? false) && trim((string) ($config['footer_note'] ?? '')) !== '')
+<div class="document-footer-note" style="margin: {{ DocumentLayout::FOOTER_NOTE_GAP_PT }}pt 0 0 0; padding-top: {{ DocumentLayout::FOOTER_NOTE_PAD_TOP_PT }}pt; border-top: {{ DocumentLayout::FOOTER_NOTE_RULE_PT }}pt solid #{{ DocumentLayout::FOOTER_NOTE_RULE_COLOR }}; font-size: {{ DocumentLayout::FOOTER_NOTE_SIZE_PT }}pt; color: #{{ DocumentLayout::FOOTER_NOTE_COLOR }}; text-align: center; font-family: 'Times New Roman', Times, serif; page-break-inside: avoid; break-inside: avoid;">
+    <span id="sheet-footer-note">{{ $config['footer_note'] ?? '' }}</span>
+</div>
+@endif
 
 <!-- Seksi III: Lampiran Foto Dokumentasi Kegiatan (Annex Resmi) -->
 <!-- Lampiran selalu dimulai di halaman baru. Lampiran adalah bahan

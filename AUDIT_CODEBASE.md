@@ -4531,6 +4531,348 @@ acuan yang sudah disetujui pengguna.
 
 `php artisan test` = **248 passed, 0 failed** (239 sebelumnya ditambah 9 baru).
 
+# BAGIAN 8.17 - OPSI PENYESUAIAN DOKUMEN YANG DIABAIKAN RENDERER (2026-09-29)
+
+Audit atas 27 opsi penyesuaian pada halaman pengisian notulen, kesimpulan, dan
+dokumentasi. Metodenya fungsional, bukan pembacaan kode: setiap opsi dimatikan
+DAN dinyalakan, lalu hasil ekspor PDF dan DOCX dibandingkan. Yang dibandingkan
+bukan hanya teks, melainkan teks ditambah jumlah gambar, karena menghapus logo
+atau tanda tangan tidak mengubah satu huruf pun.
+
+## 1. Hasil audit
+
+23 dari 27 opsi terbukti berlaku di kedua format. Empat sisanya bocor:
+
+| Opsi | PDF | DOCX | Gejala |
+| --- | --- | --- | --- |
+| `show_footer_note` | tidak berlaku | tidak berlaku | Toggle ada di form, tidak dibaca renderer mana pun |
+| `footer_note` | tidak berlaku | tidak berlaku | Teks yang diketik hilang dari kedua ekspor |
+| `show_signer1_signature` | berlaku | diabaikan | PDF membuang mark, DOCX tetap mencetaknya |
+| `show_signer2_signature` | berlaku | diabaikan | Idem |
+
+Yang paling berbahaya adalah `footer_note`. Pratinjau di halaman pengisian
+memang berubah saat diketik (`notulen.blade.php:1358`), nilainya tersimpan,
+dan tetap ada di basis data. Isinya baru hilang di dokumen hasil ekspor.
+Antarmuka mengonfirmasi sesuatu yang tidak akan terjadi, dan petugas baru
+menyadarinya setelah dokumen diarsipkan.
+
+## 2. Perbaikan
+
+### 2.1 Catatan kaki dokumen
+
+Blok baru di kedua renderer, diletakkan setelah blok tanda tangan dan sebelum
+lampiran, sama seperti di halaman pengisian. Toggle `show_footer_note`
+mematikan seluruh blok termasuk garis pemisahnya, sebab garis tanpa isi hanya
+menjadi garis yatim yang melayang di margin.
+
+Angkanya ditaruh di `DocumentLayout` supaya tetap satu sumber kebenaran:
+`FOOTER_NOTE_SIZE_PT`, `FOOTER_NOTE_COLOR`, `FOOTER_NOTE_RULE_PT`,
+`FOOTER_NOTE_RULE_COLOR`, `FOOTER_NOTE_GAP_PT`, `FOOTER_NOTE_PAD_TOP_PT`.
+
+Di PDF bloknya sebuah div. Di DOCX harus berupa tabel satu sel satu baris,
+karena `Style\Paragraph` pada PhpWord 0.18 tidak punya border sama sekali dan
+paragraf adalah satu-satunya cara lain menggambar garis. Tabelnya satu kolom
+seluruh lebar, jadi secara visual tetap satu garis dan satu baris teks rata
+tengah.
+
+Pemisah bullet memakai karakter `•` langsung, bukan entitas `&bull;` seperti
+di template HTML. Blade mengeluarkan entitas itu apa adanya dan perambannya
+yang mendekodekannya, sedangkan PhpWord menulis teks run apa adanya, sehingga
+entitas akan sampai ke `word/document.xml` sebagai delapan karakter itu. Kebetulan
+masih sah sebagai XML sehingga tetap akan terurai dengan benar, tetapi itu
+kebetulan, bukan rancangan, dan itu bukan tukar yang layak dalam dokumen yang
+kemudian diarsipkan.
+
+### 2.2 Toggle tanda tangan blok
+
+`addSignatures()` kini membaca `show_signer1_signature` dan
+`show_signer2_signature`, sama seperti yang sudah dilakukan PDF sejak awal.
+Data yang tidak ada dan toggle yang dimatikan berarti hal yang sama bagi
+dokumen: tidak ada gambar, sehingga selnya kosong persis seperti PDF.
+
+## 3. Test
+
+`tests/Feature/DocumentOptionEffectivenessTest.php`, 5 test dan 16 assertion.
+
+Test pertama bersifat struktural dan murah, dan inilah yang paling berguna
+sebagai penjaga: setiap field pada formulir pengisian harus dibaca oleh kedua
+renderer. Field yang bukan opsi penyesuaian ada di daftar `NON_OPTIONS` beserta
+alasannya, sehingga daftar itu terlihat dan bisa dikoreksi, bukan sekadar
+dilewati diam-diam.
+
+Empat test berikutnya membuktikan secara fungsional empat opsi yang pernah
+bocor, termasuk satu uji paritas yang membandingkan jumlah gambar di kedua
+format.
+
+Setiap guard diverifikasi punya gigi: dengan perbaikan sengaja dibatalkan,
+guard struktural, guard tanda tangan, dan uji paritas gagal; dengan perbaikan
+template PDF dibatalkan, guard catatan kaki PDF gagal. Kelima test kembali
+hijau setelah dipulihkan.
+
+## 4. Bukti
+
+- Fungsional: 27 dari 27 opsi berubah perilaku di kedua format. Sebelumnya
+  23 dari 27.
+- Tanda tangan blok: 10 gambar pada paket, menjadi 8 saat kedua toggle mati.
+- Catatan kaki: muncul di PDF dan DOCX saat menyala, beserta garisnya; seluruh
+  blok hilang saat mati.
+- Struktur .docx: 0 pasangan tabel bersebelahan, 0 `tblW` bertipe auto, 8
+  tabel (semula 7, satu untuk blok kaki).
+- `php artisan test` = **253 passed, 0 failed** (248 sebelumnya ditambah 5).
+- Audit bersifat read-only; `notulensi` dan `kesimpulan` agenda id 1 tetap
+  2779 karakter.
+
+## 5. Catatan
+
+Blok kaki masih memuat stempel waktu cetak, mengikuti desain pratinjau. Qt
+berarti PDF yang diekspor pada menit berbeda akan berbeda byte, meski isinya
+sama. Itu memang gunanya, tetapi kalau dokumen ini perlu hasil yang
+deterministik untuk pembanding arsip, stempelnya sebaiknya dihapus dari blok
+kaki dan tidak ikut diekspor. Belum diubah di bagian ini karena halaman
+pengisian menampilkannya, dan selama keduanya masih sama, memindahkannya
+adalah perubahan yang perlu Anda setujui.
+
+# BAGIAN 8.18 - MENYELARASKAN HALAMAN PENGISIAN DENGAN HASIL EKSPOR (2026-09-29)
+
+Halaman pengisian notulen adalah salinan markup yang terpisah dari template
+ekspor. Salinan itu bebas bergerak sendiri, dan bergeraklah. Bagian ini mencatat
+selisihnya, perbaikannya, dan bukti bahwa dokumen yang sudah disetujui tidak
+berubah.
+
+## 1. Apa sebenarnya yang berbeda
+
+Audit sebelumnya mengukur selisih tipografi satu per satu. Pemeriksaan yang
+lebih teliti menunjukkan masalahnya lebih mendasar: halaman pengisian hanya
+menghormati tiga dari tujuh belas toggle penyesuaian, dan tiga belas sisanya
+hanya muncul sebagai tanda centang di formulir tanpa efek apa pun pada lembar.
+
+Petugas mencentang "Tampilkan Nomor Induk Pegawai", melihat kolom NIP tetap ada
+di layar, menyimpulkan toggle itu rusak, lalu menyimpan. Ekspor berikutnya
+justru menghormati toggle tersebut. Pratinjau dan dokumen tidak pernah
+menampilkan hal yang sama.
+
+Selisih yang terukur:
+
+| Elemen | Halaman pengisian | Hasil ekspor |
+| --- | --- | --- |
+| Urutan seksi | Daftar Kehadiran, lalu Notulensi | Notulensi, lalu Daftar Kehadiran |
+| Judul dokumen | 11,5 pt | 14 pt |
+| Nomor berita acara | 9 pt | 12 pt |
+| Tabel informasi rapat | 9 pt | 12 pt |
+| Judul seksi dan subseksi | 9,5 dan 8,5 pt | 12 pt |
+| Isi kotak notulensi | 9,5 pt, spasi 1,35 | 12 pt, spasi 1,5 |
+| Lebar kolom kehadiran | 5/27/21/17/10/8/12 persen | 4/sisa/15/12/9/15/15 persen |
+| Blok tanda tangan | dua kolom tetap | dua atau tiga kolom |
+| `show_signer3` | tidak ada di lembar | kolom ketiga muncul |
+| `show_signer1/2_signature` | tidak ada di lembar | dihormati |
+
+Urutan seksi adalah yang paling merusak. Urutan Notulensi lebih dahulu
+ditetapkan pada dokumen hasil ekspor, tetapi halaman pengisian tidak pernah
+ikut diubah, sehingga petugas menyusun dokumen dalam urutan yang tidak akan
+pernah keluar dari ekspornya.
+
+## 2. Yang diperbaiki
+
+### 2.1 Angka tata letak masuk ke sumber kebenaran
+
+`DocumentLayout` sudah dideklarasikan sebagai sumber tunggal, dan `kop_surat`
+sudah menjatuhkannya. Tubuh dokumen dan halaman pengisian sama-sama melanggar
+declarasi itu: keduanya mengetik ulang angkanya sendiri. Empat belas konstanta
+baru ditambahkan, dan kedua sisi sekarang membacanya.
+
+Konsekuensi yang paling penting bukan angka yang sama, melainkan bahwa kedua
+sisi tidak mungkin lagi berbeda secara diam-diam. Kalau margins berubah lagi,
+perubahannya terjadi di satu tempat.
+
+### 2.2 Urutan seksi dibalik
+
+Blok Notulensi dipindahkan ke atas blok Daftar Kehadiran, dan penomoran
+seksi ikut disesuaikan. Tiga test lama yang mengunci urutan lama sudah
+diperbarui, karena mereka memang sedang mengunci cacat yang diperbaiki.
+
+Pemindahan pertama sempat menghapus seluruh blok kehadiran. Irisan rentang
+yang dipakai salah, dan berkas kerja tidak menyalin blok kehadiran ke
+susunan baru. Berkas dipulihkan dari cadangan dan dipindahkan ulang dengan
+pemeriksaan batas di kedua ujung. Jumlah baris sebelum dan sesudah sama,
+dan ketiga blok utuh.
+
+### 2.3 Tujuh belas toggle dihormati di lembar
+
+Setiap toggle kini dibaca di dalam markup lembar, bukan hanya di formulir.
+Tabel kehadiran memakai lebar kolom yang dihitung dengan rumus yang sama
+dengan writer .docx, lengkap dengan kolom nama yang mengambil sisa lebar.
+Tombol tanda tangan mengikuti `show_attendee_signatures` dan menuliskan
+`(HADIR)` seperti dokumen ekspor.
+
+Blok tanda tangan ditulis ulang menjadi satu loop untuk semua penanda tangan
+dengan tiga baris, persis seperti dokumen ekspor. Duplikat per penanda tangan
+seperti sebelumnya justru membuat kolom ketiga mustahil ditambahkan tanpa
+menyalin blok yang sama sekali lagi.
+
+### 2.4 Lebar kolom informasi dipindah dari colgroup ke sel
+
+Dompdf mengabaikan `<colgroup>`. Itu sebabnya nilai rapat pernah menumpuk
+ke kanan pada pratinjau. Lebar kolom kini diulang pada setiap sel, sama
+seperti yang sudah dilakukan template ekspor.
+
+### 2.5 Pratinjau langsung mengikuti centang
+
+J sebelumnya hanya tiga toggle yang bereaksi sebelum disimpan. Sekarang
+tujuh belas, memakai id yang sama dengan blok di server. Kolom ketiga
+penanda tangan tidak bisa hanya disembunyikan lewat gaya karena jumlah kolomnya
+menentukan lebar kolom lainnya, jadi yang itu memang perlu halaman dimuat
+ulang, dan hal itu disebut apa adanya di dalam kode.
+
+## 3. Bukti
+
+- Dokumen yang sudah disetujui tidak berubah: halaman 1, 2, dan 4 identik
+  piksel-demi-piksel terhadap build tercommit. Halaman 3 juga identik di
+  seluruh area di atas catatan kaki, yang sendiri adalah perubahan tahap
+  sebelumnya. Perbandingan dilakukan dengan `pdftoppm` dan pencocokan piksel
+  per koordinat, bukan perkiraan.
+- Fungsional: 27 dari 27 opsi berubah perilaku di kedua format.
+- Pratinjau dirender ulang ke PDF dan dibandingkan dengan dokumen ekspor:
+  urutan seksi, lebar kolom informasi, tabel kehadiran, dan blok tanda tangan
+  sekarang seragam.
+- `php artisan test` = **260 passed, 0 failed** (253 sebelumnya ditambah 7).
+- Test baru `NotulenPreviewParityTest` examining area lembar secara terlingkupi,
+  bukan seluruh berkas. Tanpa itu, pemeriksaan struktural akan selalu hijau
+  karena nama field pada formulir juga memuat kunci yang sama.
+- Tiap guard diuji dengan pembatalan perbaikan yang disengaja, dan guard
+  gagal seperti seharusnya.
+
+## 4. Dua test lama yang diperbarui, dan alasannya
+
+`AgendaRoleDelegationTest` dan `WordEditorMinutesTest` mengunci label lama
+"Notulensi / Catatan Jalannya Rapat" dan urutan "I. Daftar Kehadiran".
+`SignatureColumnStandardizationTest` mengunci bentuk blok tanda tangan berupa
+tabel bersarang dengan atribut `width="50%"`.
+
+Ketiganya mengunci selisih yang justru diperbaiki bagian ini. Test tanda tangan
+sekarang justru memeriksa bahwa pratinjau dan ekspor memakai bentuk yang sama.
+Satu catatan teknis: `"I. DAFTAR KEHADIRAN"` adalah potongan dari
+`"II. DAFTAR KEHADIRAN"`, jadi pemeriksaan posisi berbasis teks akan selalu
+menemukan yang kedua lebih dulu. Posisi kini dibaca dari id wadah.
+
+## 5. Temuan yang belum diperbaiki, dan perlu keputusan
+
+Urutan baris kehadiran berbeda antara halaman pengisian dan dokumen ekspor.
+Ini bukan bagian ini, dan bukan pula akibat pekerjaan ini.
+
+- Halaman pengisian memakai `orderBy('signed_at', 'asc')` yang ditulis
+  sengaja di controller.
+- Ekspor memakai relasi apa adanya, sehingga urutannya ikut urutan
+  penyisipan di basis data.
+
+Hasilnya tiga peserta yang sama muncul pada baris berbeda di keduanya, dan
+urutan ekspor bisa berbeda antar-basis data karena tidak ada kriteria yang
+menaipkannya.
+
+Perbaikannya ada di sisi ekspor, karena itu yang membuat urutannya dapat
+diulang. Tetapi itu mengubah urutan isi dokumen yang sudah disetujui, dan
+urutan mana yang benar untuk berita acara adalah keputusan yang bukan
+milik implementasi. Karena itu dibiarkan dan dilaporkan, bukan diam-diam
+diubah.
+
+# BAGIAN 8.19 - NILAI FORMULIR YANG TIDAK SAMPAI KE DOKUMEN (2026-09-30)
+
+Tahap sebelumnya menyelaraskan lembar pratinjau dengan dokumen ekspor.
+Pengukuran ulang menemukan dua hal yang masih tidak sampai.
+
+## 1. Cara mengukur
+
+Audit sebelumnya membaca berkas sumber dan mencari nama variabel. Itu
+mendukung kesimpulan yang salah, karena nama yang sama muncul di formulir,
+di lembar, dan di template ekspor, tanpa ada jaminan bahwa nilainya
+benar-benar dipakai.
+
+Pengukuran di sini bersifat fungsional. Setiap field diisi nilai uji, lalu
+nilainya dicari di tiga tempat sekaligus: lembar pratinjau pada halaman
+pengisian, PDF, dan .docx. Notulensi dan kesimpulan diuji lewat model agenda,
+karena keduanya bukan kunci konfigurasi.
+
+## 2. Dua cacat yang ditemukan
+
+| Field | Formulir | Lembar | PDF | .docx |
+| --- | --- | --- | --- | --- |
+| `custom_agenda_title` | ada | TIDAK | ada | ada |
+| `custom_location` | ada | TIDAK | ada | ada |
+
+Kelasnya sama dengan catatan kaki yang bocor di bagian sebelumnya. Officer
+mengetik override, nilai itu tersimpan, PDF dan .docx menghormatinya,
+tetapi lembar pratinjau masih menampilkan kolom agenda mentah. Petugas tidak pernah melihat apa yang dia ketik, dan tidak punya
+cara tahu kecuali mengunduh dokumen.
+
+Sixteen field lainnya sudah sampai ke ketiganya.
+
+## 3. Dua cara probe ini sempat berbohong
+
+Keduanya ditemukan karena hasil yang tidak masuk akal, dan keduanya penting
+dicatat karena akan menipu siapa pun yang memakai alat serupa.
+
+- **Nilai uji yang mengandung spasi.** Dua kolom side-by-side dibaca
+  `pdftotext -layout` baris per baris, sehingga teks kolom kanan dan kiri
+  saling menyisipkan. Nilai "1 Januari 2030" terbaca hilang padahal
+  tercetak utuh.
+- **Nilai uji yang mengandung tanda hubung.** Dompdf boleh memecah satu
+  baris di tanda hubung. "PROBE-TANGGAL-YYY" keluar sebagai "PROBE-" di
+  akhir baris dan "TANGGAL-YYY" di awal baris berikutnya, yang setelah
+  diratakan menjadi "PROBE- TANGGAL-YYY" dan tidak cocok dengan aslinya.
+
+Keduanya tampak sebagai cacat dokumen yang serius. Keduanya artefak alat.
+Nilai uji sekarang hanya huruf dan angka.
+
+Probe pertama juga salah karena menaruh notulensi dan kesimpulan di dalam
+array konfigurasi, padahal keduanya kolom agenda. Keduanya dilaporkan
+"TIDAK" di ketiga tempat, dan itu keliru.
+
+## 4. Perbaikan
+
+Dua baris pada lembar pratinjau sekarang memakai override, sama seperti
+yang sudah dilakukan template ekspor:
+
+```blade
+{{ $config['custom_agenda_title'] ?? $agenda->judul_rapat }}
+{{ $config['custom_location'] ?? ($agenda->lokasi_ruang ?? '...') }}
+```
+
+Label seksi di formulir juga diselaraskan. Semuanya masih urutan lama
+"Kehadiran = Seksi I" sementara dokumennya "Notulensi = Seksi I", jadi
+petugas membaca panel pengaturan yang bernomor dan terurut berbeda dari
+dokumen yang akan keluar. Urutan dan penomoran di panel kini mengikuti
+dokumen.
+
+## 5. Test
+
+`tests/Feature/FormValueReachTest.php`, 2 test dan 5 assertion.
+
+Test pertama mengisi seluruh field dan mencari nilai ujinya di ketiga tempat
+sekaligus, dengan nama field yang gagal disebut satu per satu.
+Perubahan pada agenda dibungkus transaksi yang selalu di-rollback.
+
+Test kedua memeriksa sumbernya langsung, supaya kegagalan muncul di titik
+yang sama dengan sumber kebocorannya.
+
+Kedua test diuji dengan pembatalan perbaikan yang disengaja, dan keduanya
+gagal dengan diagnosis yang tepat.
+
+## 6. Bukti
+
+- Fungsional: 18 dari 18 field sampai ke lembar, PDF, dan .docx.
+- Dokumen yang sudah disetujui tidak berubah: halaman 1, 2, dan 4 identik
+  piksel-demi-piksel terhadap build tercommit. Halaman 3 berbeda pada 29
+  baris dari 1754, semuanya di rentang y 657 sampai 731, yaitu pita catatan
+  kaki yang ditambahkan pada bagian sebelumnya. Kop, judul, tabel informasi,
+  notulensi, daftar kehadiran, dan blok tanda tangan tetap identik.
+- `php artisan test` = **262 passed, 0 failed** (260 sebelumnya ditambah 2).
+- Basis data utuh: notulensi dan kesimpulan agenda id 1 tetap 2779 karakter.
+
+## 7. Yang masih terbuka
+
+Urutan baris kehadiran berbeda antara halaman pengisian dan dokumen ekspor.
+Sudah dilaporkan pada bagian sebelumnya dan belum diubah, karena
+mengubahnya berarti mengubah urutan isi dokumen yang sudah disetujui.
+
 # BAGIAN 9 — CATATAN METODOLOGIS & KETERBATASAN
 
 1. **Tidak ada file yang diubah** — audit 100% read-only. 7 file sudah uncommitted sebelum audit dimulai (`notulen.blade.php`, `show.blade.php`, `binary_pdf.blade.php`, `document_body.blade.php`, `word_berita_acara.blade.php`, `reports/show.blade.php`, `SignatureColumnStandardizationTest.php`) — **tidak disentuh**.

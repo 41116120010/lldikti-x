@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use Tests\Support\InspectsDocx;
 use App\Models\Agenda;
 use App\Models\User;
+use Tests\Support\InspectsDocx;
 use Tests\TestCase;
 
 class ReportExportConfigurationTest extends TestCase
@@ -34,7 +34,11 @@ class ReportExportConfigurationTest extends TestCase
         $this->assertTrue($config['show_notulensi']);
         $this->assertTrue($config['show_kesimpulan']);
         $this->assertTrue($config['show_documentation']);
-        $this->assertTrue($config['show_footer_note']);
+        // Catatan kaki mati secara bawaan. Dokumen tidak lagi mencantumkan
+        // kalimat resmi sistem maupun stempel waktu cetak; yang dicetak
+        // hanya bila petugas menyalakannya dan menuliskan sendiri.
+        $this->assertFalse($config['show_footer_note']);
+        $this->assertSame('', $config['footer_note']);
         $this->assertTrue($config['show_selfie_photos']);
     }
 

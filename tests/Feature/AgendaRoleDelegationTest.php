@@ -2,11 +2,11 @@
 
 namespace Tests\Feature;
 
-use Tests\Support\InspectsDocx;
 use App\Models\Agenda;
 use App\Models\Attendance;
 use App\Models\User;
 use Illuminate\Support\Facades\Storage;
+use Tests\Support\InspectsDocx;
 use Tests\TestCase;
 
 class AgendaRoleDelegationTest extends TestCase
@@ -18,8 +18,8 @@ class AgendaRoleDelegationTest extends TestCase
         $admin = User::where('role', 'administrator')->first();
 
         $agenda = Agenda::create([
-            'judul_rapat' => 'Rapat Fallback Peran ' . uniqid(),
-            'slug' => 'RPT-' . uniqid(),
+            'judul_rapat' => 'Rapat Fallback Peran '.uniqid(),
+            'slug' => 'RPT-'.uniqid(),
             'jenis_rapat' => 'pleno',
             'tipe_rapat' => 'offline',
             'lokasi_ruang' => 'Ruang Sidang 1',
@@ -44,7 +44,7 @@ class AgendaRoleDelegationTest extends TestCase
         $staffPimpinan = User::where('role', 'staff')->first();
         $staffNotulis = User::where('role', 'staff')->skip(1)->first();
 
-        $title = 'Rapat Penugasan Khusus ' . uniqid();
+        $title = 'Rapat Penugasan Khusus '.uniqid();
 
         $response = $this->actingAs($superadmin)->post('/admin/agendas', [
             'judul_rapat' => $title,
@@ -74,8 +74,8 @@ class AgendaRoleDelegationTest extends TestCase
         $staffNotulis = User::where('role', 'staff')->skip(1)->first();
 
         $agenda = Agenda::create([
-            'judul_rapat' => 'Rapat Dinamis Peran ' . uniqid(),
-            'slug' => 'RPT-' . uniqid(),
+            'judul_rapat' => 'Rapat Dinamis Peran '.uniqid(),
+            'slug' => 'RPT-'.uniqid(),
             'jenis_rapat' => 'pleno',
             'tipe_rapat' => 'offline',
             'lokasi_ruang' => 'Ruang Rapat 2',
@@ -104,14 +104,14 @@ class AgendaRoleDelegationTest extends TestCase
         ]);
     }
 
-    public function test_staff_notulis_has_minutes_access_ONLY_during_ongoing_meeting(): void
+    public function test_staff_notulis_has_minutes_access_onl_y_during_ongoing_meeting(): void
     {
         $superadmin = User::where('role', 'administrator')->first();
         $staffNotulis = User::where('role', 'staff')->first();
 
         $agenda = Agenda::create([
-            'judul_rapat' => 'Rapat Time-Bound Notulis ' . uniqid(),
-            'slug' => 'RPT-' . uniqid(),
+            'judul_rapat' => 'Rapat Time-Bound Notulis '.uniqid(),
+            'slug' => 'RPT-'.uniqid(),
             'jenis_rapat' => 'pleno',
             'tipe_rapat' => 'offline',
             'lokasi_ruang' => 'Ruang Pimpinan',
@@ -122,11 +122,13 @@ class AgendaRoleDelegationTest extends TestCase
             'notulis_id' => $staffNotulis->id,
         ]);
 
-        // 1. When status is ONGOING -> Staff Notulis CAN view and submit notulen form
+        // 1. When status is ONGOING -> Staff Notulis CAN view and submit notulen form.
+        // The label is the one the exported document uses, so the form and the
+        // document name the same section the same way.
         $this->actingAs($staffNotulis)
             ->get("/admin/agendas/{$agenda->id}/notulen")
             ->assertStatus(200)
-            ->assertSee('Notulensi / Catatan Jalannya Rapat');
+            ->assertSee('Catatan Jalannya Rapat (Notulensi):');
 
         $response = $this->actingAs($staffNotulis)
             ->put("/admin/agendas/{$agenda->id}/notulen", [
@@ -176,8 +178,8 @@ class AgendaRoleDelegationTest extends TestCase
         Storage::disk('public')->put($notulisSigPath, 'fake-png-data-notulis');
 
         $agenda = Agenda::create([
-            'judul_rapat' => 'Rapat Uji Tanda Tangan ' . uniqid(),
-            'slug' => 'RPT-' . uniqid(),
+            'judul_rapat' => 'Rapat Uji Tanda Tangan '.uniqid(),
+            'slug' => 'RPT-'.uniqid(),
             'jenis_rapat' => 'pleno',
             'tipe_rapat' => 'offline',
             'lokasi_ruang' => 'Ruang Rapat Utama',
@@ -267,8 +269,8 @@ class AgendaRoleDelegationTest extends TestCase
 
         // 1. Superadmin creates a universal plenary meeting in 'scheduled' status
         $agenda = Agenda::create([
-            'judul_rapat' => 'Rapat Koordinasi Pleno ' . uniqid(),
-            'slug' => 'RPT-' . uniqid(),
+            'judul_rapat' => 'Rapat Koordinasi Pleno '.uniqid(),
+            'slug' => 'RPT-'.uniqid(),
             'jenis_rapat' => 'pleno',
             'tipe_rapat' => 'offline',
             'lokasi_ruang' => 'Auditorium Utama',
@@ -343,8 +345,8 @@ class AgendaRoleDelegationTest extends TestCase
 
         // 1. Universal meeting currently ONGOING, Admin Akademik is appointed as Pimpinan
         $agenda = Agenda::create([
-            'judul_rapat' => 'Rapat Pleno Dipimpin Admin Unit ' . uniqid(),
-            'slug' => 'RPT-' . uniqid(),
+            'judul_rapat' => 'Rapat Pleno Dipimpin Admin Unit '.uniqid(),
+            'slug' => 'RPT-'.uniqid(),
             'jenis_rapat' => 'pleno',
             'tipe_rapat' => 'offline',
             'lokasi_ruang' => 'Ruang Sidang Utama',
