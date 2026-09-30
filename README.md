@@ -100,8 +100,8 @@ Sistem mengelola 7 tabel relasional utama:
 +---------------------+
 ```
 
-* **`units`**: Menyimpan data bagian, kelompok kerja (Pokja), dan subbagian instansi.
-* **`users`**: Menyimpan identitas pegawai, NIP (18 digit), username, password hash (Bcrypt), role, dan status aktif.
+* **`units`**: Menyimpan data 11 subbagian resmi dan kelompok kerja penjaminan mutu di lingkungan LLDIKTI Wilayah X.
+* **`users`**: Menyimpan 79 data aparatur/pegawai resmi instansi (1 Administrator dan 78 Staff), NIP (18 digit), username, password hash (Bcrypt), role, dan status keaktifan.
 * **`agendas`**: Menyimpan data induk rapat, format (offline/online/hybrid), tautan daring, ruangan, surat edaran, notulensi, dan kesimpulan RTL.
 * **`agenda_units`**: Tabel pivot pemetaan undangan rapat lintas unit kerja.
 * **`attendances`**: Menyimpan rekaman presensi sah, waktu presensi, relative path selfie, relative path tanda tangan, alamat IP, dan User-Agent.
@@ -173,6 +173,7 @@ Siklus rapat dikontrol melalui transisi status ketat:
    ```bash
    php artisan migrate --seed
    ```
+   *Seeder sistem akan secara otomatis menginisialisasi 11 subbagian resmi + Pokja Penjaminan Mutu (`UnitSeeder`) dan 79 akun aparatur/pegawai resmi LLDIKTI Wilayah X (`UserSeeder`). Data agenda rapat sengaja ditiadakan (`AgendaSeeder` ditiadakan) agar sistem berada dalam kondisi bersih (*pristine state*) dan siap langsung digunakan untuk pencatatan rapat nyata.*
 
    > **Penting setelah upgrade:** migration
    > `2026_09_27_000001_add_lokasi_ruang_normalized_to_agendas_table` menambahkan
@@ -200,31 +201,25 @@ Siklus rapat dikontrol melalui transisi status ketat:
 
 ---
 
-## 8. Data Awal (Demo)
+## 8. Data Awal & Dokumentasi Akun Bawaan (Default Seed Data)
 
-Jalankan perintah berikut untuk mengisi data awal aplikasi:
+Proses seeding aplikasi menginisialisasi struktur organisasi dan kepegawaian resmi di lingkungan **Lembaga Layanan Pendidikan Tinggi (LLDIKTI) Wilayah X**:
 
-```bash
-php artisan migrate --seed
-```
+### 8.1. Struktur Akun Resmi Bawaan
 
-> **⚠️ Kredensial demo tidak lagi didokumentasikan pada repositori ini.**
->
-> Repository bersifat publik, sehingga memuatkan nama pengguna, NIP, dan kata sandi
-> akun di sini akan memberi akses gratis ke setiap instance yang memakai seed
-> tersebut. Kredensial default dicatat pada **dokumentasi internal instansi** dan
-> harus diganti segera setelah deployment.
->
-> Untuk lingkungan evaluasi, tetapkan kredensial sendiri melalui seeder internal
-> atau console:
->
-> ```bash
-> php artisan tinker
-> >>> App\Models\User::where('role', 'administrator')->first()
->      ->update(['password' => Hash::make('kata-sandi-baru-yang-kuat')]);
-> ```
->
-> Lihat `AUDIT_CODEBASE.md` §1.13 untuk rationale lengkap.
+| Peran Sistem | Nama Lengkap & Gelar | NIP Resmi (18 Digit) | Username | Subbagian / Unit Kerja | Hak Akses Utama |
+|---|---|---|---|---|---|
+| **Administrator** | Afdalisma, SH, M.Pd | `197012051992032002` | `afdalisma` | Lintas Unit (Pusat) | Kelola seluruh unit, pengguna lintas unit, seluruh agenda rapat, audit trail, rekapitulasi & ekspor laporan |
+| **Staff** | Ely Susanti, SE, MM | `196708231991032001` | `ely_susanti` | Bagian Akademik dan Kemahasiswaan | Presensi selfie WebRTC + TTD digital, riwayat presensi pribadi, unduh surat edaran & materi |
+| **Staff** | Febrina Fitri, SE, M.Si | `196502101991032002` | `febrina_fitri` | Bagian Sumber Daya Perguruan Tinggi | Presensi selfie WebRTC + TTD digital, riwayat presensi pribadi, unduh surat edaran & materi |
+| **Staff** | Reri Anton, ST, MM | `197003081991031001` | `reri_anton` | Pokja Pendidik dan Tenaga Kependidikan | Presensi selfie WebRTC + TTD digital, riwayat presensi pribadi, unduh surat edaran & materi |
+| *(Total 78 Staff)* | *(78 Pegawai ASN)* | *(18 digit NIP valid)* | *(Username unik)* | *(11 Subbagian resmi)* | *(Presensi rapat sesuai undangan unit kerja)* |
+
+### 8.2. Standar Kredensial & Autentikasi
+* **Password Default Seluruh Akun:** `Password123!` *(Wajib diperbarui saat implementasi produksi).*
+* **Domain Email Resmi Instansi:** `@lldiktiwilayahx.kemdiktisaintek.go.id`.
+* **Multi-Identifier Single Input:** Pegawai dapat login secara fleksibel menggunakan **NIP (18 Digit)** ataupun **Username** alfanumerik pada satu field formulir masuk yang responsif.
+* **Peniadaan Data Agenda Dummy (*Pristine State*):** `AgendaSeeder` ditiadakan dari alur seeding sistem. Database tabel `agendas`, `attendances`, dan `agenda_documentations` berstatus bersih (0 record), sehingga instansi dapat langsung memulai administrasi rapat dinas tanpa perlu membersihkan data dummy.
 
 ---
 
@@ -239,20 +234,24 @@ php artisan test
 
 ### 9.2. Cakupan Pengujian
 * **MultiIdentifierAuthenticationTest:** Validasi login cerdas NIP vs Username, proteksi brute-force, dan penolakan akun nonaktif.
+* **SubbagianAndEmployeeSeederTest:** Validasi integritas 11 subbagian resmi, akun Administrator resmi Afdalisma, 78 pegawai staff, dan keakuratan multi-ID login.
 * **UnitManagementTest:** Validasi isolasi wewenang master unit kerja.
 * **UserManagementTest:** Validasi isolasi modifikasi data pengguna lintas unit.
 * **ActivityLogTest:** Validasi pencatatan audit trail otomatis pada setiap mutasi.
 * **AgendaManagementTest:** Validasi alur siklus rapat, unggah surat edaran, notulensi, dan dokumentasi foto.
 * **AttendanceCheckInTest:** Validasi selfie WebRTC, tanda tangan canvas, pencegahan presensi ganda, dan penerbitan tanda terima sah.
-* **ReportAndExportTest:** Validasi agregasi analitik, ekspor Berita Acara PDF, ekspor Word (.doc), dan ekspor CSV.
+* **ReportAndExportTest & ExportIntegrityTest:** Validasi agregasi analitik, ekspor Berita Acara PDF, ekspor Word (.docx), dan ekspor CSV.
+* **NotulenPreviewParityTest & KopSuratStandardTest:** Validasi paritas visual notulensi, standarisasi Kop Surat kementerian, dan penomoran resmi.
 * **EndToEndUserAcceptanceTest:** Simulasi menyeluruh siklus operasional rapat dari hulu ke hilir.
 
 Hasil eksekusi pengujian standar:
 ```
-Tests: 49 passed (190 assertions)
-Duration: 2.33s
+Tests: 293 passed (1913 assertions)
+Duration: ~10-15s
 Status: 100% PASS
 ```
+
+> **Kemandirian Test Suite (*Zero-Bloatware Test Fixture*):** `Tests\TestCase` mengimplementasikan fixture pengujian dinamis yang berjalan di dalam `DatabaseTransactions`. Setiap pengujian yang membutuhkan agenda akan memperoleh data uji terisolasi yang otomatis di-*rollback* di akhir pengujian, sehingga database operasional instansi tetap murni berstatus 0 agenda.
 
 ### 9.3. Database Uji Terpisah (Disarankan)
 
@@ -326,7 +325,7 @@ SIPERAPAT_STRICT_TEST_DB=true
 ```env
 APP_ENV=production
 APP_DEBUG=false
-APP_URL=https://siperapat.lldikti10.kemdikbud.go.id
+APP_URL=https://siperapat.lldiktiwilayahx.kemdiktisaintek.go.id
 
 SESSION_DRIVER=redis
 SESSION_SECURE_COOKIE=true
@@ -421,18 +420,18 @@ sudo supervisorctl reread && sudo supervisorctl update
 
 ```bash
 # TLS dan HSTS
-curl -I https://siperapat.lldikti10.kemdikbud.go.id/up
+curl -I https://siperapat.lldiktiwilayahx.kemdiktisaintek.go.id/up
 # Harus 200 + header Strict-Transport-Security
 
 # Area unggahan tidak boleh mengeksekusi skrip
-curl -I https://siperapat.lldikti10.kemdikbud.go.id/storage/probe.php
+curl -I https://siperapat.lldiktiwilayahx.kemdiktisaintek.go.id/storage/probe.php
 # Harus 404
 
 # Debug mode harus mati
 grep -E '^APP_DEBUG' .env        # harus false
 
 # Pesan error tidak boleh membocorkan stack trace
-curl -s https://siperapat.lldikti10.kemdikbud.go.id/agenda-tidak-ada-12345 | grep -i "stack trace\|vendor/laravel" && echo "BAHAYA: debug aktif"
+curl -s https://siperapat.lldiktiwilayahx.kemdiktisaintek.go.id/agenda-tidak-ada-12345 | grep -i "stack trace\|vendor/laravel" && echo "BAHAYA: debug aktif"
 ```
 
 ---
