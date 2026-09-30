@@ -26,10 +26,10 @@ class MultiIdentifierAuthenticationTest extends TestCase
 
     public function test_users_can_authenticate_using_username(): void
     {
-        $user = User::where('username', 'superadmin')->first();
+        $user = User::where('role', 'administrator')->firstOrFail();
 
         $response = $this->post('/login', [
-            'login' => 'superadmin',
+            'login' => $user->username,
             'password' => 'Password123!',
         ]);
 
@@ -45,10 +45,10 @@ class MultiIdentifierAuthenticationTest extends TestCase
 
     public function test_users_can_authenticate_using_nip(): void
     {
-        $user = User::where('nip', '199402142020121004')->first();
+        $user = User::where('role', 'staff')->firstOrFail();
 
         $response = $this->post('/login', [
-            'login' => '199402142020121004',
+            'login' => $user->nip,
             'password' => 'Password123!',
         ]);
 
@@ -58,8 +58,10 @@ class MultiIdentifierAuthenticationTest extends TestCase
 
     public function test_users_cannot_authenticate_with_invalid_password(): void
     {
+        $user = User::where('role', 'administrator')->firstOrFail();
+
         $response = $this->post('/login', [
-            'login' => 'superadmin',
+            'login' => $user->username,
             'password' => 'WrongPassword123!',
         ]);
 
@@ -93,7 +95,7 @@ class MultiIdentifierAuthenticationTest extends TestCase
 
     public function test_user_can_logout(): void
     {
-        $user = User::where('username', 'superadmin')->first();
+        $user = User::where('role', 'administrator')->firstOrFail();
 
         $this->actingAs($user);
 
@@ -110,11 +112,12 @@ class MultiIdentifierAuthenticationTest extends TestCase
 
     public function test_users_can_authenticate_using_nip_with_whitespace(): void
     {
-        $user = User::where('nip', '199402142020121004')->first();
+        $user = User::where('role', 'staff')->firstOrFail();
 
         // Simulate clipboard copy paste with spaces: " 19940214 202012 1 004 "
+        $spacedNip = ' ' . substr($user->nip, 0, 8) . ' ' . substr($user->nip, 8, 6) . ' ' . substr($user->nip, 14, 1) . ' ' . substr($user->nip, 15) . ' ';
         $response = $this->post('/login', [
-            'login' => ' 19940214 202012 1 004 ',
+            'login' => $spacedNip,
             'password' => 'Password123!',
         ]);
 
@@ -124,7 +127,7 @@ class MultiIdentifierAuthenticationTest extends TestCase
 
     public function test_authenticated_user_accessing_login_page_redirects_to_dashboard(): void
     {
-        $user = User::where('username', 'superadmin')->first();
+        $user = User::where('role', 'administrator')->firstOrFail();
 
         $response = $this->actingAs($user)->get('/login');
 

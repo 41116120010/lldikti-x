@@ -23,7 +23,8 @@ class ReportAndExportTest extends TestCase
 
     public function test_admin_unit_can_view_reports_dashboard(): void
     {
-        $adminAkm = User::where('username', 'admin_akademik')->first();
+        $adminAkm = User::whereHas('unit', fn($q) => $q->where('kode_unit', 'POKJA-AKM'))->firstOrFail();
+        $adminAkm->update(['role' => 'admin']);
 
         $response = $this->actingAs($adminAkm)->get('/admin/reports');
 

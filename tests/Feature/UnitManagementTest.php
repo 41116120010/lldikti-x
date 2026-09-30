@@ -20,8 +20,9 @@ class UnitManagementTest extends TestCase
 
     public function test_admin_unit_and_staff_cannot_access_units(): void
     {
-        $adminUnit = User::where('role', 'admin')->first();
-        $staff = User::where('role', 'staff')->first();
+        $adminUnit = User::whereNotNull('unit_id')->firstOrFail();
+        $adminUnit->update(['role' => 'admin']);
+        $staff = User::where('role', 'staff')->where('id', '!=', $adminUnit->id)->firstOrFail();
 
         $this->actingAs($adminUnit)->get('/admin/units')->assertStatus(403);
         $this->actingAs($staff)->get('/admin/units')->assertStatus(403);

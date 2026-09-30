@@ -18,7 +18,7 @@ class AttendanceCheckInTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $staff = User::where('username', 'staff_rizky')->first();
+        $staff = User::where('role', 'staff')->first();
         if ($staff) {
             Attendance::where('user_id', $staff->id)->delete();
         }
@@ -58,7 +58,7 @@ class AttendanceCheckInTest extends TestCase
 
     public function test_user_can_view_checkin_form_for_ongoing_meeting(): void
     {
-        $staff = User::where('username', 'staff_rizky')->first();
+        $staff = User::where('role', 'staff')->first();
         $agenda = Agenda::first();
         $agenda->update(['status' => 'ongoing', 'is_all_units' => true]);
 
@@ -72,7 +72,7 @@ class AttendanceCheckInTest extends TestCase
 
     public function test_user_cannot_access_checkin_for_scheduled_meeting(): void
     {
-        $staff = User::where('username', 'staff_rizky')->first();
+        $staff = User::where('role', 'staff')->first();
         $scheduledAgenda = Agenda::first();
         $scheduledAgenda->update(['status' => 'scheduled']);
 
@@ -85,7 +85,7 @@ class AttendanceCheckInTest extends TestCase
     public function test_ineligible_user_cannot_access_checkin_for_restricted_unit_meeting(): void
     {
         $unitKlb = Unit::where('kode_unit', 'POKJA-KLB')->first();
-        $staffAkm = User::where('username', 'staff_rizky')->first(); // staff in POKJA-AKM
+        $staffAkm = User::whereHas('unit', fn($q) => $q->where('kode_unit', 'POKJA-AKM'))->firstOrFail(); // staff in POKJA-AKM
 
         $agendaKlb = Agenda::create([
             'created_by' => $staffAkm->id,
@@ -109,7 +109,7 @@ class AttendanceCheckInTest extends TestCase
     public function test_user_can_successfully_check_in_with_canvas_base64_media(): void
     {
         Storage::fake('public');
-        $staff = User::where('username', 'staff_nurul')->first();
+        $staff = User::where('role', 'staff')->firstOrFail();
         
         $agenda = Agenda::create([
             'created_by' => $staff->id,
@@ -152,7 +152,7 @@ class AttendanceCheckInTest extends TestCase
     public function test_anti_double_checkin_prevention(): void
     {
         Storage::fake('public');
-        $staff = User::where('username', 'staff_nurul')->first();
+        $staff = User::where('role', 'staff')->firstOrFail();
         $agenda = Agenda::where('judul_rapat', 'like', 'Rapat Presensi Test%')->first();
 
         if (!$agenda) {
@@ -187,7 +187,7 @@ class AttendanceCheckInTest extends TestCase
 
     public function test_user_can_view_official_attendance_receipt(): void
     {
-        $staff = User::where('username', 'staff_nurul')->first();
+        $staff = User::where('role', 'staff')->firstOrFail();
         $attendance = Attendance::where('user_id', $staff->id)->latest('id')->first();
 
         if (!$attendance) {
@@ -213,7 +213,7 @@ class AttendanceCheckInTest extends TestCase
 
     public function test_attendance_rejects_disallowed_image_extension_payload(): void
     {
-        $staff = User::where('username', 'staff_rizky')->first();
+        $staff = User::where('role', 'staff')->firstOrFail();
         $agenda = Agenda::first();
         $agenda->update(['status' => 'ongoing', 'is_all_units' => true]);
 
@@ -241,7 +241,7 @@ class AttendanceCheckInTest extends TestCase
 
     public function test_user_can_view_attendance_history_with_search_filter(): void
     {
-        $staff = User::where('username', 'staff_nurul')->first();
+        $staff = User::where('role', 'staff')->firstOrFail();
 
         $response = $this->actingAs($staff)->get(route('attendances.history', ['search' => 'Rapat']));
 
@@ -251,7 +251,7 @@ class AttendanceCheckInTest extends TestCase
 
     public function test_attendance_history_shows_empty_state_when_search_not_found(): void
     {
-        $staff = User::where('username', 'staff_nurul')->first();
+        $staff = User::where('role', 'staff')->firstOrFail();
 
         $response = $this->actingAs($staff)->get(route('attendances.history', ['search' => 'NonExistentMeetingKeyword9999']));
 
@@ -313,8 +313,10 @@ class AttendanceCheckInTest extends TestCase
 
     public function test_admin_unit_can_view_attendance_badge_of_staff_in_their_unit(): void
     {
-        $adminAkm = User::where('username', 'admin_akademik')->first();
-        $staffAkm = User::where('username', 'staff_rizky')->first(); // staff in AKM
+        $unitAkm = Unit::where('kode_unit', 'POKJA-AKM')->firstOrFail();
+        $adminAkm = User::where('unit_id', $unitAkm->id)->firstOrFail();
+        $adminAkm->update(['role' => 'admin']);
+        $staffAkm = User::where('unit_id', $unitAkm->id)->where('id', '!=', $adminAkm->id)->firstOrFail();
         $superadmin = User::where('role', 'administrator')->first();
 
         // Agenda created by Superadmin

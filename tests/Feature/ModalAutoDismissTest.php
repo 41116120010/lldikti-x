@@ -15,7 +15,7 @@ class ModalAutoDismissTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->superadmin = User::where('username', 'superadmin')->first();
+        $this->superadmin = User::where('role', 'administrator')->firstOrFail();
     }
 
     public function test_authenticated_layout_contains_modal_timer_track_and_bar(): void

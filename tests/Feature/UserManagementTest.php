@@ -17,7 +17,7 @@ class UserManagementTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('Kelola Seluruh Pengguna');
-        $response->assertSee('Dr. Ir. Hendra Prasetyo');
+        $response->assertSee('Afdalisma');
         $response->assertViewHas('userStats');
         $response->assertSee('Total Pengguna');
         $response->assertSee('Akun Aktif');
@@ -29,9 +29,11 @@ class UserManagementTest extends TestCase
 
     public function test_admin_unit_can_only_view_users_in_their_unit(): void
     {
-        $adminAkm = User::where('username', 'admin_akademik')->first();
-        $staffAkm = User::where('username', 'staff_rizky')->first();
-        $staffKlb = User::where('username', 'staff_nurul')->first();
+        $unitAkm = Unit::where('kode_unit', 'POKJA-AKM')->firstOrFail();
+        $adminAkm = User::where('unit_id', $unitAkm->id)->firstOrFail();
+        $adminAkm->update(['role' => 'admin']);
+        $staffAkm = User::where('unit_id', $unitAkm->id)->where('id', '!=', $adminAkm->id)->firstOrFail();
+        $staffKlb = User::whereHas('unit', fn($q) => $q->where('kode_unit', 'POKJA-KLB'))->firstOrFail();
 
         $response = $this->actingAs($adminAkm)->get('/admin/users');
 
@@ -83,8 +85,9 @@ class UserManagementTest extends TestCase
 
     public function test_admin_unit_cannot_create_administrator(): void
     {
-        $adminAkm = User::where('username', 'admin_akademik')->first();
-        $unitAkm = Unit::where('kode_unit', 'POKJA-AKM')->first();
+        $unitAkm = Unit::where('kode_unit', 'POKJA-AKM')->firstOrFail();
+        $adminAkm = User::where('unit_id', $unitAkm->id)->firstOrFail();
+        $adminAkm->update(['role' => 'admin']);
 
         $response = $this->actingAs($adminAkm)->post('/admin/users', [
             'name' => 'Hacker Admin',
@@ -102,16 +105,20 @@ class UserManagementTest extends TestCase
 
     public function test_admin_unit_cannot_edit_user_from_other_unit(): void
     {
-        $adminAkm = User::where('username', 'admin_akademik')->first();
-        $staffKlb = User::where('username', 'staff_nurul')->first();
+        $unitAkm = Unit::where('kode_unit', 'POKJA-AKM')->firstOrFail();
+        $adminAkm = User::where('unit_id', $unitAkm->id)->firstOrFail();
+        $adminAkm->update(['role' => 'admin']);
+        $staffKlb = User::whereHas('unit', fn($q) => $q->where('kode_unit', 'POKJA-KLB'))->firstOrFail();
 
         $this->actingAs($adminAkm)->get("/admin/users/{$staffKlb->id}/edit")->assertStatus(403);
     }
 
     public function test_admin_unit_cannot_update_administrator_user(): void
     {
-        $adminAkm = User::where('username', 'admin_akademik')->first();
-        $superadmin = User::where('role', 'administrator')->first();
+        $unitAkm = Unit::where('kode_unit', 'POKJA-AKM')->firstOrFail();
+        $adminAkm = User::where('unit_id', $unitAkm->id)->firstOrFail();
+        $adminAkm->update(['role' => 'admin']);
+        $superadmin = User::where('role', 'administrator')->firstOrFail();
 
         $this->actingAs($adminAkm)
             ->put("/admin/users/{$superadmin->id}", [

@@ -62,8 +62,9 @@ class AgendaManagementTest extends TestCase
 
     public function test_admin_unit_can_create_scoped_agenda(): void
     {
-        $adminAkm = User::where('username', 'admin_akademik')->first();
-        $unitAkm = Unit::where('kode_unit', 'POKJA-AKM')->first();
+        $unitAkm = Unit::where('kode_unit', 'POKJA-AKM')->firstOrFail();
+        $adminAkm = User::where('unit_id', $unitAkm->id)->firstOrFail();
+        $adminAkm->update(['role' => 'admin']);
         $unitKlb = Unit::where('kode_unit', 'POKJA-KLB')->first();
 
         $uniqueTitle = 'Rapat Koordinasi Bersama ' . uniqid();
@@ -180,7 +181,9 @@ class AgendaManagementTest extends TestCase
 
     public function test_admin_unit_can_access_create_agenda_page(): void
     {
-        $adminAkm = User::where('username', 'admin_akademik')->first();
+        $unitAkm = Unit::where('kode_unit', 'POKJA-AKM')->firstOrFail();
+        $adminAkm = User::where('unit_id', $unitAkm->id)->firstOrFail();
+        $adminAkm->update(['role' => 'admin']);
 
         $response = $this->actingAs($adminAkm)->get(route('admin.agendas.create'));
 
@@ -309,7 +312,7 @@ class AgendaManagementTest extends TestCase
     public function test_staff_cannot_bypass_to_view_other_unit_restricted_agenda(): void
     {
         $unitKlb = \App\Models\Unit::where('kode_unit', 'POKJA-KLB')->first();
-        $staffAkm = User::where('username', 'staff_rizky')->first(); // staff in POKJA-AKM
+        $staffAkm = User::whereHas('unit', fn($q) => $q->where('kode_unit', 'POKJA-AKM'))->firstOrFail(); // staff in POKJA-AKM
         $superadmin = User::where('role', 'administrator')->first();
 
         $agendaKlb = Agenda::create([
@@ -576,8 +579,9 @@ class AgendaManagementTest extends TestCase
     public function test_filter_draft_agendas_works_for_admin_and_admin_unit(): void
     {
         $superadmin = User::where('role', 'administrator')->first();
-        $adminAkm = User::where('username', 'admin_akademik')->first();
-        $unitAkm = Unit::where('kode_unit', 'POKJA-AKM')->first();
+        $unitAkm = Unit::where('kode_unit', 'POKJA-AKM')->firstOrFail();
+        $adminAkm = User::where('unit_id', $unitAkm->id)->firstOrFail();
+        $adminAkm->update(['role' => 'admin']);
         $unitKlb = Unit::where('kode_unit', 'POKJA-KLB')->first();
 
         // Draft for all units

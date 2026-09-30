@@ -42,8 +42,10 @@ class AppointedAdminAuthorisationTest extends TestCase
         parent::setUp();
 
         $this->superadmin = User::where('role', 'administrator')->firstOrFail();
-        $this->hostUnitAdmin = User::where('username', 'admin_akademik')->firstOrFail();
-        $this->otherUnitAdmin = User::where('username', 'admin_kelembagaan')->firstOrFail();
+        $this->hostUnitAdmin = User::whereHas('unit', fn($q) => $q->where('kode_unit', 'POKJA-AKM'))->firstOrFail();
+        $this->hostUnitAdmin->update(['role' => 'admin']);
+        $this->otherUnitAdmin = User::whereHas('unit', fn($q) => $q->where('kode_unit', 'POKJA-KLB'))->firstOrFail();
+        $this->otherUnitAdmin->update(['role' => 'admin']);
     }
 
     public function test_the_meeting_organiser_always_regains_full_control(): void

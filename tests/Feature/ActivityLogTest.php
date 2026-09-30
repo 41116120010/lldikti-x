@@ -20,7 +20,8 @@ class ActivityLogTest extends TestCase
 
     public function test_admin_unit_and_staff_cannot_view_activity_logs(): void
     {
-        $adminAkm = User::where('username', 'admin_akademik')->first();
+        $adminAkm = User::whereHas('unit', fn($q) => $q->where('kode_unit', 'POKJA-AKM'))->firstOrFail();
+        $adminAkm->update(['role' => 'admin']);
         $staff = User::where('role', 'staff')->first();
 
         $this->actingAs($adminAkm)->get('/admin/logs')->assertStatus(403);

@@ -13,7 +13,7 @@ class PaginationTest extends TestCase
 {
     public function test_dashboard_renders_with_paginated_agendas(): void
     {
-        $superadmin = User::where('username', 'superadmin')->first();
+        $superadmin = User::where('role', 'administrator')->firstOrFail();
 
         $response = $this->actingAs($superadmin)->get('/dashboard');
 
@@ -24,7 +24,7 @@ class PaginationTest extends TestCase
 
     public function test_profile_activity_logs_renders_with_pagination(): void
     {
-        $superadmin = User::where('username', 'superadmin')->first();
+        $superadmin = User::where('role', 'administrator')->firstOrFail();
 
         $response = $this->actingAs($superadmin)->get('/profil/aktivitas');
 
@@ -35,7 +35,7 @@ class PaginationTest extends TestCase
 
     public function test_reports_index_renders_with_paginated_agendas_and_unit_participation(): void
     {
-        $superadmin = User::where('username', 'superadmin')->first();
+        $superadmin = User::where('role', 'administrator')->firstOrFail();
 
         $response = $this->actingAs($superadmin)->get('/admin/reports');
 
@@ -48,7 +48,8 @@ class PaginationTest extends TestCase
 
     public function test_reports_index_for_admin_unit_renders_with_paginated_member_stats(): void
     {
-        $adminUnit = User::where('role', 'admin')->first();
+        $adminUnit = User::whereNotNull('unit_id')->firstOrFail();
+        $adminUnit->update(['role' => 'admin']);
 
         $response = $this->actingAs($adminUnit)->get('/admin/reports');
 
@@ -61,7 +62,7 @@ class PaginationTest extends TestCase
 
     public function test_report_detail_renders_with_paginated_attendances(): void
     {
-        $superadmin = User::where('username', 'superadmin')->first();
+        $superadmin = User::where('role', 'administrator')->firstOrFail();
         $agenda = Agenda::first();
 
         $response = $this->actingAs($superadmin)->get("/admin/reports/{$agenda->id}");
@@ -73,7 +74,7 @@ class PaginationTest extends TestCase
 
     public function test_agenda_detail_renders_with_paginated_attendances_and_documentations(): void
     {
-        $superadmin = User::where('username', 'superadmin')->first();
+        $superadmin = User::where('role', 'administrator')->firstOrFail();
         $agenda = Agenda::first();
 
         $response = $this->actingAs($superadmin)->get("/admin/agendas/{$agenda->id}");
@@ -87,7 +88,7 @@ class PaginationTest extends TestCase
 
     public function test_agenda_notulen_renders_with_paginated_documentations(): void
     {
-        $superadmin = User::where('username', 'superadmin')->first();
+        $superadmin = User::where('role', 'administrator')->firstOrFail();
         $agenda = Agenda::first();
 
         $response = $this->actingAs($superadmin)->get("/admin/agendas/{$agenda->id}/notulen");
@@ -99,7 +100,7 @@ class PaginationTest extends TestCase
 
     public function test_unit_edit_renders_with_paginated_unit_users(): void
     {
-        $superadmin = User::where('username', 'superadmin')->first();
+        $superadmin = User::where('role', 'administrator')->firstOrFail();
         $unit = Unit::first();
 
         $response = $this->actingAs($superadmin)->get("/admin/units/{$unit->id}/edit");
@@ -111,7 +112,7 @@ class PaginationTest extends TestCase
 
     public function test_user_edit_renders_with_paginated_recent_attendances(): void
     {
-        $superadmin = User::where('username', 'superadmin')->first();
+        $superadmin = User::where('role', 'administrator')->firstOrFail();
         $user = User::first();
 
         $response = $this->actingAs($superadmin)->get("/admin/users/{$user->id}/edit");

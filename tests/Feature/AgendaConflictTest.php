@@ -206,7 +206,8 @@ class AgendaConflictTest extends TestCase
 
     public function test_admin_unit_cannot_create_meeting_today_if_unit_has_ongoing_agenda(): void
     {
-        $adminUnit = User::where('role', 'admin')->whereNotNull('unit_id')->first();
+        $adminUnit = User::whereNotNull('unit_id')->firstOrFail();
+        $adminUnit->update(['role' => 'admin']);
         $this->assertNotNull($adminUnit, 'Admin unit user must exist');
 
         // 1. Create an ongoing agenda for this admin's unit
@@ -248,7 +249,8 @@ class AgendaConflictTest extends TestCase
 
     public function test_admin_unit_can_create_future_scheduled_meeting_even_with_ongoing_agenda(): void
     {
-        $adminUnit = User::where('role', 'admin')->whereNotNull('unit_id')->first();
+        $adminUnit = User::whereNotNull('unit_id')->firstOrFail();
+        $adminUnit->update(['role' => 'admin']);
         $this->assertNotNull($adminUnit);
 
         // 1. Ongoing agenda today

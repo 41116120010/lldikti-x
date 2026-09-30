@@ -265,7 +265,8 @@ class AgendaRoleDelegationTest extends TestCase
     public function test_participating_admin_unit_cannot_manage_universal_agenda(): void
     {
         $superadmin = User::where('role', 'administrator')->first();
-        $adminAkademik = User::where('username', 'admin_akademik')->first();
+        $adminAkademik = User::whereHas('unit', fn($q) => $q->where('kode_unit', 'POKJA-AKM'))->firstOrFail();
+        $adminAkademik->update(['role' => 'admin']);
 
         // 1. Superadmin creates a universal plenary meeting in 'scheduled' status
         $agenda = Agenda::create([
@@ -340,8 +341,10 @@ class AgendaRoleDelegationTest extends TestCase
     public function test_appointed_admin_unit_can_manage_agenda_during_ongoing_session(): void
     {
         $superadmin = User::where('role', 'administrator')->first();
-        $adminAkademik = User::where('username', 'admin_akademik')->first();
-        $adminKelembagaan = User::where('username', 'admin_kelembagaan')->first();
+        $adminAkademik = User::whereHas('unit', fn($q) => $q->where('kode_unit', 'POKJA-AKM'))->firstOrFail();
+        $adminAkademik->update(['role' => 'admin']);
+        $adminKelembagaan = User::whereHas('unit', fn($q) => $q->where('kode_unit', 'POKJA-KLB'))->firstOrFail();
+        $adminKelembagaan->update(['role' => 'admin']);
 
         // 1. Universal meeting currently ONGOING, Admin Akademik is appointed as Pimpinan
         $agenda = Agenda::create([

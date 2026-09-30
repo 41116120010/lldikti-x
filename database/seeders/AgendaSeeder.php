@@ -15,11 +15,9 @@ class AgendaSeeder extends Seeder
     public function run(): void
     {
         $superadmin = User::where('role', 'administrator')->first();
-        $adminAkm   = User::where('username', 'admin_akademik')->first();
-        $adminKlb   = User::where('username', 'admin_kelembagaan')->first();
-
-        $adminTu    = User::where('username', 'admin_tu')->first();
-        $staffAhmad = User::where('username', 'staff_ahmad')->first();
+        $staffKlb   = User::whereHas('unit', fn($q) => $q->where('kode_unit', 'POKJA-KLB'))->first();
+        $staffTu    = User::whereHas('unit', fn($q) => $q->where('kode_unit', 'BAG-TU'))->first();
+        $staffAkm   = User::whereHas('unit', fn($q) => $q->where('kode_unit', 'POKJA-AKM'))->first();
 
         $unitAkm = Unit::where('kode_unit', 'POKJA-AKM')->first();
         $unitKlb = Unit::where('kode_unit', 'POKJA-KLB')->first();
@@ -44,7 +42,7 @@ class AgendaSeeder extends Seeder
                 'is_all_units' => true,
                 'status' => 'ongoing',
                 'pimpinan_id' => $superadmin->id,
-                'notulis_id' => $adminKlb?->id ?? $superadmin->id,
+                'notulis_id' => $staffKlb?->id ?? $superadmin->id,
             ]
         );
         $agenda1->report_config = $agenda1->getDefaultReportConfig();
@@ -58,12 +56,12 @@ class AgendaSeeder extends Seeder
                 'signature' => 'attendances/1/signatures/sig_1_8nvcY3uYgJ91PT85.png',
             ],
             [
-                'user' => $adminKlb,
+                'user' => $staffKlb,
                 'selfie' => 'attendances/1/selfies/selfie_3_wsLRV1qcTkA7PBmC.jpg',
                 'signature' => 'attendances/1/signatures/sig_3_G5j7mN0Unn14OQM8.png',
             ],
             [
-                'user' => $staffAhmad,
+                'user' => $staffTu,
                 'selfie' => 'attendances/1/selfies/selfie_6_PZjFUOK4TRUXWo9X.jpg',
                 'signature' => 'attendances/1/signatures/sig_6_ZVglWrZg1XrWtR4e.png',
             ],
@@ -103,7 +101,7 @@ class AgendaSeeder extends Seeder
         $agenda2 = Agenda::updateOrCreate(
             ['judul_rapat' => 'Konsinyasi Penjaminan Mutu & Akreditasi Program Studi Baru'],
             [
-                'created_by' => $adminAkm?->id ?? $superadmin->id,
+                'created_by' => $superadmin->id,
                 'slug' => 'konsinyasi-penjaminan-mutu-prodi-baru',
                 'jenis_rapat' => 'konsinyasi',
                 'tipe_rapat' => 'offline',
@@ -122,7 +120,7 @@ class AgendaSeeder extends Seeder
         $agenda3 = Agenda::updateOrCreate(
             ['judul_rapat' => 'Rapat Terbatas Evaluasi Usulan Pembukaan PTS Baru'],
             [
-                'created_by' => $adminKlb?->id ?? $superadmin->id,
+                'created_by' => $superadmin->id,
                 'slug' => 'rapat-terbatas-evaluasi-pts-baru',
                 'jenis_rapat' => 'terbatas',
                 'tipe_rapat' => 'offline',

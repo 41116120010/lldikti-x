@@ -28,7 +28,7 @@ class EndToEndUserAcceptanceTest extends TestCase
         // STEP 1: SUPERADMIN WORKFLOW
         // -------------------------------------------------------------
         // 1.1 Login via 18-digit NIP
-        $superadmin = User::where('username', 'superadmin')->first();
+        $superadmin = User::where('role', 'administrator')->firstOrFail();
         $loginRes = $this->post('/login', [
             'login' => $superadmin->nip,
             'password' => 'Password123!',
@@ -95,7 +95,7 @@ class EndToEndUserAcceptanceTest extends TestCase
         // -------------------------------------------------------------
         // STEP 2: STAFF ATTENDANCE WORKFLOW (WebRTC + Signature Pad)
         // -------------------------------------------------------------
-        $staff = User::where('username', 'staff_rizky')->first();
+        $staff = User::where('role', 'staff')->firstOrFail();
 
         // 2.1 Staff visits attendance portal
         $this->actingAs($staff)->get('/presensi')->assertStatus(200)->assertSee($agendaTitle);
@@ -205,13 +205,15 @@ class EndToEndUserAcceptanceTest extends TestCase
         $this->assertGuest();
 
         // 2. Staff cannot access Administrator master routes (403)
-        $staff = User::where('username', 'staff_rizky')->first();
+        $staff = User::where('role', 'staff')->firstOrFail();
         $this->actingAs($staff)->get('/admin/units')->assertStatus(403);
         $this->actingAs($staff)->get('/admin/logs')->assertStatus(403);
 
         // 3. Admin Unit cannot modify users in other units (403)
-        $adminAkm = User::where('username', 'admin_akademik')->first();
-        $staffKlb = User::where('username', 'staff_nurul')->first(); // POKJA-KLB
+        $unitAkm = Unit::where('kode_unit', 'POKJA-AKM')->firstOrFail();
+        $adminAkm = User::where('unit_id', $unitAkm->id)->firstOrFail();
+        $adminAkm->update(['role' => 'admin']);
+        $staffKlb = User::whereHas('unit', fn($q) => $q->where('kode_unit', 'POKJA-KLB'))->firstOrFail(); // POKJA-KLB
 
         $editRes = $this->actingAs($adminAkm)->get("/admin/users/{$staffKlb->id}/edit");
         $editRes->assertStatus(403);

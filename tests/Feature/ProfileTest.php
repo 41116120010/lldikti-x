@@ -16,7 +16,7 @@ class ProfileTest extends TestCase
 
     public function test_authenticated_user_can_view_profile_edit_page(): void
     {
-        $staff = User::where('username', 'staff_rizky')->first();
+        $staff = User::where('role', 'staff')->firstOrFail();
 
         $response = $this->actingAs($staff)->get(route('profile.edit'));
 
@@ -28,7 +28,7 @@ class ProfileTest extends TestCase
 
     public function test_user_can_update_name_and_email(): void
     {
-        $staff = User::where('username', 'staff_nurul')->first();
+        $staff = User::where('role', 'staff')->skip(1)->firstOrFail();
         $originalName = $staff->name;
         $originalEmail = $staff->email;
 
@@ -59,7 +59,7 @@ class ProfileTest extends TestCase
 
     public function test_user_can_update_password_with_valid_current_password(): void
     {
-        $staff = User::where('username', 'staff_ahmad')->first();
+        $staff = User::where('role', 'staff')->skip(2)->firstOrFail();
         $staff->update(['password' => Hash::make('Password123!')]);
 
         $response = $this->actingAs($staff)->put(route('profile.update'), [
@@ -82,7 +82,7 @@ class ProfileTest extends TestCase
 
     public function test_user_cannot_update_password_with_invalid_current_password(): void
     {
-        $staff = User::where('username', 'staff_rizky')->first();
+        $staff = User::where('role', 'staff')->skip(3)->firstOrFail();
         $staff->update(['password' => Hash::make('Password123!')]);
 
         $response = $this->actingAs($staff)->put(route('profile.update'), [
@@ -101,7 +101,7 @@ class ProfileTest extends TestCase
 
     public function test_user_profile_update_normalizes_email_and_trims_whitespace(): void
     {
-        $staff = User::where('username', 'staff_nurul')->first();
+        $staff = User::where('role', 'staff')->skip(4)->firstOrFail();
         $originalEmail = $staff->email;
         $originalName = $staff->name;
 
