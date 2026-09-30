@@ -329,9 +329,14 @@ class AgendaRoleDelegationTest extends TestCase
         $showResponse = $this->actingAs($adminAkademik)->get("/admin/agendas/{$agenda->id}");
         $showResponse->assertStatus(200);
         $showResponse->assertSee('Mode Pemantauan (Unit Partisipan)');
-        $showResponse->assertDontSee('Buka Sesi Presensi');
+        $showResponse->assertDontSee('Mulai Rapat');
         $showResponse->assertDontSee('Tugaskan Peran');
         $showResponse->assertDontSee('Edit Agenda');
+
+        // Verifikasi admin berwenang melihat tombol 'Mulai Rapat'
+        $superadminShowResponse = $this->actingAs($superadmin)->get("/admin/agendas/{$agenda->id}");
+        $superadminShowResponse->assertStatus(200);
+        $superadminShowResponse->assertSee('Mulai Rapat');
     }
 
     /**

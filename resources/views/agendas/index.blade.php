@@ -151,15 +151,15 @@
                                     action="{{ route('admin.agendas.update-status', $agenda) }}" 
                                     method="POST" 
                                     class="inline"
-                                    data-confirm="Buka sesi presensi rapat '{{ $agenda->judul_rapat }}' sekarang? Pegawai akan dapat langsung melakukan presensi."
-                                    data-confirm-title="Buka Sesi Presensi"
+                                    data-confirm="Mulai rapat '{{ $agenda->judul_rapat }}' sekarang? Pegawai akan dapat langsung melakukan presensi."
+                                    data-confirm-title="Mulai Rapat"
                                     data-confirm-type="confirm"
-                                    data-confirm-btn="Ya, Mulai Sesi"
+                                    data-confirm-btn="Ya, Mulai Rapat"
                                 >
                                     @csrf
                                     @method('PATCH')
                                     <input type="hidden" name="status" value="ongoing">
-                                    <button type="submit" class="button small text-xs bg-amber-700 hover:bg-amber-800 text-white font-bold" title="Buka Sesi Presensi">
+                                    <button type="submit" class="button small text-xs bg-amber-700 hover:bg-amber-800 text-white font-bold" title="Mulai Rapat">
                                         Mulai
                                     </button>
                                 </form>

@@ -102,17 +102,17 @@
                             action="{{ route('admin.agendas.update-status', $agenda) }}" 
                             method="POST" 
                             class="inline"
-                            data-confirm="Buka sesi presensi rapat '{{ $agenda->judul_rapat }}' sekarang? Pegawai akan dapat langsung mengisi daftar hadir."
-                            data-confirm-title="Buka Sesi Presensi"
+                            data-confirm="Mulai rapat '{{ $agenda->judul_rapat }}' sekarang? Pegawai akan dapat langsung mengisi daftar hadir."
+                            data-confirm-title="Mulai Rapat"
                             data-confirm-type="confirm"
-                            data-confirm-btn="Ya, Mulai Sesi"
+                            data-confirm-btn="Ya, Mulai Rapat"
                         >
                             @csrf
                             @method('PATCH')
                             <input type="hidden" name="status" value="ongoing">
                             <button type="submit" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold shadow-md cursor-pointer transition">
                                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                                <span>Buka Sesi Presensi</span>
+                                <span>Mulai Rapat</span>
                             </button>
                         </form>
                     @elseif($agenda->status === 'ongoing')
