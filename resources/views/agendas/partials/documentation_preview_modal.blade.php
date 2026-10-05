@@ -5,7 +5,7 @@
 
 <div 
     id="documentation-preview-modal" 
-    class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-xs transition-opacity duration-200 hidden !m-0 m-0"
+    class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-3 sm:p-5 md:p-6 bg-slate-950/80 backdrop-blur-xs transition-opacity duration-200 hidden !m-0 m-0"
     tabindex="-1"
     role="dialog"
     aria-modal="true"
@@ -14,11 +14,11 @@
 >
     <div 
         id="doc-modal-dialog"
-        class="relative w-full max-w-2xl sm:max-w-3xl bg-white border border-slate-300 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90dvh] transition-transform duration-200 transform scale-95"
+        class="relative my-auto w-full max-w-2xl sm:max-w-3xl bg-white border border-slate-300 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3.5rem)] transition-transform duration-200 transform scale-95"
         onclick="event.stopPropagation()"
     >
         {{-- 1. Modal Header --}}
-        <div class="px-4 sm:px-5 py-3.5 border-b border-slate-200 bg-white flex items-center justify-between shrink-0">
+        <div class="px-4 sm:px-5 py-2.5 sm:py-3 border-b border-slate-200 bg-white flex items-center justify-between shrink-0">
             <div class="flex items-center gap-2.5 min-w-0">
                 <div class="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center shrink-0 shadow-2xs">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -65,7 +65,7 @@
         {{-- 2. Interactive Viewport Stage --}}
         <div 
             id="doc-modal-stage"
-            class="relative w-full bg-slate-950 flex items-center justify-center overflow-hidden min-h-[220px] sm:min-h-[280px] max-h-[340px] sm:max-h-[420px] select-none touch-none shrink-0"
+            class="relative w-full bg-slate-950 flex items-center justify-center overflow-hidden flex-1 min-h-[160px] sm:min-h-[200px] max-h-[250px] sm:max-h-[280px] select-none touch-none"
         >
             {{-- Tombol Navigasi Prev (Foto Sebelumnya) --}}
             <button 
@@ -155,12 +155,12 @@
                 id="doc-modal-img" 
                 src="" 
                 alt="Dokumentasi Kegiatan" 
-                class="max-h-[300px] sm:max-h-[380px] w-auto max-w-full object-contain transition-transform duration-75 cursor-grab active:cursor-grabbing will-change-transform"
+                class="max-h-[210px] sm:max-h-[260px] w-auto max-w-full object-contain transition-transform duration-75 cursor-grab active:cursor-grabbing will-change-transform"
                 draggable="false"
             >
 
             {{-- Container Fallback untuk Media Non-Gambar (PDF / Video / Berkas Lain) --}}
-            <div id="doc-modal-pdf-container" class="hidden w-full h-[300px] sm:h-[380px] flex items-center justify-center bg-slate-900">
+            <div id="doc-modal-pdf-container" class="hidden w-full h-[210px] sm:h-[260px] flex items-center justify-center bg-slate-900">
                 <object id="doc-modal-pdf-object" data="" type="application/pdf" class="w-full h-full">
                     <div class="text-center text-white p-6">
                         <p class="text-sm font-semibold mb-2">Pratinjau PDF tidak didukung peramban ini.</p>
@@ -169,8 +169,8 @@
                 </object>
             </div>
 
-            <div id="doc-modal-video-container" class="hidden w-full max-h-[300px] sm:max-h-[380px] flex items-center justify-center bg-slate-950 p-4">
-                <video id="doc-modal-video" controls class="max-h-[260px] sm:max-h-[340px] max-w-full rounded-lg shadow-lg">
+            <div id="doc-modal-video-container" class="hidden w-full max-h-[210px] sm:max-h-[260px] flex items-center justify-center bg-slate-950 p-3">
+                <video id="doc-modal-video" controls class="max-h-[190px] sm:max-h-[240px] max-w-full rounded-lg shadow-lg">
                     <source src="" type="video/mp4">
                     Peramban Anda tidak mendukung pemutaran video.
                 </video>
@@ -196,32 +196,32 @@
         </div>
 
         {{-- 3. Metadata & Caption Card (Overflow Y Auto - Bebas Clipping) --}}
-        <div class="p-3.5 sm:p-4 bg-slate-50 border-t border-slate-200 overflow-y-auto max-h-[150px] sm:max-h-[175px]">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="p-2.5 sm:p-3 bg-slate-50 border-t border-slate-200 shrink-0 max-h-[110px] sm:max-h-[120px] overflow-y-auto">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {{-- Keterangan / Caption Foto --}}
-                <div class="p-3 bg-white rounded-xl border border-slate-300 shadow-2xs space-y-1">
-                    <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono">
+                <div class="p-2.5 bg-white rounded-xl border border-slate-300 shadow-2xs space-y-0.5">
+                    <div class="text-[9px] font-bold uppercase tracking-wider text-slate-500 font-mono">
                         Keterangan Foto Kegiatan
                     </div>
-                    <div id="doc-modal-caption" class="text-xs sm:text-sm font-bold text-slate-950 leading-snug break-words">
+                    <div id="doc-modal-caption" class="text-xs font-bold text-slate-950 leading-snug line-clamp-2" title="">
                         Dokumentasi Rapat
                     </div>
-                    <div id="doc-modal-agenda-title" class="text-[11px] text-slate-600 font-medium truncate">
+                    <div id="doc-modal-agenda-title" class="text-[10px] text-slate-500 font-medium truncate">
                         -
                     </div>
                 </div>
 
                 {{-- Informasi Berkas & Status Arsip --}}
-                <div class="p-3 bg-white rounded-xl border border-slate-300 shadow-2xs space-y-1 flex flex-col justify-between">
+                <div class="p-2.5 bg-white rounded-xl border border-slate-300 shadow-2xs space-y-0.5 flex flex-col justify-between">
                     <div>
-                        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono">
+                        <div class="text-[9px] font-bold uppercase tracking-wider text-slate-500 font-mono">
                             Waktu Unggah / Berkas
                         </div>
                         <div id="doc-modal-date" class="font-mono text-xs font-bold text-slate-950">
                             -
                         </div>
                     </div>
-                    <div id="doc-modal-type-badge" class="text-[10px] font-medium text-emerald-700 flex items-center gap-1 mt-1">
+                    <div id="doc-modal-type-badge" class="text-[10px] font-medium text-emerald-700 flex items-center gap-1 mt-0.5">
                         <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                         <span>Arsip Dokumentasi Sah</span>
                     </div>
@@ -230,7 +230,7 @@
         </div>
 
         {{-- 4. Footer & Action Buttons --}}
-        <div class="px-4 sm:px-5 py-3 border-t border-slate-200 bg-white flex flex-wrap items-center justify-between gap-2.5 shrink-0">
+        <div class="px-4 sm:px-5 py-2.5 sm:py-3 border-t border-slate-200 bg-white flex flex-wrap items-center justify-between gap-2.5 shrink-0">
             <div class="text-[11px] text-slate-500 font-medium hidden sm:flex items-center gap-1.5">
                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                 <span>Navigasi: <strong class="text-slate-700">← / →</strong> atau geser gambar saat diperbesar</span>
@@ -529,7 +529,10 @@ window.documentationPreviewModal = {
 
         // Update Metadata
         const captionEl = document.getElementById('doc-modal-caption');
-        if (captionEl) captionEl.textContent = current.caption || 'Dokumentasi Rapat';
+        if (captionEl) {
+            captionEl.textContent = current.caption || 'Dokumentasi Rapat';
+            captionEl.title = current.caption || '';
+        }
 
         const agendaEl = document.getElementById('doc-modal-agenda-title');
         if (agendaEl) agendaEl.textContent = current.agendaTitle || '';

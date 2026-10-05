@@ -12,7 +12,7 @@
 @once
 <div 
     id="selfie-preview-modal" 
-    class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-xs transition-opacity duration-200 hidden"
+    class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-3 sm:p-6 bg-slate-950/80 backdrop-blur-xs transition-opacity duration-200 hidden"
     role="dialog"
     aria-modal="true"
     aria-labelledby="selfie-modal-title"
@@ -21,7 +21,7 @@
     {{-- Dialog Box --}}
     <div 
         id="selfie-modal-dialog"
-        class="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-300 overflow-hidden flex flex-col max-h-[94dvh] transition-transform duration-200 scale-95"
+        class="relative my-auto w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-300 overflow-hidden flex flex-col max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3.5rem)] transition-transform duration-200 scale-95"
         onclick="event.stopPropagation()"
     >
         {{-- Header Dialog --}}
