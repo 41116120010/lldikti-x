@@ -122,4 +122,60 @@ class AuthApiTest extends TestCase
 
         $retry->assertStatus(401);
     }
+
+    public function test_user_can_update_profile_via_api(): void
+    {
+        $user = User::where('is_active', true)->first();
+        $this->assertNotNull($user);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->putJson('/api/v1/profile', [
+                'name' => 'Nama Pengguna Terupdate',
+                'email' => $user->email,
+                'phone' => '081234567890',
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.name', 'Nama Pengguna Terupdate')
+            ->assertJsonPath('data.phone', '081234567890');
+
+        $this->assertEquals('Nama Pengguna Terupdate', $user->fresh()->name);
+    }
+
+    public function test_user_can_change_password_and_old_tokens_are_revoked(): void
+    {
+        $user = User::where('is_active', true)->first();
+        $this->assertNotNull($user);
+
+        // Set a known initial password
+        $user->update(['password' => bcrypt('OldPassword123!')]);
+
+        // Create an active token for this user
+        $oldToken = $user->createToken('MobileDevice')->plainTextToken;
+        $this->assertEquals(1, $user->tokens()->count());
+
+        $response = $this->withHeader('Authorization', "Bearer {$oldToken}")
+            ->putJson('/api/v1/profile', [
+                'name' => $user->name,
+                'email' => $user->email,
+                'current_password' => 'OldPassword123!',
+                'password' => 'NewPassword123!',
+                'password_confirmation' => 'NewPassword123!',
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('success', true);
+
+        // All active tokens must be revoked
+        $this->assertEquals(0, $user->tokens()->count());
+
+        // Old token must now be rejected
+        $this->app['auth']->forgetGuards();
+        $retry = $this->withHeader('Authorization', "Bearer {$oldToken}")
+            ->getJson('/api/v1/auth/me');
+
+        $retry->assertStatus(401);
+    }
 }
+

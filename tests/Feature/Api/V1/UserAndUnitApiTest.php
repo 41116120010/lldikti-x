@@ -117,4 +117,182 @@ class UserAndUnitApiTest extends TestCase
             ->assertJsonPath('success', true)
             ->assertJsonPath('data.is_active', false);
     }
+
+    public function test_administrator_can_create_user_via_api(): void
+    {
+        $admin = User::where('role', 'administrator')->first();
+        $unit = Unit::first();
+        $this->assertNotNull($admin);
+        $this->assertNotNull($unit);
+
+        $payload = [
+            'name' => 'Pegawai Baru Pengujian API',
+            'nip' => '199501012026011999',
+            'username' => 'pegawai_baru_99',
+            'email' => 'pegawai99@lldikti.test',
+            'password' => 'Password123!',
+            'role' => 'staff',
+            'unit_id' => $unit->id,
+            'phone' => '081298765432',
+            'is_active' => true,
+        ];
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->postJson('/api/v1/users', $payload);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.nip', $payload['nip'])
+            ->assertJsonPath('data.username', $payload['username']);
+
+        $this->assertDatabaseHas('users', [
+            'nip' => $payload['nip'],
+            'username' => $payload['username'],
+        ]);
+    }
+
+    public function test_authorized_user_can_view_user_detail_via_api(): void
+    {
+        $admin = User::where('role', 'administrator')->first();
+        $staff = User::where('role', 'staff')->first();
+        $this->assertNotNull($admin);
+        $this->assertNotNull($staff);
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->getJson("/api/v1/users/{$staff->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.id', $staff->id)
+            ->assertJsonPath('data.name', $staff->name);
+    }
+
+    public function test_administrator_can_update_user_via_api(): void
+    {
+        $admin = User::where('role', 'administrator')->first();
+        $staff = User::where('role', 'staff')->first();
+        $this->assertNotNull($admin);
+        $this->assertNotNull($staff);
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->putJson("/api/v1/users/{$staff->id}", [
+                'name' => 'Nama Staff Terupdate',
+                'nip' => $staff->nip,
+                'username' => $staff->username,
+                'email' => $staff->email,
+                'role' => $staff->role,
+                'unit_id' => $staff->unit_id,
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.name', 'Nama Staff Terupdate');
+
+        $this->assertEquals('Nama Staff Terupdate', $staff->fresh()->name);
+    }
+
+    public function test_administrator_can_delete_user_via_api(): void
+    {
+        $admin = User::where('role', 'administrator')->first();
+        $this->assertNotNull($admin);
+
+        $disposableUser = User::create([
+            'name' => 'User Disposable Hapus',
+            'nip' => '199999999999999999',
+            'username' => 'disposable_user_99',
+            'email' => 'disposable99@lldikti.test',
+            'password' => bcrypt('password123'),
+            'role' => 'staff',
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->deleteJson("/api/v1/users/{$disposableUser->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('success', true);
+
+        $this->assertDatabaseMissing('users', [
+            'id' => $disposableUser->id,
+        ]);
+    }
+
+    public function test_authorized_user_can_view_unit_detail_via_api(): void
+    {
+        $admin = User::where('role', 'administrator')->first();
+        $unit = Unit::first();
+        $this->assertNotNull($admin);
+        $this->assertNotNull($unit);
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->getJson("/api/v1/units/{$unit->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.id', $unit->id)
+            ->assertJsonPath('data.nama_unit', $unit->nama_unit);
+    }
+
+    public function test_administrator_can_update_unit_via_api(): void
+    {
+        $admin = User::where('role', 'administrator')->first();
+        $this->assertNotNull($admin);
+
+        $disposableUnit = Unit::create([
+            'nama_unit' => 'Unit Sementara Sebelum Update',
+            'kode_unit' => 'UK-SEMENTARA',
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->putJson("/api/v1/units/{$disposableUnit->id}", [
+                'nama_unit' => 'Unit Setelah Diperbarui',
+                'kode_unit' => 'UK-PERBAIKI',
+                'is_active' => true,
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.nama_unit', 'Unit Setelah Diperbarui');
+
+        $this->assertEquals('Unit Setelah Diperbarui', $disposableUnit->fresh()->nama_unit);
+    }
+
+    public function test_administrator_can_delete_unit_via_api(): void
+    {
+        $admin = User::where('role', 'administrator')->first();
+        $this->assertNotNull($admin);
+
+        $disposableUnit = Unit::create([
+            'nama_unit' => 'Unit Untuk Dihapus',
+            'kode_unit' => 'UK-HAPUS-99',
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->deleteJson("/api/v1/units/{$disposableUnit->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('success', true);
+
+        $this->assertDatabaseMissing('units', [
+            'id' => $disposableUnit->id,
+        ]);
+    }
+
+    public function test_user_filtering_and_search_via_api(): void
+    {
+        $admin = User::where('role', 'administrator')->first();
+        $this->assertNotNull($admin);
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->getJson('/api/v1/users?role=staff&status=active');
+
+        $response->assertOk()
+            ->assertJsonPath('success', true);
+
+        $data = $response->json('data');
+        $this->assertNotEmpty($data);
+    }
 }
+

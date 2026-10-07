@@ -209,5 +209,93 @@ class AgendaApiTest extends TestCase
             $response->assertStatus(403);
         }
     }
+
+    public function test_authorized_admin_can_update_agenda_via_api(): void
+    {
+        $admin = User::where('role', 'administrator')->first();
+        $agenda = Agenda::first();
+        $this->assertNotNull($agenda);
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->putJson("/api/v1/agendas/{$agenda->id}", [
+                'judul_rapat' => 'Judul Agenda Rapat Diperbarui',
+                'jenis_rapat' => 'koordinasi',
+                'tipe_rapat' => 'hybrid',
+                'lokasi_ruang' => 'Ruang Sidang Utama Lantai 3',
+                'link_meeting' => 'https://zoom.us/j/999888777',
+                'waktu_mulai' => now()->addDays(3)->format('Y-m-d H:i:s'),
+                'is_all_units' => true,
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.judul_rapat', 'Judul Agenda Rapat Diperbarui');
+
+        $this->assertEquals('Judul Agenda Rapat Diperbarui', $agenda->fresh()->judul_rapat);
+    }
+
+    public function test_authorized_admin_can_delete_agenda_without_attendances_via_api(): void
+    {
+        $admin = User::where('role', 'administrator')->first();
+        $this->assertNotNull($admin);
+
+        // Create a temporary standalone agenda without attendees
+        $agenda = Agenda::create([
+            'created_by' => $admin->id,
+            'judul_rapat' => 'Agenda Siap Hapus Tanpa Kehadiran',
+            'slug' => 'agenda-siap-hapus',
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'online',
+            'link_meeting' => 'https://zoom.us/j/111222333',
+            'waktu_mulai' => now()->addDays(5),
+            'is_all_units' => true,
+            'status' => 'scheduled',
+        ]);
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->deleteJson("/api/v1/agendas/{$agenda->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('success', true);
+
+        $this->assertDatabaseMissing('agendas', [
+            'id' => $agenda->id,
+        ]);
+    }
+
+    public function test_admin_cannot_delete_agenda_with_attendances_via_api(): void
+    {
+        $admin = User::where('role', 'administrator')->first();
+        $agenda = Agenda::first();
+        $this->assertNotNull($agenda);
+        $this->assertTrue($agenda->attendances()->exists());
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->deleteJson("/api/v1/agendas/{$agenda->id}");
+
+        $response->assertStatus(422)
+            ->assertJsonPath('success', false);
+
+        $this->assertDatabaseHas('agendas', [
+            'id' => $agenda->id,
+        ]);
+    }
+
+    public function test_agenda_filtering_and_search_via_api(): void
+    {
+        $admin = User::where('role', 'administrator')->first();
+        $agenda = Agenda::first();
+        $this->assertNotNull($agenda);
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->getJson("/api/v1/agendas?status={$agenda->status}&tipe_rapat={$agenda->tipe_rapat}&search=Evaluasi");
+
+        $response->assertOk()
+            ->assertJsonPath('success', true);
+
+        $data = $response->json('data');
+        $this->assertNotEmpty($data);
+    }
 }
+
 

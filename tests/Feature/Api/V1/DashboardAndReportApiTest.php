@@ -138,5 +138,40 @@ class DashboardAndReportApiTest extends TestCase
 
         $this->assertNull($agenda->fresh()->report_config);
     }
+
+    public function test_user_can_download_agenda_pdf_report_via_api(): void
+    {
+        $admin = User::where('role', 'administrator')->first();
+        $agenda = Agenda::first();
+        $this->assertNotNull($agenda);
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->get("/api/v1/reports/agendas/{$agenda->id}/export/pdf");
+
+        $response->assertOk();
+        $this->assertTrue(
+            str_contains((string) $response->headers->get('Content-Type'), 'application/pdf') ||
+            str_contains((string) $response->headers->get('Content-Type'), 'text/html')
+        );
+    }
+
+    public function test_user_can_download_agenda_word_report_via_api(): void
+    {
+        $admin = User::where('role', 'administrator')->first();
+        $agenda = Agenda::first();
+        $this->assertNotNull($agenda);
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->get("/api/v1/reports/agendas/{$agenda->id}/export/word");
+
+        $response->assertOk();
+        $this->assertTrue(
+            str_contains((string) $response->headers->get('Content-Type'), 'wordprocessingml.document') ||
+            str_contains((string) $response->headers->get('Content-Type'), 'application/msword') ||
+            str_contains((string) $response->headers->get('Content-Type'), 'text/html')
+        );
+    }
 }
+
+
 
