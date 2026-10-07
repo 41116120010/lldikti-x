@@ -3,6 +3,7 @@
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AgendaController;
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\AttendanceMediaController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
@@ -50,6 +51,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/agendas/{agenda}/presensi', [AttendanceController::class, 'create'])->name('attendances.create');
     Route::post('/agendas/{agenda}/presensi', [AttendanceController::class, 'store'])->middleware('throttle:30,1')->name('attendances.store');
     Route::get('/agendas/{agenda}/presensi/{attendance}/sukses', [AttendanceController::class, 'success'])->name('attendances.success');
+    Route::get('/attendances/{attendance}/selfie', [AttendanceMediaController::class, 'selfie'])->name('attendances.selfie');
+    Route::get('/attendances/{attendance}/signature', [AttendanceMediaController::class, 'signature'])->name('attendances.signature');
 
     // Agenda Management & Notulensi
     Route::prefix('admin/agendas')->name('admin.agendas.')->group(function () {

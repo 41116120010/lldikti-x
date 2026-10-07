@@ -95,4 +95,20 @@ class Attendance extends Model
     {
         return $this->signature_path ? Storage::disk('public')->url($this->signature_path) : null;
     }
+
+    /**
+     * Get protected route URL for selfie image streaming.
+     */
+    public function getProtectedSelfieUrlAttribute(): ?string
+    {
+        return $this->selfie_path ? route('attendances.selfie', $this) : null;
+    }
+
+    /**
+     * Get protected route URL for signature image streaming.
+     */
+    public function getProtectedSignatureUrlAttribute(): ?string
+    {
+        return $this->signature_path ? route('attendances.signature', $this) : null;
+    }
 }

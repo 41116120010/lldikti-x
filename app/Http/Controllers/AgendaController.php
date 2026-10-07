@@ -13,6 +13,7 @@ use App\Models\Unit;
 use App\Models\User;
 use App\Services\ActivityLogger;
 use App\Services\AgendaConflictService;
+use App\Services\AgendaService;
 use App\Services\ReportConfigService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -108,75 +109,16 @@ class AgendaController extends Controller
     /**
      * Store a newly created agenda in storage.
      */
-    public function store(StoreAgendaRequest $request): RedirectResponse
+    public function store(StoreAgendaRequest $request, AgendaService $agendaService): RedirectResponse
     {
         $validated = $request->validated();
         $user = Auth::user();
 
-        // The conflict check is re-run inside a room-scoped advisory lock so two
-        // concurrent saves cannot both pass validation and then both insert.
-        /** @var Agenda $agenda Row created inside the room lock. */
-        $agenda = AgendaConflictService::runUnderRoomLock(
-            data: $validated,
-            ignoreAgendaId: null,
-            user: $user,
-            callback: function () use ($request, $validated, $user) {
-                return DB::transaction(function () use ($request, $validated, $user) {
-                    $isAllUnits = $request->boolean('is_all_units', true);
-                    $waktuMulai = $validated['waktu_mulai'];
-                    $waktuSelesai = !empty($validated['waktu_selesai'])
-                        ? $validated['waktu_selesai']
-                        : null;
-
-                    $agendaData = [
-                        'created_by' => $user->id,
-                        'pimpinan_id' => $validated['pimpinan_id'] ?? null,
-                        'notulis_id' => $validated['notulis_id'] ?? null,
-                        'judul_rapat' => $validated['judul_rapat'],
-                        'slug' => Str::slug($validated['judul_rapat']) . '-' . Str::lower(Str::random(6)),
-                        'jenis_rapat' => $validated['jenis_rapat'],
-                        'tipe_rapat' => $validated['tipe_rapat'],
-                        'lokasi_ruang' => $validated['lokasi_ruang'] ?? null,
-                        'link_meeting' => $validated['link_meeting'] ?? null,
-                        'waktu_mulai' => $waktuMulai,
-                        'waktu_selesai' => $waktuSelesai,
-                        'is_all_units' => $isAllUnits,
-                        'status' => $validated['status'] ?? 'scheduled',
-                    ];
-
-                    if ($request->hasFile('surat_edaran')) {
-                        $file = $request->file('surat_edaran');
-                        $path = $file->store('surat_edaran', 'public');
-                        $agendaData['surat_edaran_path'] = $path;
-                        $agendaData['surat_edaran_name'] = $file->getClientOriginalName();
-                    }
-
-                    $agenda = Agenda::create($agendaData);
-
-                    // Sync units
-                    if ($isAllUnits) {
-                        // Attach all active units
-                        $allUnitIds = Unit::active()->pluck('id')->toArray();
-                        $agenda->units()->sync($allUnitIds);
-                    } else {
-                        $unitIds = $validated['unit_ids'] ?? ($validated['units'] ?? []);
-                        if ($user->isAdmin() && empty($unitIds)) {
-                            $unitIds = [$user->unit_id];
-                        }
-                        $agenda->units()->sync($unitIds);
-                    }
-
-                    return $agenda;
-                });
-            },
-        );
-
-        ActivityLogger::log(
-            type: 'CREATE_AGENDA',
-            description: "Agenda rapat baru '{$agenda->judul_rapat}' ({$agenda->jenis_rapat}, {$agenda->tipe_rapat}) berhasil dibuat.",
-            targetModel: Agenda::class,
-            targetId: $agenda->id,
-            properties: $agenda->only(['judul_rapat', 'jenis_rapat', 'tipe_rapat', 'waktu_mulai', 'waktu_selesai', 'is_all_units'])
+        $agenda = $agendaService->createAgenda(
+            creator: $user,
+            validated: $validated,
+            isAllUnits: $request->boolean('is_all_units', true),
+            suratEdaran: $request->file('surat_edaran'),
         );
 
         return redirect()->route('admin.agendas.show', $agenda)
@@ -262,89 +204,17 @@ class AgendaController extends Controller
     /**
      * Update the specified agenda in storage.
      */
-    public function update(UpdateAgendaRequest $request, Agenda $agenda): RedirectResponse
+    public function update(UpdateAgendaRequest $request, Agenda $agenda, AgendaService $agendaService): RedirectResponse
     {
         $validated = $request->validated();
-        $oldData = $agenda->toArray();
 
-        /*
-         * File work is deliberately kept OUTSIDE the database transaction.
-         *
-         * The filesystem is not transactional. Deleting the superseded circular
-         * letter inside the transaction meant a later failure would roll the row
-         * back while the file was already gone — leaving the record pointing at
-         * something that no longer exists. The new file is written first, the row
-         * is repointed inside the transaction, and only then is the old file
-         * removed, so at no point can a committed row reference a missing file.
-         */
-        $newCircularPath = null;
-        $supersededCircularPath = null;
-
-        if ($request->hasFile('surat_edaran')) {
-            $file = $request->file('surat_edaran');
-            // store() derives the extension from the file's magic bytes and
-            // generates a random basename. Never trust the client filename:
-            // this disk is web-accessible and nginx would execute a .php.
-            $newCircularPath = $file->store('circulars', 'public');
-            $supersededCircularPath = $agenda->surat_edaran_path;
-        }
-
-        // Same room-scoped advisory lock as store(), so a concurrent save of the
-        // same room cannot slip a conflicting booking in between validation and write.
-        AgendaConflictService::runUnderRoomLock(
-            data: $validated,
-            ignoreAgendaId: (int) $agenda->getKey(),
-            user: Auth::user(),
-            callback: function () use ($request, $validated, $agenda, $oldData, $newCircularPath) {
-                DB::transaction(function () use ($request, $validated, $agenda, $oldData, $newCircularPath) {
-                    $isAllUnits = $request->boolean('is_all_units', true);
-                    $waktuMulai = $validated['waktu_mulai'];
-                    $waktuSelesai = !empty($validated['waktu_selesai'])
-                        ? $validated['waktu_selesai']
-                        : null;
-
-                    $updateData = [
-                        'pimpinan_id' => $validated['pZpimpinan_id'] ?? null,
-                        'notulis_id' => $validated['notulis_id'] ?? null,
-                        'judul_rapat' => $validated['judul_rapat'],
-                        'jenis_rapat' => $validated['jenis_rapat'],
-                        'tipe_rapat' => $validated['tipe_rapat'],
-                        'lokasi_ruang' => $validated['lokasi_ruang'] ?? null,
-                        'link_meeting' => $validated['link_meeting'] ?? null,
-                        'waktu_mulai' => $waktuMulai,
-                        'waktu_selesai' => $waktuSelesai,
-                        'is_all_units' => $isAllUnits,
-                        'status' => $validated['status'] ?? $agenda->status,
-                    ];
-
-                    if ($newCircularPath !== null) {
-                        $updateData['surat_edaran_path'] = $newCircularPath;
-                    }
-
-                    $agenda->update($updateData);
-
-                    if ($isAllUnits) {
-                        $allUnitIds = Unit::active()->pluck('id')->toArray();
-                        $agenda->units()->sync($allUnitIds);
-                    } elseif (!empty($validated['unit_ids'])) {
-                        $agenda->units()->sync($validated['unit_ids']);
-                    }
-
-                    ActivityLogger::log(
-                        type: 'UPDATE_AGENDA',
-                        description: "Agenda rapat '{$agenda->judul_rapat}' diperbarui.",
-                        targetModel: Agenda::class,
-                        targetId: $agenda->id,
-                        properties: ['old' => $oldData, 'new' => $agenda->toArray()]
-                    );
-                });
-            },
+        $agendaService->updateAgenda(
+            agenda: $agenda,
+            actor: Auth::user(),
+            validated: $validated,
+            isAllUnits: $request->boolean('is_all_units', true),
+            suratEdaran: $request->file('surat_edaran'),
         );
-
-        // Row now durably references the new file, so the superseded one is safe to drop.
-        if ($supersededCircularPath && $supersededCircularPath !== $newCircularPath) {
-            Storage::disk('public')->delete($supersededCircularPath);
-        }
 
         return redirect()->route('admin.agendas.show', $agenda)
             ->with('success', "Agenda rapat '{$agenda->judul_rapat}' berhasil diperbarui.");
@@ -354,60 +224,17 @@ class AgendaController extends Controller
      * Remove the specified agenda from storage.
      * Dapat dilakukan oleh Administrator (semua unit) atau Admin Unit yang berkaitan.
      */
-    public function destroy(Agenda $agenda): RedirectResponse
+    public function destroy(Agenda $agenda, AgendaService $agendaService): RedirectResponse
     {
         Gate::authorize('delete', $agenda);
 
         $judul = $agenda->judul_rapat;
-        $id = $agenda->id;
 
-        // Lindungi catatan presensi kegiatan kedinasan yang sudah terlaksana
-        if ($agenda->attendances()->exists()) {
-            return back()->with('error', "Agenda rapat '{$judul}' telah memiliki catatan presensi kehadiran pegawai. Agenda tidak dapat dihapus demi integritas arsip kegiatan. Ubah status agenda menjadi 'Dibatalkan' jika agenda batal terlaksana.");
+        try {
+            $agendaService->deleteAgenda($agenda, Auth::user());
+        } catch (\DomainException $e) {
+            return back()->with('error', $e->getMessage());
         }
-
-        /*
-         * Collect the physical files first, delete the row, then remove the files.
-         *
-         * Two problems with the previous ordering. The filesystem is not
-         * transactional, so unlinking inside the transaction meant a later failure
-         * would roll the row back while its files were already gone. And the
-         * per-file exists()+delete() pair issued two syscalls per file — a meeting
-         * with 100 attendees cost 400 blocking disk operations inside an open
-         * transaction. Storage::delete() accepts an array, so this is one call.
-         */
-        $documentations = $agenda->documentations()->pluck('file_path')->all();
-        $attendances = $agenda->attendances()->get(['selfie_path', 'signature_path']);
-
-        $filesToDelete = array_values(array_filter(array_merge(
-            [$agenda->surat_edaran_path],
-            [$agenda->report_config['custom_logo_path'] ?? null],
-            $documentations,
-            $attendances->pluck('selfie_path')->all(),
-            $attendances->pluck('signature_path')->all(),
-        )));
-
-        $agendaId = (int) $agenda->getKey();
-
-        DB::transaction(function () use ($agenda) {
-            // Relasi attendances, documentations, agenda_units cascade otomatis.
-            $agenda->delete();
-        });
-
-        if ($filesToDelete !== []) {
-            Storage::disk('public')->delete($filesToDelete);
-        }
-
-        // Bersihkan direktori agenda jika masih tersisa
-        Storage::disk('public')->deleteDirectory("documentations/{$agendaId}");
-        Storage::disk('public')->deleteDirectory("attendances/{$agendaId}");
-
-        ActivityLogger::log(
-            type: 'DELETE_AGENDA',
-            description: "Agenda rapat '{$judul}' (ID: {$id}) berhasil dihapus oleh " . Auth::user()->name . ".",
-            targetModel: Agenda::class,
-            targetId: $id
-        );
 
         return redirect()->route('admin.agendas.index')
             ->with('success', "Agenda rapat '{$judul}' berhasil dihapus.");
@@ -416,35 +243,12 @@ class AgendaController extends Controller
     /**
      * Update status of the agenda (e.g. start meeting, complete meeting).
      */
-    public function updateStatus(UpdateAgendaStatusRequest $request, Agenda $agenda): RedirectResponse
+    public function updateStatus(UpdateAgendaStatusRequest $request, Agenda $agenda, AgendaService $agendaService): RedirectResponse
     {
         Gate::authorize('manageStatus', $agenda);
 
         $validated = $request->validated();
-        $newStatus = $validated['status'];
-
-        $statusLabels = [
-            'draft' => 'Draft',
-            'scheduled' => 'Terjadwal',
-            'ongoing' => 'Sedang Berlangsung (Presensi Dibuka)',
-            'completed' => 'Selesai (Presensi Ditutup)',
-            'cancelled' => 'Dibatalkan',
-        ];
-
-        $statusText = $statusLabels[$newStatus] ?? $newStatus;
-
-        DB::transaction(function () use ($agenda, $newStatus, $statusText) {
-            $agenda->status = $newStatus;
-            $agenda->save();
-
-            ActivityLogger::log(
-                type: 'UPDATE_AGENDA_STATUS',
-                description: "Status agenda rapat '{$agenda->judul_rapat}' diubah menjadi {$statusText}.",
-                targetModel: Agenda::class,
-                targetId: $agenda->id,
-                properties: ['status' => $newStatus]
-            );
-        });
+        $statusText = $agendaService->updateStatus($agenda, $validated['status']);
 
         return back()->with('success', "Status agenda rapat berhasil diubah menjadi {$statusText}.");
     }
@@ -452,37 +256,10 @@ class AgendaController extends Controller
     /**
      * Update pimpinan and notulis roles dynamically (e.g. during meeting or from show page).
      */
-    public function updateRoles(UpdateRolesRequest $request, Agenda $agenda): RedirectResponse
+    public function updateRoles(UpdateRolesRequest $request, Agenda $agenda, AgendaService $agendaService): RedirectResponse
     {
-        // The field names live only inside the FormRequest; roles() derives them
-        // from the validated rules, so the write can never disagree with the check.
         $roles = $request->roles();
-
-        DB::transaction(function () use ($agenda, $roles) {
-            // signer1/signer2 are refreshed by the Agenda::saving hook whenever the
-            // role ids change, so this block does not repeat that logic. Doing it
-            // here as well meant two writes plus a refresh() plus three eager loads
-            // for a single role change, and the two copies could drift apart.
-            $before = [
-                $agenda->nama_pimpinan,
-                $agenda->nama_notulis,
-            ];
-
-            $agenda->update($roles);
-
-            $agenda->refresh();
-
-            ActivityLogger::log(
-                type: 'UPDATE_AGENDA_ROLES',
-                description: "Penugasan}pimpinan rapat ('{$agenda->nama_pimpinan}') dan notulis ('{$agenda->nama_notulis}') untuk rapat '{$agenda->judul_rapat}' diperbarui.",
-                targetModel: Agenda::class,
-                targetId: $agenda->id,
-                properties: [
-                    'old' => ['pimpinan' => $before[0], 'notulis' => $before[1]],
-                    'new' => ['pimpinan' => $agenda->nama_pimpinan, 'notulis' => $agenda->nama_notulis],
-                ]
-            );
-        });
+        $agendaService->updateRoles($agenda, $roles);
 
         return back()->with('success', 'Penugasan Pemimpin Rapat dan Notulis berhasil diperbarui.');
     }
@@ -519,51 +296,20 @@ class AgendaController extends Controller
     /**
      * Update Notulensi, Kesimpulan, and Upload Documentation Photos & Sync Document Configuration (Single Action).
      */
-    public function updateNotulen(UpdateMinutesRequest $request, Agenda $agenda, ReportConfigService $configService): RedirectResponse
+    public function updateNotulen(UpdateMinutesRequest $request, Agenda $agenda, AgendaService $agendaService): RedirectResponse
     {
         $validated = $request->validated();
 
-        DB::transaction(function () use ($request, $validated, $agenda, $configService) {
-            $agenda->update([
+        $agendaService->updateNotulen(
+            agenda: $agenda,
+            data: [
                 'notulensi' => $validated['notulensi'] ?? null,
                 'kesimpulan' => $validated['kesimpulan'] ?? null,
-            ]);
-
-            // Synchronize report configuration if provided from workstation
-            if ($request->boolean('has_document_config') || $request->filled('document_title') || $request->hasFile('custom_logo') || $request->boolean('reset_custom_logo')) {
-                $configService->syncFromRequest($request, $agenda, persist: true);
-            }
-
-            // Handle multi-photo documentations
-            if ($request->hasFile('photos')) {
-                $captions = $request->input('captions', []);
-
-                // Read the high-water mark once. Calling ->count() inside the loop
-                // issued one COUNT query per uploaded photo; uploading 10 photos
-                // meant 10 identical queries (AGENTS.md §6).
-                $baseSortOrder = (int) $agenda->documentations()->max('sort_order');
-
-                foreach ($request->file('photos') as $index => $photo) {
-                    // Magic-byte extension + random name, for the same reason as
-                    // surat_edaran above.
-                    $path = $photo->store('documentations/' . $agenda->id, 'public');
-
-                    AgendaDocumentation::create([
-                        'agenda_id' => $agenda->id,
-                        'file_path' => $path,
-                        'caption' => $captions[$index] ?? null,
-                        'sort_order' => $baseSortOrder + $index + 1,
-                    ]);
-                }
-            }
-
-            ActivityLogger::log(
-                type: 'UPDATE_AGENDA_MINUTES',
-                description: "Notulensi, kesimpulan, dan konfigurasi dokumen rapat '{$agenda->judul_rapat}' diperbarui.",
-                targetModel: Agenda::class,
-                targetId: $agenda->id
-            );
-        });
+                'photos' => $request->file('photos'),
+                'captions' => $request->input('captions', []),
+            ],
+            request: $request,
+        );
 
         $redirectRoute = Auth::user()?->isStaff()
             ? route('agendas.show', $agenda)
@@ -576,28 +322,15 @@ class AgendaController extends Controller
     /**
      * Delete a single photo documentation item.
      */
-    public function deleteDocumentation(Agenda $agenda, AgendaDocumentation $documentation): RedirectResponse
+    public function deleteDocumentation(Agenda $agenda, AgendaDocumentation $documentation, AgendaService $agendaService): RedirectResponse
     {
         Gate::authorize('manageMinutes', $agenda);
 
-        if ($documentation->agenda_id !== $agenda->id) {
+        try {
+            $agendaService->deleteDocumentation($agenda, $documentation);
+        } catch (\InvalidArgumentException $e) {
             abort(404);
         }
-
-        DB::transaction(function () use ($agenda, $documentation) {
-            if (Storage::disk('public')->exists($documentation->file_path)) {
-                Storage::disk('public')->delete($documentation->file_path);
-            }
-
-            $documentation->delete();
-
-            ActivityLogger::log(
-                type: 'DELETE_AGENDA_DOCUMENTATION',
-                description: "Foto dokumentasi pada agenda rapat '{$agenda->judul_rapat}' dihapus.",
-                targetModel: AgendaDocumentation::class,
-                targetId: $documentation->id
-            );
-        });
 
         return back()->with('success', "Foto dokumentasi berhasil dihapus.");
     }

@@ -38,6 +38,18 @@ class LoginRequest extends FormRequest
     }
 
     /**
+     * Prepare inputs for validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        if (!$this->filled('login') && $this->filled('identifier')) {
+            $this->merge([
+                'login' => $this->input('identifier'),
+            ]);
+        }
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
@@ -45,7 +57,8 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'login' => ['required', 'string'],
+            'login' => ['required_without:identifier', 'nullable', 'string'],
+            'identifier' => ['required_without:login', 'nullable', 'string'],
             'password' => ['required', 'string'],
             'remember' => ['nullable', 'boolean'],
         ];
@@ -58,22 +71,22 @@ class LoginRequest extends FormRequest
     {
         return [
             'login' => 'NIP atau Username',
+            'identifier' => 'NIP atau Username',
             'password' => 'Kata Sandi',
         ];
     }
 
     /**
-     * Attempt to authenticate the request's credentials.
+     * Resolve and verify the authenticating user without creating a web session.
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-    public function authenticate(): void
+    public function resolveUser(): User
     {
         $this->ensureIsNotRateLimited();
 
         $rawInput = trim($this->input('login'));
         $password = (string) $this->input('password');
-        $remember = $this->boolean('remember');
 
         // Check if raw input stripped of spaces consists solely of digits (NIP format)
         $digitsOnly = preg_replace('/\s+/', '', $rawInput);
@@ -112,14 +125,30 @@ class LoginRequest extends FormRequest
              * deactivation hint is an invitation to probe for a way to re-enable
              * an account.
              */
-            throw ValidationException::withMessages([
-                'login' => 'Kredensial tidak valid atau akun sedang dinonaktifkan.',
-            ]);
+            $errors = ['login' => 'Kredensial tidak valid atau akun sedang dinonaktifkan.'];
+            if ($this->has('identifier')) {
+                $errors['identifier'] = 'Kredensial tidak valid atau akun sedang dinonaktifkan.';
+            }
+
+            throw ValidationException::withMessages($errors);
         }
 
-        Auth::login($user, $remember);
-
         RateLimiter::clear($this->throttleKey());
+
+        return $user;
+    }
+
+    /**
+     * Attempt to authenticate the request's credentials into a web session.
+     *
+     * @throws \Illuminate\Validation\ValidationException
+     */
+    public function authenticate(): void
+    {
+        $user = $this->resolveUser();
+        $remember = $this->boolean('remember');
+
+        Auth::login($user, $remember);
     }
 
     /**

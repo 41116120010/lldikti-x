@@ -6,6 +6,7 @@ use App\Http\Requests\Attendance\StoreAttendanceRequest;
 use App\Models\Agenda;
 use App\Models\Attendance;
 use App\Services\ActivityLogger;
+use App\Services\AttendanceService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -97,7 +98,7 @@ class AttendanceController extends Controller
     /**
      * Store an attendance check-in record.
      */
-    public function store(StoreAttendanceRequest $request, Agenda $agenda): RedirectResponse
+    public function store(StoreAttendanceRequest $request, Agenda $agenda, AttendanceService $attendanceService): RedirectResponse
     {
         $user = Auth::user();
 
@@ -120,82 +121,22 @@ class AttendanceController extends Controller
                 ->with('error', 'Sesi presensi untuk agenda rapat ini tidak sedang dibuka.');
         }
 
-        $savedPaths = [];
+        $result = $attendanceService->recordAttendance($agenda, $user, [
+            'selfie_data' => $request->input('selfie_data'),
+            'selfie_file' => $request->file('selfie_file'),
+            'signature_data' => $request->input('signature_data'),
+            'signature_file' => $request->file('signature_file'),
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
 
-        try {
-            $attendance = DB::transaction(function () use ($request, $agenda, $user, &$savedPaths) {
-                $selfiePath = $this->saveImageFile(
-                    dataUri: $request->input('selfie_data'),
-                    file: $request->file('selfie_file'),
-                    directory: "attendances/{$agenda->id}/selfies",
-                    prefix: "selfie_{$user->id}"
-                );
-                $savedPaths[] = $selfiePath;
-
-                $signaturePath = $this->saveImageFile(
-                    dataUri: $request->input('signature_data'),
-                    file: $request->file('signature_file'),
-                    directory: "attendances/{$agenda->id}/signatures",
-                    prefix: "sig_{$user->id}"
-                );
-                $savedPaths[] = $signaturePath;
-
-                $record = Attendance::create([
-                    'agenda_id' => $agenda->id,
-                    'user_id' => $user->id,
-                    'signed_at' => now(),
-                    'selfie_path' => $selfiePath,
-                    'signature_path' => $signaturePath,
-                    'ip_address' => $request->ip(),
-                    'user_agent' => $request->userAgent(),
-                ]);
-
-                ActivityLogger::log(
-                    type: 'RECORD_ATTENDANCE',
-                    description: "Pegawai {$user->name} (NIP: {$user->nip}) melakukan presensi pada agenda '{$agenda->judul_rapat}'.",
-                    targetModel: Attendance::class,
-                    targetId: $record->id,
-                    properties: [
-                        'agenda_id' => $agenda->id,
-                        'user_id' => $user->id,
-                        'signed_at' => $record->signed_at->toDateTimeString(),
-                    ]
-                );
-
-                return $record;
-            });
-
-            return redirect()->route('attendances.success', [$agenda, $attendance])
-                ->with('success', 'Presensi kehadiran rapat Anda berhasil dicatat dan diverifikasi!');
-        } catch (QueryException $e) {
-            // Clean up newly saved files on collision
-            foreach ($savedPaths as $path) {
-                if (Storage::disk('public')->exists($path)) {
-                    Storage::disk('public')->delete($path);
-                }
-            }
-
-            // Gracefully handle duplicate check-in collision (SQLSTATE 23000 / Error 1062)
-            $existing = Attendance::where('agenda_id', $agenda->id)
-                ->where('user_id', $user->id)
-                ->first();
-
-            if ($existing) {
-                return redirect()->route('attendances.success', [$agenda, $existing])
-                    ->with('info', 'Presensi kehadiran Anda telah tercatat pada agenda rapat ini.');
-            }
-
-            throw $e;
-        } catch (\Throwable $e) {
-            // Clean up files on any other transaction failure
-            foreach ($savedPaths as $path) {
-                if (Storage::disk('public')->exists($path)) {
-                    Storage::disk('public')->delete($path);
-                }
-            }
-
-            throw $e;
+        if ($result['is_duplicate']) {
+            return redirect()->route('attendances.success', [$agenda, $result['attendance']])
+                ->with('info', 'Presensi kehadiran Anda telah tercatat pada agenda rapat ini.');
         }
+
+        return redirect()->route('attendances.success', [$agenda, $result['attendance']])
+            ->with('success', 'Presensi kehadiran rapat Anda berhasil dicatat dan diverifikasi!');
     }
 
     /**
@@ -255,59 +196,5 @@ class AttendanceController extends Controller
         $attendances = $query->paginate(10)->withQueryString();
 
         return view('attendances.history', compact('attendances', 'user'));
-    }
-
-    /**
-     * Helper to process and store Base64 Data URI or File Upload to disk safely.
-     *
-     * @param  string  $dataUri    Raw `data:image/...;base64,...` payload from the canvas.
-     * @param  \Illuminate\Http\UploadedFile|null  $file  Direct upload fallback.
-     * @param  string  $directory  Disk-relative directory.
-     * @param  string  $prefix     Human-readable filename prefix, e.g. `selfie_7`.
-     * @return string Path relative to the public disk.
-     */
-    private function saveImageFile(?string $dataUri, ?UploadedFile $file, string $directory, string $prefix): string
-    {
-        $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
-
-        // 1. If uploaded as direct file
-        if ($file) {
-            // Derive the extension from the file's magic bytes, never from the
-            // client-supplied filename. getClientOriginalExtension() is fully
-            // attacker-controlled and would let a `.php` payload land under a
-            // public disk that nginx happily hands to PHP-FPM.
-            $ext = strtolower((string) $file->guessExtension());
-            if (!in_array($ext, $allowedExtensions, true)) {
-                throw new \InvalidArgumentException('Tipe berkas gambar tidak diizinkan.');
-            }
-
-            $filename = "{$prefix}_" . Str::random(16) . '.' . $ext;
-            return $file->storeAs($directory, $filename, 'public');
-        }
-
-        // 2. If uploaded as Base64 Data URI from Canvas
-        if ($dataUri && preg_match('/^data:image\/([a-zA-Z0-9\+]+);base64,/', $dataUri, $type)) {
-            $rawExtension = strtolower($type[1]);
-            $extension = ($rawExtension === 'jpeg') ? 'jpg' : $rawExtension;
-
-            if (!in_array($extension, $allowedExtensions, true)) {
-                throw new \InvalidArgumentException('Format gambar base64 tidak didukung.');
-            }
-
-            $data = substr($dataUri, strpos($dataUri, ',') + 1);
-            $decoded = base64_decode($data, true);
-            if ($decoded === false) {
-                throw new \InvalidArgumentException('Format gambar base64 tidak valid.');
-            }
-
-            $filename = "{$prefix}_" . Str::random(16) . ".{$extension}";
-            $path = "{$directory}/{$filename}";
-
-            Storage::disk('public')->put($path, $decoded);
-
-            return $path;
-        }
-
-        throw new \InvalidArgumentException('Data berkas gambar tidak ditemukan.');
     }
 }

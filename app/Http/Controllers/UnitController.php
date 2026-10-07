@@ -6,6 +6,7 @@ use App\Http\Requests\Unit\StoreUnitRequest;
 use App\Http\Requests\Unit\UpdateUnitRequest;
 use App\Models\Unit;
 use App\Services\ActivityLogger;
+use App\Services\UnitService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -57,24 +58,12 @@ class UnitController extends Controller
     /**
      * Store a newly created unit in storage.
      */
-    public function store(StoreUnitRequest $request): RedirectResponse
+    public function store(StoreUnitRequest $request, UnitService $unitService): RedirectResponse
     {
         $validated = $request->validated();
-        $validated['is_active'] = $request->boolean('is_active', true);
+        $isActive = $request->boolean('is_active', true);
 
-        $unit = DB::transaction(function () use ($validated) {
-            $unit = Unit::create($validated);
-
-            ActivityLogger::log(
-                type: 'CREATE_UNIT',
-                description: "Unit kerja baru '{$unit->nama_unit}' ({$unit->kode_unit}) berhasil ditambahkan.",
-                targetModel: Unit::class,
-                targetId: $unit->id,
-                properties: $unit->toArray()
-            );
-
-            return $unit;
-        });
+        $unit = $unitService->createUnit($validated, $isActive);
 
         return redirect()->route('admin.units.index')
             ->with('success', "Unit kerja '{$unit->nama_unit}' berhasil ditambahkan.");
@@ -100,23 +89,12 @@ class UnitController extends Controller
     /**
      * Update the specified unit in storage.
      */
-    public function update(UpdateUnitRequest $request, Unit $unit): RedirectResponse
+    public function update(UpdateUnitRequest $request, Unit $unit, UnitService $unitService): RedirectResponse
     {
-        $oldData = $unit->toArray();
         $validated = $request->validated();
-        $validated['is_active'] = $request->boolean('is_active', true);
+        $isActive = $request->boolean('is_active', true);
 
-        DB::transaction(function () use ($unit, $validated, $oldData) {
-            $unit->update($validated);
-
-            ActivityLogger::log(
-                type: 'UPDATE_UNIT',
-                description: "Data unit kerja '{$unit->nama_unit}' ({$unit->kode_unit}) diperbarui.",
-                targetModel: Unit::class,
-                targetId: $unit->id,
-                properties: ['old' => $oldData, 'new' => $unit->toArray()]
-            );
-        });
+        $unitService->updateUnit($unit, $validated, $isActive);
 
         return redirect()->route('admin.units.index')
             ->with('success', "Unit kerja '{$unit->nama_unit}' berhasil diperbarui.");
@@ -126,31 +104,16 @@ class UnitController extends Controller
      * Remove the specified unit from storage.
      * Prevents deletion if the unit has associated users or meeting agendas.
      */
-    public function destroy(Unit $unit): RedirectResponse
+    public function destroy(Unit $unit, UnitService $unitService): RedirectResponse
     {
         Gate::authorize('delete', $unit);
-
-        if ($unit->users()->count() > 0) {
-            return back()->with('error', "Tidak dapat menghapus unit kerja '{$unit->nama_unit}' karena masih memiliki {$unit->users()->count()} pegawai terdaftar.");
-        }
-
-        if ($unit->agendas()->count() > 0) {
-            return back()->with('error', "Tidak dapat menghapus unit kerja '{$unit->nama_unit}' karena masih terhubung dengan riwayat agenda rapat kedinasan. Anda dapat menonaktifkan status unit ini.");
-        }
-
         $namaUnit = $unit->nama_unit;
-        $unitId = $unit->id;
 
-        DB::transaction(function () use ($unit, $namaUnit, $unitId) {
-            $unit->delete();
-
-            ActivityLogger::log(
-                type: 'DELETE_UNIT',
-                description: "Unit kerja '{$namaUnit}' (ID: {$unitId}) dihapus.",
-                targetModel: Unit::class,
-                targetId: $unitId
-            );
-        });
+        try {
+            $unitService->deleteUnit($unit);
+        } catch (\DomainException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return redirect()->route('admin.units.index')
             ->with('success', "Unit kerja '{$namaUnit}' berhasil dihapus.");
@@ -159,35 +122,11 @@ class UnitController extends Controller
     /**
      * Toggle active/inactive status of a unit.
      */
-    public function toggleStatus(Unit $unit): RedirectResponse
+    public function toggleStatus(Unit $unit, UnitService $unitService): RedirectResponse
     {
         Gate::authorize('update', $unit);
 
-        $statusLabel = DB::transaction(function () use ($unit) {
-            /*
-             * Re-read the row under a row lock. Toggling is a read-modify-write,
-             * and $unit was hydrated before the transaction opened, so without
-             * lockForUpdate() two concurrent requests would both read the same
-             * is_active value, both flip it, and one of the two changes would be
-             * silently lost. A transaction alone does not prevent this.
-             */
-            $unit = Unit::whereKey($unit->getKey())->lockForUpdate()->firstOrFail();
-
-            $unit->is_active = !$unit->is_active;
-            $unit->save();
-
-            $label = $unit->is_active ? 'diaktifkan' : 'dinonaktifkan';
-
-            ActivityLogger::log(
-                type: 'TOGGLE_UNIT_STATUS',
-                description: "Status unit kerja '{$unit->nama_unit}' diubah menjadi {$label}.",
-                targetModel: Unit::class,
-                targetId: $unit->id,
-                properties: ['is_active' => $unit->is_active]
-            );
-
-            return $label;
-        });
+        $statusLabel = $unitService->toggleStatus($unit);
 
         return back()->with('success', "Unit kerja '{$unit->nama_unit}' berhasil {$statusLabel}.");
     }

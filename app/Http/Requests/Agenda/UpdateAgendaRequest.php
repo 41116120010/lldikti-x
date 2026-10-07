@@ -55,6 +55,15 @@ class UpdateAgendaRequest extends FormRequest
             $this->merge(['link_meeting' => $link]);
         }
 
+        if ($this->has('tipe_rapat')) {
+            $tipe = strtolower(trim((string) $this->input('tipe_rapat')));
+            if ($tipe === 'luring') {
+                $this->merge(['tipe_rapat' => 'offline']);
+            } elseif ($tipe === 'daring') {
+                $this->merge(['tipe_rapat' => 'online']);
+            }
+        }
+
         if ($this->has('waktu_selesai') && blank($this->input('waktu_selesai'))) {
             $this->merge(['waktu_selesai' => null]);
         }

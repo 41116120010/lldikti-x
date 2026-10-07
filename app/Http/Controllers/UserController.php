@@ -7,6 +7,7 @@ use App\Http\Requests\User\UpdateUserRequest;
 use App\Models\Unit;
 use App\Models\User;
 use App\Services\ActivityLogger;
+use App\Services\UserService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -101,35 +102,13 @@ class UserController extends Controller
     /**
      * Store a newly created user in storage.
      */
-    public function store(StoreUserRequest $request): RedirectResponse
+    public function store(StoreUserRequest $request, UserService $userService): RedirectResponse
     {
         $currentUser = Auth::user();
         $validated = $request->validated();
+        $isActive = $request->boolean('is_active', true);
 
-        // Enforce unit_id for Admin Unit
-        if ($currentUser->isAdmin()) {
-            $validated['unit_id'] = $currentUser->unit_id;
-            if ($validated['role'] === 'administrator') {
-                $validated['role'] = 'staff';
-            }
-        }
-
-        $validated['password'] = Hash::make($validated['password']);
-        $validated['is_active'] = $request->boolean('is_active', true);
-
-        $user = DB::transaction(function () use ($validated) {
-            $user = User::create($validated);
-
-            ActivityLogger::log(
-                type: 'CREATE_USER',
-                description: "Pengguna baru '{$user->name}' (NIP: {$user->nip}, Role: {$user->role_label}) berhasil didaftarkan.",
-                targetModel: User::class,
-                targetId: $user->id,
-                properties: $user->only(['name', 'nip', 'username', 'email', 'role', 'unit_id', 'is_active'])
-            );
-
-            return $user;
-        });
+        $user = $userService->createUser($currentUser, $validated, $isActive);
 
         return redirect()->route('admin.users.index')
             ->with('success', "Pengguna '{$user->name}' berhasil ditambahkan.");
@@ -159,39 +138,15 @@ class UserController extends Controller
     /**
      * Update the specified user in storage.
      */
-    public function update(UpdateUserRequest $request, User $user): RedirectResponse
+    public function update(UpdateUserRequest $request, User $user, UserService $userService): RedirectResponse
     {
         Gate::authorize('update', $user);
 
         $currentUser = Auth::user();
-        $oldData = $user->only(['name', 'nip', 'username', 'email', 'role', 'unit_id', 'is_active', 'phone']);
         $validated = $request->validated();
+        $isActive = $request->boolean('is_active', true);
 
-        // If password is not provided, keep current password
-        if (empty($validated['password'])) {
-            unset($validated['password']);
-        } else {
-            $validated['password'] = Hash::make($validated['password']);
-        }
-
-        // Scoping for Admin Unit
-        if ($currentUser->isAdmin()) {
-            $validated['unit_id'] = $currentUser->unit_id;
-        }
-
-        $validated['is_active'] = $request->boolean('is_active', true);
-
-        DB::transaction(function () use ($user, $validated, $oldData) {
-            $user->update($validated);
-
-            ActivityLogger::log(
-                type: 'UPDATE_USER',
-                description: "Data pengguna '{$user->name}' (NIP: {$user->nip}) diperbarui.",
-                targetModel: User::class,
-                targetId: $user->id,
-                properties: ['old' => $oldData, 'new' => $user->only(array_keys($oldData))]
-            );
-        });
+        $userService->updateUser($user, $currentUser, $validated, $isActive);
 
         return redirect()->route('admin.users.index')
             ->with('success', "Data pengguna '{$user->name}' berhasil diperbarui.");
@@ -200,33 +155,17 @@ class UserController extends Controller
     /**
      * Remove the specified user from storage.
      */
-    public function destroy(User $user): RedirectResponse
+    public function destroy(User $user, UserService $userService): RedirectResponse
     {
         Gate::authorize('delete', $user);
 
-        // Check if user has attendance history or created agendas to protect archive data from cascading deletion
-        if ($user->attendances()->exists()) {
-            return back()->with('error', "Pengguna '{$user->name}' memiliki riwayat presensi rapat kedinasan. Non-aktifkan akun alih-alih menghapusnya demi integritas data arsip.");
-        }
-
-        if ($user->createdAgendas()->exists()) {
-            return back()->with('error', "Pengguna '{$user->name}' tercatat sebagai pembuat agenda rapat kedinasan. Non-aktifkan akun alih-alih menghapusnya agar riwayat agenda rapat tidak terhapus.");
-        }
-
         $name = $user->name;
-        $nip = $user->nip;
-        $userId = $user->id;
 
-        DB::transaction(function () use ($user, $name, $nip, $userId) {
-            $user->delete();
-
-            ActivityLogger::log(
-                type: 'DELETE_USER',
-                description: "Pengguna '{$name}' (NIP: {$nip}, ID: {$userId}) dihapus dari sistem.",
-                targetModel: User::class,
-                targetId: $userId
-            );
-        });
+        try {
+            $userService->deleteUser($user, Auth::user());
+        } catch (\DomainException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return redirect()->route('admin.users.index')
             ->with('success', "Pengguna '{$name}' berhasil dihapus.");
@@ -235,38 +174,15 @@ class UserController extends Controller
     /**
      * Toggle active/inactive user account status.
      */
-    public function toggleStatus(User $user): RedirectResponse
+    public function toggleStatus(User $user, UserService $userService): RedirectResponse
     {
         Gate::authorize('update', $user);
 
-        if ($user->id === Auth::id()) {
-            return back()->with('error', 'Anda tidak dapat menonaktifkan akun Anda sendiri.');
+        try {
+            $statusLabel = $userService->toggleStatus($user, Auth::user());
+        } catch (\DomainException $e) {
+            return back()->with('error', $e->getMessage());
         }
-
-        $statusLabel = DB::transaction(function () use ($user) {
-            /*
-             * Re-read the row under a row lock. Toggling is a read-modify-write
-             * and $user was hydrated before the transaction opened, so two
-             * concurrent requests could both read the same is_active, both flip
-             * it, and one change would be silently lost.
-             */
-            $user = User::whereKey($user->getKey())->lockForUpdate()->firstOrFail();
-
-            $user->is_active = !$user->is_active;
-            $user->save();
-
-            $label = $user->is_active ? 'diaktifkan' : 'dinonaktifkan';
-
-            ActivityLogger::log(
-                type: 'TOGGLE_USER_STATUS',
-                description: "Akun pengguna '{$user->name}' {$label}.",
-                targetModel: User::class,
-                targetId: $user->id,
-                properties: ['is_active' => $user->is_active]
-            );
-
-            return $label;
-        });
 
         return back()->with('success', "Akun '{$user->name}' berhasil {$statusLabel}.");
     }
