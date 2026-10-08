@@ -76,8 +76,9 @@ class AppServiceProvider extends ServiceProvider
             return;
         }
 
-        $expectedOffsetHours = (int) (new \DateTimeImmutable('now', new \DateTimeZone($appTimezone)))->format('G');
-        $expectedOffset = (new \DateTimeImmutable('now', new \DateTimeZone($appTimezone)))->format('P');
+        $now = new \DateTimeImmutable('now', new \DateTimeZone($appTimezone));
+        $expectedOffsetHours = (int) ($now->getOffset() / 3600);
+        $expectedOffset = $now->format('P');
 
         try {
             $driver = DB::connection()->getDriverName();

@@ -65,12 +65,18 @@ Sistem menerapkan pembagian hak akses granular berbasis 3 tingkatan peran:
 * **Backend Framework:** PHP 8.3+ / Laravel 13.x / LTS Framework
 * **Frontend Layer:** Laravel Blade Component + Tailwind CSS v4 + Vite + Vanilla JS
 * **Iconography:** Pure Vector SVG Icons (Phosphor / Heroicons Standard)
-* **Database Engine:** MariaDB 10.11+ / MySQL 8.0+ (Didukung SQLite untuk local testing suite)
-* **Penyimpanan Berkas:** Local Filesystem Storage via Symlink (`storage/app/public/`)
+* **Database Engine:** PostgreSQL 15+ (Primary Production Engine) / MariaDB 10.11+ & MySQL 8.0+ (Backward Compatible) / SQLite 3.35+ (Local Testing)
+* **Penyimpanan Berkas:** Local Filesystem Storage via Symlink (`storage/app/public/`) & Controller Streaming Terproteksi untuk Data Biometrik ASN
 * **Format Ekspor:**
   * PDF: Print-ready Gov-Tech Standard View dengan CSS `@media print`
   * Microsoft Word: Word XML Compliant Document (`.doc`)
   * Data Tabular: CSV Format dengan UTF-8 Byte Order Mark (BOM) untuk Microsoft Excel
+* **Dokumentasi Terkait:**
+  * Panduan Migrasi Database: [`MIGRATION_POSTGRES.md`](file:///home/daffiq/Documents/Semester-5/lldikti-x/lldikti-x/MIGRATION_POSTGRES.md)
+  * Kebijakan Backup & DR: [`BACKUP.md`](file:///home/daffiq/Documents/Semester-5/lldikti-x/lldikti-x/BACKUP.md)
+  * Spesifikasi REST API Mobile v1: [`API.md`](file:///home/daffiq/Documents/Semester-5/lldikti-x/lldikti-x/API.md)
+  * Spesifikasi Kebutuhan Produk: [`PRD.md`](file:///home/daffiq/Documents/Semester-5/lldikti-x/lldikti-x/PRD.md)
+  * Skema & Kamus Data: [`ERD.md`](file:///home/daffiq/Documents/Semester-5/lldikti-x/lldikti-x/ERD.md)
 
 ---
 
@@ -133,10 +139,10 @@ Siklus rapat dikontrol melalui transisi status ketat:
 ## 7. Petunjuk Instalasi & Menjalankan Sistem
 
 ### 7.1. Prasyarat Sistem
-* PHP >= 8.3 dengan ekstensi: `pdo_mysql`, `mbstring`, `openssl`, `tokenizer`, `xml`, `ctype`, `json`, `fileinfo`, `gd`
+* PHP >= 8.3 dengan ekstensi: `pdo_pgsql`, `pgsql`, `pdo_mysql` (opsional untuk legacy), `mbstring`, `openssl`, `tokenizer`, `xml`, `ctype`, `json`, `fileinfo`, `gd`
 * Composer >= 2.6
 * Node.js >= 20.x & NPM
-* Database Server: MariaDB / MySQL
+* Database Server: PostgreSQL 15+ (Direkomendasikan / Utama) atau MariaDB 10.11+ / MySQL 8.0+
 
 ### 7.2. Langkah Instalasi
 
@@ -161,12 +167,23 @@ Siklus rapat dikontrol melalui transisi status ketat:
 
    Pastikan konfigurasi database pada file `.env` telah sesuai:
    ```env
-   DB_CONNECTION=mysql
+   # PostgreSQL (Standar Utama SIPERAPAT)
+   DB_CONNECTION=pgsql
    DB_HOST=127.0.0.1
-   DB_PORT=3306
-   DB_DATABASE=lldikti_db
+   DB_PORT=5432
+   DB_DATABASE=siperapat_db
    DB_USERNAME=<user_database_anda>
    DB_PASSWORD=<kata_sandi_yang_kuat>
+   DB_SCHEMA=public
+   DB_SSLMODE=prefer
+
+   # Opsi Alternatif: MySQL / MariaDB (Legacy)
+   # DB_CONNECTION=mysql
+   # DB_HOST=127.0.0.1
+   # DB_PORT=3306
+   # DB_DATABASE=lldikti_db
+   # DB_USERNAME=root
+   # DB_PASSWORD=
    ```
 
 4. **Eksekusi Migrasi & Database Seeder:**
@@ -264,22 +281,26 @@ kata `test` (dan bukan SQLite), karena feature test bergantung pada data seed
 aplikasi. Suite tetap berjalan normal; hanya ketegakannya yang opsional.
 
 ```bash
-# Buat database uji khusus
-mysql -u root -p -e "CREATE DATABASE lldikti_db_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+# 1. Buat database uji khusus:
+# Untuk PostgreSQL (Standar Utama):
+sudo -u postgres psql -c "CREATE DATABASE siperapat_db_test OWNER siperapat_user ENCODING 'UTF8';"
 
-# Isi dengan skema + data seed yang sama
-DB_DATABASE=lldikti_db_test php artisan migrate:fresh --seed
+# Atau untuk MySQL / MariaDB (Legacy):
+# mysql -u root -p -e "CREATE DATABASE lldikti_db_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
-# Simpan konfigurasi uji (tidak masuk version control)
+# 2. Isi dengan skema + data seed yang sama
+DB_DATABASE=siperapat_db_test php artisan migrate:fresh --seed
+
+# 3. Simpan konfigurasi uji (tidak masuk version control)
 cp .env .env.testing
 # lalu pada .env.testing pastikan:
-#   DB_DATABASE=lldikti_db_test
+#   DB_DATABASE=siperapat_db_test
 #   APP_ENV=testing
 
 # Opsional: jadikan ketegakan wajib, bukan sekadar peringatan
 #   SIPERAPAT_STRICT_TEST_DB=true
 
-# Sekarang suite dapat dijalankan
+# 4. Sekarang suite dapat dijalankan
 php artisan test
 ```
 
@@ -407,14 +428,14 @@ sudo supervisorctl reread && sudo supervisorctl update
 * * * * * cd /var/www/siperapat && php artisan schedule:run >> /dev/null 2>&1
 ```
 
-### 10.6. Strategi Cadangan (Backup)
+### 10.6. Strategi Cadangan (Backup & Disaster Recovery)
 
 | Aspek | Rekomendasi |
 |---|---|
-| Database | Snapshot harian (`mysqldump --single-transaction`) dan simpan minimal 30 hari |
-| Penyimpanan media | Backup `storage/app/public` (foto selfie, tanda tangan, surat edaran) — **tidak tercakup backup database** |
-| Konfigurasi | Simpan salinan terenkripsi `.env` di luar repositori |
-| Uji pemulihan | Lakukan restore drill secara berkala; backup yang tak pernah diuji bukan backup |
+| Database | Dump berkala terenkripsi (`pg_dump -Fc -Z 9`) per 6 jam & tengah malam dengan retensi GFS 30 hari. Lihat SOP lengkap di [`BACKUP.md`](file:///home/daffiq/Documents/Semester-5/lldikti-x/lldikti-x/BACKUP.md) |
+| Penyimpanan media | Backup rsync/snapshot `storage/app/public` (foto selfie, tanda tangan, surat edaran) — **tidak tercakup backup database** |
+| Konfigurasi | Simpan salinan terenkripsi `.env` di vault/cold storage di luar repositori |
+| Uji pemulihan | Lakukan restore drill berkala (target RTO $\le$ 30 menit, RPO $\le$ 1 jam); backup yang tak pernah diuji bukan backup |
 
 ### 10.7. Verifikasi Pasca-Deployment
 

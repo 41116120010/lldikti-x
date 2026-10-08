@@ -93,12 +93,12 @@ class LoginRequest extends FormRequest
         if ($digitsOnly !== '' && ctype_digit($digitsOnly)) {
             $field = 'nip';
             $loginValue = $digitsOnly;
+            $user = User::where('nip', $loginValue)->first();
         } else {
             $field = 'username';
             $loginValue = $rawInput;
+            $user = User::whereRaw('LOWER(username) = ?', [strtolower($loginValue)])->first();
         }
-
-        $user = User::where($field, $loginValue)->first();
 
         /*
          * Always run a real hash comparison, even when no account matches.

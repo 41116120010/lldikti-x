@@ -15,6 +15,15 @@ class StoreUserRequest extends FormRequest
         return $this->user()?->can('create', User::class) ?? false;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('username') && is_string($this->input('username'))) {
+            $this->merge([
+                'username' => strtolower(trim($this->input('username'))),
+            ]);
+        }
+    }
+
     /**
      * @return array<string, array<int, mixed>>
      */

@@ -43,6 +43,19 @@ class MultiIdentifierAuthenticationTest extends TestCase
         ]);
     }
 
+    public function test_users_can_authenticate_using_case_insensitive_username(): void
+    {
+        $user = User::where('role', 'administrator')->firstOrFail();
+
+        $response = $this->post('/login', [
+            'login' => strtoupper($user->username),
+            'password' => 'Password123!',
+        ]);
+
+        $this->assertAuthenticatedAs($user);
+        $response->assertRedirect('/dashboard');
+    }
+
     public function test_users_can_authenticate_using_nip(): void
     {
         $user = User::where('role', 'staff')->firstOrFail();

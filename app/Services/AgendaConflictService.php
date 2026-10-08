@@ -82,16 +82,24 @@ class AgendaConflictService
 
     /**
      * Ambil advisory lock. Mengembalikan true bila lock bersifat session-level dan
-     * harus dilepas manual (MySQL/MariaSQL), false untuk lock yang otomatis
-     * dilepas saat transaksi selesai (PostgreSQL).
+     * harus dilepas manual (MySQL/MariaDB dan PostgreSQL session-level), false untuk
+     * driver yang tidak mendukung advisory lock (misal SQLite).
      */
     private static function acquireRoomLock(string $lockName): bool
     {
-        if (DB::connection()->getDriverName() === 'pgsql') {
-            // pg_advisory_xact_lock dilepas otomatis pada COMMIT/ROLLBACK.
-            DB::select('SELECT pg_advisory_xact_lock(hashtext(?))', [$lockName]);
+        $driver = DB::connection()->getDriverName();
 
+        if ($driver === 'sqlite') {
             return false;
+        }
+
+        if ($driver === 'pgsql') {
+            // pg_advisory_lock bersifat session-level sehingga aktif melintasi seluruh
+            // proses validasi konflik hingga penyimpanan transaksi selesai,
+            // dan dilepas secara deterministik pada blok finally via pg_advisory_unlock.
+            DB::select('SELECT pg_advisory_lock(hashtext(?))', [$lockName]);
+
+            return true;
         }
 
         $row = DB::selectOne('SELECT GET_LOCK(?, ?) AS acquired', [$lockName, self::LOCK_TIMEOUT_SECONDS]);
@@ -107,12 +115,18 @@ class AgendaConflictService
 
     /**
      * Lepas session-level advisory lock. Best-effort: bila koneksi sudah hilang,
-     // MySQL akan membersihkannya sendiri saat koneksi ditutup.
+     * PostgreSQL dan MySQL akan membersihkannya sendiri saat koneksi ditutup.
      */
     private static function releaseRoomLock(string $lockName): void
     {
+        $driver = DB::connection()->getDriverName();
+
         try {
-            DB::selectOne('SELECT RELEASE_LOCK(?) AS released', [$lockName]);
+            if ($driver === 'pgsql') {
+                DB::select('SELECT pg_advisory_unlock(hashtext(?))', [$lockName]);
+            } elseif ($driver === 'mysql' || $driver === 'mariadb') {
+                DB::selectOne('SELECT RELEASE_LOCK(?) AS released', [$lockName]);
+            }
         } catch (\Throwable) {
             // Lock yang bocor akan dilepas otomatis ketika koneksi database ditutup.
         }

@@ -47,6 +47,23 @@ class AuthApiTest extends TestCase
             ->assertJsonPath('data.user.id', $user->id);
     }
 
+    public function test_user_can_login_with_case_insensitive_username(): void
+    {
+        $user = User::where('is_active', true)->whereNotNull('username')->first();
+        $this->assertNotNull($user);
+
+        $response = $this->postJson('/api/v1/auth/login', [
+            'identifier' => strtoupper($user->username),
+            'password' => 'Password123!',
+            'device_name' => 'Pixel 7',
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.token_type', 'Bearer')
+            ->assertJsonPath('data.user.id', $user->id);
+    }
+
     public function test_user_cannot_login_with_wrong_password(): void
     {
         $user = User::where('is_active', true)->first();
