@@ -87,7 +87,7 @@ class AppServiceProvider extends ServiceProvider
             // has to be told. MySQL and MariaDB are already aligned through the
             // `timezone` key in config/database.php.
             if ($driver === 'pgsql') {
-                DB::statement("SET TIME ZONE '{$expectedOffset}'");
+                DB::statement("SET TIME ZONE '{$appTimezone}'");
             }
 
             if ($driver === 'sqlite') {

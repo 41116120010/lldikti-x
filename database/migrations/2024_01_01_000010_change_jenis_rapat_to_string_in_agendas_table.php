@@ -12,6 +12,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (DB::connection()->getDriverName() === 'pgsql') {
+            DB::statement('ALTER TABLE agendas DROP CONSTRAINT IF EXISTS agendas_jenis_rapat_check');
+        }
+
         Schema::table('agendas', function (Blueprint $table) {
             $table->string('jenis_rapat', 100)->default('Rapat Koordinasi')->change();
         });

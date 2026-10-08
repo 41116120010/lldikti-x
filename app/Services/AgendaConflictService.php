@@ -97,7 +97,9 @@ class AgendaConflictService
             // pg_advisory_lock bersifat session-level sehingga aktif melintasi seluruh
             // proses validasi konflik hingga penyimpanan transaksi selesai,
             // dan dilepas secara deterministik pada blok finally via pg_advisory_unlock.
-            DB::select('SELECT pg_advisory_lock(hashtext(?))', [$lockName]);
+            // Casting ?::text dan ::bigint wajib karena pg_advisory_lock hanya menerima
+            // bigint (64-bit), sedangkan hashtext menghasilkan integer (32-bit).
+            DB::select('SELECT pg_advisory_lock(hashtext(?::text)::bigint)', [$lockName]);
 
             return true;
         }
@@ -123,7 +125,7 @@ class AgendaConflictService
 
         try {
             if ($driver === 'pgsql') {
-                DB::select('SELECT pg_advisory_unlock(hashtext(?))', [$lockName]);
+                DB::select('SELECT pg_advisory_unlock(hashtext(?::text)::bigint)', [$lockName]);
             } elseif ($driver === 'mysql' || $driver === 'mariadb') {
                 DB::selectOne('SELECT RELEASE_LOCK(?) AS released', [$lockName]);
             }
