@@ -59,8 +59,8 @@ class AgendaController extends Controller
         if ($request->filled('search')) {
             $search = trim((string) $request->query('search'));
             $query->where(function ($q) use ($search) {
-                $q->where('judul_rapat', 'like', "%{$search}%")
-                    ->orWhere('lokasi_ruang', 'like', "%{$search}%");
+                $q->whereLike('judul_rapat', "%{$search}%")
+                    ->orWhereLike('lokasi_ruang', "%{$search}%");
             });
         }
 

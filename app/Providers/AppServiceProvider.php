@@ -93,7 +93,11 @@ class AppServiceProvider extends ServiceProvider
                 return;
             }
 
-            $row = DB::selectOne('SELECT CAST(TIMEDIFF(NOW(), UTC_TIMESTAMP()) AS SIGNED) AS offset_hours');
+            if ($driver === 'pgsql') {
+                $row = DB::selectOne('SELECT CAST(EXTRACT(TIMEZONE_HOUR FROM NOW()) AS INTEGER) AS offset_hours');
+            } else {
+                $row = DB::selectOne('SELECT CAST(TIMEDIFF(NOW(), UTC_TIMESTAMP()) AS SIGNED) AS offset_hours');
+            }
             $offsetHours = $row?->offset_hours === null ? null : (int) $row->offset_hours;
         } catch (\Throwable) {
             // No database reachable at boot (e.g. warming caches) — skip.

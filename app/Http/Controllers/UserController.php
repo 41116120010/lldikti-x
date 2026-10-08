@@ -36,10 +36,10 @@ class UserController extends Controller
         // Search by Name, NIP, Username, or Email
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('nip', 'like', "%{$search}%")
-                  ->orWhere('username', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                $q->whereLike('name', "%{$search}%")
+                  ->orWhereLike('nip', "%{$search}%")
+                  ->orWhereLike('username', "%{$search}%")
+                  ->orWhereLike('email', "%{$search}%");
             });
         }
 
@@ -77,8 +77,8 @@ class UserController extends Controller
         }
         $userStats = $statsQuery->selectRaw('
             COUNT(*) as total,
-            COALESCE(SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END), 0) as active,
-            COALESCE(SUM(CASE WHEN is_active = 0 THEN 1 ELSE 0 END), 0) as inactive
+            COALESCE(SUM(CASE WHEN is_active THEN 1 ELSE 0 END), 0) as active,
+            COALESCE(SUM(CASE WHEN NOT is_active THEN 1 ELSE 0 END), 0) as inactive
         ')->first();
 
         return view('users.index', compact('users', 'units', 'currentUser', 'userStats'));

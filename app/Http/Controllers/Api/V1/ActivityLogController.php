@@ -45,11 +45,11 @@ class ActivityLogController extends Controller
         if ($search = $request->query('search')) {
             $search = trim((string) $search);
             $query->where(function ($q) use ($search) {
-                $q->where('description', 'like', "%{$search}%")
-                    ->orWhere('ip_address', 'like', "%{$search}%")
+                $q->whereLike('description', "%{$search}%")
+                    ->orWhereLike('ip_address', "%{$search}%")
                     ->orWhereHas('user', function ($uq) use ($search) {
-                        $uq->where('name', 'like', "%{$search}%")
-                            ->orWhere('nip', 'like', "%{$search}%");
+                        $uq->whereLike('name', "%{$search}%")
+                            ->orWhereLike('nip', "%{$search}%");
                     });
             });
         }

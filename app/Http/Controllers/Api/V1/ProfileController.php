@@ -57,8 +57,8 @@ class ProfileController extends Controller
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
-                $q->where('description', 'like', "%{$search}%")
-                    ->orWhere('ip_address', 'like', "%{$search}%");
+                $q->whereLike('description', "%{$search}%")
+                    ->orWhereLike('ip_address', "%{$search}%");
             });
         }
 

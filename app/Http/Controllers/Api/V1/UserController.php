@@ -32,10 +32,10 @@ class UserController extends Controller
         // Search: Name, NIP, Username, or Email
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('nip', 'like', "%{$search}%")
-                    ->orWhere('username', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%");
+                $q->whereLike('name', "%{$search}%")
+                    ->orWhereLike('nip', "%{$search}%")
+                    ->orWhereLike('username', "%{$search}%")
+                    ->orWhereLike('email', "%{$search}%");
             });
         }
 

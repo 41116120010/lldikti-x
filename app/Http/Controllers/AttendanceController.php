@@ -188,8 +188,8 @@ class AttendanceController extends Controller
 
         if ($search = $request->input('search')) {
             $query->whereHas('agenda', function ($q) use ($search) {
-                $q->where('judul_rapat', 'like', "%{$search}%")
-                  ->orWhere('lokasi_ruang', 'like', "%{$search}%");
+                $q->whereLike('judul_rapat', "%{$search}%")
+                  ->orWhereLike('lokasi_ruang', "%{$search}%");
             });
         }
 

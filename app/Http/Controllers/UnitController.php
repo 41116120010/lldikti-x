@@ -26,9 +26,9 @@ class UnitController extends Controller
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
-                $q->where('nama_unit', 'like', "%{$search}%")
-                  ->orWhere('kode_unit', 'like', "%{$search}%")
-                  ->orWhere('deskripsi', 'like', "%{$search}%");
+                $q->whereLike('nama_unit', "%{$search}%")
+                  ->orWhereLike('kode_unit', "%{$search}%")
+                  ->orWhereLike('deskripsi', "%{$search}%");
             });
         }
 
