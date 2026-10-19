@@ -536,8 +536,64 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
 #### 6. Riwayat Kehadiran Saya
 * **Endpoint:** `GET /api/v1/attendances/my-history`
 * **Headers:** `Authorization: Bearer <token>`
-* **Query Parameters:** `page`, `per_page`
-* **Response:** Daftar riwayat kehadiran user saat ini.
+* **Query Parameters:**
+  - `page`: Nomor halaman paginasi (integer, default: `1`).
+  - `per_page`: Jumlah rekaman per halaman (integer, default: `15`, min: `1`, max: `50`).
+  - `search`: Kata kunci pencarian agenda rapat berdasarkan judul rapat atau nama ruangan rapat (string).
+  - `period`: Filter periode bulan dan tahun dengan format `YYYY-MM` (contoh: `2026-10`, `2026-09`) atau `all` untuk seluruh periode (string).
+  - `start_date` & `end_date`: Filter rentang tanggal kehadiran spesifik dengan format `YYYY-MM-DD` (string).
+  - `tipe_rapat`: Filter format pelaksanaan rapat: `offline` (atau `luring`), `online` (atau `daring`), `hybrid`, atau `all` (string).
+* **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "message": "Riwayat presensi berhasil diambil.",
+    "data": [
+      {
+        "id": 101,
+        "agenda_id": 1,
+        "user_id": 7,
+        "agenda": {
+          "id": 1,
+          "judul_rapat": "Rapat Koordinasi Evaluasi Pelaporan PDDikti Semester Genap",
+          "slug": "rakor-evaluasi-pddikti-genap-2026",
+          "jenis_rapat": "koordinasi",
+          "tipe_rapat": "hybrid",
+          "lokasi_ruang": "Ruang Sidang Utama Lantai 2, Gedung LLDIKTI",
+          "link_meeting": "https://zoom.us/j/1234567890?pwd=lldikti-rakor",
+          "waktu_mulai": "2026-10-19T09:00:00+07:00",
+          "waktu_selesai": "2026-10-19T12:00:00+07:00",
+          "rentang_waktu": "09:00 - 12:00 WIB",
+          "status": {
+            "value": "completed",
+            "label": "Selesai"
+          },
+          "nomor_ba": "BA-RAPAT/2026/0001"
+        },
+        "signed_at": "2026-10-19T09:14:22+07:00",
+        "selfie_url": "http://localhost:8001/api/v1/attendances/101/selfie",
+        "signature_url": "http://localhost:8001/api/v1/attendances/101/signature",
+        "ip_address": "192.168.1.100",
+        "user_agent": "SIPERAPAT-Android/1.0",
+        "created_at": "2026-10-19T09:14:22+07:00",
+        "updated_at": "2026-10-19T09:14:22+07:00"
+      }
+    ],
+    "meta": {
+      "current_page": 1,
+      "last_page": 1,
+      "per_page": 15,
+      "total": 1
+    },
+    "summary": {
+      "total_attended": 1,
+      "total_eligible_agendas": 1,
+      "attendance_rate": 100.0,
+      "attendance_rate_label": "100.0%",
+      "period_label": "Tahun Anggaran 2026"
+    }
+  }
+  ```
 
 #### 7. Daftar Presensi Rapat & Pegawai Belum Hadir (Agenda Attendances & Monitoring)
 * **Endpoint:** `GET /api/v1/agendas/{id}/attendances`
@@ -921,4 +977,55 @@ Gunakan properti `meeting?.export_links` untuk aksi unduh:
 3. **Unduh Tabulasi Kehadiran (Excel/CSV):**
    * URL: `meeting?.export_links?.csv` (`GET /api/v1/reports/agendas/{id}/export/csv`)
    * Menghasilkan file CSV biner dengan encoding UTF-8 BOM yang langsung terbaca rapi pada Microsoft Excel dan Google Sheets tanpa karakter rusak (*mojibake*).
+
+---
+
+### 5.7. Panduan Integrasi Khusus Layar Riwayat Presensi (RiwayatScreen.tsx)
+
+Bagi pengembang aplikasi mobile yang mengintegrasikan layar catatan kehadiran pegawai ([`RiwayatScreen.tsx`](file:///home/daffiq/Documents/Semester-5/lldikti-x-mobile/siperapat/src/presentation/screens/RiwayatScreen.tsx)), berikut adalah panduan binding data dan konsumsi endpoint:
+
+#### A. Konsumsi & Binding Bento Overview Cards
+Pada baris 124–150 di `RiwayatScreen.tsx`, data agregat telemetri kini tersedia langsung pada objek `summary` di respons `GET /api/v1/attendances/my-history`:
+1. **Kartu 1 (Total Rapat):**
+   * Nilai: `response.summary.total_attended` (atau `response.meta.total`).
+   * Subteks: `response.summary.period_label` (contoh: `"Tahun Anggaran 2026"` atau `"Okt 2026"`).
+2. **Kartu 2 (Tingkat Kehadiran):**
+   * Nilai: Gantikan strip `—` dengan `response.summary.attendance_rate_label` (contoh: `"100.0%"` atau `"88.9%"`).
+   * Subteks: Gantikan pesan *"Persentase tidak disediakan API"* dengan `"Dari " + response.summary.total_eligible_agendas + " Rapat Dinas"`.
+3. **Kartu 3 (Periode Aktif):**
+   * Nilai: `response.summary.period_label`.
+   * Subteks: Periode aktif filter kalender berjalan.
+
+#### B. Kontrol Pencarian & Filter Dinamis Sisi Server
+Alihkan penyaringan data dari *client-side in-memory* ke *server-side dynamic query params*:
+1. **Pencarian Nama Agenda (`search`):**
+   * Hubungkan input search bar ke query parameter: `GET /api/v1/attendances/my-history?search={encodeURIComponent(search)}` (rekomendasi debounce 300ms).
+   * Backend melakukan pencarian sargable multi-kolom (`judul_rapat`, `lokasi_ruang`, dan ID agenda).
+2. **Filter Periode Bulan/Tahun (`DateFilterModal.tsx`):**
+   * Saat user memilih bulan tertentu (misal `'2026-10'`):
+     `GET /api/v1/attendances/my-history?period=2026-10`
+   * Saat user memilih `"Semua Periode"`:
+     `GET /api/v1/attendances/my-history?period=all` (atau tanpa parameter period).
+   * Backend juga mendukung rentang tanggal kustom via `?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD`.
+3. **Filter Format Pelaksanaan Rapat (`tipe_rapat`):**
+   * Mendukung opsi: `hybrid`, `offline` (atau `luring`), `online` (atau `daring`), `all`.
+   * Endpoint: `GET /api/v1/attendances/my-history?tipe_rapat={selectedType}`.
+   * *Catatan:* Toast pembatas sebelumnya (`"API riwayat belum menyertakan tipe rapat"`) kini dapat dihapus karena backend sudah mendukung filter `tipe_rapat` secara penuh.
+
+#### C. Kartu Daftar Riwayat Presensi (historyCard)
+Setiap item dalam array `data` pada respons `myHistory` kini telah diperkaya dengan relasi lengkap `agenda`:
+1. **Nama Ruangan / Tautan Virtual:**
+   * Gantikan teks fallback *"Detail agenda tidak disertakan pada API riwayat"* dengan:
+     `item.agenda?.lokasi_ruang || item.agenda?.link_meeting || 'Lokasi tidak ditentukan'`.
+2. **Judul Rapat:**
+   * Ambil langsung dari `item.agenda?.judul_rapat` (menggantikan judul sintetis `"Agenda #" + dto.agenda_id`).
+3. **Nomor Dokumen Berita Acara:**
+   * Ambil dari `item.agenda?.nomor_ba` (contoh: `"BA-RAPAT/2026/0001"`).
+4. **Format Pertemuan:**
+   * Ambil dari `item.agenda?.tipe_rapat` (`'hybrid'`, `'offline'`, atau `'online'`).
+5. **Waktu Pelaksanaan:**
+   * Ambil dari `item.agenda?.rentang_waktu` atau waktu presensi `item.signed_at`.
+6. **Aksi Tanda Terima:**
+   * Tombol *"Tanda Terima"* tetap mengarahkan ke `onSelectReceipt(item.id)` dengan data presensi yang valid.
+
 

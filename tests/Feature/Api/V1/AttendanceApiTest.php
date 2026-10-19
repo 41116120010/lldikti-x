@@ -86,7 +86,15 @@ class AttendanceApiTest extends TestCase
     public function test_user_can_view_my_attendance_history(): void
     {
         $staff = User::where('role', 'staff')->first();
+        $agenda = Agenda::first();
         $this->assertNotNull($staff);
+        $this->assertNotNull($agenda);
+
+        // Ensure user has at least one attendance record to verify enriched agenda
+        \App\Models\Attendance::firstOrCreate(
+            ['agenda_id' => $agenda->id, 'user_id' => $staff->id],
+            ['signed_at' => now(), 'ip_address' => '127.0.0.1', 'user_agent' => 'PHPUnit']
+        );
 
         $response = $this->actingAs($staff, 'sanctum')
             ->getJson('/api/v1/attendances/my-history');
@@ -96,9 +104,132 @@ class AttendanceApiTest extends TestCase
             ->assertJsonStructure([
                 'success',
                 'message',
-                'data',
+                'data' => [
+                    '*' => [
+                        'id',
+                        'agenda_id',
+                        'user_id',
+                        'agenda' => [
+                            'id',
+                            'judul_rapat',
+                            'slug',
+                            'jenis_rapat',
+                            'tipe_rapat',
+                            'lokasi_ruang',
+                            'link_meeting',
+                            'waktu_mulai',
+                            'waktu_selesai',
+                            'rentang_waktu',
+                            'status' => ['value', 'label'],
+                            'nomor_ba',
+                        ],
+                        'signed_at',
+                    ],
+                ],
                 'meta' => ['current_page', 'last_page', 'per_page', 'total'],
+                'summary' => [
+                    'total_attended',
+                    'total_eligible_agendas',
+                    'attendance_rate',
+                    'attendance_rate_label',
+                    'period_label',
+                ],
             ]);
+    }
+
+    public function test_user_can_filter_my_attendance_history_by_search(): void
+    {
+        $staff = User::where('role', 'staff')->first();
+        $agenda = Agenda::first();
+        $this->assertNotNull($staff);
+        $this->assertNotNull($agenda);
+
+        \App\Models\Attendance::firstOrCreate(
+            ['agenda_id' => $agenda->id, 'user_id' => $staff->id],
+            ['signed_at' => now(), 'ip_address' => '127.0.0.1', 'user_agent' => 'PHPUnit']
+        );
+
+        // Search matching keyword in agenda title
+        $responseMatch = $this->actingAs($staff, 'sanctum')
+            ->getJson('/api/v1/attendances/my-history?search=PDDikti');
+
+        $responseMatch->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('meta.total', 1);
+
+        // Search non-matching keyword
+        $responseNoMatch = $this->actingAs($staff, 'sanctum')
+            ->getJson('/api/v1/attendances/my-history?search=KataKunciPalsuYangTidakAda');
+
+        $responseNoMatch->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('meta.total', 0);
+    }
+
+    public function test_user_can_filter_my_attendance_history_by_period(): void
+    {
+        $staff = User::where('role', 'staff')->first();
+        $agenda = Agenda::first();
+        $this->assertNotNull($staff);
+        $this->assertNotNull($agenda);
+
+        \App\Models\Attendance::firstOrCreate(
+            ['agenda_id' => $agenda->id, 'user_id' => $staff->id],
+            ['signed_at' => now(), 'ip_address' => '127.0.0.1', 'user_agent' => 'PHPUnit']
+        );
+
+        $currentPeriod = now()->format('Y-m');
+        $response = $this->actingAs($staff, 'sanctum')
+            ->getJson("/api/v1/attendances/my-history?period={$currentPeriod}");
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonStructure([
+                'summary' => [
+                    'total_attended',
+                    'total_eligible_agendas',
+                    'attendance_rate',
+                    'period_label',
+                ],
+            ]);
+
+        // Historical past period with 0 attendances
+        $responsePast = $this->actingAs($staff, 'sanctum')
+            ->getJson('/api/v1/attendances/my-history?period=2020-01');
+
+        $responsePast->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('meta.total', 0);
+    }
+
+    public function test_user_can_filter_my_attendance_history_by_tipe_rapat(): void
+    {
+        $staff = User::where('role', 'staff')->first();
+        $agenda = Agenda::first();
+        $this->assertNotNull($staff);
+        $this->assertNotNull($agenda);
+
+        \App\Models\Attendance::firstOrCreate(
+            ['agenda_id' => $agenda->id, 'user_id' => $staff->id],
+            ['signed_at' => now(), 'ip_address' => '127.0.0.1', 'user_agent' => 'PHPUnit']
+        );
+
+        // Matching tipe_rapat (agenda fixture is hybrid)
+        $responseHybrid = $this->actingAs($staff, 'sanctum')
+            ->getJson('/api/v1/attendances/my-history?tipe_rapat=hybrid');
+
+        $responseHybrid->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('meta.total', 1);
+
+        // Non-matching tipe_rapat (offline)
+        $responseOffline = $this->actingAs($staff, 'sanctum')
+            ->getJson('/api/v1/attendances/my-history?tipe_rapat=offline');
+
+        $responseOffline->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('meta.total', 0);
     }
 
     public function test_admin_can_view_agenda_attendances_list(): void

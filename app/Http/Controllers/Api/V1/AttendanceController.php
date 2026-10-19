@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\AttendanceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\Response;
@@ -130,17 +131,142 @@ class AttendanceController extends Controller
     }
 
     /**
-     * List user's attendance check-in history.
+     * List user's attendance check-in history with advanced filtering and summary telemetry.
      */
     public function myHistory(Request $request): JsonResponse
     {
         $user = $request->user();
         $perPage = min(max((int) $request->query('per_page', 15), 1), 50);
 
-        $attendances = Attendance::where('user_id', $user->id)
-            ->with(['agenda.creator.unit'])
-            ->latest('signed_at')
-            ->paginate($perPage);
+        $query = Attendance::where('user_id', $user->id)
+            ->with(['agenda.creator.unit']);
+
+        // 1. Filter Search (Judul Rapat, Lokasi Ruang, atau Nomor BA/ID)
+        if ($request->filled('search')) {
+            $search = trim((string) $request->query('search'));
+            $query->whereHas('agenda', function ($q) use ($search) {
+                $q->where(function ($sub) use ($search) {
+                    $sub->whereLike('judul_rapat', "%{$search}%")
+                        ->orWhereLike('lokasi_ruang', "%{$search}%");
+
+                    if (is_numeric($search)) {
+                        $sub->orWhere('id', (int) $search);
+                    }
+                });
+            });
+        }
+
+        // 2. Filter Periode (Bulan/Tahun 'YYYY-MM' atau Rentang Tanggal)
+        $periodStartDate = null;
+        $periodEndDate = null;
+        $periodLabel = 'Tahun Anggaran ' . Carbon::now('Asia/Jakarta')->year;
+
+        if ($request->filled('period') && $request->query('period') !== 'all') {
+            $periodStr = trim((string) $request->query('period'));
+            if (preg_match('/^\d{4}-\d{2}$/', $periodStr)) {
+                try {
+                    $carbonPeriod = Carbon::createFromFormat('Y-m', $periodStr, 'Asia/Jakarta');
+                    $periodStartDate = $carbonPeriod->copy()->startOfMonth();
+                    $periodEndDate = $carbonPeriod->copy()->endOfMonth();
+
+                    $months = [
+                        1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr', 5 => 'Mei', 6 => 'Jun',
+                        7 => 'Jul', 8 => 'Agu', 9 => 'Sep', 10 => 'Okt', 11 => 'Nov', 12 => 'Des',
+                    ];
+                    $monthNum = (int) $carbonPeriod->format('n');
+                    $periodLabel = ($months[$monthNum] ?? $carbonPeriod->format('M')) . ' ' . $carbonPeriod->year;
+                } catch (\Throwable) {
+                    $periodStartDate = null;
+                    $periodEndDate = null;
+                }
+            }
+        } elseif ($request->filled('start_date') || $request->filled('end_date')) {
+            if ($request->filled('start_date')) {
+                try {
+                    $periodStartDate = Carbon::parse($request->query('start_date'), 'Asia/Jakarta')->startOfDay();
+                } catch (\Throwable) {}
+            }
+            if ($request->filled('end_date')) {
+                try {
+                    $periodEndDate = Carbon::parse($request->query('end_date'), 'Asia/Jakarta')->endOfDay();
+                } catch (\Throwable) {}
+            }
+            if ($periodStartDate && $periodEndDate) {
+                $periodLabel = $periodStartDate->format('d/m/Y') . ' - ' . $periodEndDate->format('d/m/Y');
+            } elseif ($periodStartDate) {
+                $periodLabel = 'Sejak ' . $periodStartDate->format('d/m/Y');
+            } elseif ($periodEndDate) {
+                $periodLabel = 'Sampai ' . $periodEndDate->format('d/m/Y');
+            }
+        }
+
+        if ($periodStartDate && $periodEndDate) {
+            $query->whereBetween('signed_at', [$periodStartDate, $periodEndDate]);
+        } elseif ($periodStartDate) {
+            $query->where('signed_at', '>=', $periodStartDate);
+        } elseif ($periodEndDate) {
+            $query->where('signed_at', '<=', $periodEndDate);
+        }
+
+        // 3. Filter Tipe Rapat (offline/luring, online/daring, hybrid)
+        $tipeRapat = null;
+        if ($request->filled('tipe_rapat') && $request->query('tipe_rapat') !== 'all') {
+            $tipe = strtolower(trim((string) $request->query('tipe_rapat')));
+            if ($tipe === 'luring') {
+                $tipe = 'offline';
+            } elseif ($tipe === 'daring') {
+                $tipe = 'online';
+            }
+            if (in_array($tipe, ['offline', 'online', 'hybrid'], true)) {
+                $tipeRapat = $tipe;
+                $query->whereHas('agenda', fn ($q) => $q->where('tipe_rapat', $tipe));
+            }
+        }
+
+        // 4. Eksekusi Paginasi
+        $attendances = $query->latest('signed_at')->paginate($perPage);
+
+        // 5. Kalkulasi Agregat Telemetri Summary
+        $eligibleAgendasQuery = Agenda::visibleTo($user)->where('status', 'completed');
+        if ($periodStartDate && $periodEndDate) {
+            $eligibleAgendasQuery->whereBetween('waktu_mulai', [$periodStartDate, $periodEndDate]);
+        } elseif ($periodStartDate) {
+            $eligibleAgendasQuery->where('waktu_mulai', '>=', $periodStartDate);
+        } elseif ($periodEndDate) {
+            $eligibleAgendasQuery->where('waktu_mulai', '<=', $periodEndDate);
+        }
+        if ($tipeRapat !== null) {
+            $eligibleAgendasQuery->where('tipe_rapat', $tipeRapat);
+        }
+        $totalEligibleAgendas = $eligibleAgendasQuery->count();
+
+        $attendedCompletedQuery = Attendance::where('user_id', $user->id)
+            ->whereHas('agenda', function ($q) use ($periodStartDate, $periodEndDate, $tipeRapat) {
+                $q->where('status', 'completed');
+                if ($periodStartDate && $periodEndDate) {
+                    $q->whereBetween('waktu_mulai', [$periodStartDate, $periodEndDate]);
+                } elseif ($periodStartDate) {
+                    $q->where('waktu_mulai', '>=', $periodStartDate);
+                } elseif ($periodEndDate) {
+                    $q->where('waktu_mulai', '<=', $periodEndDate);
+                }
+                if ($tipeRapat !== null) {
+                    $q->where('tipe_rapat', $tipeRapat);
+                }
+            });
+        $attendedCompletedCount = $attendedCompletedQuery->count();
+
+        $rate = ($totalEligibleAgendas === 0)
+            ? 100.0
+            : round(min(($attendedCompletedCount / $totalEligibleAgendas) * 100, 100.0), 1);
+
+        $summary = [
+            'total_attended' => $attendances->total(),
+            'total_eligible_agendas' => $totalEligibleAgendas,
+            'attendance_rate' => $rate,
+            'attendance_rate_label' => "{$rate}%",
+            'period_label' => $periodLabel,
+        ];
 
         return response()->json([
             'success' => true,
@@ -152,6 +278,7 @@ class AttendanceController extends Controller
                 'per_page' => $attendances->perPage(),
                 'total' => $attendances->total(),
             ],
+            'summary' => $summary,
         ]);
     }
 

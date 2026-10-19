@@ -19,6 +19,25 @@ class AttendanceResource extends JsonResource
             'agenda_id' => $this->agenda_id,
             'user_id' => $this->user_id,
             'user' => new UserResource($this->whenLoaded('user')),
+            'agenda' => $this->whenLoaded('agenda', function () {
+                return [
+                    'id' => $this->agenda->id,
+                    'judul_rapat' => $this->agenda->judul_rapat,
+                    'slug' => $this->agenda->slug,
+                    'jenis_rapat' => $this->agenda->jenis_rapat,
+                    'tipe_rapat' => $this->agenda->tipe_rapat,
+                    'lokasi_ruang' => $this->agenda->lokasi_ruang,
+                    'link_meeting' => $this->agenda->link_meeting,
+                    'waktu_mulai' => $this->agenda->waktu_mulai?->toIso8601String(),
+                    'waktu_selesai' => $this->agenda->waktu_selesai?->toIso8601String(),
+                    'rentang_waktu' => $this->agenda->rentang_waktu,
+                    'status' => [
+                        'value' => $this->agenda->status,
+                        'label' => $this->agenda->status_meta['label'] ?? $this->agenda->status,
+                    ],
+                    'nomor_ba' => $this->agenda->nomor_ba,
+                ];
+            }),
             'signed_at' => $this->signed_at?->toIso8601String(),
             'selfie_url' => $this->selfie_path ? url("/api/v1/attendances/{$this->id}/selfie") : null,
             'signature_url' => $this->signature_path ? url("/api/v1/attendances/{$this->id}/signature") : null,
