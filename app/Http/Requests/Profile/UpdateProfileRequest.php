@@ -55,7 +55,8 @@ class UpdateProfileRequest extends FormRequest
             'password' => [
                 'nullable',
                 'string',
-                Password::min(8)->letters()->numbers(),
+                Password::min(8)->letters()->mixedCase()->numbers(),
+                'different:current_password',
                 'confirmed',
             ],
         ];
@@ -88,8 +89,12 @@ class UpdateProfileRequest extends FormRequest
             'email.unique' => 'Alamat email ini sudah terdaftar oleh pengguna lain.',
             'current_password.required_with' => 'Kata sandi saat ini wajib dimasukkan untuk mengonfirmasi penggantian kata sandi.',
             'current_password.current_password' => 'Kata sandi saat ini yang Anda masukkan tidak sesuai.',
+            'password.different' => 'Kata sandi baru harus berbeda dari kata sandi saat ini.',
             'password.confirmed' => 'Konfirmasi kata sandi baru tidak cocok.',
-            'password.min' => 'Kata sandi baru minimal harus terdiri dari 8 karakter kombinasi huruf dan angka.',
+            'password.min' => 'Kata sandi baru minimal harus terdiri dari 8 karakter.',
+            'password.letters' => 'Kata sandi baru harus memuat huruf.',
+            'password.mixed_case' => 'Kata sandi baru harus memuat kombinasi huruf besar dan huruf kecil.',
+            'password.numbers' => 'Kata sandi baru harus memuat sekurang-kurangnya satu angka (0-9).',
         ];
     }
 }

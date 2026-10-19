@@ -42,6 +42,12 @@ Route::prefix('v1')->group(function () {
         // Profile Management & Activity Audit
         Route::get('/profile', [ProfileController::class, 'show'])->name('api.v1.profile.show');
         Route::put('/profile', [ProfileController::class, 'update'])->name('api.v1.profile.update');
+        Route::put('/profile/password', [ProfileController::class, 'updatePassword'])
+            ->middleware('throttle:password')
+            ->name('api.v1.profile.password');
+        Route::put('/auth/password', [ProfileController::class, 'updatePassword'])
+            ->middleware('throttle:password')
+            ->name('api.v1.auth.password');
         Route::get('/profile/logs', [ProfileController::class, 'logs'])->name('api.v1.profile.logs');
 
         // Agency-Wide Activity Audit (Administrator Only)

@@ -114,8 +114,9 @@ Sesuai aturan keamanan instansi (**AGENTS.md §3.2 & §3.6**):
 ## 3. Batas Rate Limiting (Named Throttling)
 
 * **Login:** Maksimal 5 percobaan gagal per menit per identitas/IP (`throttle:login`).
-* **Presensi Check-In:** Maksimal 30 percobaan per menit per user (`throttle:attendance`).
-* **Ekspor Dokumen:** Maksimal 5 permintaan per menit per user (`throttle:export`).
+* **Presensi Check-In:** Maksimal 10 percobaan per menit per user (`throttle:attendance`).
+* **Ekspor Dokumen:** Maksimal 15 permintaan per menit per user (`throttle:export`).
+* **Ubah Kata Sandi:** Maksimal 5 permintaan per menit per user/IP (`throttle:password`).
 * **General API:** Maksimal 60 permintaan per menit per token (`throttle:api`).
 
 ---
@@ -812,6 +813,63 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
 
 * **`GET /api/v1/profile`**: Mengambil profil akun pengguna aktif.
 * **`PUT /api/v1/profile`**: Mengubah nama, email, nomor HP, atau kata sandi. *(Penggantian kata sandi otomatis mencabut token sesi lama).*
+* **`PUT /api/v1/profile/password`** *(Alias: `PUT /api/v1/auth/password`)*: Mengubah kata sandi akun pengguna terautentikasi dengan token rotation otomatis (`throttle:password`).
+  * **Headers:** `Authorization: Bearer <token>`, `Content-Type: application/json`
+  * **Middleware:** `auth:sanctum`, `throttle:password` (maksimal 5 request per menit)
+  * **Otorisasi:** Seluruh pengguna aktif terautentikasi (Administrator, Admin Unit, Staff).
+  * **Request Body (JSON):**
+    ```json
+    {
+      "current_password": "PasswordLama123",
+      "password": "PasswordBaru456",
+      "password_confirmation": "PasswordBaru456",
+      "device_name": "SIPERAPAT Mobile"
+    }
+    ```
+    *(Mendukung juga alias penamaan field mobile: `new_password` untuk `password`, dan `confirm_password` / `new_password_confirmation` untuk `password_confirmation`).*
+  * **Aturan Kompleksitas Sandi (Gov-Tech Standard):**
+    - `current_password`: Wajib, sesuai dengan kata sandi saat ini.
+    - `password`: Wajib, minimal 8 karakter, kombinasi huruf besar & kecil (`mixedCase`), sekurang-kurangnya satu angka (0-9), berbeda dari kata sandi saat ini (`different:current_password`), dan cocok dengan konfirmasi (`confirmed`).
+    - `password_confirmation`: Wajib.
+  * **Response Sukses (200 OK):**
+    ```json
+    {
+      "success": true,
+      "message": "Kata sandi akun Anda berhasil diperbarui.",
+      "data": {
+        "token": "49|b2x9qK8sL0m...",
+        "token_type": "Bearer",
+        "expires_in_days": 30,
+        "user": {
+          "id": 14,
+          "name": "Drs. M. Syahril, M.M.",
+          "nip": "196803151994031003",
+          "email": "syahril@lldikti.go.id",
+          "phone": "081234567890",
+          "jabatan": "Pengelola Sarana Prasarana",
+          "role": {
+            "value": "staff",
+            "label": "Pegawai ASN"
+          },
+          "unit": {
+            "id": 4,
+            "nama_unit": "Subbagian Sarana & Prasarana"
+          }
+        }
+      }
+    }
+    ```
+  * **Respons Error Validasi (422 Unprocessable Entity):**
+    ```json
+    {
+      "message": "Kata sandi baru harus memuat kombinasi huruf besar dan huruf kecil.",
+      "errors": {
+        "password": [
+          "Kata sandi baru harus memuat kombinasi huruf besar dan huruf kecil."
+        ]
+      }
+    }
+    ```
 * **`GET /api/v1/profile/logs`**: Riwayat log audit trail aktivitas pengguna terotentikasi.
   * **Headers:** `Authorization: Bearer <token>`
   * **Query Parameters:**
@@ -1328,5 +1386,75 @@ log.category: {
 ```
 Klien mobile dapat langsung menampilkan `log.category.label` pada badge log item tanpa perlu menjalankan fungsi parsing string manual `toCategory(log.activity_type)`.
 
+---
 
+### 5.10. Panduan Integrasi Khusus Layar Ubah Kata Sandi (ChangePasswordScreen.tsx)
 
+Dokumen panduan ini ditujukan bagi pengembang aplikasi mobile React Native (`lldikti-x-mobile/siperapat`) untuk mengintegrasikan layar **Ubah Kata Sandi** ([`ChangePasswordScreen.tsx`](file:///home/daffiq/Documents/Semester-5/lldikti-x-mobile/siperapat/src/presentation/screens/ChangePasswordScreen.tsx)) dengan backend Laravel 13 SIPERAPAT secara mulus (*seamless*), aman (*enterprise security*), dan andal (*high durability*).
+
+#### A. Ketersediaan Endpoint & Naming Parameter
+1. **Endpoint Resmi:**
+   - Primary: `PUT /api/v1/profile/password`
+   - Alias: `PUT /api/v1/auth/password` (dapat dipanggil melalui `authApi` atau `userApi`).
+2. **Fleksibilitas Parameter Request (Auto-Normalized):**
+   Backend mendukung penamaan parameter standar Laravel maupun alias camelCase/snake_case klien mobile:
+   - Kata sandi lama: `current_password` (string, required)
+   - Kata sandi baru: `password` atau `new_password` (string, required)
+   - Konfirmasi sandi: `password_confirmation` atau `confirm_password` atau `new_password_confirmation` (string, required)
+   - Nama perangkat: `device_name` (string, opsional, default: `"SIPERAPAT Mobile"`)
+
+#### B. Implementasi Datasource & Repository Mobile
+Perbarui implementasi `authApi.ts` dan `AuthRepositoryImpl.ts` di proyek mobile:
+
+```typescript
+// 1. Pada src/data/datasources/authApi.ts (atau userApi.ts)
+export const authApi = {
+  // ...
+  changePassword: (currentPassword: string, newPassword: string, deviceName = 'SIPERAPAT Mobile') =>
+    apiClient.put<ApiEnvelope<{ token: string; token_type: 'Bearer'; expires_in_days: number; user: ApiUserDto }>>(
+      '/profile/password',
+      {
+        current_password: currentPassword,
+        password: newPassword,
+        password_confirmation: newPassword,
+        device_name: deviceName,
+      }
+    ),
+};
+
+// 2. Pada src/data/repositories/AuthRepositoryImpl.ts
+async changePassword(currentPassword: string, newPassword: string): Promise<boolean> {
+  const response = await authApi.changePassword(currentPassword, newPassword);
+  if (!response.success) {
+    throw new Error(response.message || 'Gagal memperbarui kata sandi akun.');
+  }
+
+  // PENTING: Simpan token rotasi baru ke SecureStore
+  // Sesuai AGENTS.md Rule 3.6, seluruh token aktif lama otomatis dicabut di server.
+  // Menyimpan token baru di sini menjamin sesi pengguna tetap aktif di perangkat ini tanpa logout paksa.
+  if (response.data?.token) {
+    await authTokenStore.set(response.data.token, true);
+  }
+
+  return true;
+}
+```
+
+#### C. Alur Token Rotation (Keamanan Berlapis AGENTS.md §3.6)
+* **Mengapa Token Lama Dicabut:**
+  Sesuai standar keamanan instansi, saat terjadi perubahan kata sandi, seluruh token aktif pengguna pada perangkat lain atau sesi yang berpotensi disusupi seketika dimusnahkan (`$user->tokens()->delete()`).
+* **Mengapa Disertakan Token Baru:**
+  Respons sukses 200 OK langsung menyertakan payload `token` terotasi baru. Klien mobile wajib mengupdate token via `authTokenStore.set(response.data.token)`. Dengan demikian, ketika modal feedback sukses ditutup dan pengguna kembali ke Profil (`onSuccess()`), seluruh panggilan API berikutnya (seperti refresh profil atau cek presensi) tetap berjalan lancar tanpa mengalami *HTTP 401 Unauthorized*.
+
+#### D. Penyelarasan Kriteria Keamanan Sandi (Anti-UI-Slop)
+Empat kriteria validasi di `ChangePasswordScreen.tsx` telah disinkronkan 1:1 di backend:
+1. `hasMinLength` (≥ 8 karakter) ➔ Aturan backend `Password::min(8)`.
+2. `hasUpperAndLower` (Huruf besar A-Z dan kecil a-z) ➔ Aturan backend `->mixedCase()`.
+3. `hasNumber` (Sekurang-kurangnya satu angka 0-9) ➔ Aturan backend `->numbers()`.
+4. `isDifferentFromCurrent` (Berbeda dari sandi saat ini) ➔ Aturan backend `different:current_password`.
+5. `isMatch` (Konfirmasi kata sandi cocok) ➔ Aturan backend `confirmed`.
+
+Jika terdapat kriteria yang dilanggar, backend mengembalikan HTTP 422 dengan pesan formal dalam Bahasa Indonesia (PUEBI/EYD) yang dapat langsung dipetakan ke state `errorMessage` di antarmuka mobile.
+
+#### E. Proteksi Brute-Force (Rate Limiting)
+Endpoint dilindungi oleh `throttle:password` dengan batasan **5 percobaan per menit per user ID/IP**. Jika melampaui batas, backend mengembalikan HTTP 429 Too Many Requests.

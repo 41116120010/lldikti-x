@@ -4,13 +4,17 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Concerns\FiltersByDateRange;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Profile\UpdatePasswordRequest;
 use App\Http\Requests\Profile\UpdateProfileRequest;
 use App\Http\Resources\ActivityLogResource;
 use App\Http\Resources\UserResource;
 use App\Models\ActivityLog;
+use App\Services\ActivityLogger;
 use App\Services\UserService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class ProfileController extends Controller
 {
@@ -31,7 +35,7 @@ class ProfileController extends Controller
     }
 
     /**
-     * Update authenticated user profile and password.
+     * Update authenticated user profile.
      */
     public function update(UpdateProfileRequest $request, UserService $userService): JsonResponse
     {
@@ -43,6 +47,52 @@ class ProfileController extends Controller
             'success' => true,
             'message' => 'Profil akun Anda berhasil diperbarui.',
             'data' => new UserResource($user->fresh()->load('unit')),
+        ]);
+    }
+
+    /**
+     * Update authenticated user password with token rotation and audit trail.
+     */
+    public function updatePassword(UpdatePasswordRequest $request): JsonResponse
+    {
+        $user = $request->user();
+        $deviceName = (string) $request->input('device_name', 'SIPERAPAT Mobile');
+
+        $newToken = DB::transaction(function () use ($user, $request, $deviceName) {
+            $user->password = Hash::make($request->input('password'));
+            $user->save();
+
+            // Revoke all existing tokens as required by AGENTS.md Rule 3.6
+            if (method_exists($user, 'tokens')) {
+                $user->tokens()->delete();
+            }
+
+            // Issue a fresh rotated token for the active session/device
+            $token = $user->createToken($deviceName)->plainTextToken;
+
+            ActivityLogger::log(
+                type: 'AUTH_CHANGE_PASSWORD',
+                description: "Pengguna {$user->name} (NIP: {$user->nip}) berhasil memperbarui kata sandi akun.",
+                targetModel: get_class($user),
+                targetId: $user->id,
+                properties: [
+                    'device_name' => $deviceName,
+                    'ip' => $request->ip(),
+                ]
+            );
+
+            return $token;
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Kata sandi akun Anda berhasil diperbarui.',
+            'data' => [
+                'token' => $newToken,
+                'token_type' => 'Bearer',
+                'expires_in_days' => 30,
+                'user' => new UserResource($user->fresh()->load('unit')),
+            ],
         ]);
     }
 
