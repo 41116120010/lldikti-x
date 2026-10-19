@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api\V1;
 
+use App\Models\ActivityLog;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
@@ -193,6 +194,73 @@ class AuthApiTest extends TestCase
             ->getJson('/api/v1/auth/me');
 
         $retry->assertStatus(401);
+    }
+
+    public function test_user_can_view_personal_activity_logs_with_category_filter_and_summary(): void
+    {
+        $user = User::where('is_active', true)->first();
+        $this->assertNotNull($user);
+
+        ActivityLog::create([
+            'user_id' => $user->id,
+            'activity_type' => 'AUTH_LOGIN_TEST',
+            'description' => 'Login aktivitas pribadi.',
+            'created_at' => now(),
+        ]);
+
+        ActivityLog::create([
+            'user_id' => $user->id,
+            'activity_type' => 'RECORD_ATTENDANCE_TEST',
+            'description' => 'Presensi aktivitas pribadi.',
+            'created_at' => now(),
+        ]);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->getJson('/api/v1/profile/logs');
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonStructure([
+                'success',
+                'message',
+                'data' => [
+                    '*' => [
+                        'id',
+                        'activity_type',
+                        'category' => [
+                            'value',
+                            'label',
+                        ],
+                        'description',
+                    ],
+                ],
+                'meta' => ['current_page', 'last_page', 'per_page', 'total'],
+                'summary' => [
+                    'total_logs',
+                    'auth_success',
+                    'incident_count',
+                    'today_count',
+                    'categories' => [
+                        'login',
+                        'agenda',
+                        'presensi',
+                        'user',
+                    ],
+                ],
+            ]);
+
+        // Filter personal logs by category
+        $filterResponse = $this->actingAs($user, 'sanctum')
+            ->getJson('/api/v1/profile/logs?category=presensi');
+
+        $filterResponse->assertOk()
+            ->assertJsonPath('success', true);
+
+        $filterData = $filterResponse->json('data');
+        $this->assertNotEmpty($filterData);
+        foreach ($filterData as $item) {
+            $this->assertEquals('presensi', $item['category']['value']);
+        }
     }
 }
 

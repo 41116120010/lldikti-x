@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Controllers\Concerns\FiltersByDateRange;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Profile\UpdateProfileRequest;
 use App\Http\Resources\ActivityLogResource;
@@ -13,6 +14,8 @@ use Illuminate\Http\Request;
 
 class ProfileController extends Controller
 {
+    use FiltersByDateRange;
+
     /**
      * Get authenticated user profile.
      */
@@ -55,7 +58,19 @@ class ProfileController extends Controller
             $query->where('activity_type', $type);
         }
 
+        if ($category = $request->input('category')) {
+            $query->forCategory($category);
+        }
+
+        $this->applyDateRange(
+            $query,
+            'created_at',
+            $request->input('start_date'),
+            $request->input('end_date'),
+        );
+
         if ($search = $request->input('search')) {
+            $search = trim((string) $search);
             $query->where(function ($q) use ($search) {
                 $q->whereLike('description', "%{$search}%")
                     ->orWhereLike('ip_address', "%{$search}%");
@@ -64,6 +79,35 @@ class ProfileController extends Controller
 
         $perPage = min(max((int) $request->query('per_page', 15), 1), 50);
         $logs = $query->paginate($perPage);
+
+        // Base metrics query for the authenticated user
+        $baseMetricsQuery = ActivityLog::where('user_id', $user->id);
+        $this->applyDateRange(
+            $baseMetricsQuery,
+            'created_at',
+            $request->input('start_date'),
+            $request->input('end_date'),
+        );
+        if ($search = $request->input('search')) {
+            $search = trim((string) $search);
+            $baseMetricsQuery->where(function ($q) use ($search) {
+                $q->whereLike('description', "%{$search}%")
+                    ->orWhereLike('ip_address', "%{$search}%");
+            });
+        }
+
+        $summary = [
+            'total_logs' => $logs->total(),
+            'auth_success' => (clone $baseMetricsQuery)->forCategory(ActivityLog::CATEGORY_LOGIN)->whereLike('activity_type', '%LOGIN%')->count(),
+            'incident_count' => 0,
+            'today_count' => (clone $baseMetricsQuery)->where('created_at', '>=', now('Asia/Jakarta')->startOfDay())->count(),
+            'categories' => [
+                'login' => (clone $baseMetricsQuery)->forCategory(ActivityLog::CATEGORY_LOGIN)->count(),
+                'agenda' => (clone $baseMetricsQuery)->forCategory(ActivityLog::CATEGORY_AGENDA)->count(),
+                'presensi' => (clone $baseMetricsQuery)->forCategory(ActivityLog::CATEGORY_PRESENSI)->count(),
+                'user' => (clone $baseMetricsQuery)->forCategory(ActivityLog::CATEGORY_USER)->count(),
+            ],
+        ];
 
         return response()->json([
             'success' => true,
@@ -75,6 +119,7 @@ class ProfileController extends Controller
                 'per_page' => $logs->perPage(),
                 'total' => $logs->total(),
             ],
+            'summary' => $summary,
         ]);
     }
 }

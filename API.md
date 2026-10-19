@@ -812,7 +812,63 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
 
 * **`GET /api/v1/profile`**: Mengambil profil akun pengguna aktif.
 * **`PUT /api/v1/profile`**: Mengubah nama, email, nomor HP, atau kata sandi. *(Penggantian kata sandi otomatis mencabut token sesi lama).*
-* **`GET /api/v1/profile/logs`**: Riwayat log audit trail aktivitas pengguna.
+* **`GET /api/v1/profile/logs`**: Riwayat log audit trail aktivitas pengguna terotentikasi.
+  * **Headers:** `Authorization: Bearer <token>`
+  * **Query Parameters:**
+    - `category`: Filter kategori makro (`login`, `agenda`, `presensi`, `user`, atau `all`).
+    - `search`: Kata kunci pencarian dalam deskripsi kegiatan atau alamat IP.
+    - `start_date` & `end_date`: Filter rentang tanggal aktivitas (`YYYY-MM-DD`).
+    - `type`: Tipe aktivitas spesifik (`AUTH_LOGIN_API`, `RECORD_ATTENDANCE`, dll.).
+    - `per_page`: Jumlah log per halaman (default 15, max 50).
+    - `page`: Nomor halaman paginasi (default 1).
+  * **Response (200 OK):**
+    ```json
+    {
+      "success": true,
+      "message": "Riwayat aktivitas berhasil diambil.",
+      "data": [
+        {
+          "id": 142,
+          "user_id": 7,
+          "user": {
+            "id": 7,
+            "name": "Prof. Dr. Ir. Budi Santoso, M.T.",
+            "nip": "197508101999031002"
+          },
+          "activity_type": "AUTH_LOGIN_API",
+          "category": {
+            "value": "login",
+            "label": "Login"
+          },
+          "description": "Pengguna Prof. Dr. Ir. Budi Santoso, M.T. berhasil masuk via API Mobile",
+          "target_model": null,
+          "target_id": null,
+          "properties": null,
+          "ip_address": "192.168.1.100",
+          "user_agent": "SIPERAPAT-Android/1.0",
+          "created_at": "2026-10-19T08:30:15+07:00"
+        }
+      ],
+      "meta": {
+        "current_page": 1,
+        "last_page": 2,
+        "per_page": 15,
+        "total": 24
+      },
+      "summary": {
+        "total_logs": 24,
+        "auth_success": 18,
+        "incident_count": 0,
+        "today_count": 4,
+        "categories": {
+          "login": 18,
+          "agenda": 2,
+          "presensi": 4,
+          "user": 0
+        }
+      }
+    }
+    ```
 
 ---
 
@@ -834,10 +890,11 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
 * **Headers:** `Authorization: Bearer <token>`
 * **Otorisasi:** Khusus peran `Administrator`. (Peran lain akan menerima respons `403 Forbidden`).
 * **Query Parameters:**
-  - `type`: Tipe aktivitas (contoh: `LOGIN`, `STORE_AGENDA`, `CHECK_IN`, `EXPORT_PDF_API`, dll.)
+  - `category`: Filter kategori makro aktivitas kedinasan: `login`, `agenda`, `presensi`, `user`, atau `all` (default: seluruh kategori).
+  - `type`: Tipe aktivitas spesifik (contoh: `AUTH_LOGIN_API`, `CREATE_AGENDA`, `RECORD_ATTENDANCE`, `EXPORT_PDF_API`, dll.)
   - `user_id`: ID pengguna tertentu
-  - `start_date`: Tanggal awal aktivitas (`Y-m-d`)
-  - `end_date`: Tanggal akhir aktivitas (`Y-m-d`)
+  - `start_date`: Tanggal awal aktivitas (`YYYY-MM-DD`)
+  - `end_date`: Tanggal akhir aktivitas (`YYYY-MM-DD`)
   - `search`: Kata kunci pencarian dalam deskripsi kegiatan, alamat IP, atau nama/NIP pegawai
   - `per_page`: Jumlah log per halaman (default 15, max 100)
   - `page`: Nomor halaman
@@ -857,6 +914,10 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
           "role": { "value": "administrator", "label": "Administrator" }
         },
         "activity_type": "EXPORT_CSV_API",
+        "category": {
+          "value": "agenda",
+          "label": "Agenda"
+        },
         "description": "Mengekspor rekapitulasi data agenda rapat ke format CSV via API Mobile",
         "target_model": "App\\Models\\Agenda",
         "target_id": null,
@@ -871,6 +932,18 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
       "last_page": 10,
       "per_page": 15,
       "total": 150
+    },
+    "summary": {
+      "total_logs": 150,
+      "auth_success": 42,
+      "incident_count": 0,
+      "today_count": 12,
+      "categories": {
+        "login": 42,
+        "agenda": 68,
+        "presensi": 25,
+        "user": 15
+      }
     }
   }
   ```
@@ -1194,5 +1267,66 @@ Objek `data.receipt` menyediakan seluruh metadata kedinasan siap saji yang dibut
    - `metode_verifikasi`: `"Swafoto Wajah & Tanda Tangan Digital"`
    - `signed_at`: Stempel waktu ISO-8601 presensi ASN.
    - `ip_address`: Alamat IP jaringan perangkat saat presensi.
+
+---
+
+### 5.9. Panduan Integrasi Khusus Layar Log Aktivitas Sistem (AuditLogScreen.tsx)
+
+Bagi pengembang aplikasi mobile yang mengintegrasikan layar audit trail kedinasan ([`AuditLogScreen.tsx`](file:///home/daffiq/Documents/Semester-5/lldikti-x-mobile/siperapat/src/presentation/screens/AuditLogScreen.tsx) dan [`userApi.ts`](file:///home/daffiq/Documents/Semester-5/lldikti-x-mobile/siperapat/src/data/datasources/userApi.ts)), berikut adalah pedoman binding data dan pemanfaatan endpoint:
+
+#### A. Konsumsi & Binding Ringkasan Aktivitas (Integrity Card)
+Pada baris 88–112 di `AuditLogScreen.tsx`, data agregat telemetri kini tersedia langsung pada objek `summary` di respons `GET /api/v1/activity-logs` (Superadmin) dan `GET /api/v1/profile/logs` (Non-Admin):
+1. **Kartu 1 (Total Log):**
+   * Nilai: `response.summary.total_logs` (atau `response.meta.total`).
+   * Subteks: `"Total Log"`.
+2. **Kartu 2 (Otentikasi Sah):**
+   * Nilai: Gantikan strip `'-'` dengan `response.summary.auth_success.toLocaleString('id-ID')`.
+   * Subteks: `"Otentikasi Sah"` (total aktivitas login kedinasan yang valid).
+3. **Kartu 3 (Insiden Keamanan):**
+   * Nilai: Gantikan strip `'-'` dengan `response.summary.incident_count.toLocaleString('id-ID')` (menampilkan `0` sebagai indikasi zero-incident kedinasan).
+   * Subteks: `"Insiden"`.
+
+#### B. Filter Kategori Sisi Server (Server-Side Category Query)
+Alihkan penyaringan filter pills `['Semua', 'Login', 'Agenda', 'Presensi', 'User']` dari *client-side in-memory filter* ke *server-side dynamic query parameter*:
+1. **Mengapa Harus Server-Side:**
+   Penyaringan lokal (`logs.filter(...)`) hanya memfilter 50 item yang sedang aktif di-load. Jika di halaman aktif tidak ada aktivitas kategori yang dipilih, daftar akan kosong dan memunculkan kebingungan bagi pengguna.
+2. **Implementasi Parameter URL di `userApi.ts`:**
+   ```typescript
+   export const activityLogApi = {
+     personal: (page = 1, options: { search?: string; category?: string } = {}) =>
+       apiClient.get<ApiPaginated<ApiActivityLogDto>>(
+         `/profile/logs?${query({ page, per_page: 50, search: options.search, category: options.category !== 'Semua' ? options.category?.toLowerCase() : undefined })}`
+       ),
+     system: (page = 1, options: { search?: string; category?: string } = {}) =>
+       apiClient.get<ApiPaginated<ApiActivityLogDto>>(
+         `/activity-logs?${query({ page, per_page: 50, search: options.search, category: options.category !== 'Semua' ? options.category?.toLowerCase() : undefined })}`
+       ),
+   };
+   ```
+3. **Nilai Parameter yang Didukung Backend:**
+   - `category=login` (seluruh aktivitas login/logout)
+   - `category=agenda` (pembuatan, pembaruan, notulensi, dan ekspor dokumen agenda)
+   - `category=presensi` (seluruh aktivitas presensi kehadiran ASN)
+   - `category=user` (manajemen akun, unit kerja, profil, dan sandi)
+   - `category=all` (atau abaikan parameter untuk seluruh kategori)
+
+#### C. Pencarian Aktivitas Real-Time Debounce (`search`)
+* Input pencarian mendukung pencarian multi-kolom sargable:
+  - Deskripsi kegiatan kedinasan
+  - Alamat IP jaringan (`ip_address`)
+  - Nama dan NIP pegawai pelaksana kegiatan
+* Hubungkan input search bar dengan debounce 350ms ke query parameter:
+  `GET /api/v1/activity-logs?search={encodeURIComponent(search)}`
+
+#### D. Pemanfaatan Objek Kategori Terstruktur (`item.category`)
+Setiap rekaman log kini menyertakan objek `category` siap pakai:
+```typescript
+log.category: {
+  value: 'login' | 'agenda' | 'presensi' | 'user' | 'lainnya',
+  label: 'Login' | 'Agenda' | 'Presensi' | 'User' | 'Lainnya'
+}
+```
+Klien mobile dapat langsung menampilkan `log.category.label` pada badge log item tanpa perlu menjalankan fungsi parsing string manual `toCategory(log.activity_type)`.
+
 
 
