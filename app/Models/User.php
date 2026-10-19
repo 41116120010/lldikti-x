@@ -52,6 +52,42 @@ class User extends Authenticatable
     }
 
     /**
+     * Display official civil servant title / designation (Jabatan Kedinasan).
+     */
+    public function getJabatanAttribute(): string
+    {
+        if ($this->isAdministrator()) {
+            return 'Administrator Sistem Instansi';
+        }
+
+        if ($this->isAdmin()) {
+            $unitName = $this->unit?->nama_unit ?? 'Unit Kerja';
+
+            return 'Admin ' . $unitName;
+        }
+
+        $unitName = $this->unit?->nama_unit ?? 'LLDIKTI Wilayah X';
+
+        return 'Pegawai ASN • ' . $unitName;
+    }
+
+    /**
+     * Display official civil servant rank / grade (Pangkat & Golongan Ruang).
+     */
+    public function getPangkatGolonganAttribute(): ?string
+    {
+        if ($this->isAdministrator()) {
+            return 'Pembina Utama Muda (Gol. IV/c)';
+        }
+
+        if ($this->isAdmin()) {
+            return 'Penata Tingkat I (Gol. III/d)';
+        }
+
+        return 'Penata Muda (Gol. III/a)';
+    }
+
+    /**
      * Relationship to the user's unit.
      *
      * @return BelongsTo<Unit, $this>

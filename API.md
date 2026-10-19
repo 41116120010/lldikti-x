@@ -171,7 +171,57 @@ Sesuai aturan keamanan instansi (**AGENTS.md §3.2 & §3.6**):
 #### 2. Profil Pengguna Saat Ini
 * **Endpoint:** `GET /api/v1/auth/me`
 * **Headers:** `Authorization: Bearer <token>`
-* **Response (200 OK):** Mengembalikan data user yang sedang login beserta unit kerja.
+* **Deskripsi:** Mengembalikan profil data ASN yang sedang login, mencakup unit kerja, jabatan, pangkat/golongan, metadata keamanan akun, dan statistik kehadiran.
+* **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "message": "Profil pengguna berhasil diambil.",
+    "data": {
+      "id": 14,
+      "name": "Drs. M. Syahril, M.M.",
+      "nip": "196803151994031003",
+      "username": "msyahril",
+      "email": "syahril@lldikti.go.id",
+      "phone": "081266128901",
+      "jabatan": "Admin Subbagian Sarana & Prasarana",
+      "pangkat_golongan": "Penata Tingkat I (Gol. III/d)",
+      "avatar_url": null,
+      "role": {
+        "value": "admin_unit",
+        "label": "Admin Unit"
+      },
+      "is_active": true,
+      "unit_id": 4,
+      "unit": {
+        "id": 4,
+        "nama_unit": "Subbagian Sarana & Prasarana",
+        "kode_unit": "SARPRAS",
+        "deskripsi": "Pengelolaan sarana dan prasarana kantor LLDIKTI",
+        "is_active": true
+      },
+      "security": {
+        "last_password_changed_at": "2026-09-19T10:15:00+07:00",
+        "last_password_changed_label": "Terakhir diperbarui 30 hari yang lalu",
+        "last_login_at": "2026-10-19T08:15:20+07:00",
+        "last_login_label": "Baru saja"
+      },
+      "attendance_stats": {
+        "total_agendas": 24,
+        "total_agendas_label": "24",
+        "total_attended": 23,
+        "attendance_rate": 98.5,
+        "attendance_rate_label": "98.5%",
+        "on_time_count": 23,
+        "on_time_rate": 100.0,
+        "on_time_rate_label": "100%",
+        "period_label": "Tahun Anggaran 2026"
+      },
+      "created_at": "2026-09-01T08:00:00+07:00",
+      "updated_at": "2026-10-19T08:15:20+07:00"
+    }
+  }
+  ```
 
 #### 3. Logout & Cabut Token
 * **Endpoint:** `POST /api/v1/auth/logout`
@@ -811,8 +861,111 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
 
 ### 4.7. Profil Akun & Log Aktivitas (Profile)
 
-* **`GET /api/v1/profile`**: Mengambil profil akun pengguna aktif.
-* **`PUT /api/v1/profile`**: Mengubah nama, email, nomor HP, atau kata sandi. *(Penggantian kata sandi otomatis mencabut token sesi lama).*
+* **`GET /api/v1/profile`**: Mengambil data profil lengkap akun pengguna aktif.
+  * **Headers:** `Authorization: Bearer <token>`
+  * **Deskripsi:** Mengembalikan profil data ASN yang sedang login, mencakup unit kerja, jabatan kedinasan resmi, pangkat & golongan ruang, metadata keamanan akun, dan blok telemetri performa kehadiran 3-kolom.
+  * **Response (200 OK):**
+    ```json
+    {
+      "success": true,
+      "message": "Profil pengguna berhasil diambil.",
+      "data": {
+        "id": 14,
+        "name": "Drs. M. Syahril, M.M.",
+        "nip": "196803151994031003",
+        "username": "msyahril",
+        "email": "syahril@lldikti.go.id",
+        "phone": "081266128901",
+        "jabatan": "Admin Subbagian Sarana & Prasarana",
+        "pangkat_golongan": "Penata Tingkat I (Gol. III/d)",
+        "avatar_url": null,
+        "role": {
+          "value": "admin_unit",
+          "label": "Admin Unit"
+        },
+        "is_active": true,
+        "unit_id": 4,
+        "unit": {
+          "id": 4,
+          "nama_unit": "Subbagian Sarana & Prasarana",
+          "kode_unit": "SARPRAS",
+          "deskripsi": "Pengelolaan sarana dan prasarana kantor LLDIKTI",
+          "is_active": true
+        },
+        "security": {
+          "last_password_changed_at": "2026-09-19T10:15:00+07:00",
+          "last_password_changed_label": "Terakhir diperbarui 30 hari yang lalu",
+          "last_login_at": "2026-10-19T08:15:20+07:00",
+          "last_login_label": "Baru saja"
+        },
+        "attendance_stats": {
+          "total_agendas": 24,
+          "total_agendas_label": "24",
+          "total_attended": 23,
+          "attendance_rate": 98.5,
+          "attendance_rate_label": "98.5%",
+          "on_time_count": 23,
+          "on_time_rate": 100.0,
+          "on_time_rate_label": "100%",
+          "period_label": "Tahun Anggaran 2026"
+        },
+        "created_at": "2026-09-01T08:00:00+07:00",
+        "updated_at": "2026-10-19T08:15:20+07:00"
+      }
+    }
+    ```
+
+* **`PUT /api/v1/profile`**: Mengubah profil pengguna (Mendukung Pembaruan Parsial).
+  * **Headers:** `Authorization: Bearer <token>`, `Content-Type: application/json`
+  * **Dukungan Pembaruan Parsial (Partial Update):**
+    Pengembang mobile dapat mengirimkan hanya field yang ingin diubah. Backend secara cerdas melakukan *fallback auto-fill* ke nama dan email saat ini jika tidak disertakan dalam payload:
+    - Contoh Pembaruan Kontak WhatsApp Saja:
+      ```json
+      {
+        "phone": "081266128901"
+      }
+      ```
+    - Contoh Pembaruan Lengkap:
+      ```json
+      {
+        "name": "Drs. M. Syahril, M.M.",
+        "email": "syahril@lldikti.go.id",
+        "phone": "081266128901"
+      }
+      ```
+  * **Response Sukses (200 OK):**
+    ```json
+    {
+      "success": true,
+      "message": "Profil akun Anda berhasil diperbarui.",
+      "data": {
+        "id": 14,
+        "name": "Drs. M. Syahril, M.M.",
+        "nip": "196803151994031003",
+        "username": "msyahril",
+        "email": "syahril@lldikti.go.id",
+        "phone": "081266128901",
+        "jabatan": "Admin Subbagian Sarana & Prasarana",
+        "pangkat_golongan": "Penata Tingkat I (Gol. III/d)",
+        "avatar_url": null,
+        "role": {
+          "value": "admin_unit",
+          "label": "Admin Unit"
+        },
+        "is_active": true,
+        "unit_id": 4,
+        "unit": {
+          "id": 4,
+          "nama_unit": "Subbagian Sarana & Prasarana",
+          "kode_unit": "SARPRAS",
+          "deskripsi": "Pengelolaan sarana dan prasarana kantor LLDIKTI",
+          "is_active": true
+        },
+        "created_at": "2026-09-01T08:00:00+07:00",
+        "updated_at": "2026-10-19T08:30:00+07:00"
+      }
+    }
+    ```
 * **`PUT /api/v1/profile/password`** *(Alias: `PUT /api/v1/auth/password`)*: Mengubah kata sandi akun pengguna terautentikasi dengan token rotation otomatis (`throttle:password`).
   * **Headers:** `Authorization: Bearer <token>`, `Content-Type: application/json`
   * **Middleware:** `auth:sanctum`, `throttle:password` (maksimal 5 request per menit)
@@ -1458,3 +1611,128 @@ Jika terdapat kriteria yang dilanggar, backend mengembalikan HTTP 422 dengan pes
 
 #### E. Proteksi Brute-Force (Rate Limiting)
 Endpoint dilindungi oleh `throttle:password` dengan batasan **5 percobaan per menit per user ID/IP**. Jika melampaui batas, backend mengembalikan HTTP 429 Too Many Requests.
+
+---
+
+### 5.11. Panduan Integrasi Khusus Layar Profil ASN (ProfileScreen.tsx)
+
+Dokumen panduan ini ditujukan bagi pengembang aplikasi mobile React Native (`lldikti-x-mobile/siperapat`) untuk mengintegrasikan layar **Profil ASN** ([`ProfileScreen.tsx`](file:///home/daffiq/Documents/Semester-5/lldikti-x-mobile/siperapat/src/presentation/screens/ProfileScreen.tsx)) dengan endpoint backend Laravel 13 SIPERAPAT secara mulus (*seamless*), menghapus seluruh nilai statis (*zero hardcoded data*), dan mengimplementasikan pembaruan profil yang reaktif.
+
+#### A. Pemetaan Komponen Antarmuka Mobile ke Payload API
+
+| Bagian Tampilan `ProfileScreen.tsx` | Elemen Antarmuka di Mobile | Sumber Data Backend (`UserResource`) | Keterangan & Fallback |
+| :--- | :--- | :--- | :--- |
+| **Hero Card (Identitas)** | Nama Pegawai | `user.name` | Nama lengkap ASN beserta gelar kedinasan resmi |
+| | Jabatan Kedinasan | `user.jabatan` | Terformat otomatis: *"Administrator Sistem Instansi"*, *"Admin Subbagian ..."*, atau *"Pegawai ASN • Subbagian ..."* |
+| | Sub-baris Pangkat & Unit Kerja | `user.pangkat_golongan` • `user.unit.nama_unit` | Terformat otomatis: *"Penata Tingkat I (Gol. III/d) • Subbagian ..."* |
+| **Grid 3-Kolom Statistik Kehadiran** | Total Agenda (Kolom 1) | `user.attendance_stats.total_agendas_label` | Jumlah total rapat relevan yang diselenggarakan |
+| | Kehadiran (Kolom 2) | `user.attendance_stats.attendance_rate_label` | Persentase kehadiran rapat berstatus selesai (contoh: `"98.5%"`) |
+| | Tepat Waktu (Kolom 3) | `user.attendance_stats.on_time_rate_label` | Persentase presensi ASN sebelum/saat rapat dimulai (contoh: `"100%"`) |
+| **Informasi Akun Kedinasan** | NIP | `user.nip` | 18 digit NIP resmi ASN (tampilan readonly) |
+| | Username | `user.username` | Identifier login akun sistem |
+| | Email Kedinasan | `user.email` | Alamat email resmi instansi |
+| | WhatsApp Kedinasan | `user.phone` | Nomor WhatsApp kontak dinamis (dapat diubah) |
+| | Hak Akses | `user.role.label` | Label dinamis: *"Administrator"*, *"Admin Unit"*, atau *"Pegawai ASN"* (menghapus string hardcoded *"Superadmin Wilayah"*) |
+| **Keamanan Akun** | Subteks Kata Sandi | `user.security.last_password_changed_label` | Human-readable: *"Hari ini"*, *"Kemarin"*, atau *"Terakhir diperbarui X hari yang lalu"* (menghapus string hardcoded 30 hari) |
+
+#### B. Pembaruan Kontak WhatsApp Kedinasan (Partial Update)
+Pada `ProfileScreen.tsx`, field WhatsApp bersifat *editable*. Mobile developer dapat menambahkan tombol simpan atau *auto-save on blur* dengan memanggil `PUT /api/v1/profile`:
+
+```typescript
+// Contoh pemanggilan partial update dari ProfileScreen.tsx:
+const handleUpdateWhatsApp = async (newPhone: string) => {
+  try {
+    const res = await userApi.updateProfile({ phone: newPhone });
+    if (res.success && res.data) {
+      // Perbarui user state di useAuthStore
+      useAuthStore.getState().setUser(toAsn(res.data));
+      useFeedbackStore.getState().showToast({
+        type: 'success',
+        message: 'Nomor WhatsApp kedinasan berhasil diperbarui.',
+      });
+    }
+  } catch (err: any) {
+    useFeedbackStore.getState().showToast({
+      type: 'error',
+      message: err.message || 'Gagal memperbarui nomor WhatsApp.',
+    });
+  }
+};
+```
+
+#### C. Penyesuaian `apiMappers.ts` di Aplikasi Mobile
+Perbarui mapper `toAsn()` pada `src/data/mappers/apiMappers.ts`:
+```typescript
+export function toAsn(user: ApiUserDto): ASN {
+  return {
+    id: String(user.id),
+    nip: user.nip ?? '',
+    name: user.name,
+    pangkatGolongan: user.pangkat_golongan ?? '',
+    jabatan: user.jabatan ?? user.role.label,
+    unitKerja: user.unit?.nama_unit ?? '',
+    email: user.email ?? '',
+    phone: user.phone ?? '',
+    avatarUrl: user.avatar_url ?? undefined,
+    username: user.username,
+    role: user.role.value,
+    roleLabel: user.role.label,
+    biometricEnabled: false,
+    attendanceStats: user.attendance_stats,
+    security: user.security,
+  };
+}
+```
+
+#### D. Penyesuaian JSX `ProfileScreen.tsx` (Anti-UI-Slop & Zero-Hardcoded)
+1. **Grid Statistik Kehadiran (Baris 97–114):**
+   ```tsx
+   <View style={styles.perfGrid}>
+     <View style={styles.perfCol}>
+       <Text style={styles.perfLabel}>Total Agenda</Text>
+       <Text style={styles.perfValue}>
+         {user?.attendanceStats?.total_agendas_label ?? '0'}
+       </Text>
+       <Text style={styles.perfSub}>Rapat & Sidang</Text>
+     </View>
+
+     <View style={styles.perfCol}>
+       <Text style={styles.perfLabel}>Kehadiran</Text>
+       <Text style={styles.perfValue}>
+         {user?.attendanceStats?.attendance_rate_label ?? '100%'}
+       </Text>
+       <Text style={styles.perfSub}>Tervalidasi</Text>
+     </View>
+
+     <View style={styles.perfCol}>
+       <Text style={styles.perfLabel}>Tepat Waktu</Text>
+       <Text style={styles.perfValue}>
+         {user?.attendanceStats?.on_time_rate_label ?? '100%'}
+       </Text>
+       <Text style={styles.perfSub}>Presensi Awal</Text>
+     </View>
+   </View>
+   ```
+
+2. **Hak Akses Dinamis (Baris 168–176):**
+   ```tsx
+   <View style={styles.fieldItem}>
+     <Text style={styles.fieldLabel}>Hak Akses</Text>
+     <View style={styles.readonlyInputRow}>
+       <MaterialIcons name="security" size={18} color={colors.outline} />
+       <Text style={styles.readonlyInputValueBold}>
+         {user?.roleLabel ?? user?.jabatan ?? 'Pegawai ASN'}
+       </Text>
+     </View>
+   </View>
+   ```
+
+3. **Subteks Keamanan Kata Sandi Dinamis (Baris 185–189):**
+   ```tsx
+   <View style={{ flex: 1 }}>
+     <Text style={styles.authActionTitle}>Kata Sandi</Text>
+     <Text style={styles.authActionSub}>
+       {user?.security?.last_password_changed_label ?? 'Belum pernah diubah'}
+     </Text>
+   </View>
+   ```

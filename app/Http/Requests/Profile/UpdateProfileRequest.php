@@ -21,11 +21,29 @@ class UpdateProfileRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        $this->merge([
-            'name' => $this->name ? trim($this->name) : null,
-            'email' => $this->email ? strtolower(trim($this->email)) : null,
-            'phone' => $this->phone ? trim($this->phone) : null,
-        ]);
+        $user = $this->user();
+        $merges = [];
+
+        if (! $this->has('name') && $user) {
+            $merges['name'] = $user->name;
+        } elseif ($this->has('name')) {
+            $merges['name'] = is_string($this->name) ? trim($this->name) : $this->name;
+        }
+
+        if (! $this->has('email') && $user) {
+            $merges['email'] = $user->email;
+        } elseif ($this->has('email')) {
+            $merges['email'] = is_string($this->email) ? strtolower(trim($this->email)) : $this->email;
+        }
+
+        if ($this->has('phone')) {
+            $phone = is_string($this->phone) ? trim($this->phone) : $this->phone;
+            $merges['phone'] = ($phone === '') ? null : $phone;
+        }
+
+        if (! empty($merges)) {
+            $this->merge($merges);
+        }
     }
 
     /**
