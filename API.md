@@ -839,23 +839,314 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
 
 ### 4.5. Manajemen Pengguna (Users)
 
-* **`GET /api/v1/users`**: Daftar pengguna (tersaring otomatis berdasarkan cakupan unit Admin).
-* **`POST /api/v1/users`**: Tambah pengguna baru.
-* **`GET /api/v1/users/{id}`**: Detail pengguna.
-* **`PUT /api/v1/users/{id}`**: Perbarui profil/jabatan/unit pengguna.
-* **`DELETE /api/v1/users/{id}`**: Hapus pengguna (mencabut seluruh token aktif).
-* **`PATCH /api/v1/users/{id}/toggle-status`**: Aktifkan / Nonaktifkan akun (mencabut seluruh token aktif jika dinonaktifkan).
+#### 1. Daftar Pengguna ASN (`GET /api/v1/users`)
+* **Endpoint:** `GET /api/v1/users`
+* **Headers:** `Authorization: Bearer <token>`
+* **Otorisasi:** Administrator atau Admin Unit Kerja (`UserPolicy::viewAny`). Catatan: Admin Unit secara otomatis hanya melihat daftar ASN yang bernaung di unit kerjanya (*unit-scoped*).
+* **Query Parameters:**
+  | Parameter | Tipe | Contoh Nilai | Keterangan |
+  | :--- | :--- | :--- | :--- |
+  | `page` | `integer` | `1` | Nomor halaman paginasi (default: 1). |
+  | `per_page` | `integer` | `15` | Jumlah item per halaman (min 1, max 50, default: 15). |
+  | `search` | `string` | `syahril` | Pencarian teks fleksibel pada Nama Lengkap, NIP, Username, atau Email. |
+  | `role` | `string` | `staff` / `Admin Unit` | Filter peran pengguna. Mendukung enum backend (`administrator`, `admin`, `staff`) maupun label UI mobile (`Administrator`, `Admin Unit`, `Staff`, `Pegawai`). |
+  | `status` | `string` | `aktif` / `inactive` | Filter status keaktifan. Mendukung `active`/`inactive` dan Bahasa Indonesia `aktif`/`nonaktif` / `1`/`0`. |
+  | `unit_id` | `integer` / `none` | `4` atau `none` | *(Khusus Administrator)* Filter ID unit kerja, atau `none` untuk ASN tanpa unit. |
+* **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "message": "Daftar pengguna berhasil diambil.",
+    "data": [
+      {
+        "id": 14,
+        "name": "Drs. M. Syahril, M.M.",
+        "nip": "196803151994031003",
+        "username": "msyahril",
+        "email": "syahril@lldikti.go.id",
+        "phone": "081266128901",
+        "jabatan": "Admin Subbagian Sarana & Prasarana",
+        "pangkat_golongan": "Penata Tingkat I (Gol. III/d)",
+        "avatar_url": null,
+        "role": {
+          "value": "admin",
+          "label": "Admin Unit"
+        },
+        "is_active": true,
+        "unit_id": 4,
+        "unit": {
+          "id": 4,
+          "nama_unit": "Subbagian Sarana & Prasarana",
+          "kode_unit": "SARPRAS",
+          "deskripsi": "Pengelolaan sarana dan prasarana kantor LLDIKTI",
+          "is_active": true
+        },
+        "created_at": "2026-09-01T08:00:00+07:00",
+        "updated_at": "2026-10-19T08:15:20+07:00"
+      }
+    ],
+    "meta": {
+      "current_page": 1,
+      "last_page": 6,
+      "per_page": 15,
+      "total": 79
+    },
+    "summary": {
+      "total_users": 79,
+      "active_users": 77,
+      "inactive_users": 2,
+      "admin_users": 12,
+      "staff_users": 67,
+      "active_units": 12,
+      "attendance_rate": 92.4,
+      "attendance_rate_label": "92.4%",
+      "attendance_rate_subtext": "Rata-rata Seluruh ASN (14 Rapat)"
+    }
+  }
+  ```
+
+#### 2. Tambah Pengguna ASN Baru (`POST /api/v1/users`)
+* **Endpoint:** `POST /api/v1/users`
+* **Headers:** `Authorization: Bearer <token>`, `Content-Type: application/json`
+* **Otorisasi:** Administrator atau Admin Unit Kerja (`UserPolicy::create`). Admin Unit otomatis mengunci `unit_id` ke unit miliknya dan tidak dapat membuat role `administrator`.
+* **Fitur Normalisasi Toleran (*Robustness Principle*):**
+  - **Password Otomatis:** Jika `password` tidak dikirim (karena form mobile tidak menyediakan field kata sandi), backend otomatis menetapkan kata sandi kedinasan awal: `'Password123!'`.
+  - **Sanitasi Username:** Otomatis membuang simbol awalan `@` (contoh `@johndoe` menjadi `johndoe`) dan mengubah ke huruf kecil.
+  - **Resolusi String Unit:** Jika client mengirimkan nama unit berupa teks pada field `unit` (misal `"Subbagian Kepegawaian"`), backend otomatis mencarikan `unit_id` yang cocok.
+  - **Normalisasi Role & Status:** Menerima label UI seperti `'Administrator'`, `'Admin Unit'`, `'Staff'`, serta status `'Aktif'` / `'Nonaktif'`.
+  - **Sanitasi Nomor Telepon:** Simbol `'-'` atau string kosong otomatis dikonversi menjadi `null`.
+* **Payload Request:**
+  ```json
+  {
+    "name": "Syahril Amri, S.Kom.",
+    "nip": "199408152020121002",
+    "username": "@syahrilamri",
+    "email": "syahril.amri@lldikti.go.id",
+    "role": "Staff",
+    "unit": "Subbagian Sarana & Prasarana",
+    "status": "Aktif",
+    "phone": "081234567890",
+    "jabatan": "Pranata Komputer Ahli Pertama",
+    "pangkat_golongan": "Penata Muda (Gol. III/a)"
+  }
+  ```
+* **Response Sukses (201 Created):**
+  ```json
+  {
+    "success": true,
+    "message": "Pengguna 'Syahril Amri, S.Kom.' berhasil ditambahkan.",
+    "data": {
+      "id": 80,
+      "name": "Syahril Amri, S.Kom.",
+      "nip": "199408152020121002",
+      "username": "syahrilamri",
+      "email": "syahril.amri@lldikti.go.id",
+      "phone": "081234567890",
+      "jabatan": "Pranata Komputer Ahli Pertama",
+      "pangkat_golongan": "Penata Muda (Gol. III/a)",
+      "avatar_url": null,
+      "role": {
+        "value": "staff",
+        "label": "Pegawai ASN"
+      },
+      "is_active": true,
+      "unit_id": 4,
+      "unit": {
+        "id": 4,
+        "nama_unit": "Subbagian Sarana & Prasarana",
+        "kode_unit": "SARPRAS",
+        "deskripsi": "Pengelolaan sarana dan prasarana kantor LLDIKTI",
+        "is_active": true
+      },
+      "created_at": "2026-10-19T15:20:00+07:00",
+      "updated_at": "2026-10-19T15:20:00+07:00"
+    }
+  }
+  ```
+
+#### 3. Detail Pengguna ASN (`GET /api/v1/users/{id}`)
+* **Endpoint:** `GET /api/v1/users/{id}`
+* **Headers:** `Authorization: Bearer <token>`
+* **Otorisasi:** `UserPolicy::view`. Administrator dapat melihat semua pegawai. Admin Unit hanya dapat melihat pegawai dalam unit kerjanya.
+* **Response (200 OK):** Mengembalikan objek `data` pegawai ASN lengkap beserta data relasi `unit`.
+
+#### 4. Perbarui Data Pengguna ASN (`PUT /api/v1/users/{id}`)
+* **Endpoint:** `PUT /api/v1/users/{id}`
+* **Headers:** `Authorization: Bearer <token>`, `Content-Type: application/json`
+* **Otorisasi:** `UserPolicy::update`. Administrator dapat memperbarui semua pegawai. Admin Unit hanya dapat memperbarui staf dalam unit kerjanya.
+* **Fitur Normalisasi Toleran & Pembaruan Parsial:**
+  - Mendukung update parsial (field yang tidak dikirim tidak akan menimpa data yang sudah ada).
+  - Sanitasi awalan `@` pada username dan auto-resolving string `unit` ke `unit_id`.
+  - Jika kata sandi dikosongkan, kata sandi lama tetap dipertahankan. Jika kata sandi diubah atau akun dinonaktifkan, seluruh sesi Bearer Token Sanctum aktif akun tersebut langsung dicabut demi keamanan (*enterprise token revocation*).
+* **Payload Request:**
+  ```json
+  {
+    "name": "Syahril Amri, S.Kom., M.T.",
+    "username": "@syahrilamri",
+    "email": "syahril.amri@lldikti.go.id",
+    "role": "Admin Unit",
+    "unit": "Subbagian Sarana & Prasarana",
+    "status": "Aktif",
+    "phone": "081234567899",
+    "jabatan": "Pengelola Pengadaan Barang/Jasa Ahli Muda",
+    "pangkat_golongan": "Penata (Gol. III/c)"
+  }
+  ```
+* **Response Sukses (200 OK):** Mengembalikan objek data pengguna terbaru (`UserResource`).
+
+#### 5. Hapus Pengguna ASN (`DELETE /api/v1/users/{id}`)
+* **Endpoint:** `DELETE /api/v1/users/{id}`
+* **Headers:** `Authorization: Bearer <token>`
+* **Otorisasi:** `UserPolicy::delete` (Administrator & Admin Unit scoped).
+* **Aturan Durabilitas & Integritas Arsip:**
+  - Akun pegawai yang **telah memiliki riwayat presensi rapat** atau **pernah membuat agenda rapat kedinasan** dilindungi dari penghapusan fisik demi integritas jejak audit pemerintahan. Permintaan akan ditolak dengan `422 Unprocessable Entity` disertai instruksi untuk menonaktifkan akun.
+* **Response Sukses (200 OK):**
+  ```json
+  {
+    "success": true,
+    "message": "Pengguna 'Syahril Amri, S.Kom.' berhasil dihapus."
+  }
+  ```
+* **Response Ditolak demi Integritas (422 Unprocessable Entity):**
+  ```json
+  {
+    "success": false,
+    "message": "Pengguna 'Drs. M. Syahril, M.M.' memiliki riwayat presensi rapat kedinasan. Non-aktifkan akun alih-alih menghapusnya demi integritas data arsip."
+  }
+  ```
+
+#### 6. Toggle Status Aktif / Nonaktif Akun (`PATCH /api/v1/users/{id}/toggle-status`)
+* **Endpoint:** `PATCH /api/v1/users/{id}/toggle-status`
+* **Headers:** `Authorization: Bearer <token>`
+* **Otorisasi:** `UserPolicy::update`. Pengguna tidak diizinkan menonaktifkan akunnya sendiri.
+* **Fitur Keamanan:** Saat akun dinonaktifkan, seluruh personal access token Sanctum milik pengguna tersebut seketika dimusnahkan.
+* **Response Sukses (200 OK):**
+  ```json
+  {
+    "success": true,
+    "message": "Akun 'Drs. M. Syahril, M.M.' berhasil dinonaktifkan.",
+    "data": { ... }
+  }
+  ```
 
 ---
 
 ### 4.6. Manajemen Unit Kerja (Units)
 
-* **`GET /api/v1/units`**: Daftar unit kerja (`?all=true` untuk opsi dropdown tanpa paginasi).
-* **`POST /api/v1/units`**: Tambah unit kerja.
-* **`GET /api/v1/units/{id}`**: Detail unit kerja.
-* **`PUT /api/v1/units/{id}`**: Perbarui unit kerja.
-* **`DELETE /api/v1/units/{id}`**: Hapus unit kerja.
-* **`PATCH /api/v1/units/{id}/toggle-status`**: Aktifkan / Nonaktifkan unit kerja.
+#### 1. Daftar Unit Kerja (`GET /api/v1/units`)
+* **Endpoint:** `GET /api/v1/units`
+* **Headers:** `Authorization: Bearer <token>`
+* **Otorisasi:** Terbuka bagi seluruh pengguna terautentikasi (Administrator, Admin Unit, Staff) untuk keperluan direktori dan pilihan filter/dropdown.
+* **Query Parameters:**
+  | Parameter | Tipe | Contoh | Keterangan |
+  | :--- | :--- | :--- | :--- |
+  | `page` | `integer` | `1` | Nomor halaman paginasi (default: 1). |
+  | `per_page` | `integer` | `10` | Jumlah item per halaman (min 1, max 50, default: 15). |
+  | `search` | `string` | `Sarana` | Pencarian teks pada Nama Unit, Kode Unit, atau Deskripsi. |
+  | `status` | `string` | `active` / `aktif` | Filter status keaktifan (`active`/`inactive`, `aktif`/`nonaktif`). |
+  | `all` | `boolean` | `true` | Jika `true`, mengembalikan seluruh data tanpa paginasi (cocok untuk dropdown list). |
+* **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "message": "Daftar unit kerja berhasil diambil.",
+    "data": [
+      {
+        "id": 4,
+        "nama_unit": "Subbagian Sarana & Prasarana",
+        "kode_unit": "SARPRAS",
+        "deskripsi": "Pengelolaan sarana dan prasarana kantor LLDIKTI",
+        "is_active": true,
+        "users_count": 8,
+        "agendas_count": 14,
+        "created_at": "2026-09-01T08:00:00+07:00",
+        "updated_at": "2026-10-19T08:00:00+07:00"
+      }
+    ],
+    "meta": {
+      "current_page": 1,
+      "last_page": 2,
+      "per_page": 10,
+      "total": 12
+    },
+    "summary": {
+      "total_units": 12,
+      "active_units": 12,
+      "inactive_units": 0,
+      "total_users_assigned": 79
+    }
+  }
+  ```
+
+#### 2. Tambah Unit Kerja (`POST /api/v1/units`)
+* **Endpoint:** `POST /api/v1/units`
+* **Headers:** `Authorization: Bearer <token>`, `Content-Type: application/json`
+* **Otorisasi:** Khusus Administrator (`UnitPolicy::create`).
+* **Payload Request:**
+  ```json
+  {
+    "kode_unit": "POKJA-IKU",
+    "nama_unit": "Kelompok Kerja Indikator Kinerja Utama",
+    "deskripsi": "Pengawalan dan monev capaian IKU perguruan tinggi",
+    "is_active": true
+  }
+  ```
+* **Response Sukses (201 Created):** Mengembalikan objek `data` unit baru (`UnitResource`).
+
+#### 3. Detail Unit Kerja (`GET /api/v1/units/{id}`)
+* **Endpoint:** `GET /api/v1/units/{id}`
+* **Headers:** `Authorization: Bearer <token>`
+* **Otorisasi:** `UnitPolicy::view`. Administrator dapat melihat unit manapun. Admin Unit diizinkan melihat detail unit kerjanya sendiri. (Mengakses unit lain tanpa hak akan menghasilkan `403 Forbidden`).
+* **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "message": "Detail unit kerja berhasil diambil.",
+    "data": {
+      "id": 4,
+      "nama_unit": "Subbagian Sarana & Prasarana",
+      "kode_unit": "SARPRAS",
+      "deskripsi": "Pengelolaan sarana dan prasarana kantor LLDIKTI",
+      "is_active": true,
+      "users_count": 8,
+      "agendas_count": 14,
+      "created_at": "2026-09-01T08:00:00+07:00",
+      "updated_at": "2026-10-19T08:00:00+07:00"
+    }
+  }
+  ```
+
+#### 4. Perbarui Unit Kerja (`PUT /api/v1/units/{id}`)
+* **Endpoint:** `PUT /api/v1/units/{id}`
+* **Headers:** `Authorization: Bearer <token>`, `Content-Type: application/json`
+* **Otorisasi:** Khusus Administrator (`UnitPolicy::update`).
+* **Response Sukses (200 OK):** Mengembalikan objek `data` unit terbaru.
+
+#### 5. Hapus Unit Kerja (`DELETE /api/v1/units/{id}`)
+* **Endpoint:** `DELETE /api/v1/units/{id}`
+* **Headers:** `Authorization: Bearer <token>`
+* **Otorisasi:** Khusus Administrator (`UnitPolicy::delete`).
+* **Proteksi Integritas Relasional:** Unit kerja yang masih memiliki relasi aktif dengan pegawai atau agenda rapat akan ditolak penghapusannya dengan `422 Unprocessable Entity`.
+* **Response Sukses (200 OK):**
+  ```json
+  {
+    "success": true,
+    "message": "Unit kerja 'POKJA-IKU' berhasil dihapus."
+  }
+  ```
+
+#### 6. Toggle Status Aktif / Nonaktif Unit Kerja (`PATCH /api/v1/units/{id}/toggle-status`)
+* **Endpoint:** `PATCH /api/v1/units/{id}/toggle-status`
+* **Headers:** `Authorization: Bearer <token>`
+* **Otorisasi:** Khusus Administrator (`UnitPolicy::update`).
+* **Response Sukses (200 OK):**
+  ```json
+  {
+    "success": true,
+    "message": "Unit kerja 'Subbagian Sarana & Prasarana' berhasil dinonaktifkan.",
+    "data": { ... }
+  }
+  ```
 
 ---
 
@@ -1736,3 +2027,131 @@ export function toAsn(user: ApiUserDto): ASN {
      </Text>
    </View>
    ```
+
+---
+
+### 5.12. Panduan Integrasi Khusus Layar Kelola Pegawai & Unit Kerja (`EmployeeDirectoryScreen`, `Add/Edit Employee & Unit`)
+
+Dokumen panduan ini ditujukan bagi pengembang aplikasi mobile React Native (`lldikti-x-mobile/siperapat`) untuk mengintegrasikan layar **Kelola Pegawai & Unit Kerja** ([`EmployeeDirectoryScreen.tsx`](file:///home/daffiq/Documents/Semester-5/lldikti-x-mobile/siperapat/src/presentation/screens/EmployeeDirectoryScreen.tsx)), formulir pendaftaran ([`AddEmployeeScreen.tsx`](file:///home/daffiq/Documents/Semester-5/lldikti-x-mobile/siperapat/src/presentation/screens/AddEmployeeScreen.tsx)), penyuntingan pegawai ([`EditEmployeeScreen.tsx`](file:///home/daffiq/Documents/Semester-5/lldikti-x-mobile/siperapat/src/presentation/screens/EditEmployeeScreen.tsx)), serta manajemen unit kerja ([`AddUnitScreen.tsx`](file:///home/daffiq/Documents/Semester-5/lldikti-x-mobile/siperapat/src/presentation/screens/AddUnitScreen.tsx), [`EditUnitScreen.tsx`](file:///home/daffiq/Documents/Semester-5/lldikti-x-mobile/siperapat/src/presentation/screens/EditUnitScreen.tsx)).
+
+#### A. Pemetaan 4 Bento Stat Cards Direktori Pegawai (`EmployeeDirectoryScreen.tsx`)
+
+Pada implementasi mobile sebelumnya, Bento Card 1–3 menghitung angka hanya dari data yang termuat pada halaman paginasi aktif `(halaman ini)`, sedangkan Bento Card 4 menampilkan nilai kosong `—` dengan subteks *"Belum tersedia di API"*.
+
+Backend SIPERAPAT kini menyertakan blok telemetri `summary` pada respons `GET /api/v1/users` sehingga seluruh kartu statistik menyajikan angka real-time seluruh instansi (atau unit kerja terkait):
+
+| Bento Stat Card di Mobile | Parameter UI Mobile | Sumber Data Backend (`response.summary`) | Keterangan & Dampak UI |
+| :--- | :--- | :--- | :--- |
+| **Kartu 1: Total Pegawai** | Nilai Utama (`bentoValue`) | `summary.total_users` | Total seluruh ASN terdaftar (bukan hanya halaman ini). |
+| | Sub-keterangan (`bentoSub`) | `${summary.staff_users} Staf · ${summary.admin_users} Admin` | Rincian staf dan admin instansi. |
+| **Kartu 2: Unit Kerja Aktif** | Nilai Utama (`bentoValue`) | `summary.active_units` | Jumlah unit kerja berstatus aktif. |
+| | Sub-keterangan (`bentoSub`) | `"Unit aktif instansi"` | Keterangan status keaktifan unit. |
+| **Kartu 3: Status Akun** | Nilai Utama (`bentoValue`) | `summary.active_users` | Jumlah akun ASN berstatus aktif. |
+| | Sub-keterangan (`bentoSub`) | `${summary.inactive_users} Nonaktif` | Jumlah akun nonaktif instansi. |
+| **Kartu 4: Rerata Presensi** | Nilai Utama (`bentoValue`) | `summary.attendance_rate_label` | **Contoh: `"92.4%"`** (menghapus tanda strip `—`). |
+| | Sub-keterangan (`bentoSub`) | `summary.attendance_rate_subtext` | **Contoh: `"Rata-rata Seluruh ASN (14 Rapat)"`** (menghapus label *"Belum tersedia di API"*). |
+
+#### B. Solusi Pembuatan Akun Pegawai ASN (`AddEmployeeScreen.tsx`)
+
+Sebelumnya, repositori mobile melempar eksepsi error pada `EmployeeRepositoryImpl.ts#L35-L37`:
+> *"Pembuatan akun memerlukan password awal, sedangkan formulir mobile belum menyediakan field tersebut."*
+
+Backend SIPERAPAT telah dimutakhirkan dengan prinsip *Robustness Principle* (Postel's Law):
+1. **Fallback Default Password Kedinasan:**
+   Jika payload `POST /api/v1/users` tidak memuat field `password`, backend secara otomatis menerapkan kata sandi mula kedinasan standar instansi:
+   ```
+   Password123!
+   ```
+   Pegawai bersangkutan dapat mengubah kata sandi ini sewaktu-waktu melalui fitur *Ubah Kata Sandi* di aplikasi mobile.
+2. **Sanitasi Awalan `@` pada Username:**
+   Field username yang dikirim dengan format `@johndoe` akan secara otomatis dibersihkan menjadi `johndoe` sehingga lolos validasi `alpha_dash`.
+3. **Resolusi Nama Unit String ke `unit_id`:**
+   Jika mobile mengirimkan field `unit` berupa nama unit kerja (contoh: `"Subbagian Kepegawaian"`), backend otomatis mencari dan mengaitkan `unit_id` yang sesuai tanpa perlu iterasi manual di sisi klien.
+4. **Normalisasi Role & Status:**
+   Backend menerima label UI Bahasa Indonesia (`"Administrator"`, `"Admin Unit"`, `"Staff"` serta status `"Aktif"`, `"Nonaktif"`).
+
+#### C. Contoh Implementasi `createEmployee` pada `EmployeeRepositoryImpl.ts`
+
+Pengembang mobile dapat mengaktifkan fungsi pendaftaran pegawai di `EmployeeRepositoryImpl.ts` dengan kode berikut:
+
+```typescript
+// src/data/repositories/EmployeeRepositoryImpl.ts
+async createEmployee(employee: Omit<Employee, 'id' | 'initials'>): Promise<Employee> {
+  const role = employee.role === 'Administrator' ? 'administrator' : employee.role === 'Admin Unit' ? 'admin' : 'staff';
+  const isActive = employee.status === 'Aktif';
+
+  const response = await userApi.create({
+    name: employee.name,
+    nip: employee.nip,
+    username: employee.username.replace(/^@/, ''),
+    email: employee.email,
+    role: role,
+    unit: employee.unit, // Backend otomatis menyelesaikan nama unit ke unit_id
+    unit_id: employee.unitId,
+    status: employee.status,
+    is_active: isActive,
+    phone: employee.phone || null,
+    jabatan: employee.jabatan,
+    pangkat_golongan: employee.pangkatGolongan,
+    // Password tidak wajib dikirim; backend default ke 'Password123!'
+  });
+
+  if (!response.success || !response.data) {
+    throw new Error(response.message || 'Gagal mendaftarkan pegawai ASN baru.');
+  }
+
+  return toEmployee(response.data);
+}
+```
+
+#### D. Penyesuaian `EmployeeDirectoryScreen.tsx` untuk 4 Bento Cards
+
+```tsx
+{/* 4 BENTO STATS CARDS */}
+<View style={styles.bentoGrid}>
+  <View style={styles.bentoCol}>
+    <View style={styles.bentoTop}>
+      <Text style={styles.bentoLabel}>Total Pegawai</Text>
+      <MaterialIcons name="group" size={16} color={colors.outline} />
+    </View>
+    <Text style={styles.bentoValue}>{userSummary?.total_users ?? totalCount}</Text>
+    <Text style={styles.bentoSub}>
+      {userSummary ? `${userSummary.staff_users} Staf · ${userSummary.admin_users} Admin` : `${staffCount} Staf · ${adminCount} Admin`}
+    </Text>
+  </View>
+
+  <View style={styles.bentoCol}>
+    <View style={styles.bentoTop}>
+      <Text style={styles.bentoLabel}>Unit Kerja Aktif</Text>
+      <MaterialIcons name="account-tree" size={16} color={colors.outline} />
+    </View>
+    <Text style={styles.bentoValue}>{userSummary?.active_units ?? (apiUnits.length ? apiUnits.filter((u) => u.is_active).length : '—')}</Text>
+    <Text style={styles.bentoSub}>Unit aktif instansi</Text>
+  </View>
+
+  <View style={styles.bentoCol}>
+    <View style={styles.bentoTop}>
+      <Text style={styles.bentoLabel}>Status Akun</Text>
+      <MaterialIcons name="badge" size={16} color={colors.outline} />
+    </View>
+    <Text style={styles.bentoValue}>{userSummary?.active_users ?? activeCount}</Text>
+    <Text style={styles.bentoSub}>
+      {userSummary ? `${userSummary.inactive_users} Nonaktif` : `${inactiveCount} Nonaktif`}
+    </Text>
+  </View>
+
+  <View style={styles.bentoCol}>
+    <View style={styles.bentoTop}>
+      <Text style={styles.bentoLabel}>Rerata Presensi</Text>
+      <MaterialIcons name="analytics" size={16} color={colors.outline} />
+    </View>
+    <Text style={styles.bentoValue}>{userSummary?.attendance_rate_label ?? '100%'}</Text>
+    <Text style={styles.bentoSub}>{userSummary?.attendance_rate_subtext ?? 'Tingkat kehadiran dinas'}</Text>
+  </View>
+</View>
+```
+
+#### E. Otorisasi Detail Unit Kerja untuk Admin Unit (`UnitPolicy::view`)
+
+Admin Unit Kerja kini dapat memanggil `GET /api/v1/units/{id}` untuk mengambil detail data unit kerjanya sendiri (misal saat membuka layar [`EditUnitScreen.tsx`](file:///home/daffiq/Documents/Semester-5/lldikti-x-mobile/siperapat/src/presentation/screens/EditUnitScreen.tsx) atau melihat daftar staf unit). Backend memverifikasi bahwa `$user->unit_id === $unit->id`. Jika mencoba mengakses unit lain di luar wewenangnya, server merespons dengan aman via HTTP `403 Forbidden`.
+

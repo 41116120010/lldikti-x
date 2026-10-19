@@ -30,14 +30,27 @@ class UnitController extends Controller
             });
         }
 
-        // Filter: Status
+        // Filter: Status (supports active/inactive and Indonesian aktif/nonaktif)
         if ($status = $request->input('status')) {
-            if ($status === 'active') {
+            $statusLower = strtolower(trim($status));
+            if (in_array($statusLower, ['active', 'aktif', '1', 'true'], true)) {
                 $query->where('is_active', true);
-            } elseif ($status === 'inactive') {
+            } elseif (in_array($statusLower, ['inactive', 'nonaktif', 'tidak aktif', '0', 'false'], true)) {
                 $query->where('is_active', false);
             }
         }
+
+        $totalUnits = Unit::count();
+        $activeUnits = Unit::where('is_active', true)->count();
+        $inactiveUnits = Unit::where('is_active', false)->count();
+        $totalUsersAssigned = \App\Models\User::whereNotNull('unit_id')->count();
+
+        $summary = [
+            'total_units' => $totalUnits,
+            'active_units' => $activeUnits,
+            'inactive_units' => $inactiveUnits,
+            'total_users_assigned' => $totalUsersAssigned,
+        ];
 
         // Option to fetch all active units for dropdown without pagination
         if ($request->boolean('all')) {
@@ -46,6 +59,7 @@ class UnitController extends Controller
                 'success' => true,
                 'message' => 'Daftar semua unit kerja berhasil diambil.',
                 'data' => UnitResource::collection($units),
+                'summary' => $summary,
             ]);
         }
 
@@ -62,6 +76,7 @@ class UnitController extends Controller
                 'per_page' => $units->perPage(),
                 'total' => $units->total(),
             ],
+            'summary' => $summary,
         ]);
     }
 

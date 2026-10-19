@@ -50,22 +50,82 @@ class UserController extends Controller
             }
         }
 
-        // Filter: Role
+        // Filter: Role (supports direct enum values or friendly UI labels)
         if ($role = $request->input('role')) {
-            $query->where('role', $role);
+            $roleLower = strtolower(trim($role));
+            $roleMap = [
+                'administrator' => 'administrator',
+                'admin unit' => 'admin',
+                'admin' => 'admin',
+                'staff' => 'staff',
+                'pegawai' => 'staff',
+                'pegawai asn' => 'staff',
+            ];
+            $targetRole = $roleMap[$roleLower] ?? $roleLower;
+            $query->where('role', $targetRole);
         }
 
-        // Filter: Status
+        // Filter: Status (supports active/inactive and Indonesian aktif/nonaktif)
         if ($status = $request->input('status')) {
-            if ($status === 'active') {
+            $statusLower = strtolower(trim($status));
+            if (in_array($statusLower, ['active', 'aktif', '1', 'true'], true)) {
                 $query->where('is_active', true);
-            } elseif ($status === 'inactive') {
+            } elseif (in_array($statusLower, ['inactive', 'nonaktif', 'tidak aktif', '0', 'false'], true)) {
                 $query->where('is_active', false);
             }
         }
 
         $perPage = min(max((int) $request->query('per_page', 15), 1), 50);
         $users = $query->orderBy('name', 'asc')->paginate($perPage);
+
+        // Telemetry Summary Calculation (scoped by current user permissions)
+        $scopedBaseQuery = User::query();
+        if ($currentUser->isAdmin()) {
+            $scopedBaseQuery->where('unit_id', $currentUser->unit_id);
+        }
+
+        $totalUsers = (clone $scopedBaseQuery)->count();
+        $activeUsers = (clone $scopedBaseQuery)->where('is_active', true)->count();
+        $inactiveUsers = (clone $scopedBaseQuery)->where('is_active', false)->count();
+        $adminUsers = (clone $scopedBaseQuery)->whereIn('role', ['administrator', 'admin'])->count();
+        $staffUsers = (clone $scopedBaseQuery)->where('role', 'staff')->count();
+        $activeUnits = \App\Models\Unit::where('is_active', true)->count();
+
+        // Calculate institutional attendance rate
+        $completedAgendas = \App\Models\Agenda::where('status', 'completed')->count();
+        if ($currentUser->isAdministrator()) {
+            $completedAttendances = \App\Models\Attendance::whereHas('agenda', fn ($q) => $q->where('status', 'completed'))->count();
+            $expected = $completedAgendas * max($activeUsers, 1);
+            $rate = ($completedAgendas === 0 || $activeUsers === 0)
+                ? 100.0
+                : round(min(($completedAttendances / max($expected, 1)) * 100, 100.0), 1);
+            $rateSubtext = $completedAgendas > 0
+                ? "Rata-rata Seluruh ASN ({$completedAgendas} Rapat)"
+                : 'Belum ada rapat dinas selesai';
+        } else {
+            $unitCompletedAttendances = \App\Models\Attendance::whereHas('user', fn ($q) => $q->where('unit_id', $currentUser->unit_id))
+                ->whereHas('agenda', fn ($q) => $q->where('status', 'completed'))
+                ->count();
+            $expected = $completedAgendas * max($totalUsers, 1);
+            $rate = ($completedAgendas === 0 || $totalUsers === 0)
+                ? 100.0
+                : round(min(($unitCompletedAttendances / max($expected, 1)) * 100, 100.0), 1);
+            $rateSubtext = $completedAgendas > 0
+                ? "Kehadiran Unit ({$totalUsers} Pegawai)"
+                : 'Belum ada rapat dinas selesai';
+        }
+
+        $summary = [
+            'total_users' => $totalUsers,
+            'active_users' => $activeUsers,
+            'inactive_users' => $inactiveUsers,
+            'admin_users' => $adminUsers,
+            'staff_users' => $staffUsers,
+            'active_units' => $activeUnits,
+            'attendance_rate' => $rate,
+            'attendance_rate_label' => "{$rate}%",
+            'attendance_rate_subtext' => $rateSubtext,
+        ];
 
         return response()->json([
             'success' => true,
@@ -77,6 +137,7 @@ class UserController extends Controller
                 'per_page' => $users->perPage(),
                 'total' => $users->total(),
             ],
+            'summary' => $summary,
         ]);
     }
 

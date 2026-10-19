@@ -20,7 +20,7 @@ class UnitPolicy
      */
     public function view(User $user, Unit $unit): bool
     {
-        return $user->isAdministrator();
+        return $user->isAdministrator() || ($user->isAdmin() && $user->unit_id === $unit->id);
     }
 
     /**
