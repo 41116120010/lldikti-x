@@ -100,5 +100,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/reports/agendas/{agenda}/export/word', [ReportController::class, 'exportWord'])
             ->middleware('throttle:export')
             ->name('api.v1.reports.export.word');
+        Route::get('/reports/agendas/{agenda}/export/csv', [ReportController::class, 'exportAgendaCsv'])
+            ->middleware('throttle:export')
+            ->name('api.v1.reports.agenda.export.csv');
     });
 });

@@ -716,4 +716,66 @@ class Agenda extends Model
     {
         return in_array($this->surat_edaran_extension, ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'], true);
     }
+
+    /**
+     * Get total active civil servants (ASN) invited to this agenda.
+     */
+    public function getTotalInvitedAttribute(): int
+    {
+        if ($this->is_all_units) {
+            return User::where('is_active', true)->count();
+        }
+
+        if ($this->relationLoaded('units')) {
+            $unitIds = $this->units->pluck('id');
+        } else {
+            $unitIds = $this->units()->pluck('units.id');
+        }
+
+        return User::where('is_active', true)->whereIn('unit_id', $unitIds)->count();
+    }
+
+    /**
+     * Get total attendances recorded for this agenda.
+     */
+    public function getTotalAttendedAttribute(): int
+    {
+        return (int) ($this->attendances_count ?? ($this->relationLoaded('attendances') ? $this->attendances->count() : $this->attendances()->count()));
+    }
+
+    /**
+     * Get total invited attendees who have not yet checked in.
+     */
+    public function getUnattendedCountAttribute(): int
+    {
+        return max(0, $this->total_invited - $this->total_attended);
+    }
+
+    /**
+     * Get participation rate percentage (0.0 to 100.0).
+     */
+    public function getParticipationRateAttribute(): float
+    {
+        $invited = $this->total_invited;
+
+        return $invited > 0 ? round(min(($this->total_attended / $invited) * 100, 100.0), 1) : 0.0;
+    }
+
+    /**
+     * Formatted string of participation rate (e.g. "85.5%").
+     */
+    public function getParticipationRateLabelAttribute(): string
+    {
+        return "{$this->participation_rate}%";
+    }
+
+    /**
+     * Official meeting document number (Nomor Berita Acara).
+     */
+    public function getNomorBaAttribute(): string
+    {
+        $config = $this->resolved_report_config;
+
+        return (string) ($config['document_number'] ?? ('BA-RAPAT/'.($this->waktu_mulai ? $this->waktu_mulai->format('Y') : date('Y')).'/'.str_pad($this->id, 4, '0', STR_PAD_LEFT)));
+    }
 }

@@ -359,6 +359,17 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
       "notulis": { ... },
       "units": [ ... ],
       "attendances_count": 24,
+      "nomor_ba": "BA-RAPAT/2026/0001",
+      "total_invited": 79,
+      "total_attended": 24,
+      "unattended_count": 55,
+      "participation_rate": 30.4,
+      "participation_rate_label": "30.4%",
+      "export_links": {
+        "pdf": "https://siperapat.lldikti.go.id/api/v1/reports/agendas/1/export/pdf",
+        "word": "https://siperapat.lldikti.go.id/api/v1/reports/agendas/1/export/word",
+        "csv": "https://siperapat.lldikti.go.id/api/v1/reports/agendas/1/export/csv"
+      },
       "is_eligible": true,
       "has_attended": false,
       "my_attendance": null,
@@ -368,6 +379,17 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
     }
   }
   ```
+
+##### Kamus Properti Telemetri & Berita Acara Agenda
+| Properti | Tipe | Deskripsi & Kegunaan UI Mobile |
+| :--- | :--- | :--- |
+| `nomor_ba` | `string` | Nomor dokumen Berita Acara resmi (contoh: `"BA-RAPAT/2026/0001"`). Siap disalin pada kartu hero dokumen. |
+| `total_invited` | `integer` | Jumlah seluruh ASN aktif yang menjadi target undangan rapat (berdasarkan seluruh instansi atau unit kerja terkait). |
+| `total_attended` | `integer` | Jumlah ASN yang telah berhasil melakukan presensi dan tercatat sah pada agenda rapat. |
+| `unattended_count` | `integer` | Jumlah ASN yang diundang namun belum melakukan presensi (`max(0, total_invited - total_attended)`). |
+| `participation_rate` | `float` | Persentase rasio kehadiran terhadap target undangan (0.0 s.d. 100.0) untuk kalkulasi progress bar. |
+| `participation_rate_label` | `string` | Label rasio kehadiran terformat siap saji (contoh: `"30.4%"`). |
+| `export_links` | `object` | Tautan langsung pengunduhan dokumen resmi (`pdf`, `word`, `csv`) terproteksi token. |
 
 #### 3. Buat Agenda Rapat (Admin / Administrator)
 * **Endpoint:** `POST /api/v1/agendas`
@@ -517,6 +539,101 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
 * **Query Parameters:** `page`, `per_page`
 * **Response:** Daftar riwayat kehadiran user saat ini.
 
+#### 7. Daftar Presensi Rapat & Pegawai Belum Hadir (Agenda Attendances & Monitoring)
+* **Endpoint:** `GET /api/v1/agendas/{id}/attendances`
+* **Headers:** `Authorization: Bearer <token>`
+* **Otorisasi:** Pimpinan rapat, Notulis, Admin Unit penyelenggara, atau Administrator (`AttendancePolicy::viewAny` / `AgendaPolicy::view`).
+* **Query Parameters:**
+  - `status`:
+    - `all` (default): Mengembalikan daftar seluruh peserta ASN yang telah melakukan presensi sah.
+    - `unattended`: Mengembalikan daftar seluruh ASN aktif yang diundang tetapi **belum melakukan presensi** (untuk konsumsi Tab "Belum Hadir").
+  - `search`: Kata kunci pencarian nama atau NIP pegawai.
+  - `page`: Nomor halaman (default 1).
+  - `per_page`: Jumlah data per halaman (default 25, max 100).
+* **Response untuk Presensi Tercatat (`?status=all`, 200 OK):**
+  ```json
+  {
+    "success": true,
+    "message": "Daftar kehadiran agenda rapat berhasil diambil.",
+    "data": [
+      {
+        "id": 101,
+        "agenda_id": 1,
+        "user_id": 14,
+        "user": {
+          "id": 14,
+          "name": "Drs. M. Syahril, M.M.",
+          "nip": "196803151994031003",
+          "email": "syahril@lldikti.go.id",
+          "jabatan": "Pengelola Sarana Prasarana",
+          "unit": { "id": 4, "nama_unit": "Subbagian Sarana & Prasarana" }
+        },
+        "signed_at": "2026-10-07T09:15:30+07:00",
+        "selfie_url": "https://siperapat.lldikti.go.id/api/v1/attendances/101/selfie",
+        "signature_url": "https://siperapat.lldikti.go.id/api/v1/attendances/101/signature",
+        "ip_address": "192.168.1.104",
+        "user_agent": "SIPERAPAT-Android/1.0"
+      }
+    ],
+    "meta": {
+      "current_page": 1,
+      "last_page": 1,
+      "per_page": 25,
+      "total": 1
+    },
+    "summary": {
+      "total_invited": 79,
+      "total_attended": 1,
+      "unattended_count": 78,
+      "participation_rate": 1.3,
+      "participation_rate_label": "1.3%"
+    }
+  }
+  ```
+* **Response untuk Belum Hadir (`?status=unattended`, 200 OK):**
+  ```json
+  {
+    "success": true,
+    "message": "Daftar ASN yang belum presensi berhasil diambil.",
+    "data": [
+      {
+        "id": 15,
+        "agenda_id": 1,
+        "user_id": 15,
+        "user": {
+          "id": 15,
+          "name": "Dr. Hj. Siti Fatimah, S.Pd., M.Hum",
+          "nip": "197205121998022001",
+          "email": "fatimah@lldikti.go.id",
+          "jabatan": "Analis SDM Aparatur",
+          "unit": { "id": 2, "nama_unit": "Subbagian Kepegawaian" }
+        },
+        "signed_at": null,
+        "selfie_url": null,
+        "signature_url": null,
+        "ip_address": null,
+        "user_agent": null,
+        "status": "belum_hadir",
+        "created_at": null,
+        "updated_at": null
+      }
+    ],
+    "meta": {
+      "current_page": 1,
+      "last_page": 4,
+      "per_page": 25,
+      "total": 78
+    },
+    "summary": {
+      "total_invited": 79,
+      "total_attended": 1,
+      "unattended_count": 78,
+      "participation_rate": 1.3,
+      "participation_rate_label": "1.3%"
+    }
+  }
+  ```
+
 ---
 
 ### 4.5. Manajemen Pengguna (Users)
@@ -557,6 +674,7 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
 * **`POST /api/v1/reports/agendas/{id}/config/reset`**: Mereset konfigurasi kop surat, penandatangan, dan tata letak dokumen agenda kembali ke standar sistem instansi.
 * **`GET /api/v1/reports/agendas/{id}/export/pdf`**: Unduh dokumen resmi Berita Acara & Daftar Hadir format PDF (`throttle:export`).
 * **`GET /api/v1/reports/agendas/{id}/export/word`**: Unduh dokumen resmi Berita Acara format Microsoft Word (.doc) (`throttle:export`).
+* **`GET /api/v1/reports/agendas/{id}/export/csv`**: Unduh berkas tabulasi daftar kehadiran ASN untuk satu agenda rapat spesifik format CSV spreadsheet (Excel-ready) (`throttle:export`). Otomatis disanitasi terhadap bahaya CSV Formula Injection (CWE-1236) dan menyertakan UTF-8 BOM.
 
 ---
 
@@ -609,7 +727,7 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
 
 ---
 
-### 4.10. Matriks Hak Akses RBAC 42 Endpoint REST API v1
+### 4.10. Matriks Hak Akses RBAC 43 Endpoint REST API v1
 
 ```
 ┌────┬────────────────────────────────────────────────┬───────────────┬────────────┬─────────┐
@@ -657,6 +775,7 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
 │ 40 │ POST   /api/v1/reports/agendas/{id}/config/rst │ Ya            │ Ya (Scoped)│ ❌ (403)│
 │ 41 │ GET    /api/v1/reports/agendas/{id}/export/pdf │ Ya            │ Ya (Scoped)│ ❌ (403)│
 │ 42 │ GET    /api/v1/reports/agendas/{id}/export/word│ Ya            │ Ya (Scoped)│ ❌ (403)│
+│ 43 │ GET    /api/v1/reports/agendas/{id}/export/csv │ Ya            │ Ya (Scoped)│ ❌ (403)│
 └────┴────────────────────────────────────────────────┴───────────────┴────────────┴─────────┘
 *Keterangan: Ya(Notu) = Hanya jika pegawai bertugas sebagai Notulis rapat yang bersangkutan. 
 Ya(Milik) = Hanya jika data kehadiran tersebut adalah milik pegawai itu sendiri.*
@@ -751,3 +870,55 @@ const MeetingMinutesView = ({ htmlContent }) => {
   );
 };
 ```
+
+---
+
+### 5.6. Panduan Integrasi Khusus Layar Monitoring Presensi (MonitoringScreen.tsx)
+
+Bagi pengembang aplikasi mobile yang mengintegrasikan layar pemantauan kehadiran rapat ([`MonitoringScreen.tsx`](file:///home/daffiq/Documents/Semester-5/lldikti-x-mobile/siperapat/src/presentation/screens/MonitoringScreen.tsx)), berikut adalah panduan binding data dan konsumsi endpoint:
+
+#### A. Hero Header & Nomor Berita Acara
+* **Data Sumber:** `GET /api/v1/agendas/{id}`
+* **Nomor Dokumen Resmi (`nomor_ba`):**
+  * Tampilkan langsung pada badge/kotak info berita acara: `meeting?.nomor_ba`.
+  * Aksi Tombol Salin:
+    ```typescript
+    await Clipboard.setStringAsync(meeting?.nomor_ba || '');
+    Alert.alert('Berhasil', 'Nomor berita acara berhasil disalin ke clipboard.');
+    ```
+
+#### B. Kartu Rekapitulasi Presensi & Rasio Partisipasi
+* **Statistik Kehadiran:**
+  * **Hadir Sah:** Tampilkan `meeting?.total_attended` (atau `meeting?.attendances_count`).
+  * **Belum Hadir:** Tampilkan `meeting?.unattended_count` (dengan subteks: `"Dari target undangan"`).
+  * **Target Undangan:** Tampilkan `meeting?.total_invited` (dengan subteks: `meeting?.is_all_units ? "Seluruh ASN Instansi" : "Unit Kerja Terpilih"`).
+* **Partisipasi Kehadiran (Progress Bar):**
+  * Label: `meeting?.participation_rate_label` (contoh: `"30.4%"`).
+  * Lebar Bar Dinamis:
+    ```typescript
+    style={{ width: `${Math.min(meeting?.participation_rate ?? 0, 100)}%` }}
+    ```
+
+#### C. Navigasi & Konsumsi Tab Kategori
+Layar monitoring memiliki 3 tab utama:
+1. **Tab 1: "Tercatat" (Daftar Hadir Sah):**
+   * Endpoint: `GET /api/v1/agendas/{id}/attendances?page=1`
+   * Menampilkan daftar pegawai yang telah melakukan presensi beserta waktu `signed_at`, foto selfie terproteksi (`selfie_url`), dan tanda tangan terproteksi (`signature_url`).
+2. **Tab 2: "Belum Hadir" (ASN Terundang Belum Presensi):**
+   * Endpoint: `GET /api/v1/agendas/{id}/attendances?status=unattended&page=1`
+   * Menampilkan daftar pegawai yang belum hadir (`status: 'belum_hadir'`) dengan nama lengkap, NIP, jabatan, dan unit kerja.
+3. **Tab 3: "Notulensi & Hasil Sidang":**
+   * Sumber Data: `meeting?.notulensi_html` dan `meeting?.kesimpulan_html`.
+   * Render menggunakan `RenderHtml` (read-only).
+
+#### D. Aksi Ekspor & Unduh Dokumen Kedinasan
+Gunakan properti `meeting?.export_links` untuk aksi unduh:
+1. **Unduh Berita Acara (PDF):**
+   * URL: `meeting?.export_links?.pdf` (`GET /api/v1/reports/agendas/{id}/export/pdf`)
+   * Buka via browser atau downloader terotentikasi Bearer token.
+2. **Unduh Risalah Sidang (DOCX):**
+   * URL: `meeting?.export_links?.word` (`GET /api/v1/reports/agendas/{id}/export/word`)
+3. **Unduh Tabulasi Kehadiran (Excel/CSV):**
+   * URL: `meeting?.export_links?.csv` (`GET /api/v1/reports/agendas/{id}/export/csv`)
+   * Menghasilkan file CSV biner dengan encoding UTF-8 BOM yang langsung terbaca rapi pada Microsoft Excel dan Google Sheets tanpa karakter rusak (*mojibake*).
+

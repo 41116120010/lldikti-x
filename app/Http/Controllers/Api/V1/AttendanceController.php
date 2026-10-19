@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Attendance\StoreAttendanceRequest;
 use App\Http\Resources\AgendaResource;
 use App\Http\Resources\AttendanceResource;
+use App\Http\Resources\UserResource;
 use App\Models\Agenda;
 use App\Models\Attendance;
+use App\Models\User;
 use App\Services\AttendanceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -155,17 +157,89 @@ class AttendanceController extends Controller
 
     /**
      * List all attendances for a specific agenda (Admin / Leader access).
+     * Supports filtering by status: 'all' / 'attended' (default), 'unattended' (invited but not yet checked in).
      */
     public function agendaAttendances(Agenda $agenda, Request $request): JsonResponse
     {
         Gate::authorize('view', $agenda);
 
         $perPage = min(max((int) $request->query('per_page', 25), 1), 100);
+        $status = $request->query('status', 'all');
 
-        $attendances = $agenda->attendances()
+        $summary = [
+            'total_invited' => $agenda->total_invited,
+            'total_attended' => $agenda->total_attended,
+            'unattended_count' => $agenda->unattended_count,
+            'participation_rate' => $agenda->participation_rate,
+            'participation_rate_label' => $agenda->participation_rate_label,
+        ];
+
+        if ($status === 'unattended') {
+            $attendedUserIds = $agenda->attendances()->pluck('user_id');
+
+            $unattendedQuery = User::where('is_active', true)
+                ->with('unit')
+                ->whereNotIn('id', $attendedUserIds);
+
+            if (! $agenda->is_all_units) {
+                $unitIds = $agenda->units()->pluck('units.id');
+                $unattendedQuery->whereIn('unit_id', $unitIds);
+            }
+
+            if ($request->filled('search')) {
+                $search = trim((string) $request->query('search'));
+                $unattendedQuery->where(function ($q) use ($search) {
+                    $q->whereLike('name', "%{$search}%")
+                        ->orWhereLike('nip', "%{$search}%");
+                });
+            }
+
+            $unattendedPaginated = $unattendedQuery->orderBy('name')->paginate($perPage);
+
+            $data = $unattendedPaginated->getCollection()->map(function (User $user) use ($agenda) {
+                return [
+                    'id' => $user->id,
+                    'agenda_id' => $agenda->id,
+                    'user_id' => $user->id,
+                    'user' => (new UserResource($user))->resolve(),
+                    'signed_at' => null,
+                    'selfie_url' => null,
+                    'signature_url' => null,
+                    'ip_address' => null,
+                    'user_agent' => null,
+                    'status' => 'belum_hadir',
+                    'created_at' => null,
+                    'updated_at' => null,
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Daftar ASN yang belum presensi berhasil diambil.',
+                'data' => $data,
+                'meta' => [
+                    'current_page' => $unattendedPaginated->currentPage(),
+                    'last_page' => $unattendedPaginated->lastPage(),
+                    'per_page' => $unattendedPaginated->perPage(),
+                    'total' => $unattendedPaginated->total(),
+                ],
+                'summary' => $summary,
+            ]);
+        }
+
+        $attendancesQuery = $agenda->attendances()
             ->with(['user.unit'])
-            ->latest('signed_at')
-            ->paginate($perPage);
+            ->latest('signed_at');
+
+        if ($request->filled('search')) {
+            $search = trim((string) $request->query('search'));
+            $attendancesQuery->whereHas('user', function ($q) use ($search) {
+                $q->whereLike('name', "%{$search}%")
+                    ->orWhereLike('nip', "%{$search}%");
+            });
+        }
+
+        $attendances = $attendancesQuery->paginate($perPage);
 
         return response()->json([
             'success' => true,
@@ -177,6 +251,7 @@ class AttendanceController extends Controller
                 'per_page' => $attendances->perPage(),
                 'total' => $attendances->total(),
             ],
+            'summary' => $summary,
         ]);
     }
 

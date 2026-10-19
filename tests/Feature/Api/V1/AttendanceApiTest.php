@@ -118,7 +118,56 @@ class AttendanceApiTest extends TestCase
                 'message',
                 'data',
                 'meta',
+                'summary' => [
+                    'total_invited',
+                    'total_attended',
+                    'unattended_count',
+                    'participation_rate',
+                    'participation_rate_label',
+                ],
             ]);
+    }
+
+    public function test_admin_can_filter_unattended_attendances_list(): void
+    {
+        $admin = User::where('role', 'administrator')->first();
+        $agenda = Agenda::first();
+        $this->assertNotNull($admin);
+        $this->assertNotNull($agenda);
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->getJson("/api/v1/agendas/{$agenda->id}/attendances?status=unattended");
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonStructure([
+                'success',
+                'message',
+                'data' => [
+                    '*' => [
+                        'id',
+                        'agenda_id',
+                        'user_id',
+                        'user' => [
+                            'id',
+                            'name',
+                            'nip',
+                        ],
+                        'signed_at',
+                        'status',
+                    ],
+                ],
+                'meta' => ['current_page', 'last_page', 'per_page', 'total'],
+                'summary' => [
+                    'total_invited',
+                    'total_attended',
+                    'unattended_count',
+                    'participation_rate',
+                    'participation_rate_label',
+                ],
+            ]);
+
+        $this->assertEquals('belum_hadir', $response->json('data.0.status'));
     }
 
     public function test_user_can_view_portal_feed_via_api(): void

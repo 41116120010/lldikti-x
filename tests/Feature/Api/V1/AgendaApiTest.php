@@ -103,6 +103,17 @@ class AgendaApiTest extends TestCase
                     'status' => ['value', 'label'],
                     'surat_edaran',
                     'creator',
+                    'nomor_ba',
+                    'total_invited',
+                    'total_attended',
+                    'unattended_count',
+                    'participation_rate',
+                    'participation_rate_label',
+                    'export_links' => [
+                        'pdf',
+                        'word',
+                        'csv',
+                    ],
                 ],
             ]);
     }

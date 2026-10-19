@@ -14,6 +14,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -90,6 +91,7 @@ class ReportController extends Controller
                 'export_links' => [
                     'pdf' => url("/api/v1/reports/agendas/{$agenda->id}/export/pdf"),
                     'word' => url("/api/v1/reports/agendas/{$agenda->id}/export/word"),
+                    'csv' => url("/api/v1/reports/agendas/{$agenda->id}/export/csv"),
                 ],
             ],
         ]);
@@ -135,6 +137,83 @@ class ReportController extends Controller
         $config = $agenda->resolved_report_config;
 
         return $docxService->exportBeritaAcara($agenda, $config);
+    }
+
+    /**
+     * Export attendance tabulation of a specific agenda to CSV spreadsheet for mobile clients.
+     */
+    public function exportAgendaCsv(Request $request, Agenda $agenda): StreamedResponse
+    {
+        Gate::authorize('view', $agenda);
+
+        ActivityLogger::log(
+            type: 'EXPORT_AGENDA_CSV_API',
+            description: "Mengekspor tabulasi kehadiran CSV via API Mobile untuk agenda: {$agenda->judul_rapat}",
+            targetModel: Agenda::class,
+            targetId: $agenda->id
+        );
+
+        $safeSlug = Str::slug($agenda->judul_rapat, '_');
+        $filename = "Daftar_Hadir_{$safeSlug}_" . date('Ymd_His') . ".csv";
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ];
+
+        $callback = function () use ($agenda) {
+            $file = fopen('php://output', 'w');
+            // Add UTF-8 BOM for Excel compatibility
+            fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+            // CSV Header Row
+            fputcsv($file, [
+                'No',
+                'Nama ASN',
+                'NIP',
+                'Jabatan',
+                'Unit Kerja',
+                'Waktu Presensi',
+                'Format Kehadiran',
+                'Status Presensi',
+                'IP Address',
+            ]);
+
+            $index = 0;
+            $formatKehadiran = strtoupper($agenda->tipe_rapat ?? 'LURING');
+
+            $agenda->attendances()
+                ->with(['user.unit'])
+                ->oldest('signed_at')
+                ->chunk(200, function ($attendances) use ($file, &$index, $formatKehadiran) {
+                    foreach ($attendances as $attendance) {
+                        $index++;
+
+                        $safeName = $this->sanitizeCsvValue($attendance->user?->name ?? 'Pegawai');
+                        $safeNip = $this->sanitizeCsvValue($attendance->user?->nip ?? '-');
+                        $safeJabatan = $this->sanitizeCsvValue($attendance->user?->jabatan ?? '-');
+                        $safeUnit = $this->sanitizeCsvValue($attendance->user?->unit?->nama_unit ?? '-');
+                        $waktuPresensi = $attendance->signed_at ? $attendance->signed_at->format('d/m/Y H:i:s') : '-';
+                        $safeIp = $this->sanitizeCsvValue($attendance->ip_address ?? '-');
+
+                        fputcsv($file, [
+                            $index,
+                            $safeName,
+                            $safeNip,
+                            $safeJabatan,
+                            $safeUnit,
+                            $waktuPresensi,
+                            $formatKehadiran,
+                            'Hadir Sah',
+                            $safeIp,
+                        ]);
+                    }
+                });
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 
     /**

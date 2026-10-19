@@ -58,6 +58,17 @@ class AgendaResource extends JsonResource
             'kesimpulan_html' => $this->formatted_kesimpulan,
             'documentations' => DocumentationResource::collection($this->whenLoaded('documentations')),
             'attendances' => AttendanceResource::collection($this->whenLoaded('attendances')),
+            'nomor_ba' => $this->nomor_ba,
+            'total_invited' => $this->total_invited,
+            'total_attended' => $this->total_attended,
+            'unattended_count' => $this->unattended_count,
+            'participation_rate' => $this->participation_rate,
+            'participation_rate_label' => $this->participation_rate_label,
+            'export_links' => [
+                'pdf' => url("/api/v1/reports/agendas/{$this->id}/export/pdf"),
+                'word' => url("/api/v1/reports/agendas/{$this->id}/export/word"),
+                'csv' => url("/api/v1/reports/agendas/{$this->id}/export/csv"),
+            ],
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

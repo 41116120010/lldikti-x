@@ -76,6 +76,12 @@ class DashboardAndReportApiTest extends TestCase
     public function test_admin_unit_can_access_dashboard_summary_with_unit_scoped_stats(): void
     {
         $adminUnit = User::where('role', 'admin')->first();
+        if (! $adminUnit) {
+            $staff = User::where('role', 'staff')->first();
+            $this->assertNotNull($staff);
+            $staff->update(['role' => 'admin']);
+            $adminUnit = $staff->fresh();
+        }
         $this->assertNotNull($adminUnit);
 
         $response = $this->actingAs($adminUnit, 'sanctum')
@@ -156,6 +162,7 @@ class DashboardAndReportApiTest extends TestCase
                     'export_links' => [
                         'pdf',
                         'word',
+                        'csv',
                     ],
                 ],
             ]);
@@ -251,6 +258,27 @@ class DashboardAndReportApiTest extends TestCase
             str_contains((string) $response->headers->get('Content-Type'), 'application/msword') ||
             str_contains((string) $response->headers->get('Content-Type'), 'text/html')
         );
+    }
+
+    public function test_user_can_download_agenda_csv_report_via_api(): void
+    {
+        $admin = User::where('role', 'administrator')->first();
+        $agenda = Agenda::first();
+        $this->assertNotNull($admin);
+        $this->assertNotNull($agenda);
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->get("/api/v1/reports/agendas/{$agenda->id}/export/csv");
+
+        $response->assertOk();
+        $this->assertStringContainsString('text/csv', (string) $response->headers->get('Content-Type'));
+        $this->assertStringContainsString('attachment; filename="Daftar_Hadir_', (string) $response->headers->get('Content-Disposition'));
+
+        $content = $response->streamedContent();
+        $this->assertStringContainsString('Nama ASN', $content);
+        $this->assertStringContainsString('NIP', $content);
+        $this->assertStringContainsString('Format Kehadiran', $content);
+        $this->assertStringContainsString('Status Presensi', $content);
     }
 }
 
