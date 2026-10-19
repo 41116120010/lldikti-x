@@ -34,18 +34,61 @@ class DashboardController extends Controller
             'upcoming_agendas'  => Agenda::visibleTo($user)->upcoming()->count(),
         ];
 
+        $completedAgendas = (int) ($agendaCounts->completed ?? 0);
+
         if ($user->isAdministrator()) {
             $stats['total_users'] = User::count();
             $stats['total_units'] = Unit::count();
             $stats['total_attendances'] = Attendance::count();
+
+            $totalActiveUsers = User::where('is_active', true)->count();
+            $completedAttendances = Attendance::whereHas('agenda', fn ($q) => $q->where('status', 'completed'))->count();
+            $expected = $completedAgendas * max($totalActiveUsers, 1);
+            $rate = ($completedAgendas === 0 || $totalActiveUsers === 0)
+                ? 100.0
+                : round(min(($completedAttendances / max($expected, 1)) * 100, 100.0), 1);
+
+            $stats['attendance_rate'] = $rate;
+            $stats['attendance_rate_label'] = "{$rate}%";
+            $stats['attendance_rate_subtext'] = $completedAgendas > 0
+                ? "Rata-rata Seluruh ASN ({$completedAgendas} Rapat)"
+                : 'Belum ada rapat dinas selesai';
         } elseif ($user->isAdmin()) {
             $stats['total_users'] = User::forUnit($user->unit_id)->count();
             $stats['total_attendances'] = Attendance::whereHas('user', function ($q) use ($user) {
                 $q->where('unit_id', $user->unit_id);
             })->count();
+
+            $unitUsersCount = $stats['total_users'];
+            $unitCompletedAttendances = Attendance::whereHas('user', fn ($q) => $q->where('unit_id', $user->unit_id))
+                ->whereHas('agenda', fn ($q) => $q->where('status', 'completed'))
+                ->count();
+            $expected = $completedAgendas * max($unitUsersCount, 1);
+            $rate = ($completedAgendas === 0 || $unitUsersCount === 0)
+                ? 100.0
+                : round(min(($unitCompletedAttendances / max($expected, 1)) * 100, 100.0), 1);
+
+            $stats['attendance_rate'] = $rate;
+            $stats['attendance_rate_label'] = "{$rate}%";
+            $stats['attendance_rate_subtext'] = $completedAgendas > 0
+                ? "Kehadiran Unit ({$unitUsersCount} Pegawai)"
+                : 'Belum ada rapat dinas selesai';
         } else {
             // Staff
             $stats['my_attendances'] = Attendance::where('user_id', $user->id)->count();
+
+            $myCompletedAttendances = Attendance::where('user_id', $user->id)
+                ->whereHas('agenda', fn ($q) => $q->where('status', 'completed'))
+                ->count();
+            $rate = ($completedAgendas === 0)
+                ? 100.0
+                : round(min(($myCompletedAttendances / $completedAgendas) * 100, 100.0), 1);
+
+            $stats['attendance_rate'] = $rate;
+            $stats['attendance_rate_label'] = "{$rate}%";
+            $stats['attendance_rate_subtext'] = $completedAgendas > 0
+                ? "Dari {$completedAgendas} Rapat Selesai"
+                : 'Belum ada rapat dinas selesai';
         }
 
         // Active / Ongoing Agendas available right now with pagination, prioritized by ongoing first.

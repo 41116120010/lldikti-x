@@ -45,7 +45,14 @@
                 </div>
                 <div>
                     <label>Total Pengguna</label>
-                    <div class="font-bold text-2xl text-slate-900 font-mono mt-0.5">{{ $stats['total_users'] ?? 0 }}</div>
+                    <div class="font-bold text-2xl text-slate-900 font-mono mt-0.5 flex items-baseline gap-2">
+                        <span>{{ $stats['total_users'] ?? 0 }}</span>
+                        @if(isset($stats['attendance_rate_label']))
+                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200" title="{{ $stats['attendance_rate_subtext'] ?? '' }}">
+                                {{ $stats['attendance_rate_label'] }}
+                            </span>
+                        @endif
+                    </div>
                 </div>
             </div>
         @elseif($user->isAdmin())
@@ -55,7 +62,14 @@
                 </div>
                 <div>
                     <label>Pegawai di Unit</label>
-                    <div class="font-bold text-2xl text-slate-900 font-mono mt-0.5">{{ $stats['total_users'] ?? 0 }}</div>
+                    <div class="font-bold text-2xl text-slate-900 font-mono mt-0.5 flex items-baseline gap-2">
+                        <span>{{ $stats['total_users'] ?? 0 }}</span>
+                        @if(isset($stats['attendance_rate_label']))
+                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200" title="{{ $stats['attendance_rate_subtext'] ?? '' }}">
+                                {{ $stats['attendance_rate_label'] }}
+                            </span>
+                        @endif
+                    </div>
                 </div>
             </div>
         @else
@@ -65,7 +79,14 @@
                 </div>
                 <div>
                     <label>Riwayat Kehadiran</label>
-                    <div class="font-bold text-2xl text-slate-900 font-mono mt-0.5">{{ $stats['my_attendances'] ?? 0 }} <span class="text-sm font-sans font-semibold text-slate-600">Kali</span></div>
+                    <div class="font-bold text-2xl text-slate-900 font-mono mt-0.5 flex items-baseline gap-2">
+                        <span>{{ $stats['my_attendances'] ?? 0 }} <span class="text-sm font-sans font-semibold text-slate-600">Kali</span></span>
+                        @if(isset($stats['attendance_rate_label']))
+                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200" title="{{ $stats['attendance_rate_subtext'] ?? '' }}">
+                                {{ $stats['attendance_rate_label'] }}
+                            </span>
+                        @endif
+                    </div>
                 </div>
             </div>
         @endif

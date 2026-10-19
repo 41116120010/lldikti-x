@@ -190,7 +190,29 @@ Sesuai aturan keamanan instansi (**AGENTS.md §3.2 & §3.6**):
 #### 1. Ringkasan Dashboard
 * **Endpoint:** `GET /api/v1/dashboard`
 * **Headers:** `Authorization: Bearer <token>`
-* **Response (200 OK):**
+* **Deskripsi:** Mengembalikan metrik telemetri kinerja kehadiran, daftar agenda aktif/terdekat untuk dashboard, dan riwayat presensi terbaru pengguna yang diautentikasi.
+* **Response untuk Pegawai (Staff ASN) (200 OK):**
+  ```json
+  {
+    "success": true,
+    "message": "Data dashboard berhasil diambil.",
+    "data": {
+      "stats": {
+        "total_agendas": 12,
+        "ongoing_agendas": 1,
+        "completed_agendas": 9,
+        "upcoming_agendas": 2,
+        "my_attendances": 8,
+        "attendance_rate": 88.9,
+        "attendance_rate_label": "88.9%",
+        "attendance_rate_subtext": "Dari 9 Rapat Selesai"
+      },
+      "active_agendas": [ ... ],
+      "recent_attendances": [ ... ]
+    }
+  }
+  ```
+* **Response untuk Administrator (200 OK):**
   ```json
   {
     "success": true,
@@ -203,13 +225,87 @@ Sesuai aturan keamanan instansi (**AGENTS.md §3.2 & §3.6**):
         "upcoming_agendas": 2,
         "total_users": 79,
         "total_units": 12,
-        "total_attendances": 142
+        "total_attendances": 142,
+        "attendance_rate": 91.2,
+        "attendance_rate_label": "91.2%",
+        "attendance_rate_subtext": "Rata-rata Seluruh ASN (9 Rapat)"
       },
       "active_agendas": [ ... ],
       "recent_attendances": [ ... ]
     }
   }
   ```
+* **Response untuk Admin Unit Kerja (200 OK):**
+  ```json
+  {
+    "success": true,
+    "message": "Data dashboard berhasil diambil.",
+    "data": {
+      "stats": {
+        "total_agendas": 12,
+        "ongoing_agendas": 1,
+        "completed_agendas": 9,
+        "upcoming_agendas": 2,
+        "total_users": 8,
+        "total_attendances": 32,
+        "attendance_rate": 85.0,
+        "attendance_rate_label": "85.0%",
+        "attendance_rate_subtext": "Kehadiran Unit (8 Pegawai)"
+      },
+      "active_agendas": [ ... ],
+      "recent_attendances": [ ... ]
+    }
+  }
+  ```
+
+#### 2. Kamus Properti Statistik (`stats`)
+| Properti | Tipe | Deskripsi & Peran Pengguna |
+| :--- | :--- | :--- |
+| `total_agendas` | `integer` | Total seluruh agenda rapat dinas yang terlihat oleh pengguna. |
+| `ongoing_agendas` | `integer` | Jumlah rapat dinas yang saat ini sedang berlangsung (`status = ongoing`). |
+| `upcoming_agendas` | `integer` | Jumlah rapat dinas terjadwal mendatang (`status = scheduled`). |
+| `completed_agendas` | `integer` | Jumlah rapat dinas yang telah selesai dilaksanakan (`status = completed`). |
+| `my_attendances` | `integer` | *(Khusus Staff)* Jumlah seluruh presensi kehadiran yang tercatat atas nama pengguna. |
+| `total_users` | `integer` | *(Admin/Administrator)* Total pengguna aktif (instansi atau unit terkait). |
+| `total_units` | `integer` | *(Khusus Administrator)* Total unit kerja resmi yang terdaftar di instansi. |
+| `total_attendances` | `integer` | *(Admin/Administrator)* Total presensi ASN (instansi atau unit terkait). |
+| `attendance_rate` | `float` | Persentase tingkat kehadiran ASN (0.0 - 100.0). |
+| `attendance_rate_label` | `string` | Format string siap saji untuk kartu metrik UI (contoh: `"88.9%"` atau `"100.0%"`). |
+| `attendance_rate_subtext` | `string` | Keterangan deskriptif (contoh: `"Dari 9 Rapat Selesai"` atau `"Belum ada rapat dinas selesai"`). |
+
+#### 3. Panduan Integrasi Klien Mobile (React Native / Android)
+
+##### A. Pemetaan Komponen BentoGrid Telemetri
+* **Kartu 1 (Presensi Rapat):**
+  * Nilai Utama (`value`): `stats.my_attendances ?? stats.total_attendances ?? '0'`
+  * Sub-nilai (`subValue`): `'Tercatat'`
+* **Kartu 2 (Jadwal Mendatang):**
+  * Nilai Utama (`value`): `String(stats.upcoming_agendas ?? 0)`
+  * Sub-nilai (`subValue`): `'Agenda'`
+* **Kartu 3 (Tingkat Kehadiran):**
+  * Nilai Utama (`value`): `stats.attendance_rate_label ?? (stats.attendance_rate !== undefined ? `${stats.attendance_rate}%` : '—')`
+  * Sub-nilai (`subValue`): `stats.attendance_rate_subtext ?? 'Tidak tersedia'`
+
+##### B. Pemetaan Tab Kategori Rapat (Horizontal Category Pills)
+Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agendas`:
+* **Tab "Semua":**
+  * Counter Badge: `stats.total_agendas`
+  * Panggilan API: `GET /api/v1/agendas?page=1`
+* **Tab "Berlangsung":**
+  * Counter Badge: `stats.ongoing_agendas`
+  * Panggilan API: `GET /api/v1/agendas?status=ongoing&page=1`
+* **Tab "Mendatang":**
+  * Counter Badge: `stats.upcoming_agendas`
+  * Panggilan API: `GET /api/v1/agendas?status=scheduled&page=1`
+* **Tab "Selesai":**
+  * Counter Badge: `stats.completed_agendas`
+  * Panggilan API: `GET /api/v1/agendas?status=completed&page=1`
+
+##### C. Tombol Aksi pada Kartu Rapat Aktif (`active_agendas`)
+* **Tombol "Buka PDF Undangan":** Membuka URL `agenda.surat_edaran.url` jika tersedia (bernilai `null` jika tidak diunggah).
+* **Tombol "Join Meeting":** Membuka tautan video conference `agenda.link_meeting` (Zoom, Google Meet, dll.).
+* **Tombol "Presensi Sekarang":** Aktif secara otomatis saat `agenda.status.value === 'ongoing'` dan `agenda.is_eligible === true` serta `agenda.has_attended === false`.
+
 
 ---
 

@@ -30,11 +30,92 @@ class DashboardAndReportApiTest extends TestCase
                         'ongoing_agendas',
                         'completed_agendas',
                         'upcoming_agendas',
+                        'total_users',
+                        'total_units',
+                        'total_attendances',
+                        'attendance_rate',
+                        'attendance_rate_label',
+                        'attendance_rate_subtext',
                     ],
                     'active_agendas',
                     'recent_attendances',
                 ],
             ]);
+    }
+
+    public function test_staff_can_access_dashboard_summary_with_personal_attendance_rate(): void
+    {
+        $staff = User::where('role', 'staff')->first();
+        $this->assertNotNull($staff);
+
+        $response = $this->actingAs($staff, 'sanctum')
+            ->getJson('/api/v1/dashboard');
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonStructure([
+                'data' => [
+                    'stats' => [
+                        'total_agendas',
+                        'ongoing_agendas',
+                        'completed_agendas',
+                        'upcoming_agendas',
+                        'my_attendances',
+                        'attendance_rate',
+                        'attendance_rate_label',
+                        'attendance_rate_subtext',
+                    ],
+                ],
+            ]);
+
+        $this->assertIsNumeric($response->json('data.stats.attendance_rate'));
+        $this->assertStringContainsString('%', $response->json('data.stats.attendance_rate_label'));
+        $this->assertNotEmpty($response->json('data.stats.attendance_rate_subtext'));
+    }
+
+    public function test_admin_unit_can_access_dashboard_summary_with_unit_scoped_stats(): void
+    {
+        $adminUnit = User::where('role', 'admin')->first();
+        $this->assertNotNull($adminUnit);
+
+        $response = $this->actingAs($adminUnit, 'sanctum')
+            ->getJson('/api/v1/dashboard');
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonStructure([
+                'data' => [
+                    'stats' => [
+                        'total_agendas',
+                        'ongoing_agendas',
+                        'completed_agendas',
+                        'upcoming_agendas',
+                        'total_users',
+                        'total_attendances',
+                        'attendance_rate',
+                        'attendance_rate_label',
+                        'attendance_rate_subtext',
+                    ],
+                ],
+            ]);
+    }
+
+    public function test_dashboard_category_tabs_endpoints_respond_with_correct_status_filters(): void
+    {
+        $staff = User::where('role', 'staff')->first();
+        $this->assertNotNull($staff);
+
+        foreach (['scheduled', 'ongoing', 'completed'] as $status) {
+            $response = $this->actingAs($staff, 'sanctum')
+                ->getJson("/api/v1/agendas?status={$status}&page=1");
+
+            $response->assertOk()
+                ->assertJsonPath('success', true)
+                ->assertJsonStructure([
+                    'data',
+                    'meta' => ['current_page', 'last_page', 'per_page', 'total'],
+                ]);
+        }
     }
 
     public function test_user_can_access_report_summary(): void
