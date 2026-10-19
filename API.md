@@ -690,6 +690,100 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
   }
   ```
 
+#### 8. Detail Tanda Terima Presensi (Single Attendance Receipt)
+* **Endpoint:** `GET /api/v1/attendances/{id}`
+* **Alias Endpoint:** `GET /api/v1/attendances/{id}/receipt`
+* **Headers:** `Authorization: Bearer <token>`
+* **Otorisasi:** `AttendancePolicy::view`. Pegawai pemilik kehadiran (`$user->id === $attendance->user_id`), Admin Unit terkait, atau Administrator. (Akses ke ID kehadiran milik pegawai lain tanpa wewenang akan ditolak dengan `403 Forbidden`).
+* **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "message": "Detail tanda terima presensi berhasil diambil.",
+    "data": {
+      "id": 101,
+      "agenda_id": 1,
+      "user_id": 7,
+      "verification_token": "SIP-20261019-1-101-E4F2B1A9",
+      "user": {
+        "id": 7,
+        "name": "Prof. Dr. Ir. Budi Santoso, M.T.",
+        "nip": "197508101999031002",
+        "email": "budi.santoso@lldikti.go.id",
+        "jabatan": "Ketua Kelompok Kerja",
+        "role": {
+          "value": "staff",
+          "label": "Pegawai / Peserta"
+        },
+        "unit": {
+          "id": 2,
+          "nama_unit": "Subbagian Akademik & Kemahasiswaan",
+          "kode_unit": "AKAD"
+        }
+      },
+      "agenda": {
+        "id": 1,
+        "judul_rapat": "Rapat Koordinasi Evaluasi Pelaporan PDDikti Semester Genap",
+        "slug": "rakor-evaluasi-pddikti-genap-2026",
+        "jenis_rapat": "koordinasi",
+        "tipe_rapat": "hybrid",
+        "format_kedinasan": "Hybrid (Luring di Ruang Sidang Utama Lantai 2 & Daring via Tautan Virtual)",
+        "lokasi_ruang": "Ruang Sidang Utama Lantai 2, Gedung LLDIKTI",
+        "link_meeting": "https://zoom.us/j/1234567890?pwd=lldikti-rakor",
+        "waktu_mulai": "2026-10-19T09:00:00+07:00",
+        "waktu_selesai": "2026-10-19T12:00:00+07:00",
+        "rentang_waktu": "09:00 - 12:00 WIB",
+        "jadwal_lengkap": "Senin, 19 Oktober 2026 • 09:00 - 12:00 WIB",
+        "status": {
+          "value": "completed",
+          "label": "Selesai"
+        },
+        "nomor_ba": "BA-RAPAT/2026/0001"
+      },
+      "receipt": {
+        "nomor_bukti": "SIP-20261019-1-101-E4F2B1A9",
+        "verification_token": "SIP-20261019-1-101-E4F2B1A9",
+        "institutional_header": {
+          "kementerian": "KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI",
+          "instansi": "LEMBAGA LAYANAN PENDIDIKAN TINGGI WILAYAH X",
+          "alamat": "Jl. Khatib Sulaiman Padang, Sumatera Barat"
+        },
+        "meeting": {
+          "judul_rapat": "Rapat Koordinasi Evaluasi Pelaporan PDDikti Semester Genap",
+          "nomor_ba": "BA-RAPAT/2026/0001",
+          "format_kedinasan": "Hybrid (Luring di Ruang Sidang Utama Lantai 2 & Daring via Tautan Virtual)",
+          "tipe_rapat": "hybrid",
+          "lokasi_ruang": "Ruang Sidang Utama Lantai 2, Gedung LLDIKTI",
+          "link_meeting": "https://zoom.us/j/1234567890?pwd=lldikti-rakor",
+          "rentang_waktu": "09:00 - 12:00 WIB",
+          "jadwal_lengkap": "Senin, 19 Oktober 2026 • 09:00 - 12:00 WIB"
+        },
+        "participant": {
+          "name": "Prof. Dr. Ir. Budi Santoso, M.T.",
+          "nip": "197508101999031002",
+          "jabatan": "Pegawai / Peserta",
+          "unit_kerja": "Subbagian Akademik & Kemahasiswaan"
+        },
+        "validation": {
+          "status": "tercatat",
+          "status_label": "Hadir Sah Terverifikasi",
+          "metode_verifikasi": "Swafoto Wajah & Tanda Tangan Digital",
+          "ip_address": "192.168.1.100",
+          "user_agent": "SIPERAPAT-Android/1.0",
+          "signed_at": "2026-10-19T09:14:22+07:00"
+        }
+      },
+      "signed_at": "2026-10-19T09:14:22+07:00",
+      "selfie_url": "https://siperapat.lldikti.go.id/api/v1/attendances/101/selfie",
+      "signature_url": "https://siperapat.lldikti.go.id/api/v1/attendances/101/signature",
+      "ip_address": "192.168.1.100",
+      "user_agent": "SIPERAPAT-Android/1.0",
+      "created_at": "2026-10-19T09:14:22+07:00",
+      "updated_at": "2026-10-19T09:14:22+07:00"
+    }
+  }
+  ```
+
 ---
 
 ### 4.5. Manajemen Pengguna (Users)
@@ -783,7 +877,7 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
 
 ---
 
-### 4.10. Matriks Hak Akses RBAC 43 Endpoint REST API v1
+### 4.10. Matriks Hak Akses RBAC 44 Endpoint REST API v1
 
 ```
 ┌────┬────────────────────────────────────────────────┬───────────────┬────────────┬─────────┐
@@ -811,27 +905,28 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
 │ 20 │ POST   /api/v1/agendas/{id}/attendances        │ Ya            │ Ya         │ Ya      │
 │ 21 │ GET    /api/v1/agendas/{id}/attendances        │ Ya            │ Ya (Scoped)│ ❌ (403)│
 │ 22 │ GET    /api/v1/attendances/my-history          │ Ya            │ Ya         │ Ya      │
-│ 23 │ GET    /api/v1/attendances/{id}/selfie         │ Ya            │ Ya (Scoped)│ Ya(Milik│
-│ 24 │ GET    /api/v1/attendances/{id}/signature      │ Ya            │ Ya (Scoped)│ Ya(Milik│
-│ 25 │ GET    /api/v1/users                           │ Ya (Semua)    │ Ya (Scoped)│ ❌ (403)│
-│ 26 │ POST   /api/v1/users                           │ Ya            │ Ya (Scoped)│ ❌ (403)│
-│ 27 │ GET    /api/v1/users/{id}                      │ Ya            │ Ya (Scoped)│ ❌ (403)│
-│ 28 │ PUT    /api/v1/users/{id}                      │ Ya            │ Ya (Scoped)│ ❌ (403)│
-│ 29 │ DELETE /api/v1/users/{id}                      │ Ya            │ Ya (Scoped)│ ❌ (403)│
-│ 30 │ PATCH  /api/v1/users/{id}/toggle-status        │ Ya            │ Ya (Scoped)│ ❌ (403)│
-│ 31 │ GET    /api/v1/units                           │ Ya (Semua)    │ Ya (Baca)  │ Ya(Baca)│
-│ 32 │ POST   /api/v1/units                           │ Ya            │ ❌ (403)   │ ❌ (403)│
-│ 33 │ GET    /api/v1/units/{id}                      │ Ya            │ Ya         │ Ya      │
-│ 34 │ PUT    /api/v1/units/{id}                      │ Ya            │ ❌ (403)   │ ❌ (403)│
-│ 35 │ DELETE /api/v1/units/{id}                      │ Ya            │ ❌ (403)   │ ❌ (403)│
-│ 36 │ PATCH  /api/v1/units/{id}/toggle-status        │ Ya            │ ❌ (403)   │ ❌ (403)│
-│ 37 │ GET    /api/v1/reports/summary                 │ Ya (Semua)    │ Ya (Scoped)│ Ya      │
-│ 38 │ GET    /api/v1/reports/summary/csv             │ Ya (Semua)    │ Ya (Scoped)│ Ya      │
-│ 39 │ GET    /api/v1/reports/agendas/{id}            │ Ya            │ Ya (Scoped)│ ❌ (403)│
-│ 40 │ POST   /api/v1/reports/agendas/{id}/config/rst │ Ya            │ Ya (Scoped)│ ❌ (403)│
-│ 41 │ GET    /api/v1/reports/agendas/{id}/export/pdf │ Ya            │ Ya (Scoped)│ ❌ (403)│
-│ 42 │ GET    /api/v1/reports/agendas/{id}/export/word│ Ya            │ Ya (Scoped)│ ❌ (403)│
-│ 43 │ GET    /api/v1/reports/agendas/{id}/export/csv │ Ya            │ Ya (Scoped)│ ❌ (403)│
+│ 23 │ GET    /api/v1/attendances/{id}                │ Ya            │ Ya (Scoped)│ Ya(Milik│
+│ 24 │ GET    /api/v1/attendances/{id}/selfie         │ Ya            │ Ya (Scoped)│ Ya(Milik│
+│ 25 │ GET    /api/v1/attendances/{id}/signature      │ Ya            │ Ya (Scoped)│ Ya(Milik│
+│ 26 │ GET    /api/v1/users                           │ Ya (Semua)    │ Ya (Scoped)│ ❌ (403)│
+│ 27 │ POST   /api/v1/users                           │ Ya            │ Ya (Scoped)│ ❌ (403)│
+│ 28 │ GET    /api/v1/users/{id}                      │ Ya            │ Ya (Scoped)│ ❌ (403)│
+│ 29 │ PUT    /api/v1/users/{id}                      │ Ya            │ Ya (Scoped)│ ❌ (403)│
+│ 30 │ DELETE /api/v1/users/{id}                      │ Ya            │ Ya (Scoped)│ ❌ (403)│
+│ 31 │ PATCH  /api/v1/users/{id}/toggle-status        │ Ya            │ Ya (Scoped)│ ❌ (403)│
+│ 32 │ GET    /api/v1/units                           │ Ya (Semua)    │ Ya (Baca)  │ Ya(Baca)│
+│ 33 │ POST   /api/v1/units                           │ Ya            │ ❌ (403)   │ ❌ (403)│
+│ 34 │ GET    /api/v1/units/{id}                      │ Ya            │ Ya         │ Ya      │
+│ 35 │ PUT    /api/v1/units/{id}                      │ Ya            │ ❌ (403)   │ ❌ (403)│
+│ 36 │ DELETE /api/v1/units/{id}                      │ Ya            │ ❌ (403)   │ ❌ (403)│
+│ 37 │ PATCH  /api/v1/units/{id}/toggle-status        │ Ya            │ ❌ (403)   │ ❌ (403)│
+│ 38 │ GET    /api/v1/reports/summary                 │ Ya (Semua)    │ Ya (Scoped)│ Ya      │
+│ 39 │ GET    /api/v1/reports/summary/csv             │ Ya (Semua)    │ Ya (Scoped)│ Ya      │
+│ 40 │ GET    /api/v1/reports/agendas/{id}            │ Ya            │ Ya (Scoped)│ ❌ (403)│
+│ 41 │ POST   /api/v1/reports/agendas/{id}/config/rst │ Ya            │ Ya (Scoped)│ ❌ (403)│
+│ 42 │ GET    /api/v1/reports/agendas/{id}/export/pdf │ Ya            │ Ya (Scoped)│ ❌ (403)│
+│ 43 │ GET    /api/v1/reports/agendas/{id}/export/word│ Ya            │ Ya (Scoped)│ ❌ (403)│
+│ 44 │ GET    /api/v1/reports/agendas/{id}/export/csv │ Ya            │ Ya (Scoped)│ ❌ (403)│
 └────┴────────────────────────────────────────────────┴───────────────┴────────────┴─────────┘
 *Keterangan: Ya(Notu) = Hanya jika pegawai bertugas sebagai Notulis rapat yang bersangkutan. 
 Ya(Milik) = Hanya jika data kehadiran tersebut adalah milik pegawai itu sendiri.*
@@ -1027,5 +1122,77 @@ Setiap item dalam array `data` pada respons `myHistory` kini telah diperkaya den
    * Ambil dari `item.agenda?.rentang_waktu` atau waktu presensi `item.signed_at`.
 6. **Aksi Tanda Terima:**
    * Tombol *"Tanda Terima"* tetap mengarahkan ke `onSelectReceipt(item.id)` dengan data presensi yang valid.
+
+---
+
+### 5.8. Panduan Integrasi Khusus Layar Tanda Terima Presensi (ReceiptScreen.tsx & PerforatedTicket.tsx)
+
+Bagi pengembang aplikasi mobile yang mengintegrasikan layar tanda terima presensi kedinasan ([`ReceiptScreen.tsx`](file:///home/daffiq/Documents/Semester-5/lldikti-x-mobile/siperapat/src/presentation/screens/ReceiptScreen.tsx) dan [`PerforatedTicket.tsx`](file:///home/daffiq/Documents/Semester-5/lldikti-x-mobile/siperapat/src/presentation/components/receipt/PerforatedTicket.tsx)), berikut adalah pedoman binding data dan pemanfaatan endpoint:
+
+#### A. Pengambilan Data Presensi Tunggal O(1) (Eliminasi Loop Paginasi)
+* **Endpoint:** `GET /api/v1/attendances/{id}` (atau alias `GET /api/v1/attendances/{id}/receipt`)
+* **Headers:** `Authorization: Bearer <token>`
+* **Optimasi Arsitektur:**
+  Sebelumnya pada `AttendanceRepositoryImpl.ts#getAttendanceById`, klien mobile terpaksa melakukan loop paginasi `while (page <= lastPage)` memanggil `getAttendanceHistory(page)` hanya untuk mencari 1 catatan presensi. Dengan adanya endpoint tunggal ini, klien dapat mengambil detail tanda terima secara instan dalam **1 HTTP Request tunggal ($O(1)$ complexity)**.
+
+  ```typescript
+  // Implementasi yang direkomendasikan pada AttendanceRepositoryImpl.ts:
+  async getAttendanceById(id: number): Promise<AttendanceReceipt> {
+    const response = await this.httpClient.get<ApiResponse<AttendanceDto>>(`/api/v1/attendances/${id}`);
+    if (!response.data.success || !response.data.data) {
+      throw new Error(response.data.message || 'Tanda terima presensi tidak ditemukan');
+    }
+    return AttendanceMapper.toReceipt(response.data.data);
+  }
+  ```
+
+#### B. Nomor Bukti Presensi & Token Kriptografis (PerforatedTicket Header)
+* **Sumber Data:** `data.verification_token` atau `data.receipt.nomor_bukti`.
+* **Format:** `SIP-{YYYYMMDD}-{agenda_id}-{attendance_id}-{SHORT_HASH}` (contoh: `SIP-20261019-1-101-E4F2B1A9`).
+* **Binding UI di `PerforatedTicket.tsx` (baris 38–41):**
+  Gantikan fallback text:
+  ```typescript
+  // SEBELUM (Fallback Hardcoded):
+  <Text style={styles.ticketId}>ID {attendance.id} • token tidak disediakan API</Text>
+
+  // SESUDAH (Terintegrasi Penuh):
+  <Text style={styles.ticketId}>{attendance.verification_token || `ID ${attendance.id}`}</Text>
+  ```
+
+#### C. Format Kedinasan & Lokasi Pertemuan (PerforatedTicket Meeting Box)
+* **Sumber Data:** `data.agenda.format_kedinasan` atau `data.receipt.meeting.format_kedinasan`.
+* **Format Nilai Dinamis:**
+  - Hybrid: `"Hybrid (Luring di Ruang Sidang Utama Lantai 2 & Daring via Tautan Virtual)"`
+  - Offline: `"Luring di Ruang Rapat Pimpinan Lantai 1"`
+  - Online: `"Daring via Tautan Virtual (https://zoom.us/...)"`
+* **Binding UI di `PerforatedTicket.tsx` (baris 74–80):**
+  Gantikan fallback text:
+  ```typescript
+  // SEBELUM (Fallback Hardcoded):
+  <Text style={styles.locationDetail}>Lokasi dan format tidak disediakan API</Text>
+
+  // SESUDAH (Terintegrasi Penuh):
+  <Text style={styles.locationDetail}>
+    {attendance.receipt?.meeting?.format_kedinasan || attendance.agenda?.format_kedinasan || 'Format kedinasan resmi LLDIKTI'}
+  </Text>
+  ```
+
+#### D. Metadata Institusional & Validasi Otentisitas
+Objek `data.receipt` menyediakan seluruh metadata kedinasan siap saji yang dibutuhkan untuk rendering tiket:
+1. **Header Instansi (`receipt.institutional_header`):**
+   - `kementerian`: `"KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI"`
+   - `instansi`: `"LEMBAGA LAYANAN PENDIDIKAN TINGGI WILAYAH X"`
+   - `alamat`: `"Jl. Khatib Sulaiman Padang, Sumatera Barat"`
+2. **Data Peserta (`receipt.participant`):**
+   - `name`: Nama lengkap ASN beserta gelar.
+   - `nip`: NIP resmi 18 digit.
+   - `jabatan`: Label peran/jabatan kedinasan ASN.
+   - `unit_kerja`: Nama subbagian / unit kerja ASN.
+3. **Validasi Bukti Presensi (`receipt.validation`):**
+   - `status`: `"tercatat"`
+   - `status_label`: `"Hadir Sah Terverifikasi"`
+   - `metode_verifikasi`: `"Swafoto Wajah & Tanda Tangan Digital"`
+   - `signed_at`: Stempel waktu ISO-8601 presensi ASN.
+   - `ip_address`: Alamat IP jaringan perangkat saat presensi.
 
 

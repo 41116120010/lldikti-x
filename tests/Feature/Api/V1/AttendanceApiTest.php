@@ -321,5 +321,115 @@ class AttendanceApiTest extends TestCase
                 ],
             ]);
     }
+
+    public function test_user_can_view_single_attendance_receipt(): void
+    {
+        $staff = User::where('role', 'staff')->first();
+        $agenda = Agenda::first();
+        $this->assertNotNull($staff);
+        $this->assertNotNull($agenda);
+
+        $attendance = \App\Models\Attendance::firstOrCreate(
+            ['agenda_id' => $agenda->id, 'user_id' => $staff->id],
+            [
+                'signed_at' => now(),
+                'ip_address' => '127.0.0.1',
+                'user_agent' => 'SIPERAPAT-Test/1.0',
+            ]
+        );
+
+        $response = $this->actingAs($staff, 'sanctum')
+            ->getJson("/api/v1/attendances/{$attendance->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.id', $attendance->id)
+            ->assertJsonPath('data.user_id', $staff->id)
+            ->assertJsonPath('data.verification_token', $attendance->verification_token)
+            ->assertJsonPath('data.receipt.nomor_bukti', $attendance->verification_token)
+            ->assertJsonPath('data.receipt.institutional_header.instansi', 'LEMBAGA LAYANAN PENDIDIKAN TINGGI WILAYAH X')
+            ->assertJsonPath('data.receipt.meeting.judul_rapat', $agenda->judul_rapat)
+            ->assertJsonPath('data.receipt.participant.name', $staff->name)
+            ->assertJsonPath('data.receipt.validation.status', 'tercatat');
+
+        $this->assertStringStartsWith('SIP-', $response->json('data.verification_token'));
+    }
+
+    public function test_user_can_view_single_attendance_receipt_via_alias(): void
+    {
+        $staff = User::where('role', 'staff')->first();
+        $agenda = Agenda::first();
+        $this->assertNotNull($staff);
+        $this->assertNotNull($agenda);
+
+        $attendance = \App\Models\Attendance::firstOrCreate(
+            ['agenda_id' => $agenda->id, 'user_id' => $staff->id],
+            [
+                'signed_at' => now(),
+                'ip_address' => '127.0.0.1',
+                'user_agent' => 'SIPERAPAT-Test/1.0',
+            ]
+        );
+
+        $response = $this->actingAs($staff, 'sanctum')
+            ->getJson("/api/v1/attendances/{$attendance->id}/receipt");
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.id', $attendance->id)
+            ->assertJsonPath('data.verification_token', $attendance->verification_token);
+    }
+
+    public function test_user_cannot_view_other_users_attendance_receipt(): void
+    {
+        $staffUsers = User::where('role', 'staff')->take(2)->get();
+        $this->assertCount(2, $staffUsers);
+        $staffA = $staffUsers[0];
+        $staffB = $staffUsers[1];
+
+        $agenda = Agenda::first();
+        $this->assertNotNull($agenda);
+
+        $attendanceA = \App\Models\Attendance::firstOrCreate(
+            ['agenda_id' => $agenda->id, 'user_id' => $staffA->id],
+            [
+                'signed_at' => now(),
+                'ip_address' => '127.0.0.1',
+                'user_agent' => 'SIPERAPAT-Test/1.0',
+            ]
+        );
+
+        // Staff B tries to access Staff A's receipt -> 403 Forbidden
+        $response = $this->actingAs($staffB, 'sanctum')
+            ->getJson("/api/v1/attendances/{$attendanceA->id}");
+
+        $response->assertForbidden();
+    }
+
+    public function test_administrator_can_view_any_attendance_receipt(): void
+    {
+        $admin = User::where('role', 'administrator')->first();
+        $staff = User::where('role', 'staff')->first();
+        $agenda = Agenda::first();
+        $this->assertNotNull($admin);
+        $this->assertNotNull($staff);
+        $this->assertNotNull($agenda);
+
+        $attendance = \App\Models\Attendance::firstOrCreate(
+            ['agenda_id' => $agenda->id, 'user_id' => $staff->id],
+            [
+                'signed_at' => now(),
+                'ip_address' => '127.0.0.1',
+                'user_agent' => 'SIPERAPAT-Test/1.0',
+            ]
+        );
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->getJson("/api/v1/attendances/{$attendance->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.id', $attendance->id);
+    }
 }
 

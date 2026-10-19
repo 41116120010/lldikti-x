@@ -515,6 +515,21 @@ class Agenda extends Model
     }
 
     /**
+     * Format deskripsi pelaksanaan rapat kedinasan untuk tampilan tanda terima & tiket presensi.
+     */
+    public function getFormatKedinasanAttribute(): string
+    {
+        $ruang = $this->lokasi_ruang ? trim($this->lokasi_ruang) : 'Ruang Rapat LLDIKTI';
+
+        return match ($this->tipe_rapat) {
+            'hybrid' => "Hybrid (Luring di {$ruang} & Daring via Tautan Virtual)",
+            'offline' => "Luring di {$ruang}",
+            'online' => $this->link_meeting ? "Daring via Tautan Virtual ({$this->link_meeting})" : 'Daring via Tautan Virtual',
+            default => "Luring di {$ruang}",
+        };
+    }
+
+    /**
      * Effective meeting leader (designated pimpinan or fallback to creator).
      */
     public function getEffectivePimpinanAttribute(): ?User

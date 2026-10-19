@@ -383,6 +383,22 @@ class AttendanceController extends Controller
     }
 
     /**
+     * Display a specific attendance record and official receipt.
+     */
+    public function show(Attendance $attendance): JsonResponse
+    {
+        Gate::authorize('view', $attendance);
+
+        $attendance->load(['user.unit', 'agenda.creator.unit']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Detail tanda terima presensi berhasil diambil.',
+            'data' => new AttendanceResource($attendance),
+        ]);
+    }
+
+    /**
      * Stream protected selfie file for authorized clients.
      */
     public function selfie(Attendance $attendance): Response

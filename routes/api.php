@@ -66,6 +66,8 @@ Route::prefix('v1')->group(function () {
             ->name('api.v1.agendas.attendances.store');
         Route::get('/agendas/{agenda}/attendances', [AttendanceController::class, 'agendaAttendances'])->name('api.v1.agendas.attendances.index');
         Route::get('/attendances/my-history', [AttendanceController::class, 'myHistory'])->name('api.v1.attendances.history');
+        Route::get('/attendances/{attendance}', [AttendanceController::class, 'show'])->name('api.v1.attendances.show');
+        Route::get('/attendances/{attendance}/receipt', [AttendanceController::class, 'show'])->name('api.v1.attendances.receipt');
 
         // Protected Biometric Media Streaming
         Route::get('/attendances/{attendance}/selfie', [AttendanceController::class, 'selfie'])->name('api.v1.attendances.selfie');

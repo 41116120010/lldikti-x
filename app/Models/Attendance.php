@@ -111,4 +111,17 @@ class Attendance extends Model
     {
         return $this->signature_path ? route('attendances.signature', $this) : null;
     }
+
+    /**
+     * Get deterministic verification token for official attendance receipt.
+     */
+    public function getVerificationTokenAttribute(): string
+    {
+        $dateStr = $this->signed_at ? $this->signed_at->format('Ymd') : ($this->created_at ? $this->created_at->format('Ymd') : date('Ymd'));
+        $appKey = (string) config('app.key', 'siperapat-default-secret');
+        $hashInput = "SIPERAPAT-{$this->id}-{$this->user_id}-{$this->agenda_id}-{$dateStr}-{$appKey}";
+        $shortHash = strtoupper(substr(hash('sha256', $hashInput), 0, 8));
+
+        return "SIP-{$dateStr}-{$this->agenda_id}-{$this->id}-{$shortHash}";
+    }
 }
