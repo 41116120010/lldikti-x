@@ -532,43 +532,105 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
 #### 2. Periksa Kesiapan Presensi Agenda (Portal Check Per-Agenda)
 * **Endpoint:** `GET /api/v1/agendas/{id}/attendance-portal`
 * **Headers:** `Authorization: Bearer <token>`
-* **Tujuan:** Dipanggil saat halaman presensi dibuka di mobile untuk memeriksa apakah sesi aktif, apakah user berhak hadir, dan apakah user sudah presensi sebelumnya.
+* **Tujuan:** Dipanggil saat halaman presensi dibuka di mobile (`PresensiScreen.tsx`) untuk memeriksa kesiapan sesi, status eligibility unit kerja, status presensi pengguna, serta menyajikan metadata konteks verifikasi lokasi sah dan waktu resmi server instansi.
 * **Response (200 OK):**
   ```json
   {
     "success": true,
     "message": "Status portal presensi berhasil diperiksa.",
     "data": {
-      "agenda": { ... },
+      "agenda": {
+        "id": 1,
+        "judul_rapat": "Rapat Koordinasi Evaluasi Pelaporan PDDikti Semester Genap",
+        "tipe_rapat": "hybrid",
+        "lokasi_ruang": "Ruang Sidang Utama Lantai 2, Gedung LLDIKTI",
+        "link_meeting": "https://zoom.us/j/1234567890?pwd=lldikti-rakor",
+        "rentang_waktu": "09:00 - 12:00 WIB",
+        "status": {
+          "value": "ongoing",
+          "label": "Sedang Berlangsung (Presensi Dibuka)"
+        }
+      },
       "is_ongoing": true,
       "is_eligible": true,
       "has_attended": false,
+      "status_note": null,
+      "verification_context": {
+        "server_time": "2026-10-20T08:30:00+07:00",
+        "server_time_label": "20 Oktober 2026, 08:30:00 WIB",
+        "client_ip": "180.252.164.22",
+        "meeting_format": {
+          "value": "hybrid",
+          "label": "Hybrid (Luring & Daring)"
+        },
+        "venue": "Ruang Sidang Utama Lantai 2, Gedung LLDIKTI",
+        "format_kedinasan": "Hybrid (Luring di Ruang Sidang Utama Lantai 2 & Daring via Tautan Virtual)",
+        "location_validation": {
+          "is_required": false,
+          "type": "flexible",
+          "label": "Presensi Fleksibel (Luring di Ruang Rapat / Daring)",
+          "badge": "Fleksibel Sah"
+        },
+        "user_identity": {
+          "nip": "196805121994032001",
+          "name": "Afdalisma, SH, M.Pd",
+          "unit_name": "Kepala Lembaga",
+          "role": "administrator",
+          "role_label": "Administrator"
+        }
+      },
       "my_attendance": null
     }
   }
   ```
 
-#### 3. Rekam Presensi (Check-In)
+#### 3. Rekam Presensi Sah Kedinasan (Check-In)
 * **Endpoint:** `POST /api/v1/agendas/{id}/attendances`
-* **Headers:** `Authorization: Bearer <token>`, `Content-Type: multipart/form-data`
+* **Headers:** `Authorization: Bearer <token>`, `Content-Type: application/json` atau `multipart/form-data`
 * **Middleware:** `throttle:attendance` (max 30 request/menit)
-* **Form Data:**
-  - `selfie_file` (File gambar selfie, format JPEG/PNG/WebP, max 512 KB)
-  - `signature_file` (File gambar tanda tangan transparan, PNG, max 512 KB)
-  *(Klien web juga dapat mengirim `selfie_data` & `signature_data` base64 URI jika diperlukan).*
+* **Payload Opsi 1: Base64 Data URI (`application/json`) — Rekomendasi Utama Klien Mobile (`PresensiScreen.tsx`):**
+  ```json
+  {
+    "selfie_data": "data:image/jpeg;base64,/9j/4AAQSkZJRg...",
+    "signature_data": "data:image/png;base64,iVBORw0KGgo..."
+  }
+  ```
+  * `selfie_data`: String data URI gambar (JPEG, PNG, atau WebP), max 1.000.000 karakter (~750 KB).
+  * `signature_data`: String data URI gambar tanda tangan transparan (PNG, JPEG, atau WebP), max 1.000.000 karakter.
+* **Payload Opsi 2: Multipart Form Data (`multipart/form-data`) — Fallback Alternatif:**
+  - `selfie_file`: Berkas gambar selfie kamera (`image/jpeg, image/png, image/webp`, max: 512 KB).
+  - `signature_file`: Berkas gambar tanda tangan (`image/png, image/jpeg, image/webp`, max: 512 KB).
 * **Response (201 Created):**
   ```json
   {
     "success": true,
-    "message": "Presensi pada agenda 'Rakor Evaluasi' berhasil disimpan.",
+    "message": "Presensi pada agenda 'Rapat Koordinasi Evaluasi PDDikti' berhasil disimpan.",
     "data": {
       "id": 45,
       "agenda_id": 1,
       "user_id": 2,
-      "signed_at": "2026-10-07T09:14:22+07:00",
+      "signed_at": "2026-10-20T08:32:15+07:00",
       "selfie_url": "https://siperapat.lldikti.go.id/api/v1/attendances/45/selfie",
       "signature_url": "https://siperapat.lldikti.go.id/api/v1/attendances/45/signature",
-      "ip_address": "192.168.1.100",
+      "ip_address": "180.252.164.22",
+      "user_agent": "SIPERAPAT-Android/1.0"
+    }
+  }
+  ```
+* **Response (200 OK — Idempotency / Sudah Tercatat Sebelumnya):**
+  Jika presensi ASN pada agenda rapat tersebut sudah pernah tercatat (misal saat retry koneksi), backend secara cerdas merespons dengan HTTP 200 tanpa menduplikasi data di database:
+  ```json
+  {
+    "success": true,
+    "message": "Presensi Anda pada agenda rapat ini sudah pernah tercatat.",
+    "data": {
+      "id": 45,
+      "agenda_id": 1,
+      "user_id": 2,
+      "signed_at": "2026-10-20T08:32:15+07:00",
+      "selfie_url": "https://siperapat.lldikti.go.id/api/v1/attendances/45/selfie",
+      "signature_url": "https://siperapat.lldikti.go.id/api/v1/attendances/45/signature",
+      "ip_address": "180.252.164.22",
       "user_agent": "SIPERAPAT-Android/1.0"
     }
   }
@@ -2154,4 +2216,106 @@ async createEmployee(employee: Omit<Employee, 'id' | 'initials'>): Promise<Emplo
 #### E. Otorisasi Detail Unit Kerja untuk Admin Unit (`UnitPolicy::view`)
 
 Admin Unit Kerja kini dapat memanggil `GET /api/v1/units/{id}` untuk mengambil detail data unit kerjanya sendiri (misal saat membuka layar [`EditUnitScreen.tsx`](file:///home/daffiq/Documents/Semester-5/lldikti-x-mobile/siperapat/src/presentation/screens/EditUnitScreen.tsx) atau melihat daftar staf unit). Backend memverifikasi bahwa `$user->unit_id === $unit->id`. Jika mencoba mengakses unit lain di luar wewenangnya, server merespons dengan aman via HTTP `403 Forbidden`.
+
+---
+
+### 5.13. Panduan Integrasi Khusus Layar Presensi Rapat Kedinasan (`PresensiScreen.tsx`)
+
+Layar Presensi Rapat Kedinasan ([`PresensiScreen.tsx`](file:///home/daffiq/Documents/Semester-5/lldikti-x-mobile/siperapat/src/presentation/screens/PresensiScreen.tsx)) adalah antarmuka inti bagi ASN untuk merekam bukti kehadiran rapat kedinasan secara sah. Layar ini menggabungkan tangkapan kamera swafoto dengan oval guide ([`FaceOvalOverlay.tsx`](file:///home/daffiq/Documents/Semester-5/lldikti-x-mobile/siperapat/src/presentation/components/attendance/FaceOvalOverlay.tsx)), pembubuhan tanda tangan digital pada kanvas ([`DigitalSignaturePad.tsx`](file:///home/daffiq/Documents/Semester-5/lldikti-x-mobile/siperapat/src/presentation/components/attendance/DigitalSignaturePad.tsx)), kartu konteks verifikasi identitas & lokasi, serta pernyataan integritas sah kehadiran dinas.
+
+#### A. Alur Kerja 3 Langkah Presensi Mobile
+
+```
+┌────────────────────────────────────────────────────────┐
+│ 1. Mount & Portal Check                               │
+│    GET /api/v1/agendas/{id}/attendance-portal          │
+│    -> Periksa is_ongoing, is_eligible, has_attended   │
+│    -> Muat verification_context (lokasi, waktu, IP)   │
+└──────────────────────────┬─────────────────────────────┘
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│ 2. Biometric Capture & Signature                      │
+│    - FaceOvalOverlay: Ambil swafoto JPEG (< 150 KB)   │
+│    - DigitalSignaturePad: Tanda tangan PNG (< 30 KB)  │
+│    - Centang Pernyataan Sah Integritas                │
+└──────────────────────────┬─────────────────────────────┘
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│ 3. Check-In Submission & Navigasi                      │
+│    POST /api/v1/agendas/{id}/attendances              │
+│    Payload: { selfie_data, signature_data }           │
+│    -> HTTP 201 Created / HTTP 200 OK                  │
+│    -> onSuccess(record.id) -> Buka ReceiptScreen.tsx  │
+└────────────────────────────────────────────────────────┘
+```
+
+#### B. Pemetaan Field `verification_context` pada Kartu Metadata Presensi
+
+Pada `PresensiScreen.tsx`, pengembang mobile dapat mengonsumsi blok `verification_context` dari respons portal check untuk menggantikan label statis *"Diisi oleh server"* dan label hardcoded *"Validasi lokasi tidak disediakan API"*:
+
+```tsx
+{/* Step 3: Identity & Verification Metadata Card */}
+<View style={styles.metadataCard}>
+  <View style={styles.metaRow}>
+    <Text style={styles.metaLabel}>NIP Pegawai ASN</Text>
+    <Text style={styles.metaValueMono}>
+      {portal?.verification_context?.user_identity?.nip ?? user?.nip ?? '—'}
+    </Text>
+  </View>
+
+  <View style={styles.metaDivider} />
+
+  <View style={styles.metaRow}>
+    <Text style={styles.metaLabel}>Waktu & IP Sesi</Text>
+    <Text style={styles.metaValue}>
+      {portal?.verification_context?.server_time_label ?? 'Waktu Server Sah'} · IP: {portal?.verification_context?.client_ip ?? 'Terdeteksi'}
+    </Text>
+  </View>
+
+  <View style={styles.metaDivider} />
+
+  <View style={styles.metaRow}>
+    <Text style={styles.metaLabel}>Lokasi Presensi</Text>
+    <View style={styles.geofenceValidRow}>
+      <MaterialIcons name="verified-user" size={14} color={colors.primary} />
+      <Text style={styles.metaValidText}>
+        {portal?.verification_context?.location_validation?.label ?? portal?.verification_context?.venue ?? 'Presensi Kedinasan LLDIKTI X'}
+      </Text>
+    </View>
+  </View>
+```
+
+#### C. Standar Pengiriman Payload Base64 JSON
+
+Klien seluler mengirimkan data presensi melalui endpoint `POST /api/v1/agendas/{id}/attendances` dalam format `application/json`:
+
+```typescript
+const record = await submitAttendance(meetingId, {
+  selfie_data: selfieUri,      // "data:image/jpeg;base64,/9j/4AAQSkZJRg..."
+  signature_data: signatureSvg // "data:image/png;base64,iVBORw0KGgo..."
+});
+
+if (record) {
+  onSuccess(record.id); // Navigasi langsung ke ReceiptScreen.tsx
+}
+```
+
+*Catatan Rekayasa Backend:*
+1. **Batas Ukuran:** Backend memvalidasi string data URI hingga 1.000.000 karakter (`max:1000000`), memberikan ruang yang aman untuk file gambar terkompresi hingga ~750 KB tanpa risiko memory exhaustion.
+2. **Normalisasi String:** Backend secara otomatis membersihkan spasi liar atau baris baru (`\r\n`) yang mungkin disisipkan oleh encoder klien seluler saat serialisasi JSON.
+3. **Penyimpanan:** File didekode dan disimpan sebagai file biner pada direktori `storage/app/public/attendances/{agenda_id}/` dengan hash acak unik. String base64 tidak pernah disimpan ke dalam kolom teks database sesuai standar keamanan enterprise.
+
+#### D. Penanganan Idempotensi & Kode Status HTTP
+
+1. **HTTP 201 Created (Presensi Baru):**
+   - Dikembalikan saat presensi berhasil disimpan pertama kali.
+   - Mengembalikan data presensi lengkap beserta `id` untuk diteruskan ke `ReceiptScreen.tsx`.
+2. **HTTP 200 OK (Presensi Duplikat / Retry):**
+   - Jika ASN melakukan submit berulang karena gangguan sinyal seluler atau retry otomatis, backend secara cerdas mengembalikan presensi yang telah tersimpan sebelumnya (`is_duplicate: true`) dengan pesan: *"Presensi Anda pada agenda rapat ini sudah pernah tercatat."*.
+   - Klien seluler dapat langsung menavigasikan ASN ke `ReceiptScreen.tsx` dengan `record.id` yang sama tanpa menampilkan pesan error yang membingungkan.
+3. **HTTP 403 Forbidden (Aturan Bisnis):**
+   - Rapat belum dibuka: `"Sesi presensi untuk agenda rapat ini tidak sedang dibuka."`
+   - Unit kerja tidak diundang: `"Unit kerja Anda tidak termasuk dalam daftar undangan agenda rapat ini."`
+   - Sudah pernah presensi: `"Presensi Anda pada agenda rapat ini sudah pernah tercatat."`
+
 

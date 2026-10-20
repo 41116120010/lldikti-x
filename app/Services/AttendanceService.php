@@ -160,6 +160,8 @@ class AttendanceService
             }
 
             $data = substr($dataUri, strpos($dataUri, ',') + 1);
+            // Normalisasi base64: bersihkan spasi liar atau baris baru dari transmisi canvas klien seluler
+            $data = str_replace(' ', '+', preg_replace('/\s+/', '', $data));
             $decoded = base64_decode($data, true);
             if ($decoded === false) {
                 throw new \InvalidArgumentException('Format gambar base64 tidak valid.');

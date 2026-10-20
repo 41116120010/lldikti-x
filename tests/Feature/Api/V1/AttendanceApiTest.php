@@ -431,5 +431,172 @@ class AttendanceApiTest extends TestCase
             ->assertJsonPath('success', true)
             ->assertJsonPath('data.id', $attendance->id);
     }
+
+    public function test_user_can_check_attendance_portal_status_with_rich_verification_context(): void
+    {
+        $staff = User::where('role', 'staff')->first();
+        $agenda = Agenda::first();
+        $this->assertNotNull($staff);
+        $this->assertNotNull($agenda);
+
+        $agenda->update(['status' => 'ongoing', 'is_all_units' => true, 'tipe_rapat' => 'hybrid', 'lokasi_ruang' => 'Ruang Sidang Utama Lantai 2']);
+
+        $response = $this->actingAs($staff, 'sanctum')
+            ->getJson("/api/v1/agendas/{$agenda->id}/attendance-portal");
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonStructure([
+                'success',
+                'message',
+                'data' => [
+                    'agenda',
+                    'is_ongoing',
+                    'is_eligible',
+                    'has_attended',
+                    'status_note',
+                    'verification_context' => [
+                        'server_time',
+                        'server_time_label',
+                        'client_ip',
+                        'meeting_format' => ['value', 'label'],
+                        'venue',
+                        'format_kedinasan',
+                        'location_validation' => ['is_required', 'type', 'label', 'badge'],
+                        'user_identity' => ['nip', 'name', 'unit_name', 'role', 'role_label'],
+                    ],
+                ],
+            ])
+            ->assertJsonPath('data.verification_context.meeting_format.value', 'hybrid')
+            ->assertJsonPath('data.verification_context.location_validation.type', 'flexible')
+            ->assertJsonPath('data.verification_context.user_identity.nip', $staff->nip);
+    }
+
+    public function test_user_can_check_in_with_base64_data_uri_json_payload(): void
+    {
+        Storage::fake('public');
+
+        $agenda = Agenda::first();
+        $this->assertNotNull($agenda);
+
+        $agenda->update(['status' => 'ongoing', 'is_all_units' => true]);
+
+        $staff = User::where('role', 'staff')
+            ->whereDoesntHave('attendances', fn ($q) => $q->where('agenda_id', $agenda->id))
+            ->first();
+        $this->assertNotNull($staff);
+
+        // 1x1 transparent PNG / minimal valid image binary
+        $fakePngBinary = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');
+        $selfieBase64 = 'data:image/jpeg;base64,' . base64_encode($fakePngBinary);
+        $signatureBase64 = 'data:image/png;base64,' . base64_encode($fakePngBinary);
+
+        $response = $this->actingAs($staff, 'sanctum')
+            ->postJson("/api/v1/agendas/{$agenda->id}/attendances", [
+                'selfie_data' => $selfieBase64,
+                'signature_data' => $signatureBase64,
+            ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.user_id', $staff->id)
+            ->assertJsonPath('data.agenda_id', $agenda->id);
+
+        $this->assertDatabaseHas('attendances', [
+            'agenda_id' => $agenda->id,
+            'user_id' => $staff->id,
+        ]);
+    }
+
+    public function test_check_in_rejected_when_agenda_status_is_not_ongoing(): void
+    {
+        Storage::fake('public');
+
+        $agenda = Agenda::first();
+        $this->assertNotNull($agenda);
+
+        $agenda->update(['status' => 'scheduled', 'is_all_units' => true]);
+
+        $staff = User::where('role', 'staff')->first();
+        $this->assertNotNull($staff);
+
+        $fakePngBinary = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');
+        $selfieBase64 = 'data:image/jpeg;base64,' . base64_encode($fakePngBinary);
+        $signatureBase64 = 'data:image/png;base64,' . base64_encode($fakePngBinary);
+
+        $response = $this->actingAs($staff, 'sanctum')
+            ->postJson("/api/v1/agendas/{$agenda->id}/attendances", [
+                'selfie_data' => $selfieBase64,
+                'signature_data' => $signatureBase64,
+            ]);
+
+        $response->assertForbidden();
+        $this->assertStringContainsString('Sesi presensi untuk agenda rapat ini tidak sedang dibuka', $response->json('message'));
+    }
+
+    public function test_check_in_rejected_when_user_is_not_eligible(): void
+    {
+        Storage::fake('public');
+
+        $agenda = Agenda::first();
+        $this->assertNotNull($agenda);
+
+        $unitA = \App\Models\Unit::first();
+        $unitB = \App\Models\Unit::skip(1)->first();
+        $this->assertNotNull($unitA);
+        $this->assertNotNull($unitB);
+
+        $agenda->update(['status' => 'ongoing', 'is_all_units' => false]);
+        $agenda->units()->sync([$unitA->id]);
+
+        $staffNotInUnit = User::where('role', 'staff')
+            ->where('unit_id', $unitB->id)
+            ->first();
+        if (! $staffNotInUnit) {
+            $staffNotInUnit = User::where('role', 'staff')->where('unit_id', '!=', $unitA->id)->first();
+        }
+        $this->assertNotNull($staffNotInUnit);
+
+        $fakePngBinary = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');
+        $selfieBase64 = 'data:image/jpeg;base64,' . base64_encode($fakePngBinary);
+        $signatureBase64 = 'data:image/png;base64,' . base64_encode($fakePngBinary);
+
+        $response = $this->actingAs($staffNotInUnit, 'sanctum')
+            ->postJson("/api/v1/agendas/{$agenda->id}/attendances", [
+                'selfie_data' => $selfieBase64,
+                'signature_data' => $signatureBase64,
+            ]);
+
+        $response->assertForbidden();
+        $this->assertStringContainsString('Unit kerja Anda tidak termasuk dalam daftar undangan agenda rapat ini', $response->json('message'));
+    }
+
+    public function test_check_in_rejects_payload_exceeding_base64_limit(): void
+    {
+        $agenda = Agenda::first();
+        $this->assertNotNull($agenda);
+
+        $agenda->update(['status' => 'ongoing', 'is_all_units' => true]);
+
+        $staff = User::where('role', 'staff')
+            ->whereDoesntHave('attendances', fn ($q) => $q->where('agenda_id', $agenda->id))
+            ->first();
+        $this->assertNotNull($staff);
+
+        // String exceeding 1,000,000 characters
+        $oversizedData = 'data:image/jpeg;base64,' . str_repeat('A', 1000005);
+
+        $fakePngBinary = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');
+        $signatureBase64 = 'data:image/png;base64,' . base64_encode($fakePngBinary);
+
+        $response = $this->actingAs($staff, 'sanctum')
+            ->postJson("/api/v1/agendas/{$agenda->id}/attendances", [
+                'selfie_data' => $oversizedData,
+                'signature_data' => $signatureBase64,
+            ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['selfie_data']);
+    }
 }
 

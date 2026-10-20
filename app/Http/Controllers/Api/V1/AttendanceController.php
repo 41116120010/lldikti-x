@@ -82,6 +82,68 @@ class AttendanceController extends Controller
             ->where('user_id', $user->id)
             ->first();
 
+        $meetingFormatLabel = match ($agenda->tipe_rapat) {
+            'offline' => 'Luring (Tatap Muka)',
+            'online' => 'Daring (Video Conference)',
+            'hybrid' => 'Hybrid (Luring & Daring)',
+            default => 'Luring (Tatap Muka)',
+        };
+
+        $venue = match ($agenda->tipe_rapat) {
+            'online' => $agenda->link_meeting ?: 'Tautan Video Conference Belum Ditentukan',
+            default => $agenda->lokasi_ruang ?: 'Ruang Sidang LLDIKTI Wilayah X',
+        };
+
+        $locationValidation = match ($agenda->tipe_rapat) {
+            'online' => [
+                'is_required' => false,
+                'type' => 'online',
+                'label' => 'Presensi Daring Sah — Bebas Lokasi Fisik',
+                'badge' => 'Daring Sah',
+            ],
+            'hybrid' => [
+                'is_required' => false,
+                'type' => 'flexible',
+                'label' => 'Presensi Fleksibel (Luring di Ruang Rapat / Daring)',
+                'badge' => 'Fleksibel Sah',
+            ],
+            default => [
+                'is_required' => true,
+                'type' => 'room_check',
+                'label' => 'Presensi Luring Sah di ' . ($agenda->lokasi_ruang ?: 'Ruang Sidang LLDIKTI'),
+                'badge' => 'Luring Sah',
+            ],
+        };
+
+        $statusNote = null;
+        if ($existingAttendance !== null) {
+            $statusNote = 'Anda sudah tercatat melakukan presensi pada agenda rapat ini.';
+        } elseif ($agenda->status !== 'ongoing') {
+            $statusNote = 'Sesi presensi untuk agenda rapat ini tidak sedang dibuka.';
+        } elseif (! $isEligible) {
+            $statusNote = 'Unit kerja Anda tidak termasuk dalam daftar undangan agenda rapat ini.';
+        }
+
+        $verificationContext = [
+            'server_time' => now('Asia/Jakarta')->toIso8601String(),
+            'server_time_label' => now('Asia/Jakarta')->translatedFormat('d F Y, H:i:s') . ' WIB',
+            'client_ip' => $request->ip() ?: '127.0.0.1',
+            'meeting_format' => [
+                'value' => $agenda->tipe_rapat,
+                'label' => $meetingFormatLabel,
+            ],
+            'venue' => $venue,
+            'format_kedinasan' => $agenda->format_kedinasan,
+            'location_validation' => $locationValidation,
+            'user_identity' => [
+                'nip' => $user->nip,
+                'name' => $user->name,
+                'unit_name' => $user->unit?->nama_unit ?? 'Unit Kerja LLDIKTI',
+                'role' => $user->role,
+                'role_label' => $user->role_label,
+            ],
+        ];
+
         return response()->json([
             'success' => true,
             'message' => 'Status portal presensi berhasil diperiksa.',
@@ -90,6 +152,8 @@ class AttendanceController extends Controller
                 'is_ongoing' => $agenda->status === 'ongoing',
                 'is_eligible' => $isEligible,
                 'has_attended' => $existingAttendance !== null,
+                'status_note' => $statusNote,
+                'verification_context' => $verificationContext,
                 'my_attendance' => $existingAttendance ? new AttendanceResource($existingAttendance) : null,
             ],
         ]);
