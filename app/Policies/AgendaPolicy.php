@@ -171,10 +171,26 @@ class AgendaPolicy
             return true;
         }
 
-        // Saat rapat berstatus 'ongoing', petugas yang ditunjuk (pimpinan atau notulis, baik admin unit maupun staf)
-        // berhak mengelola notulensi dan foto dokumentasi kegiatan
-        if ($this->isAppointedDuringSession($user, $agenda)) {
+        // Petugas yang ditunjuk (pimpinan atau notulis, baik admin unit maupun staf)
+        // berhak mengelola notulensi dan foto dokumentasi kegiatan (pada status scheduled, ongoing, maupun completed)
+        if ($this->isAppointed($user, $agenda)) {
             return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Determine whether the user was appointed as leader or notulis for this agenda.
+     */
+    private function isAppointed(User $user, Agenda $agenda): bool
+    {
+        foreach (self::roleColumns() as $column) {
+            $appointee = $agenda->getAttribute($column);
+
+            if ($appointee !== null && (int) $appointee === (int) $user->getKey()) {
+                return true;
+            }
         }
 
         return false;

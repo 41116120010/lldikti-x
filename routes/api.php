@@ -57,11 +57,12 @@ Route::prefix('v1')->group(function () {
         Route::get('/agendas', [AgendaController::class, 'index'])->name('api.v1.agendas.index');
         Route::post('/agendas', [AgendaController::class, 'store'])->name('api.v1.agendas.store');
         Route::get('/agendas/{agenda}', [AgendaController::class, 'show'])->name('api.v1.agendas.show');
-        Route::put('/agendas/{agenda}', [AgendaController::class, 'update'])->name('api.v1.agendas.update');
+        Route::match(['PUT', 'POST'], '/agendas/{agenda}', [AgendaController::class, 'update'])->name('api.v1.agendas.update');
+        Route::post('/agendas/{agenda}/surat-edaran', [AgendaController::class, 'updateSuratEdaran'])->name('api.v1.agendas.surat-edaran');
         Route::delete('/agendas/{agenda}', [AgendaController::class, 'destroy'])->name('api.v1.agendas.destroy');
         Route::patch('/agendas/{agenda}/status', [AgendaController::class, 'updateStatus'])->name('api.v1.agendas.status');
         Route::patch('/agendas/{agenda}/roles', [AgendaController::class, 'updateRoles'])->name('api.v1.agendas.roles');
-        Route::put('/agendas/{agenda}/notulen', [AgendaController::class, 'updateNotulen'])->name('api.v1.agendas.notulen');
+        Route::match(['PUT', 'POST'], '/agendas/{agenda}/notulen', [AgendaController::class, 'updateNotulen'])->name('api.v1.agendas.notulen');
         Route::delete('/agendas/{agenda}/documentations/{documentation}', [AgendaController::class, 'deleteDocumentation'])->name('api.v1.agendas.documentations.destroy');
 
         // Attendance Portal & Check-in

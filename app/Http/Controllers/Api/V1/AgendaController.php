@@ -164,6 +164,31 @@ class AgendaController extends Controller
     }
 
     /**
+     * Upload or replace circular letter document independently.
+     */
+    public function updateSuratEdaran(Request $request, Agenda $agenda, AgendaService $agendaService): JsonResponse
+    {
+        Gate::authorize('update', $agenda);
+
+        $request->validate([
+            'surat_edaran' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:5120'],
+        ]);
+
+        $agenda = $agendaService->updateSuratEdaran(
+            agenda: $agenda,
+            suratEdaran: $request->file('surat_edaran')
+        );
+
+        $agenda->load(['creator.unit', 'pimpinan.unit', 'notulis.unit', 'units', 'documentations']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Berkas surat edaran rapat berhasil diunggah.',
+            'data' => new AgendaResource($agenda),
+        ]);
+    }
+
+    /**
      * Remove the specified agenda from storage.
      */
     public function destroy(Agenda $agenda, Request $request, AgendaService $agendaService): JsonResponse

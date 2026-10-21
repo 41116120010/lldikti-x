@@ -154,6 +154,32 @@ class AgendaService
     }
 
     /**
+     * Upload or replace circular letter file independently.
+     */
+    public function updateSuratEdaran(Agenda $agenda, UploadedFile $suratEdaran): Agenda
+    {
+        $newCircularPath = $suratEdaran->store('circulars', 'public');
+        $supersededCircularPath = $agenda->surat_edaran_path;
+
+        DB::transaction(function () use ($agenda, $newCircularPath) {
+            $agenda->update(['surat_edaran_path' => $newCircularPath]);
+
+            ActivityLogger::log(
+                type: 'UPDATE_AGENDA_CIRCULAR',
+                description: "Berkas surat edaran rapat '{$agenda->judul_rapat}' diperbarui.",
+                targetModel: Agenda::class,
+                targetId: $agenda->id
+            );
+        });
+
+        if ($supersededCircularPath && $supersededCircularPath !== $newCircularPath) {
+            Storage::disk('public')->delete($supersededCircularPath);
+        }
+
+        return $agenda->fresh();
+    }
+
+    /**
      * Delete an agenda safely.
      *
      * @throws \DomainException If agenda has attendances.
@@ -271,10 +297,16 @@ class AgendaService
     public function updateNotulen(Agenda $agenda, array $data, ?Request $request = null): void
     {
         DB::transaction(function () use ($agenda, $data, $request) {
-            $agenda->update([
-                'notulensi' => $data['notulensi'] ?? null,
-                'kesimpulan' => $data['kesimpulan'] ?? null,
-            ]);
+            $updatePayload = [];
+            if (array_key_exists('notulensi', $data)) {
+                $updatePayload['notulensi'] = $data['notulensi'];
+            }
+            if (array_key_exists('kesimpulan', $data)) {
+                $updatePayload['kesimpulan'] = $data['kesimpulan'];
+            }
+            if (!empty($updatePayload)) {
+                $agenda->update($updatePayload);
+            }
 
             if ($request && ($request->boolean('has_document_config') || $request->filled('document_title') || $request->hasFile('custom_logo') || $request->boolean('reset_custom_logo'))) {
                 $this->reportConfigService->syncFromRequest($request, $agenda, persist: true);

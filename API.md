@@ -457,7 +457,72 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
   - `unit_ids` (array integer, required jika is_all_units = false)
   - `surat_edaran` (file PDF/Image max 5MB, optional)
 
-#### 4. Perbarui Status Agenda Rapat
+#### 4. Perbarui Agenda Rapat Secara Lengkap (Admin / Administrator)
+* **Endpoint:** `PUT /api/v1/agendas/{id}`
+* **Headers:** `Authorization: Bearer <token>`, `Content-Type: application/json` (tanpa berkas baru) atau `Content-Type: multipart/form-data` (dengan berkas baru dan header `X-HTTP-Method-Override: PUT` atau form `_method=PUT`).
+* **Otorisasi:** Administrator (seluruh agenda), atau Admin Unit (agenda yang dibuat oleh admin/unitnya atau agenda unit non-pleno).
+* **Payload Fields:**
+  - `judul_rapat` (string, required, max 255)
+  - `jenis_rapat` (string, required, max 100)
+  - `tipe_rapat` (`offline`, `online`, `hybrid`)
+  - `lokasi_ruang` (string, required jika offline/hybrid, max 150)
+  - `link_meeting` (string URL, required jika online/hybrid, max 500)
+  - `waktu_mulai` (datetime ISO-8601 dengan offset `+07:00`, required)
+  - `waktu_selesai` (datetime ISO-8601 dengan offset `+07:00`, optional, wajib setelah waktu_mulai)
+  - `pimpinan_id` (integer, optional, ID ASN pimpinan rapat)
+  - `notulis_id` (integer, optional, ID ASN notulis rapat)
+  - `is_all_units` (boolean, optional)
+  - `unit_ids` (array integer, required jika is_all_units = false)
+  - `surat_edaran` (file PDF/Image max 5MB, optional pengganti berkas lama)
+  - `status` (string, optional: `draft`, `scheduled`, `ongoing`, `completed`, `cancelled`)
+* **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "message": "Agenda rapat 'Rapat Koordinasi' berhasil diperbarui.",
+    "data": { ... }
+  }
+  ```
+
+#### 5. Hapus Agenda Rapat (Admin / Administrator)
+* **Endpoint:** `DELETE /api/v1/agendas/{id}`
+* **Headers:** `Authorization: Bearer <token>`
+* **Otorisasi:** 
+  - Administrator: Berhak menghapus agenda pada seluruh unit kerja.
+  - Admin Unit: Hanya berhak menghapus agenda yang dibuat oleh dirinya/unit kerjanya, atau agenda unit khusus non-pleno (`is_all_units = false`). Dilarang menghapus agenda pleno institusi yang dibuat pihak lain.
+* **Aturan Integritas Arsip:**
+  - Agenda yang **telah memiliki catatan presensi kehadiran pegawai ASN DILARANG dihapus**. Permintaan akan ditolak dengan respons **HTTP 422**. Untuk membatalkan agenda yang batal terlaksana, gunakan perubahan status menjadi `cancelled` (`Dibatalkan`).
+* **Response Berhasil (200 OK):**
+  ```json
+  {
+    "success": true,
+    "message": "Agenda rapat 'Rapat Koordinasi' berhasil dihapus."
+  }
+  ```
+* **Response Penolakan Integritas Arsip (422 Unprocessable Entity):**
+  ```json
+  {
+    "success": false,
+    "message": "Agenda rapat 'Rapat Koordinasi' telah memiliki catatan presensi kehadiran pegawai. Agenda tidak dapat dihapus demi integritas arsip kegiatan. Ubah status agenda menjadi 'Dibatalkan' jika agenda batal terlaksana."
+  }
+  ```
+
+#### 6. Unggah / Ganti Berkas Surat Edaran Rapat (Admin / Administrator)
+* **Endpoint:** `POST /api/v1/agendas/{id}/surat-edaran`
+* **Headers:** `Authorization: Bearer <token>`, `Content-Type: multipart/form-data`
+* **Otorisasi:** Administrator atau Admin Unit penyelenggara / pembuat agenda (`update`).
+* **Form Fields:**
+  - `surat_edaran`: Berkas PDF atau Gambar (JPEG/PNG/WebP, max: 5120 KB / 5 MB).
+* **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "message": "Berkas surat edaran rapat berhasil diunggah.",
+    "data": { ... }
+  }
+  ```
+
+#### 7. Perbarui Status Agenda Rapat
 * **Endpoint:** `PATCH /api/v1/agendas/{id}/status`
 * **Request Body:**
   ```json
@@ -467,7 +532,7 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
   ```
   *(Status valid: `draft`, `scheduled`, `ongoing`, `completed`, `cancelled`).*
 
-#### 5. Penugasan Pimpinan & Notulis Rapat
+#### 8. Penugasan Pimpinan & Notulis Rapat
 * **Endpoint:** `PATCH /api/v1/agendas/{id}/roles`
 * **Request Body:**
   ```json
@@ -477,13 +542,13 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
   }
   ```
 
-#### 6. Simpan Notulensi, Kesimpulan & Foto Dokumentasi Kegiatan
-* **Endpoint:** `PUT /api/v1/agendas/{id}/notulen`
-* **Headers:** `Authorization: Bearer <token>`, `Content-Type: multipart/form-data`
-* **Otorisasi:** Notulis rapat yang ditugaskan, Admin Unit penyelenggara, atau Administrator (`manageMinutes`).
-* **Form Fields:**
-  - `notulensi` (string HTML, optional, otomatis disanitasi dari script XSS)
-  - `kesimpulan` (string HTML, optional, otomatis disanitasi dari script XSS)
+#### 9. Simpan Notulensi, Kesimpulan & Foto Dokumentasi Kegiatan
+* **Endpoint:** `PUT /api/v1/agendas/{id}/notulen` atau `POST /api/v1/agendas/{id}/notulen` (dengan `_method=PUT` atau header `X-HTTP-Method-Override: PUT`)
+* **Headers:** `Authorization: Bearer <token>`, `Content-Type: application/json` (hanya teks) atau `Content-Type: multipart/form-data` (disertai foto)
+* **Otorisasi:** Pegawai yang ditunjuk sebagai Notulis (`notulis_id`) atau Pimpinan (`pimpinan_id`), Admin Unit penyelenggara, atau Administrator (`manageMinutes`). Dapat diisi dan dimutakhirkan pada agenda rapat berstatus `scheduled`, `ongoing`, maupun `completed`.
+* **Form / JSON Fields:**
+  - `notulensi` (string HTML / teks, optional, otomatis disanitasi dari script XSS)
+  - `kesimpulan` (string HTML / teks, optional, otomatis disanitasi dari script XSS)
   - `photos[]` (array file gambar JPEG/PNG/WebP, max 3 MB per foto, max 10 foto)
   - `captions[]` (array string judul/keterangan tiap foto)
   - Pengaturan tata letak dokumen (opsional: `show_kop`, `show_meeting_info`, `show_attendees`, `signer1_name`, dll.)
@@ -496,7 +561,7 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
   }
   ```
 
-#### 7. Hapus Foto Dokumentasi Kegiatan
+#### 10. Hapus Foto Dokumentasi Kegiatan
 * **Endpoint:** `DELETE /api/v1/agendas/{agenda_id}/documentations/{documentation_id}`
 * **Headers:** `Authorization: Bearer <token>`
 * **Otorisasi:** Notulis atau Admin (`manageMinutes`).
