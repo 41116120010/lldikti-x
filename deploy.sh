@@ -7,7 +7,7 @@
 # Penggunaan:
 #   ./deploy.sh            # Pembaruan standar lokal / staging
 #   ./deploy.sh --prod     # Pembaruan produksi (dengan maintenance mode & no-dev)
-#   ./deploy.sh --pull     # Melakukan git pull --rebase sebelum deployment
+#   ./deploy.sh --pull     # Melakukan git pull origin <branch> sebelum deployment
 #   ./deploy.sh --help     # Menampilkan panduan opsi
 # ==============================================================================
 
@@ -41,7 +41,7 @@ for arg in "$@"; do
             echo ""
             echo "Opsi:"
             echo "  --prod    Jalankan prosedur rilis produksi (down, no-dev, optimize, up)"
-            echo "  --pull    Lakukan 'git pull --rebase' sebelum menjalankan migrasi/cache"
+            echo "  --pull    Lakukan 'git pull origin <branch> --rebase' sebelum menjalankan migrasi/build/cache"
             echo "  --help    Tampilkan bantuan ini"
             exit 0
             ;;
@@ -77,7 +77,7 @@ trap cleanup EXIT INT TERM HUP
 # ------------------------------------------------------------------------------
 # 1. Pengecekan Lingkungan & Dependensi Sistem (Termasuk Database Probe)
 # ------------------------------------------------------------------------------
-echo -e "${CLR_INFO}[1/8] Memeriksa dependensi sistem...${CLR_RESET}"
+echo -e "${CLR_INFO}[1/9] Memeriksa dependensi sistem...${CLR_RESET}"
 
 if ! command -v php &>/dev/null; then
     echo -e "${CLR_ERR}Kesalahan: PHP CLI tidak ditemukan di PATH!${CLR_RESET}"
@@ -91,6 +91,14 @@ if ! command -v composer &>/dev/null; then
     echo -e "${CLR_WARN}      Composer    : Tidak ditemukan di global PATH (lewati composer install otomatis).${CLR_RESET}"
 else
     echo -e "      Composer    : ${CLR_SUCCESS}$(composer --version 2>/dev/null | head -n 1)${CLR_RESET}"
+fi
+
+if command -v npm &>/dev/null; then
+    NODE_VER=$(node -v 2>/dev/null || echo "unknown")
+    NPM_VER=$(npm -v 2>/dev/null || echo "unknown")
+    echo -e "      Node / NPM  : ${CLR_SUCCESS}${NODE_VER} / ${NPM_VER}${CLR_RESET}"
+else
+    echo -e "${CLR_WARN}      Node / NPM  : Tidak ditemukan di PATH! Pastikan Node.js terinstal untuk kompilasi Vite.${CLR_RESET}"
 fi
 
 # Database Health Probe: pastikan DB hidup sebelum masuk ke mode maintenance
@@ -107,27 +115,28 @@ echo -e "      Database    : ${CLR_SUCCESS}✓ Koneksi basis data terverifikasi 
 # 2. Pembaruan Source Code via Git (Opsional)
 # ------------------------------------------------------------------------------
 if [ "$WITH_PULL" = true ]; then
-    echo -e "${CLR_INFO}[2/8] Menarik perubahan kode terbaru (git pull)...${CLR_RESET}"
-    git pull --rebase
+    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+    echo -e "${CLR_INFO}[2/9] Menarik perubahan kode terbaru (git pull origin ${CURRENT_BRANCH} --rebase)...${CLR_RESET}"
+    git pull origin "${CURRENT_BRANCH}" --rebase
 else
-    echo -e "${CLR_INFO}[2/8] Melewati git pull (gunakan flag --pull jika ingin auto-pull).${CLR_RESET}"
+    echo -e "${CLR_INFO}[2/9] Melewati git pull (gunakan flag --pull jika ingin auto-pull).${CLR_RESET}"
 fi
 
 # ------------------------------------------------------------------------------
 # 3. Mode Pemeliharaan (Khusus Mode Produksi)
 # ------------------------------------------------------------------------------
 if [ "$IS_PROD" = true ]; then
-    echo -e "${CLR_INFO}[3/8] Mengaktifkan Maintenance Mode...${CLR_RESET}"
+    echo -e "${CLR_INFO}[3/9] Mengaktifkan Maintenance Mode...${CLR_RESET}"
     php artisan down --render="errors.503" --status=503 || true
 else
-    echo -e "${CLR_INFO}[3/8] Melewati Maintenance Mode (lingkungan non-prod).${CLR_RESET}"
+    echo -e "${CLR_INFO}[3/9] Melewati Maintenance Mode (lingkungan non-prod).${CLR_RESET}"
 fi
 
 # ------------------------------------------------------------------------------
 # 4. Instalasi & Optimasi Autoloader Composer
 # ------------------------------------------------------------------------------
 if command -v composer &>/dev/null; then
-    echo -e "${CLR_INFO}[4/8] Mengoptimalkan paket dependensi Composer...${CLR_RESET}"
+    echo -e "${CLR_INFO}[4/9] Mengoptimalkan paket dependensi Composer...${CLR_RESET}"
     if [ "$IS_PROD" = true ]; then
         composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --quiet
     else
@@ -135,13 +144,29 @@ if command -v composer &>/dev/null; then
     fi
     echo -e "      ${CLR_SUCCESS}✓ Autoloader berhasil dioptimasi.${CLR_RESET}"
 else
-    echo -e "${CLR_INFO}[4/8] Composer tidak terdeteksi, melewati step dependensi.${CLR_RESET}"
+    echo -e "${CLR_INFO}[4/9] Composer tidak terdeteksi, melewati step dependensi Composer.${CLR_RESET}"
 fi
 
 # ------------------------------------------------------------------------------
-# 5. Migrasi Skema Basis Data Aman
+# 5. Instalasi Dependensi NPM & Kompilasi Aset Frontend (Vite)
 # ------------------------------------------------------------------------------
-echo -e "${CLR_INFO}[5/8] Menjalankan migrasi basis data...${CLR_RESET}"
+if command -v npm &>/dev/null; then
+    echo -e "${CLR_INFO}[5/9] Menginstal dependensi NPM dan mengompilasi aset frontend (Vite)...${CLR_RESET}"
+    if [ "$IS_PROD" = true ]; then
+        npm ci --prefer-offline --no-audit --progress=false 2>/dev/null || npm install --no-audit --progress=false
+    else
+        npm install --no-audit --progress=false
+    fi
+    npm run build
+    echo -e "      ${CLR_SUCCESS}✓ Aset Vite berhasil dikompilasi (public/build/manifest.json terbarui).${CLR_RESET}"
+else
+    echo -e "${CLR_WARN}[5/9] NPM tidak terdeteksi, melewati kompilasi aset frontend.${CLR_RESET}"
+fi
+
+# ------------------------------------------------------------------------------
+# 6. Migrasi Skema Basis Data Aman
+# ------------------------------------------------------------------------------
+echo -e "${CLR_INFO}[6/9] Menjalankan migrasi basis data...${CLR_RESET}"
 php artisan migrate --force --no-interaction
 echo -e "      ${CLR_SUCCESS}✓ Skema basis data telah mutakhir.${CLR_RESET}"
 
@@ -153,9 +178,9 @@ if [ "$DB_DRIVER" = "pgsql" ]; then
 fi
 
 # ------------------------------------------------------------------------------
-# 6. Pembersihan & Pembuatan Ulang Cache Performa Laravel
+# 7. Pembersihan & Pembuatan Ulang Cache Performa Laravel
 # ------------------------------------------------------------------------------
-echo -e "${CLR_INFO}[6/8] Memperbarui dan mengompilasi cache Laravel...${CLR_RESET}"
+echo -e "${CLR_INFO}[7/9] Memperbarui dan mengompilasi cache Laravel...${CLR_RESET}"
 php artisan config:clear
 php artisan route:clear
 php artisan view:clear
@@ -168,15 +193,17 @@ php artisan event:cache 2>/dev/null || true
 # Pastikan symbolic link storage/public telah aktif
 php artisan storage:link 2>/dev/null || true
 
-# Normalisasi hak akses direktori storage dan cache (menghindari 503 akibat permission worker PHP-FPM)
-find storage bootstrap/cache -type d -exec chmod 775 {} + 2>/dev/null || true
-find storage bootstrap/cache -type f -exec chmod 664 {} + 2>/dev/null || true
+# Normalisasi hak akses direktori storage, cache, dan build aset
+mkdir -p storage/logs public/build
+touch storage/logs/laravel.log 2>/dev/null || true
+find storage bootstrap/cache public/build -type d -exec chmod 775 {} + 2>/dev/null || true
+find storage bootstrap/cache public/build -type f -exec chmod 664 {} + 2>/dev/null || true
 echo -e "      ${CLR_SUCCESS}✓ Seluruh cache performa (Config, Route, View) berhasil dikompilasi.${CLR_RESET}"
 
 # ------------------------------------------------------------------------------
-# 7. Verifikasi Layanan Scheduler & Crontab OS
+# 8. Verifikasi Layanan Scheduler & Crontab OS
 # ------------------------------------------------------------------------------
-echo -e "${CLR_INFO}[7/8] Memeriksa status Cron Scheduler...${CLR_RESET}"
+echo -e "${CLR_INFO}[8/9] Memeriksa status Cron Scheduler...${CLR_RESET}"
 CRON_ENTRY="* * * * * cd ${SCRIPT_DIR} && php artisan schedule:run >> /dev/null 2>&1"
 
 if crontab -l 2>/dev/null | grep -q "schedule:run"; then
@@ -192,14 +219,23 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-# 8. Penutupan Maintenance & Verifikasi Ketersediaan Layanan (Zero 503 Guarantee)
+# 9. Penutupan Maintenance, Reload Layanan, & Verifikasi Ketersediaan Layanan
 # ------------------------------------------------------------------------------
-echo -e "${CLR_INFO}[8/8] Memulihkan dan memvalidasi ketersediaan layanan...${CLR_RESET}"
+echo -e "${CLR_INFO}[9/9] Memulihkan dan memvalidasi ketersediaan layanan...${CLR_RESET}"
 
 # Jaminan mutlak: hapus status maintenance mode jika masih ada
 if [ -f "${SCRIPT_DIR}/storage/framework/down" ]; then
     echo -e "      Mengaktifkan kembali sistem (php artisan up)..."
     php artisan up 2>/dev/null || rm -f "${SCRIPT_DIR}/storage/framework/down" || true
+fi
+
+# Me-reload worker PHP-FPM jika service terdeteksi di OS
+if command -v systemctl &>/dev/null; then
+    PHP_FPM_UNIT=$(systemctl list-units --type=service --state=running 2>/dev/null | grep -oE "php[0-9\.]*-fpm\.service" | head -n 1 || true)
+    if [ -n "$PHP_FPM_UNIT" ]; then
+        echo -e "      Me-reload worker PHP-FPM (${PHP_FPM_UNIT})..."
+        sudo systemctl reload "${PHP_FPM_UNIT}" 2>/dev/null || true
+    fi
 fi
 
 # Validasi HTTP Health Check Internal
