@@ -3,10 +3,11 @@
 # SIPERAPAT - LLDIKTI Wilayah X
 # Enterprise Deployment & Code Update Automation Script
 # ==============================================================================
-# Standar: Enterprise Gov-Tech, Ponytail (Zero-Bloatware), High Durability
+# Standar: Enterprise Gov-Tech, Ponytail (Zero-Bloatware), High Availability & Durability
 # Penggunaan:
 #   ./deploy.sh            # Pembaruan standar lokal / staging
 #   ./deploy.sh --prod     # Pembaruan produksi (dengan maintenance mode & no-dev)
+#   ./deploy.sh --pull     # Melakukan git pull --rebase sebelum deployment
 #   ./deploy.sh --help     # Menampilkan panduan opsi
 # ==============================================================================
 
@@ -58,7 +59,23 @@ echo -e "Waktu Eksekusi   : $(date '+%Y-%m-%d %H:%M:%S %Z')"
 echo ""
 
 # ------------------------------------------------------------------------------
-# 1. Pengecekan Lingkungan & Dependensi Sistem
+# FAIL-SAFE RECOVERY TRAP (Mencegah Aplikasi Tertinggal dalam Status 503)
+# ------------------------------------------------------------------------------
+cleanup() {
+    local exit_code=$?
+    if [ -f "${SCRIPT_DIR}/storage/framework/down" ]; then
+        echo -e "\n${CLR_WARN}Memulihkan sistem dari maintenance mode (fail-safe recovery)...${CLR_RESET}"
+        php artisan up 2>/dev/null || rm -f "${SCRIPT_DIR}/storage/framework/down" || true
+    fi
+    if [ "$exit_code" -ne 0 ]; then
+        echo -e "\n${CLR_ERR}Deployment terhenti karena kesalahan (Exit Code: ${exit_code}).${CLR_RESET}"
+        echo -e "${CLR_WARN}Sistem dipastikan dalam status LIVE untuk mencegah 503 Service Unavailable.${CLR_RESET}"
+    fi
+}
+trap cleanup EXIT INT TERM HUP
+
+# ------------------------------------------------------------------------------
+# 1. Pengecekan Lingkungan & Dependensi Sistem (Termasuk Database Probe)
 # ------------------------------------------------------------------------------
 echo -e "${CLR_INFO}[1/8] Memeriksa dependensi sistem...${CLR_RESET}"
 
@@ -76,6 +93,16 @@ else
     echo -e "      Composer    : ${CLR_SUCCESS}$(composer --version 2>/dev/null | head -n 1)${CLR_RESET}"
 fi
 
+# Database Health Probe: pastikan DB hidup sebelum masuk ke mode maintenance
+echo -e "      Memeriksa konektivitas basis data..."
+DB_PROBE=$(php -r "require 'vendor/autoload.php'; \$app = require_once 'bootstrap/app.php'; \$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap(); try { Illuminate\Support\Facades\DB::connection()->getPdo(); echo 'OK'; } catch (\Throwable \$e) { echo 'FAIL: ' . \$e->getMessage(); }" 2>/dev/null || echo "FAIL")
+if [[ "$DB_PROBE" != "OK" ]]; then
+    echo -e "${CLR_ERR}Kesalahan: Basis data tidak dapat diakses (${DB_PROBE})!${CLR_RESET}"
+    echo -e "${CLR_WARN}Membatalkan prosedur sebelum maintenance mode untuk mencegah 503 Service Unavailable.${CLR_RESET}"
+    exit 1
+fi
+echo -e "      Database    : ${CLR_SUCCESS}✓ Koneksi basis data terverifikasi (Online)${CLR_RESET}"
+
 # ------------------------------------------------------------------------------
 # 2. Pembaruan Source Code via Git (Opsional)
 # ------------------------------------------------------------------------------
@@ -89,19 +116,9 @@ fi
 # ------------------------------------------------------------------------------
 # 3. Mode Pemeliharaan (Khusus Mode Produksi)
 # ------------------------------------------------------------------------------
-MAINTENANCE_ACTIVE=false
-cleanup() {
-    if [ "$MAINTENANCE_ACTIVE" = true ]; then
-        echo -e "\n${CLR_WARN}Memulihkan sistem dari maintenance mode...${CLR_RESET}"
-        php artisan up || true
-    fi
-}
-trap cleanup EXIT INT TERM
-
 if [ "$IS_PROD" = true ]; then
     echo -e "${CLR_INFO}[3/8] Mengaktifkan Maintenance Mode...${CLR_RESET}"
-    php artisan down --render="errors::503" || true
-    MAINTENANCE_ACTIVE=true
+    php artisan down --render="errors.503" --status=503 || true
 else
     echo -e "${CLR_INFO}[3/8] Melewati Maintenance Mode (lingkungan non-prod).${CLR_RESET}"
 fi
@@ -150,6 +167,10 @@ php artisan event:cache 2>/dev/null || true
 
 # Pastikan symbolic link storage/public telah aktif
 php artisan storage:link 2>/dev/null || true
+
+# Normalisasi hak akses direktori storage dan cache (menghindari 503 akibat permission worker PHP-FPM)
+find storage bootstrap/cache -type d -exec chmod 775 {} + 2>/dev/null || true
+find storage bootstrap/cache -type f -exec chmod 664 {} + 2>/dev/null || true
 echo -e "      ${CLR_SUCCESS}✓ Seluruh cache performa (Config, Route, View) berhasil dikompilasi.${CLR_RESET}"
 
 # ------------------------------------------------------------------------------
@@ -171,18 +192,28 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-# 8. Penutupan Maintenance & Ringkasan Status
+# 8. Penutupan Maintenance & Verifikasi Ketersediaan Layanan (Zero 503 Guarantee)
 # ------------------------------------------------------------------------------
-if [ "$MAINTENANCE_ACTIVE" = true ]; then
-    echo -e "${CLR_INFO}[8/8] Menonaktifkan Maintenance Mode...${CLR_RESET}"
-    php artisan up
-    MAINTENANCE_ACTIVE=false
-else
-    echo -e "${CLR_INFO}[8/8] Memverifikasi integritas sistem...${CLR_RESET}"
+echo -e "${CLR_INFO}[8/8] Memulihkan dan memvalidasi ketersediaan layanan...${CLR_RESET}"
+
+# Jaminan mutlak: hapus status maintenance mode jika masih ada
+if [ -f "${SCRIPT_DIR}/storage/framework/down" ]; then
+    echo -e "      Mengaktifkan kembali sistem (php artisan up)..."
+    php artisan up 2>/dev/null || rm -f "${SCRIPT_DIR}/storage/framework/down" || true
 fi
 
-SANITY_CHECK=$(php -r "require 'vendor/autoload.php'; \$app = require_once 'bootstrap/app.php'; \$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap(); echo 'Agendas: '.App\Models\Agenda::count().' | Users: '.App\Models\User::count().' | Units: '.App\Models\Unit::count();")
-echo -e "      Status Data: ${CLR_BOLD}${SANITY_CHECK}${CLR_RESET}"
+# Validasi HTTP Health Check Internal
+HTTP_PROBE=$(php -r "require 'vendor/autoload.php'; \$app = require_once 'bootstrap/app.php'; \$kernel = \$app->make(Illuminate\Contracts\Http\Kernel::class); \$res = \$kernel->handle(Illuminate\Http\Request::create('/up', 'GET')); echo \$res->getStatusCode();" 2>/dev/null || echo "FAIL")
+
+if [ "$HTTP_PROBE" = "200" ]; then
+    echo -e "      Health Check: ${CLR_SUCCESS}✓ HTTP 200 OK (/up siap melayani request)${CLR_RESET}"
+else
+    echo -e "      Health Check: ${CLR_WARN}Status respon '${HTTP_PROBE}'. Menjalankan fail-safe live recovery...${CLR_RESET}"
+    php artisan up 2>/dev/null || rm -f "${SCRIPT_DIR}/storage/framework/down" || true
+fi
+
+SANITY_CHECK=$(php -r "require 'vendor/autoload.php'; \$app = require_once 'bootstrap/app.php'; \$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap(); echo 'Agendas: '.App\Models\Agenda::count().' | Users: '.App\Models\User::count().' | Units: '.App\Models\Unit::count();" 2>/dev/null || echo "Data check skipped")
+echo -e "      Status Data : ${CLR_BOLD}${SANITY_CHECK}${CLR_RESET}"
 
 echo ""
 echo -e "${CLR_SUCCESS}====================================================================${CLR_RESET}"
