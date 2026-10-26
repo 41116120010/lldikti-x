@@ -161,11 +161,13 @@ CRON_ENTRY="* * * * * cd ${SCRIPT_DIR} && php artisan schedule:run >> /dev/null 
 if crontab -l 2>/dev/null | grep -q "schedule:run"; then
     echo -e "      ${CLR_SUCCESS}✓ Cron job Laravel scheduler terdeteksi aktif di crontab.${CLR_RESET}"
 else
-    echo -e "      ${CLR_WARN}Perhatian: Entri crontab belum terdeteksi.${CLR_RESET}"
-    echo -e "      Untuk mengaktifkan otomasi auto-close rapat dan retensi log, pasang baris ini:"
-    echo -e "      ${CLR_BOLD}${CRON_ENTRY}${CLR_RESET}"
-    echo -e "      Atau jalankan perintah cepat berikut:"
-    echo -e "      ${CLR_INFO}(crontab -l 2>/dev/null; echo \"${CRON_ENTRY}\") | crontab -${CLR_RESET}"
+    echo -e "      ${CLR_INFO}Mendaftarkan cron job Laravel scheduler ke crontab...${CLR_RESET}"
+    if (crontab -l 2>/dev/null | grep -v -F "schedule:run"; echo "${CRON_ENTRY}") | crontab - 2>/dev/null; then
+        echo -e "      ${CLR_SUCCESS}✓ Cron job berhasil disimpan secara otomatis ke crontab.${CLR_RESET}"
+    else
+        echo -e "      ${CLR_WARN}Tidak dapat menulis otomatis ke crontab. Jalankan perintah manual:${CLR_RESET}"
+        echo -e "      ${CLR_INFO}(crontab -l 2>/dev/null; echo \"${CRON_ENTRY}\") | crontab -${CLR_RESET}"
+    fi
 fi
 
 # ------------------------------------------------------------------------------
