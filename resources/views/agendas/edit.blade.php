@@ -29,6 +29,23 @@
                 </div>
             @endif
 
+            @if($agenda->status === 'ongoing')
+                <div class="p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-start gap-3 shadow-2xs" role="region" aria-label="Status Agenda Sedang Berlangsung">
+                    <div class="w-8 h-8 rounded-lg bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-2xs mt-0.5">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                    </div>
+                    <div class="space-y-0.5 min-w-0">
+                        <div class="font-extrabold text-amber-950 text-xs">Agenda Rapat Sedang Berlangsung (Presensi Dibuka)</div>
+                        <p class="text-amber-900 font-medium text-[11px] leading-relaxed">
+                            Anda dapat memperbarui informasi lokasi/ruangan, tautan daring, berkas surat edaran resmi, penugasan pimpinan/notulis, maupun menetapkan perkiraan batas waktu selesai rapat.
+                        </p>
+                    </div>
+                </div>
+            @endif
+
             <div class="space-y-5">
                 <h3 class="text-sm font-extrabold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-2">1. Informasi Utama Rapat</h3>
 
@@ -367,10 +384,14 @@
                                 'cancelled' => 'Dibatalkan',
                             ];
                             $selectableStatuses = array_unique(array_merge([$agenda->status], $agenda->allowed_transitions));
+                            $hasAttendances = ($agenda->attendances_count ?? $agenda->attendances()->count()) > 0;
                         @endphp
                         @foreach($selectableStatuses as $s)
-                            <option value="{{ $s }}" {{ old('status', $agenda->status) === $s ? 'selected' : '' }}>
-                                {{ $statusLabels[$s] ?? ucfirst($s) }}
+                            @php
+                                $isDisabled = ($agenda->status === 'ongoing' && $s === 'scheduled' && $hasAttendances);
+                            @endphp
+                            <option value="{{ $s }}" {{ old('status', $agenda->status) === $s ? 'selected' : '' }} {{ $isDisabled ? 'disabled' : '' }}>
+                                {{ $statusLabels[$s] ?? ucfirst($s) }}{{ $isDisabled ? ' (Terkunci: Presensi Masuk)' : '' }}
                             </option>
                         @endforeach
                     </select>

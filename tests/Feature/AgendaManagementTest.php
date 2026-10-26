@@ -758,6 +758,162 @@ class AgendaManagementTest extends TestCase
 
         $agenda->delete();
     }
+
+    public function test_admin_and_admin_unit_can_access_edit_form_for_ongoing_agenda_with_null_end_time(): void
+    {
+        Agenda::query()->delete();
+        $superadmin = User::where('role', 'administrator')->firstOrFail();
+
+        $agenda = Agenda::create([
+            'created_by' => $superadmin->id,
+            'judul_rapat' => 'Rapat Ongoing Null End ' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Rapat Utama ' . uniqid(),
+            'waktu_mulai' => now()->subMinutes(30),
+            'waktu_selesai' => null,
+            'is_all_units' => true,
+            'status' => 'ongoing',
+        ]);
+
+        $response = $this->actingAs($superadmin)->get(route('admin.agendas.edit', $agenda));
+        $response->assertStatus(200);
+        $response->assertSee('Agenda Rapat Sedang Berlangsung (Presensi Dibuka)');
+        $response->assertSee('Hingga Selesai');
+
+        // Admin Unit can also access edit form for their own unit's ongoing agenda
+        $unit = Unit::firstOrFail();
+        $adminUnit = User::where('unit_id', $unit->id)->firstOrFail();
+        $adminUnit->update(['role' => 'admin']);
+
+        $agendaUnit = Agenda::create([
+            'created_by' => $adminUnit->id,
+            'judul_rapat' => 'Rapat Unit Ongoing ' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Unit ' . uniqid(),
+            'waktu_mulai' => now()->subMinutes(20),
+            'waktu_selesai' => null,
+            'is_all_units' => false,
+            'status' => 'ongoing',
+        ]);
+        $agendaUnit->units()->attach($unit->id);
+
+        $responseUnit = $this->actingAs($adminUnit)->get(route('admin.agendas.edit', $agendaUnit));
+        $responseUnit->assertStatus(200);
+        $responseUnit->assertSee('Agenda Rapat Sedang Berlangsung (Presensi Dibuka)');
+    }
+
+    public function test_admin_can_update_ongoing_agenda_with_null_end_time(): void
+    {
+        Agenda::query()->delete();
+        $superadmin = User::where('role', 'administrator')->firstOrFail();
+
+        $agenda = Agenda::create([
+            'created_by' => $superadmin->id,
+            'judul_rapat' => 'Rapat Koordinasi Berjalan ' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Sidang 1 ' . uniqid(),
+            'waktu_mulai' => now()->subMinutes(15),
+            'waktu_selesai' => null,
+            'is_all_units' => true,
+            'status' => 'ongoing',
+        ]);
+
+        $newTitle = 'Rapat Koordinasi Berjalan (Diperbarui) ' . uniqid();
+        $newRoom = 'Ruang Sidang 2 ' . uniqid();
+
+        $response = $this->actingAs($superadmin)->put(route('admin.agendas.update', $agenda), [
+            'judul_rapat' => $newTitle,
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => $newRoom,
+            'waktu_mulai' => $agenda->waktu_mulai->format('Y-m-d\TH:i'),
+            'waktu_selesai' => '',
+            'is_all_units' => true,
+            'status' => 'ongoing',
+        ]);
+
+        $response->assertRedirect(route('admin.agendas.show', $agenda));
+        $response->assertSessionHas('success');
+
+        $agenda->refresh();
+        $this->assertEquals($newTitle, $agenda->judul_rapat);
+        $this->assertEquals($newRoom, $agenda->lokasi_ruang);
+        $this->assertNull($agenda->waktu_selesai);
+        $this->assertEquals('ongoing', $agenda->status);
+    }
+
+    public function test_admin_can_update_ongoing_agenda_from_null_to_definite_end_time(): void
+    {
+        Agenda::query()->delete();
+        $superadmin = User::where('role', 'administrator')->firstOrFail();
+
+        $agenda = Agenda::create([
+            'created_by' => $superadmin->id,
+            'judul_rapat' => 'Rapat Fleksibel Menjadi Definitif ' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Sidang 3 ' . uniqid(),
+            'waktu_mulai' => now()->subMinutes(10),
+            'waktu_selesai' => null,
+            'is_all_units' => true,
+            'status' => 'ongoing',
+        ]);
+
+        $endTime = now()->addHours(2)->setMinute(0);
+
+        $response = $this->actingAs($superadmin)->put(route('admin.agendas.update', $agenda), [
+            'judul_rapat' => $agenda->judul_rapat,
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => $agenda->lokasi_ruang,
+            'waktu_mulai' => $agenda->waktu_mulai->format('Y-m-d\TH:i'),
+            'waktu_selesai' => $endTime->format('Y-m-d\TH:i'),
+            'is_all_units' => true,
+            'status' => 'ongoing',
+        ]);
+
+        $response->assertRedirect(route('admin.agendas.show', $agenda));
+        $response->assertSessionHas('success');
+
+        $agenda->refresh();
+        $this->assertNotNull($agenda->waktu_selesai);
+        $this->assertEquals($endTime->format('Y-m-d H:i'), $agenda->waktu_selesai->format('Y-m-d H:i'));
+    }
+
+    public function test_status_scheduled_is_disabled_in_edit_view_if_ongoing_agenda_has_attendances(): void
+    {
+        Agenda::query()->delete();
+        $superadmin = User::where('role', 'administrator')->firstOrFail();
+
+        $agenda = Agenda::create([
+            'created_by' => $superadmin->id,
+            'judul_rapat' => 'Rapat dengan Presensi ' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Sidang 4 ' . uniqid(),
+            'waktu_mulai' => now()->subMinutes(25),
+            'waktu_selesai' => null,
+            'is_all_units' => true,
+            'status' => 'ongoing',
+        ]);
+
+        \App\Models\Attendance::create([
+            'agenda_id' => $agenda->id,
+            'user_id' => $superadmin->id,
+            'selfie_path' => 'attendances/test_selfie.jpg',
+            'signature_path' => 'attendances/test_sig.png',
+            'signed_at' => now(),
+            'ip_address' => '127.0.0.1',
+            'user_agent' => 'PHPUnit Test',
+        ]);
+
+        $response = $this->actingAs($superadmin)->get(route('admin.agendas.edit', $agenda));
+        $response->assertStatus(200);
+        $response->assertSee('(Terkunci: Presensi Masuk)');
+    }
 }
 
 

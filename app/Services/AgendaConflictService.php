@@ -97,22 +97,39 @@ class AgendaConflictService
             // pg_advisory_lock bersifat session-level sehingga aktif melintasi seluruh
             // proses validasi konflik hingga penyimpanan transaksi selesai,
             // dan dilepas secara deterministik pada blok finally via pg_advisory_unlock.
-            // Casting ?::text dan ::bigint wajib karena pg_advisory_lock hanya menerima
-            // bigint (64-bit), sedangkan hashtext menghasilkan integer (32-bit).
-            DB::select('SELECT pg_advisory_lock(hashtext(?::text)::bigint)', [$lockName]);
+            // Gunakan standar SQL CAST(? AS text) dan CAST(... AS bigint)
+            // agar kompatibel dengan PDO PostgreSQL tanpa bentrok tanda titik dua ganda (::).
+            try {
+                DB::select('SELECT pg_advisory_lock(CAST(hashtext(CAST(? AS text)) AS bigint))', [$lockName]);
+                return true;
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Gagal mengambil pg_advisory_lock ruangan di PostgreSQL', [
+                    'lock' => $lockName,
+                    'error' => $e->getMessage(),
+                ]);
+                return false;
+            }
+        }
+
+        try {
+            $row = DB::selectOne('SELECT GET_LOCK(?, ?) AS acquired', [$lockName, self::LOCK_TIMEOUT_SECONDS]);
+
+            if (! $row || (int) $row->acquired !== 1) {
+                throw ValidationException::withMessages([
+                    'lokasi_ruang' => ['Ruang sedang diakses oleh proses lain. Silakan coba kembali beberapa saat lagi.'],
+                ]);
+            }
 
             return true;
-        }
-
-        $row = DB::selectOne('SELECT GET_LOCK(?, ?) AS acquired', [$lockName, self::LOCK_TIMEOUT_SECONDS]);
-
-        if (! $row || (int) $row->acquired !== 1) {
-            throw ValidationException::withMessages([
-                'lokasi_ruang' => ['Ruang sedang diakses oleh proses lain. Silakan coba kembali beberapa saat lagi.'],
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Gagal mengambil GET_LOCK ruangan di MySQL/MariaDB', [
+                'lock' => $lockName,
+                'error' => $e->getMessage(),
             ]);
+            return false;
         }
-
-        return true;
     }
 
     /**
@@ -125,7 +142,7 @@ class AgendaConflictService
 
         try {
             if ($driver === 'pgsql') {
-                DB::select('SELECT pg_advisory_unlock(hashtext(?::text)::bigint)', [$lockName]);
+                DB::select('SELECT pg_advisory_unlock(CAST(hashtext(CAST(? AS text)) AS bigint))', [$lockName]);
             } elseif ($driver === 'mysql' || $driver === 'mariadb') {
                 DB::selectOne('SELECT RELEASE_LOCK(?) AS released', [$lockName]);
             }
@@ -234,6 +251,8 @@ class AgendaConflictService
             return null;
         }
 
+        $ignoreId = $ignoreAgendaId ? (int) $ignoreAgendaId : null;
+
         // Cari apakah unit pengguna memiliki rapat yang sedang berlangsung (ongoing)
         $ongoingQuery = Agenda::query()
             ->where('status', 'ongoing')
@@ -244,8 +263,8 @@ class AgendaConflictService
                   });
             });
 
-        if ($ignoreAgendaId) {
-            $ongoingQuery->where('id', '!=', $ignoreAgendaId);
+        if ($ignoreId) {
+            $ongoingQuery->where('id', '!=', $ignoreId);
         }
 
         $ongoingAgenda = $ongoingQuery->first();
@@ -283,8 +302,9 @@ class AgendaConflictService
             // forced a full table scan on every agenda save.
             ->where('lokasi_ruang_normalized', $cleanRoom);
 
-        if ($ignoreAgendaId) {
-            $query->where('id', '!=', $ignoreAgendaId);
+        $ignoreId = $ignoreAgendaId ? (int) $ignoreAgendaId : null;
+        if ($ignoreId) {
+            $query->where('id', '!=', $ignoreId);
         }
 
         self::applyTimeOverlapScope($query, $mulai, $selesai);
@@ -312,8 +332,9 @@ class AgendaConflictService
         $query = Agenda::query()
             ->whereIn('status', ['scheduled', 'ongoing']);
 
-        if ($ignoreAgendaId) {
-            $query->where('id', '!=', $ignoreAgendaId);
+        $ignoreId = $ignoreAgendaId ? (int) $ignoreAgendaId : null;
+        if ($ignoreId) {
+            $query->where('id', '!=', $ignoreId);
         }
 
         self::applyTimeOverlapScope($query, $mulai, $selesai);
@@ -361,6 +382,7 @@ class AgendaConflictService
         ?Carbon $selesai
     ): array {
         $conflicts = [];
+        $ignoreId = $ignoreAgendaId ? (int) $ignoreAgendaId : null;
 
         // 1. Cek bentrok pimpinan
         if ($pimpinanId) {
@@ -374,8 +396,8 @@ class AgendaConflictService
                       });
                 });
 
-            if ($ignoreAgendaId) {
-                $queryPimpinan->where('id', '!=', $ignoreAgendaId);
+            if ($ignoreId) {
+                $queryPimpinan->where('id', '!=', $ignoreId);
             }
 
             self::applyTimeOverlapScope($queryPimpinan, $mulai, $selesai);
@@ -394,8 +416,8 @@ class AgendaConflictService
                 ->whereIn('status', ['scheduled', 'ongoing'])
                 ->where('notulis_id', $notulisId);
 
-            if ($ignoreAgendaId) {
-                $queryNotulis->where('id', '!=', $ignoreAgendaId);
+            if ($ignoreId) {
+                $queryNotulis->where('id', '!=', $ignoreId);
             }
 
             self::applyTimeOverlapScope($queryNotulis, $mulai, $selesai);
@@ -407,7 +429,6 @@ class AgendaConflictService
                 $conflicts['notulis_id'] = "Pegawai '{$nama}' telah ditugaskan sebagai Notulis pada '{$clashingAgenda->judul_rapat}' ({$clashingAgenda->rentang_waktu}).";
             }
         }
-
         return $conflicts;
     }
 

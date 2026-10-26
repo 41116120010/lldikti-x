@@ -27,7 +27,7 @@ class UpdateAgendaRequest extends FormRequest
             }
 
             $agenda = $this->route('agenda');
-            $agendaId = $agenda instanceof Agenda ? $agenda->id : (int) $agenda;
+            $agendaId = $agenda instanceof Agenda ? (int) $agenda->id : ($agenda ? (int) $agenda : null);
 
             $conflictResult = AgendaConflictService::checkConflicts(
                 data: $this->all(),
@@ -64,15 +64,15 @@ class UpdateAgendaRequest extends FormRequest
             }
         }
 
-        if ($this->has('waktu_selesai') && blank($this->input('waktu_selesai'))) {
+        if ($this->exists('waktu_selesai') && blank($this->input('waktu_selesai'))) {
             $this->merge(['waktu_selesai' => null]);
         }
 
-        if ($this->has('pimpinan_id') && blank($this->input('pimpinan_id'))) {
+        if ($this->exists('pimpinan_id') && blank($this->input('pimpinan_id'))) {
             $this->merge(['pimpinan_id' => null]);
         }
 
-        if ($this->has('notulis_id') && blank($this->input('notulis_id'))) {
+        if ($this->exists('notulis_id') && blank($this->input('notulis_id'))) {
             $this->merge(['notulis_id' => null]);
         }
     }

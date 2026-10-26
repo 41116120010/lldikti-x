@@ -219,6 +219,14 @@ class AgendaController extends Controller
             );
         } catch (\DomainException $e) {
             return back()->withInput()->with('error', $e->getMessage());
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Gagal memperbarui agenda rapat', [
+                'agenda_id' => $agenda->id,
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->withInput()->with('error', 'Terjadi kendala pada pemrosesan server saat memperbarui agenda: ' . $e->getMessage());
         }
 
         return redirect()->route('admin.agendas.show', $agenda)
