@@ -67,7 +67,7 @@
                             required
                         >
                         <datalist id="jenis_rapat_suggestions">
-                            @foreach (config('agenda.jenis_rapat_suggestions') as $suggestion)
+                            @foreach ((config('agenda.jenis_rapat_suggestions') ?? []) as $suggestion)
                                 <option value="{{ $suggestion }}">
                             @endforeach
                         </datalist>

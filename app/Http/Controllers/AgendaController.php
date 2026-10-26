@@ -188,18 +188,36 @@ class AgendaController extends Controller
     /**
      * Show the form for editing the specified agenda.
      */
-    public function edit(Agenda $agenda): View
+    public function edit(Agenda $agenda): View|RedirectResponse
     {
-        Gate::authorize('update', $agenda);
+        try {
+            Gate::authorize('update', $agenda);
 
-        $agenda->load(['units', 'pimpinan', 'notulis']);
-        $agenda->loadCount('attendances');
-        $currentUser = Auth::user();
-        $currentUser->load('unit');
-        $units = Unit::active()->orderBy('nama_unit')->get();
-        $users = User::query()->where('is_active', true)->with('unit')->orderBy('name')->get();
+            $agenda->load([
+                'creator.unit',
+                'units',
+                'pimpinan.unit',
+                'notulis.unit',
+            ]);
+            $agenda->loadCount(['attendances', 'documentations']);
+            $currentUser = Auth::user();
+            $currentUser->load('unit');
+            $units = Unit::active()->orderBy('nama_unit')->get();
+            $users = User::query()->where('is_active', true)->with('unit')->orderBy('name')->get();
 
-        return view('agendas.edit', compact('agenda', 'units', 'currentUser', 'users'));
+            return view('agendas.edit', compact('agenda', 'units', 'currentUser', 'users'));
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Gagal memuat formulir edit agenda rapat', [
+                'agenda_id' => $agenda->id,
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage(),
+            ]);
+
+            return redirect()->route('admin.agendas.show', $agenda)
+                ->with('error', 'Terjadi kendala saat memuat formulir edit agenda. Silakan coba kembali beberapa saat lagi.');
+        }
     }
 
     /**
@@ -219,6 +237,8 @@ class AgendaController extends Controller
             );
         } catch (\DomainException $e) {
             return back()->withInput()->with('error', $e->getMessage());
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Gagal memperbarui agenda rapat', [
                 'agenda_id' => $agenda->id,

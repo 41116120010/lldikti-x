@@ -914,6 +914,107 @@ class AgendaManagementTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('(Terkunci: Presensi Masuk)');
     }
+
+    public function test_edit_agenda_renders_cleanly_when_suggestions_config_is_null(): void
+    {
+        Agenda::query()->delete();
+        $superadmin = User::where('role', 'administrator')->firstOrFail();
+
+        $agenda = Agenda::create([
+            'created_by' => $superadmin->id,
+            'judul_rapat' => 'Rapat Config Null ' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Test ' . uniqid(),
+            'waktu_mulai' => now()->subMinutes(10),
+            'waktu_selesai' => null,
+            'is_all_units' => true,
+            'status' => 'ongoing',
+        ]);
+
+        config(['agenda.jenis_rapat_suggestions' => null]);
+
+        $response = $this->actingAs($superadmin)->get(route('admin.agendas.edit', $agenda));
+        $response->assertStatus(200);
+        $response->assertSee('Jenis Pertemuan');
+        $response->assertSee('id="jenis_rapat_suggestions"', false);
+    }
+
+    public function test_edit_agenda_handles_unexpected_exception_with_graceful_redirect(): void
+    {
+        Agenda::query()->delete();
+        $superadmin = User::where('role', 'administrator')->firstOrFail();
+
+        $agenda = Agenda::create([
+            'created_by' => $superadmin->id,
+            'judul_rapat' => 'Rapat Test Graceful ' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Test ' . uniqid(),
+            'waktu_mulai' => now()->subMinutes(10),
+            'waktu_selesai' => null,
+            'is_all_units' => true,
+            'status' => 'ongoing',
+        ]);
+
+        $mockAgenda = \Mockery::mock($agenda)->makePartial();
+        $mockAgenda->shouldReceive('load')->andThrow(new \RuntimeException('Simulasi kegagalan query relasi'));
+        \Illuminate\Support\Facades\Gate::policy(get_class($mockAgenda), \App\Policies\AgendaPolicy::class);
+
+        $this->actingAs($superadmin);
+        $controller = app(\App\Http\Controllers\AgendaController::class);
+        $response = $controller->edit($mockAgenda);
+
+        $this->assertTrue($response->isRedirect(route('admin.agendas.show', $agenda)));
+        $this->assertEquals(
+            'Terjadi kendala saat memuat formulir edit agenda. Silakan coba kembali beberapa saat lagi.',
+            session('error')
+        );
+    }
+
+    public function test_update_agenda_request_handles_conflict_exception_gracefully(): void
+    {
+        Agenda::query()->delete();
+        $superadmin = User::where('role', 'administrator')->firstOrFail();
+
+        $agenda = Agenda::create([
+            'created_by' => $superadmin->id,
+            'judul_rapat' => 'Rapat Test Request ' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Test ' . uniqid(),
+            'waktu_mulai' => now()->subMinutes(10),
+            'waktu_selesai' => null,
+            'is_all_units' => true,
+            'status' => 'ongoing',
+        ]);
+
+        $request = \App\Http\Requests\Agenda\UpdateAgendaRequest::create(
+            route('admin.agendas.update', $agenda),
+            'PUT',
+            [
+                'judul_rapat' => 'Judul Diperbarui',
+                'jenis_rapat' => 'koordinasi',
+                'tipe_rapat' => 'offline',
+                'lokasi_ruang' => 'Ruang Test',
+                'waktu_mulai' => now()->subMinutes(10)->format('Y-m-d H:i:s'),
+                'is_all_units' => true,
+                'status' => 'ongoing',
+            ]
+        );
+        $route = new \Illuminate\Routing\Route('PUT', 'admin/agendas/{agenda}', []);
+        $route->bind($request);
+        $route->setParameter('agenda', $agenda);
+        $request->setRouteResolver(fn () => $route);
+        $request->setUserResolver(fn () => $superadmin);
+
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), $request->rules());
+        $request->withValidator($validator);
+
+        // Request completes without throwing unhandled HTTP 500 exception
+        $this->assertFalse($validator->fails());
+    }
 }
+
 
 

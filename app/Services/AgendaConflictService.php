@@ -173,7 +173,14 @@ class AgendaConflictService
             return ['has_conflicts' => false, 'errors' => []];
         }
 
-        $selesai = !empty($data['waktu_selesai']) ? Carbon::parse($data['waktu_selesai']) : null;
+        $selesai = null;
+        if (!empty($data['waktu_selesai'])) {
+            try {
+                $selesai = Carbon::parse($data['waktu_selesai']);
+            } catch (\Throwable) {
+                $selesai = null;
+            }
+        }
         $status = $data['status'] ?? 'scheduled';
         $tipeRapat = $data['tipe_rapat'] ?? 'offline';
         $ruangan = isset($data['lokasi_ruang']) ? trim((string) $data['lokasi_ruang']) : null;
@@ -439,7 +446,7 @@ class AgendaConflictService
     public static function applyTimeOverlapScope(Builder $query, Carbon $mulai, ?Carbon $selesai): void
     {
         // Jika agenda baru tidak memiliki waktu selesai, estimasi hingga akhir hari (endOfDay)
-        $effectiveEnd = $selesai ? $selesai->copy() : $mulai->copy()->endOfDay();
+        $effectiveEnd = ($selesai && $selesai->gte($mulai)) ? $selesai->copy() : $mulai->copy()->endOfDay();
 
         $query->where(function (Builder $q) use ($mulai, $effectiveEnd) {
             // Syarat 1: Agenda lain mulai sebelum waktu selesai agenda baru

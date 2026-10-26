@@ -5,6 +5,7 @@ namespace App\Http\Requests\Agenda;
 use App\Models\Agenda;
 use App\Services\AgendaConflictService;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
@@ -29,18 +30,28 @@ class UpdateAgendaRequest extends FormRequest
             $agenda = $this->route('agenda');
             $agendaId = $agenda instanceof Agenda ? (int) $agenda->id : ($agenda ? (int) $agenda : null);
 
-            $conflictResult = AgendaConflictService::checkConflicts(
-                data: $this->all(),
-                ignoreAgendaId: $agendaId,
-                user: $this->user()
-            );
+            try {
+                $conflictResult = AgendaConflictService::checkConflicts(
+                    data: $this->all(),
+                    ignoreAgendaId: $agendaId,
+                    user: $this->user()
+                );
 
-            if ($conflictResult['has_conflicts']) {
-                foreach ($conflictResult['errors'] as $field => $messages) {
-                    foreach ($messages as $message) {
-                        $validator->errors()->add($field, $message);
+                if ($conflictResult['has_conflicts']) {
+                    foreach ($conflictResult['errors'] as $field => $messages) {
+                        foreach ($messages as $message) {
+                            $validator->errors()->add($field, $message);
+                        }
                     }
                 }
+            } catch (\Throwable $e) {
+                Log::error('Gagal memeriksa potensi konflik jadwal pada validasi form update agenda', [
+                    'agenda_id' => $agendaId,
+                    'user_id' => $this->user()?->id,
+                    'error' => $e->getMessage(),
+                ]);
+
+                $validator->errors()->add('jadwal', 'Terjadi kendala saat memeriksa ketersediaan jadwal/ruangan. Silakan coba kembali.');
             }
         });
     }

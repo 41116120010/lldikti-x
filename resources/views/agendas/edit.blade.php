@@ -82,7 +82,7 @@
                             required
                         >
                         <datalist id="jenis_rapat_suggestions">
-                            @foreach (config('agenda.jenis_rapat_suggestions') as $suggestion)
+                            @foreach ((config('agenda.jenis_rapat_suggestions') ?? []) as $suggestion)
                                 <option value="{{ $suggestion }}">
                             @endforeach
                         </datalist>
@@ -232,7 +232,7 @@
                             <span class="text-[11px] font-normal text-slate-700">(Penanggung Jawab Acara)</span>
                         </label>
                         <select id="pimpinan_id" name="pimpinan_id" class="input w-full font-medium @error('pimpinan_id') input-error @enderror">
-                            <option value="">Default: Pembuat Agenda ({{ $agenda->creator?->name }})</option>
+                            <option value="">Default: Pembuat Agenda ({{ $agenda->creator?->name ?? 'Penyelenggara' }})</option>
                             @foreach($users as $user)
                                 <option value="{{ $user->id }}" {{ old('pimpinan_id', $agenda->pimpinan_id) == $user->id ? 'selected' : '' }}>
                                     {{ $user->name }} (NIP: {{ $user->nip ?? '-' }}) — {{ $user->unit?->kode_unit ?? 'Pusat' }}
@@ -252,7 +252,7 @@
                             <span class="text-[11px] font-normal text-slate-700">(Pencatat Notulensi & Dokumentasi)</span>
                         </label>
                         <select id="notulis_id" name="notulis_id" class="input w-full font-medium @error('notulis_id') input-error @enderror">
-                            <option value="">Default: Pembuat Agenda ({{ $agenda->creator?->name }})</option>
+                            <option value="">Default: Pembuat Agenda ({{ $agenda->creator?->name ?? 'Penyelenggara' }})</option>
                             @foreach($users as $user)
                                 <option value="{{ $user->id }}" {{ old('notulis_id', $agenda->notulis_id) == $user->id ? 'selected' : '' }}>
                                     {{ $user->name }} (NIP: {{ $user->nip ?? '-' }}) — {{ $user->unit?->kode_unit ?? 'Pusat' }}
@@ -419,10 +419,10 @@
                 <span>Statistik Agenda Rapat</span>
             </h3>
             <div class="space-y-2 text-xs text-slate-200 font-medium">
-                <div>Total Presensi Tercatat: <strong class="text-white">{{ $agenda->attendances()->count() }} orang</strong></div>
+                <div>Total Presensi Tercatat: <strong class="text-white">{{ $agenda->attendances_count ?? $agenda->attendances()->count() }} orang</strong></div>
                 <div class="flex items-center justify-between">
-                    <div>Dokumentasi Foto: <strong class="text-white">{{ $agenda->documentations()->count() }} berkas</strong></div>
-                    @if($agenda->documentations()->count() > 0)
+                    <div>Dokumentasi Foto: <strong class="text-white">{{ $agenda->documentations_count ?? $agenda->documentations()->count() }} berkas</strong></div>
+                    @if(($agenda->documentations_count ?? $agenda->documentations()->count()) > 0)
                         @php
                             $firstDoc = $agenda->documentations()->first();
                         @endphp
@@ -442,7 +442,7 @@
                         @endif
                     @endif
                 </div>
-                @if($agenda->documentations()->count() > 0)
+                @if(($agenda->documentations_count ?? $agenda->documentations()->count()) > 0)
                     <div class="flex gap-1.5 pt-1 overflow-x-auto pb-1">
                         @foreach($agenda->documentations()->take(4)->get() as $d)
                             <button
