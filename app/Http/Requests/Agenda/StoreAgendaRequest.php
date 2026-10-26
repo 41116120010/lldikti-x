@@ -91,7 +91,7 @@ class StoreAgendaRequest extends FormRequest
             'unit_ids' => ['nullable', 'array', Rule::requiredIf(fn () => !$this->boolean('is_all_units', true))],
             'unit_ids.*' => ['exists:units,id'],
             'surat_edaran' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:5120'],
-            'status' => ['nullable', 'string', Rule::in(['draft', 'scheduled', 'ongoing', 'completed', 'cancelled'])],
+            'status' => ['nullable', 'string', Rule::in(['draft', 'scheduled'])],
         ];
     }
 

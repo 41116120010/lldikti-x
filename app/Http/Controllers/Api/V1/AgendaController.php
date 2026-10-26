@@ -146,13 +146,20 @@ class AgendaController extends Controller
     {
         Gate::authorize('update', $agenda);
 
-        $agenda = $agendaService->updateAgenda(
-            agenda: $agenda,
-            actor: $request->user(),
-            validated: $request->validated(),
-            isAllUnits: $request->boolean('is_all_units', true),
-            suratEdaran: $request->file('surat_edaran')
-        );
+        try {
+            $agenda = $agendaService->updateAgenda(
+                agenda: $agenda,
+                actor: $request->user(),
+                validated: $request->validated(),
+                isAllUnits: $request->boolean('is_all_units', true),
+                suratEdaran: $request->file('surat_edaran')
+            );
+        } catch (\DomainException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
 
         $agenda->load(['creator.unit', 'pimpinan.unit', 'notulis.unit', 'units', 'documentations']);
 
@@ -218,7 +225,15 @@ class AgendaController extends Controller
         Gate::authorize('manageStatus', $agenda);
 
         $validated = $request->validated();
-        $statusText = $agendaService->updateStatus($agenda, $validated['status']);
+
+        try {
+            $statusText = $agendaService->updateStatus($agenda, $validated['status'], $request->user());
+        } catch (\DomainException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
 
         $agenda->load(['creator.unit', 'pimpinan.unit', 'notulis.unit', 'units']);
 

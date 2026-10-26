@@ -5,6 +5,7 @@ namespace Tests\Feature\Api\V1;
 use App\Models\Agenda;
 use App\Models\Attendance;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -17,6 +18,12 @@ use Tests\TestCase;
 class MobileClientWorkflowE2ETest extends TestCase
 {
     use DatabaseTransactions;
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
+    }
 
     public function test_complete_mobile_client_lifecycle_workflow(): void
     {
@@ -106,7 +113,8 @@ class MobileClientWorkflowE2ETest extends TestCase
             ->assertJsonPath('data.pimpinan.id', $admin->id)
             ->assertJsonPath('data.notulis.id', $staff->id);
 
-        // Admin opens attendance session (ongoing)
+        // Admin opens attendance session (ongoing dalam jendela 15 menit)
+        Carbon::setTestNow(now()->addDays(2)->subMinutes(5));
         $startResponse = $withToken($adminToken)
             ->patchJson("/api/v1/agendas/{$agendaId}/status", [
                 'status' => 'ongoing',
@@ -180,6 +188,7 @@ class MobileClientWorkflowE2ETest extends TestCase
             ]);
         $finishResponse->assertOk()
             ->assertJsonPath('data.status.value', 'completed');
+        Carbon::setTestNow();
 
         // =========================================================================
         // 5. Reporting, Document Exports & Audit Trail

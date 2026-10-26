@@ -49,12 +49,17 @@ class AttendancePolicy
             return false;
         }
 
-        // 2. User must be eligible based on unit (Administrator has global attendance authority)
+        // 2. Waktu pelaksanaan rapat belum melewati batas akhir efektif (termasuk toleransi 15 menit)
+        if (now()->gt($agenda->effective_end_at)) {
+            return false;
+        }
+
+        // 3. User must be eligible based on unit (Administrator has global attendance authority)
         if (!$user->isAdministrator() && !$agenda->isUserEligible($user)) {
             return false;
         }
 
-        // 3. User must not have checked in yet
+        // 4. User must not have checked in yet
         if ($agenda->hasUserAttended($user)) {
             return false;
         }

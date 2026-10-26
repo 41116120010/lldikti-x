@@ -58,4 +58,22 @@ return [
         'lainnya' => 'Pertemuan Lainnya',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Toleransi Waktu Pelaksanaan & Presensi Agenda
+    |--------------------------------------------------------------------------
+    |
+    | 'start_window_minutes': Jendela waktu rapat dapat dimulai (dibuka presensinya)
+    | sebelum jadwal 'waktu_mulai' (default: 15 menit).
+    |
+    | 'close_grace_minutes': Masa tenggang/toleransi pengisian presensi setelah
+    | waktu akhir rapat sebelum presensi ditutup otomatis (default: 15 menit).
+    |
+    */
+
+    'start_window_minutes' => (int) env('AGENDA_START_WINDOW_MINUTES', 15),
+
+    'close_grace_minutes' => (int) env('AGENDA_CLOSE_GRACE_MINUTES', 15),
+
 ];
+

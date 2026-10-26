@@ -358,11 +358,21 @@
                 <div>
                     <label for="status" class="text-xs font-bold text-slate-900 block mb-1">Status Siklus Agenda</label>
                     <select id="status" name="status" class="input text-xs font-semibold @error('status') input-error @enderror">
-                        <option value="draft" {{ old('status', $agenda->status) === 'draft' ? 'selected' : '' }}>Konsep</option>
-                        <option value="scheduled" {{ old('status', $agenda->status) === 'scheduled' ? 'selected' : '' }}>Terjadwal</option>
-                        <option value="ongoing" {{ old('status', $agenda->status) === 'ongoing' ? 'selected' : '' }}>Sedang Berlangsung</option>
-                        <option value="completed" {{ old('status', $agenda->status) === 'completed' ? 'selected' : '' }}>Selesai</option>
-                        <option value="cancelled" {{ old('status', $agenda->status) === 'cancelled' ? 'selected' : '' }}>Dibatalkan</option>
+                        @php
+                            $statusLabels = [
+                                'draft' => 'Konsep / Draf',
+                                'scheduled' => 'Terjadwal',
+                                'ongoing' => 'Sedang Berlangsung (Presensi Dibuka)',
+                                'completed' => 'Selesai (Presensi Ditutup)',
+                                'cancelled' => 'Dibatalkan',
+                            ];
+                            $selectableStatuses = array_unique(array_merge([$agenda->status], $agenda->allowed_transitions));
+                        @endphp
+                        @foreach($selectableStatuses as $s)
+                            <option value="{{ $s }}" {{ old('status', $agenda->status) === $s ? 'selected' : '' }}>
+                                {{ $statusLabels[$s] ?? ucfirst($s) }}
+                            </option>
+                        @endforeach
                     </select>
                     @error('status')
                         <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>

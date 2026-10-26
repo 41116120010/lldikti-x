@@ -399,6 +399,14 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
         "value": "ongoing",
         "label": "Sedang Berlangsung (Presensi Dibuka)"
       },
+      "allowed_transitions": [
+        "completed",
+        "scheduled"
+      ],
+      "can_start_now": false,
+      "is_overdue": false,
+      "earliest_start_at": "2026-10-07T08:45:00+07:00",
+      "effective_end_at": "2026-10-07T12:15:00+07:00",
       "surat_edaran": {
         "url": "https://siperapat.lldikti.go.id/storage/circulars/edaran_123.pdf",
         "extension": "pdf",
@@ -431,9 +439,15 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
   }
   ```
 
-##### Kamus Properti Telemetri & Berita Acara Agenda
+##### Kamus Properti Telemetri, Status Lifecycle & Berita Acara Agenda
 | Properti | Tipe | Deskripsi & Kegunaan UI Mobile |
 | :--- | :--- | :--- |
+| `status` | `object` | Status operasional saat ini (`{ value, label }`). Nilai: `draft`, `scheduled`, `ongoing`, `completed`, `cancelled`. |
+| `allowed_transitions` | `array` | Daftar status tujuan yang sah dapat ditransisikan dari status saat ini sesuai State Machine resmi. |
+| `can_start_now` | `boolean` | `true` bila rapat berstatus `scheduled` dan waktu saat ini telah memasuki jendela buka rapat (**15 menit sebelum waktu mulai** s.d. batas waktu selesai efektif). |
+| `is_overdue` | `boolean` | `true` bila rapat `scheduled` telah melewati waktu pelaksanaan tanpa pernah dibuka presensinya. Mobile UI wajib menampilkan chip/badge **"Terlewat"**. |
+| `earliest_start_at` | `string` | Waktu paling awal tombol "Mulai Rapat" dapat ditekan (ISO-8601: `waktu_mulai - 15 menit`). |
+| `effective_end_at` | `string` | Waktu batas akhir toleransi presensi (ISO-8601: `waktu_selesai/endOfDay + 15 menit`). Melewati waktu ini, presensi ditolak dan scheduler menutup rapat otomatis. |
 | `nomor_ba` | `string` | Nomor dokumen Berita Acara resmi (contoh: `"BA-RAPAT/2026/0001"`). Siap disalin pada kartu hero dokumen. |
 | `total_invited` | `integer` | Jumlah seluruh ASN aktif yang menjadi target undangan rapat (berdasarkan seluruh instansi atau unit kerja terkait). |
 | `total_attended` | `integer` | Jumlah ASN yang telah berhasil melakukan presensi dan tercatat sah pada agenda rapat. |
@@ -456,6 +470,7 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
   - `is_all_units` (boolean, optional, default true)
   - `unit_ids` (array integer, required jika is_all_units = false)
   - `surat_edaran` (file PDF/Image max 5MB, optional)
+  - `status` (string, optional: `draft` atau `scheduled`, default `scheduled`. Pembuatan agenda langsung dengan status `ongoing` atau `completed` dilarang demi integritas alur).
 
 #### 4. Perbarui Agenda Rapat Secara Lengkap (Admin / Administrator)
 * **Endpoint:** `PUT /api/v1/agendas/{id}`
@@ -474,7 +489,7 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
   - `is_all_units` (boolean, optional)
   - `unit_ids` (array integer, required jika is_all_units = false)
   - `surat_edaran` (file PDF/Image max 5MB, optional pengganti berkas lama)
-  - `status` (string, optional: `draft`, `scheduled`, `ongoing`, `completed`, `cancelled`)
+  - `status` (string, optional: status yang diizinkan sesuai State Machine `allowed_transitions`)
 * **Response (200 OK):**
   ```json
   {
@@ -522,15 +537,46 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
   }
   ```
 
-#### 7. Perbarui Status Agenda Rapat
+#### 7. Perbarui Status Agenda Rapat (State Machine)
 * **Endpoint:** `PATCH /api/v1/agendas/{id}/status`
+* **Headers:** `Authorization: Bearer <token>`, `Content-Type: application/json`
+* **Otorisasi:** Administrator atau Admin Unit penyelenggara / pembuat agenda (`manageStatus`).
 * **Request Body:**
   ```json
   {
     "status": "ongoing"
   }
   ```
-  *(Status valid: `draft`, `scheduled`, `ongoing`, `completed`, `cancelled`).*
+* **Matriks Transisi Status Resmi (State Machine):**
+  | Status Asal | Target Diizinkan (`allowed_transitions`) | Syarat & Penegakan Bisnis |
+  | :--- | :--- | :--- |
+  | `draft` | `scheduled`, `cancelled` | Transisi ke `scheduled` melewati validasi room advisory lock dan deteksi konflik bentrok jadwal. Waktu mulai tidak boleh berada di masa lampau. |
+  | `scheduled` | `ongoing`, `draft`, `cancelled` | Transisi ke `ongoing` (Buka Presensi) **hanya diizinkan dalam jendela 15 menit sebelum `waktu_mulai`** hingga `effective_end_at`. Jika lebih awal dari 15 menit sebelum rapat, API menolak dengan HTTP 422. |
+  | `ongoing` | `completed`, `scheduled` | Transisi ke `completed` (Tutup Presensi) dapat dilakukan kapan saja oleh penyelenggara atau otomatis oleh scheduler. Rollback ke `scheduled` hanya diizinkan bila `attendances_count === 0`. |
+  | `completed` | *None* (`[]`) | **Final & Permanen**. Berkas notulensi dan daftar hadir terkunci dari perubahan status. |
+  | `cancelled` | `draft` | Mengaktifkan kembali agenda yang batal untuk dijadwalkan ulang sebagai konsep. Diizinkan untuk Administrator dan Admin Unit penyelenggara rapat. |
+* **Response Berhasil (200 OK):**
+  ```json
+  {
+    "success": true,
+    "message": "Status agenda rapat berhasil diubah menjadi Sedang Berlangsung (Presensi Dibuka).",
+    "data": { ... }
+  }
+  ```
+* **Response Penolakan Transisi Tidak Sah (422 Unprocessable Entity):**
+  ```json
+  {
+    "success": false,
+    "message": "Perubahan status agenda dari 'completed' menjadi 'scheduled' tidak diizinkan oleh sistem."
+  }
+  ```
+* **Response Penolakan di Luar Jendela Waktu (422 Unprocessable Entity):**
+  ```json
+  {
+    "success": false,
+    "message": "Sesi rapat belum dapat dimulai. Tombol mulai baru dapat diakses 15 menit sebelum jadwal rapat (08:45 WIB)."
+  }
+  ```
 
 #### 8. Penugasan Pimpinan & Notulis Rapat
 * **Endpoint:** `PATCH /api/v1/agendas/{id}/roles`

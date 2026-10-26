@@ -9,11 +9,24 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Str;
 
 class Agenda extends Model
 {
     use HasFactory;
+
+    /**
+     * Matriks transisi status agenda yang diizinkan sistem (State Machine).
+     */
+    public const ALLOWED_TRANSITIONS = [
+        'draft' => ['scheduled', 'cancelled'],
+        'scheduled' => ['ongoing', 'draft', 'cancelled'],
+        'ongoing' => ['completed', 'scheduled'],
+        'completed' => [],
+        'cancelled' => ['draft'],
+    ];
 
     protected $fillable = [
         'created_by',
@@ -793,4 +806,104 @@ class Agenda extends Model
 
         return (string) ($config['document_number'] ?? ('BA-RAPAT/'.($this->waktu_mulai ? $this->waktu_mulai->format('Y') : date('Y')).'/'.str_pad($this->id, 4, '0', STR_PAD_LEFT)));
     }
+
+    /**
+     * Convert a DateTime to a storable string, ensuring conversion to application timezone (Asia/Jakarta / WIB).
+     *
+     * Prevents UTC ISO-8601 strings (e.g. from mobile or REST API clients) from losing their offset
+     * and drifting by 7 hours when saved into the database.
+     */
+    public function fromDateTime($value)
+    {
+        if (empty($value)) {
+            return $value;
+        }
+
+        $date = $this->asDateTime($value);
+
+        $appTimezone = config('app.timezone', 'Asia/Jakarta');
+        if ($date instanceof CarbonInterface) {
+            $date = $date->copy()->setTimezone($appTimezone);
+        }
+
+        return $date->format($this->getDateFormat());
+    }
+
+    /**
+     * Determine whether the agenda can transition to the given target status.
+     */
+    public function canTransitionTo(string $targetStatus): bool
+    {
+        if ($this->status === $targetStatus) {
+            return true;
+        }
+
+        $allowed = self::ALLOWED_TRANSITIONS[$this->status] ?? [];
+
+        return in_array($targetStatus, $allowed, true);
+    }
+
+    /**
+     * List of target statuses allowed from current status.
+     */
+    public function getAllowedTransitionsAttribute(): array
+    {
+        return self::ALLOWED_TRANSITIONS[$this->status] ?? [];
+    }
+
+    /**
+     * Effective end time for attendance and operational session,
+     * including configured grace minutes tolerance.
+     */
+    public function getEffectiveEndAtAttribute(): Carbon
+    {
+        $graceMinutes = (int) config('agenda.close_grace_minutes', 15);
+        $baseEnd = $this->waktu_selesai ?? ($this->waktu_mulai ? $this->waktu_mulai->copy()->endOfDay() : now()->endOfDay());
+
+        return $baseEnd->copy()->addMinutes($graceMinutes);
+    }
+
+    /**
+     * Earliest start time when the meeting can be opened (status changed to ongoing).
+     */
+    public function getEarliestStartAtAttribute(): ?Carbon
+    {
+        if (! $this->waktu_mulai) {
+            return null;
+        }
+
+        $startWindowMinutes = (int) config('agenda.start_window_minutes', 15);
+
+        return $this->waktu_mulai->copy()->subMinutes($startWindowMinutes);
+    }
+
+    /**
+     * Whether the meeting can be started right now.
+     * Must be scheduled, and current time must fall within the [earliest_start_at, effective_end_at] window.
+     */
+    public function getCanStartNowAttribute(): bool
+    {
+        if ($this->status !== 'scheduled' || ! $this->waktu_mulai) {
+            return false;
+        }
+
+        $now = now();
+        $earliest = $this->earliest_start_at;
+        $effectiveEnd = $this->effective_end_at;
+
+        return $now->gte($earliest) && $now->lte($effectiveEnd);
+    }
+
+    /**
+     * Whether the scheduled meeting has passed its effective end time without ever being started.
+     */
+    public function getIsOverdueAttribute(): bool
+    {
+        if ($this->status !== 'scheduled') {
+            return false;
+        }
+
+        return now()->gt($this->effective_end_at);
+    }
 }
+

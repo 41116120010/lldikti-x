@@ -29,6 +29,9 @@ class StoreAttendanceRequest extends FormRequest
         if ($agenda) {
             if ($agenda->status !== 'ongoing') {
                 $message = 'Sesi presensi untuk agenda rapat ini tidak sedang dibuka.';
+            } elseif (now()->gt($agenda->effective_end_at)) {
+                $endTimeStr = $agenda->effective_end_at->translatedFormat('H:i');
+                $message = "Batas waktu pengisian presensi untuk agenda rapat ini telah berakhir sejak {$endTimeStr} WIB.";
             } elseif ($user && ! $user->isAdministrator() && ! $agenda->isUserEligible($user)) {
                 $message = 'Unit kerja Anda tidak termasuk dalam daftar undangan agenda rapat ini.';
             } elseif ($user && $agenda->hasUserAttended($user)) {

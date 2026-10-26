@@ -29,6 +29,12 @@
                         {{ $agenda->status_meta_soft['label'] }}
                     </span>
 
+                    @if($agenda->is_overdue)
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300" title="Waktu pelaksanaan rapat telah melewati batas toleransi">
+                            Terlewat
+                        </span>
+                    @endif
+
                     <span class="text-[11px] font-mono font-bold uppercase px-2 py-0.5 bg-slate-100 text-slate-800 rounded border border-slate-200">
                         {{ $agenda->tipe_rapat }}
                     </span>

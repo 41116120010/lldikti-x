@@ -7,6 +7,7 @@ use App\Models\Agenda;
 use App\Models\Attendance;
 use App\Models\Unit;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -20,6 +21,12 @@ class EndToEndUserAcceptanceTest extends TestCase
     {
         parent::setUp();
         Storage::fake('public');
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
     }
 
     public function test_complete_enterprise_lifecycle_uat_flow(): void
@@ -85,7 +92,8 @@ class EndToEndUserAcceptanceTest extends TestCase
         $this->assertNotNull($agenda);
         $agendaRes->assertRedirect("/admin/agendas/{$agenda->id}");
 
-        // 1.5 Open Attendance (Change Status to Ongoing)
+        // 1.5 Open Attendance (Change Status to Ongoing dalam jendela 15 menit)
+        Carbon::setTestNow(Carbon::parse($agenda->waktu_mulai)->subMinutes(5));
         $statusRes = $this->actingAs($superadmin)->patch("/admin/agendas/{$agenda->id}/status", [
             'status' => 'ongoing',
         ]);
@@ -140,6 +148,7 @@ class EndToEndUserAcceptanceTest extends TestCase
             'status' => 'completed',
         ]);
         $this->assertEquals('completed', $agenda->fresh()->status);
+        Carbon::setTestNow();
 
         // -------------------------------------------------------------
         // STEP 4: EXECUTIVE REPORTING & OFFICIAL EXPORTS (PDF/Word/CSV)

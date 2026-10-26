@@ -43,6 +43,12 @@
             >
                 Selesai ({{ $statusCounts['completed'] }})
             </a>
+            <a 
+                href="{{ route('admin.agendas.index', ['status' => 'cancelled'] + request()->except('status', 'page')) }}" 
+                class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition {{ request('status') === 'cancelled' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-700 hover:text-slate-900' }}"
+            >
+                Dibatalkan ({{ $statusCounts['cancelled'] }})
+            </a>
         </div>
 
         @if($currentUser->isAdministrator() || $currentUser->isAdmin())
@@ -120,9 +126,9 @@
                                 <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200 shrink-0">
                                     Penyelenggara
                                 </span>
-                            @elseif($agenda->status === 'ongoing' && ($agenda->pZpimpinan_id === $currentUser->id || $agenda->notulis_id === $currentUser->id))
+                            @elseif($agenda->status === 'ongoing' && ($agenda->pimpinan_id === $currentUser->id || $agenda->notulis_id === $currentUser->id))
                                 <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 shrink-0">
-                                    {{ $agenda->pZpimpinan_id === $currentUser->id ? 'Pimpinan Rapat' : 'Notulis Rapat' }}
+                                    {{ $agenda->pimpinan_id === $currentUser->id ? 'Pimpinan Rapat' : 'Notulis Rapat' }}
                                 </span>
                             @else
                                 <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200 shrink-0">
@@ -147,22 +153,33 @@
 
                         @can('manageStatus', $agenda)
                             @if($agenda->status === 'scheduled')
-                                <form 
-                                    action="{{ route('admin.agendas.update-status', $agenda) }}" 
-                                    method="POST" 
-                                    class="inline"
-                                    data-confirm="Mulai rapat '{{ $agenda->judul_rapat }}' sekarang? Pegawai akan dapat langsung melakukan presensi."
-                                    data-confirm-title="Mulai Rapat"
-                                    data-confirm-type="confirm"
-                                    data-confirm-btn="Ya, Mulai Rapat"
-                                >
-                                    @csrf
-                                    @method('PATCH')
-                                    <input type="hidden" name="status" value="ongoing">
-                                    <button type="submit" class="button small text-xs bg-amber-700 hover:bg-amber-800 text-white font-bold" title="Mulai Rapat">
+                                @if($agenda->can_start_now)
+                                    <form 
+                                        action="{{ route('admin.agendas.update-status', $agenda) }}" 
+                                        method="POST" 
+                                        class="inline"
+                                        data-confirm="Mulai rapat '{{ $agenda->judul_rapat }}' sekarang? Pegawai akan dapat langsung melakukan presensi."
+                                        data-confirm-title="Mulai Rapat"
+                                        data-confirm-type="confirm"
+                                        data-confirm-btn="Ya, Mulai Rapat"
+                                    >
+                                        @csrf
+                                        @method('PATCH')
+                                        <input type="hidden" name="status" value="ongoing">
+                                        <button type="submit" class="button small text-xs bg-amber-700 hover:bg-amber-800 text-white font-bold" title="Mulai Rapat">
+                                            Mulai
+                                        </button>
+                                    </form>
+                                @else
+                                    <button 
+                                        type="button" 
+                                        disabled 
+                                        class="button small text-xs bg-slate-100 text-slate-400 border border-slate-200 font-semibold cursor-not-allowed opacity-75" 
+                                        title="{{ $agenda->is_overdue ? 'Rapat telah melewati batas pelaksanaan' : 'Dapat dimulai 15 menit sebelum rapat (' . ($agenda->earliest_start_at ? $agenda->earliest_start_at->format('H:i') : '') . ' WIB)' }}"
+                                    >
                                         Mulai
                                     </button>
-                                </form>
+                                @endif
                             @elseif($agenda->status === 'ongoing')
                                 <form 
                                     action="{{ route('admin.agendas.update-status', $agenda) }}" 

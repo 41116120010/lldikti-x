@@ -14,6 +14,12 @@
                 {{ $agenda->status_meta['label'] }}
             </span>
 
+            @if($agenda->is_overdue)
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-amber-400 text-slate-950 border border-amber-300" title="Waktu pelaksanaan rapat telah melewati batas toleransi">
+                    Terlewat
+                </span>
+            @endif
+
             <span class="text-xs uppercase font-mono font-bold px-2.5 py-1 bg-slate-900 border border-slate-700 rounded-md text-slate-200">
                 {{ $agenda->tipe_rapat }}
             </span>
@@ -97,24 +103,72 @@
                 </a>
 
                 @can('manageStatus', $agenda)
-                    @if($agenda->status === 'scheduled')
+                    @if($agenda->status === 'draft')
                         <form 
                             action="{{ route('admin.agendas.update-status', $agenda) }}" 
                             method="POST" 
                             class="inline"
-                            data-confirm="Mulai rapat '{{ $agenda->judul_rapat }}' sekarang? Pegawai akan dapat langsung mengisi daftar hadir."
-                            data-confirm-title="Mulai Rapat"
+                            data-confirm="Terbitkan agenda '{{ $agenda->judul_rapat }}' menjadi Terjadwal? Agenda akan dapat diakses oleh seluruh peserta yang diundang."
+                            data-confirm-title="Terbitkan Agenda"
                             data-confirm-type="confirm"
-                            data-confirm-btn="Ya, Mulai Rapat"
+                            data-confirm-btn="Ya, Terbitkan Agenda"
                         >
                             @csrf
                             @method('PATCH')
-                            <input type="hidden" name="status" value="ongoing">
-                            <button type="submit" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold shadow-md cursor-pointer transition">
+                            <input type="hidden" name="status" value="scheduled">
+                            <button type="submit" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md cursor-pointer transition">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                <span>Terbitkan Agenda</span>
+                            </button>
+                        </form>
+                    @elseif($agenda->status === 'cancelled')
+                        <form 
+                            action="{{ route('admin.agendas.update-status', $agenda) }}" 
+                            method="POST" 
+                            class="inline"
+                            data-confirm="Buka kembali agenda rapat '{{ $agenda->judul_rapat }}' sebagai Konsep/Draf untuk penjadwalan ulang?"
+                            data-confirm-title="Buka Kembali Agenda"
+                            data-confirm-type="confirm"
+                            data-confirm-btn="Ya, Buka Kembali"
+                        >
+                            @csrf
+                            @method('PATCH')
+                            <input type="hidden" name="status" value="draft">
+                            <button type="submit" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs bg-slate-700 hover:bg-slate-800 text-white font-bold shadow-md cursor-pointer transition">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                                <span>Buka Kembali sebagai Konsep</span>
+                            </button>
+                        </form>
+                    @elseif($agenda->status === 'scheduled')
+                        @if($agenda->can_start_now)
+                            <form 
+                                action="{{ route('admin.agendas.update-status', $agenda) }}" 
+                                method="POST" 
+                                class="inline"
+                                data-confirm="Mulai rapat '{{ $agenda->judul_rapat }}' sekarang? Pegawai akan dapat langsung mengisi daftar hadir."
+                                data-confirm-title="Mulai Rapat"
+                                data-confirm-type="confirm"
+                                data-confirm-btn="Ya, Mulai Rapat"
+                            >
+                                @csrf
+                                @method('PATCH')
+                                <input type="hidden" name="status" value="ongoing">
+                                <button type="submit" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold shadow-md cursor-pointer transition">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                                    <span>Mulai Rapat</span>
+                                </button>
+                            </form>
+                        @else
+                            <button 
+                                type="button" 
+                                disabled 
+                                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs bg-slate-800 text-slate-500 border border-slate-700 font-bold cursor-not-allowed opacity-75" 
+                                title="{{ $agenda->is_overdue ? 'Rapat telah melewati batas pelaksanaan' : 'Dapat dimulai 15 menit sebelum rapat (' . ($agenda->earliest_start_at ? $agenda->earliest_start_at->format('H:i') : '') . ' WIB)' }}"
+                            >
                                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                                 <span>Mulai Rapat</span>
                             </button>
-                        </form>
+                        @endif
                     @elseif($agenda->status === 'ongoing')
                         <form 
                             action="{{ route('admin.agendas.update-status', $agenda) }}" 

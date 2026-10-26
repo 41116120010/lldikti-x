@@ -33,6 +33,11 @@ class AgendaResource extends JsonResource
                 'value' => $this->status,
                 'label' => $this->status_meta['label'] ?? $this->status,
             ],
+            'allowed_transitions' => $this->allowed_transitions,
+            'can_start_now' => (bool) $this->can_start_now,
+            'is_overdue' => (bool) $this->is_overdue,
+            'earliest_start_at' => $this->earliest_start_at?->toIso8601String(),
+            'effective_end_at' => $this->effective_end_at?->toIso8601String(),
             'surat_edaran' => [
                 'url' => $this->surat_edaran_path ? url('/storage/' . ltrim($this->surat_edaran_path, '/')) : null,
                 'extension' => $this->surat_edaran_extension,

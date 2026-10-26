@@ -172,8 +172,8 @@ class AgendaPolicy
         }
 
         // Petugas yang ditunjuk (pimpinan atau notulis, baik admin unit maupun staf)
-        // berhak mengelola notulensi dan foto dokumentasi kegiatan (pada status scheduled, ongoing, maupun completed)
-        if ($this->isAppointed($user, $agenda)) {
+        // hanya berhak mengelola notulensi dan dokumentasi khusus saat rapat berlangsung (ongoing)
+        if ($this->isAppointedDuringSession($user, $agenda)) {
             return true;
         }
 

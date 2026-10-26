@@ -6,6 +6,7 @@ use App\Models\Agenda;
 use App\Models\AgendaDocumentation;
 use App\Models\Unit;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -90,6 +91,41 @@ class AgendaService
      */
     public function updateAgenda(Agenda $agenda, User $actor, array $validated, bool $isAllUnits, ?UploadedFile $suratEdaran = null): Agenda
     {
+        $newStatus = $validated['status'] ?? $agenda->status;
+
+        if ($newStatus !== $agenda->status) {
+            if (! $agenda->canTransitionTo($newStatus)) {
+                throw new \DomainException("Perubahan status agenda dari '{$agenda->status}' menjadi '{$newStatus}' tidak diizinkan oleh sistem.");
+            }
+
+            if ($agenda->status === 'scheduled' && $newStatus === 'ongoing') {
+                if (! $agenda->can_start_now) {
+                    if ($agenda->waktu_mulai && now()->lt($agenda->earliest_start_at)) {
+                        $earliestStr = $agenda->earliest_start_at->translatedFormat('H:i');
+                        throw new \DomainException("Sesi rapat belum dapat dimulai. Tombol mulai baru dapat diakses 15 menit sebelum jadwal rapat ({$earliestStr} WIB).");
+                    }
+
+                    if ($agenda->effective_end_at && now()->gt($agenda->effective_end_at)) {
+                        $effectiveEndStr = $agenda->effective_end_at->translatedFormat('H:i');
+                        throw new \DomainException("Sesi rapat tidak dapat dimulai karena telah melewati batas akhir pelaksanaan ({$effectiveEndStr} WIB).");
+                    }
+                }
+            }
+
+            if ($agenda->status === 'ongoing' && $newStatus === 'scheduled') {
+                if ($agenda->attendances()->count() > 0) {
+                    throw new \DomainException("Sesi rapat yang telah memiliki catatan presensi kehadiran pegawai tidak dapat dikembalikan ke status Terjadwal demi integritas Berita Acara.");
+                }
+            }
+
+            if ($agenda->status === 'draft' && $newStatus === 'scheduled') {
+                $checkMulai = Carbon::parse($validated['waktu_mulai'] ?? $agenda->waktu_mulai);
+                if ($checkMulai->isPast()) {
+                    throw new \DomainException("Agenda konsep dengan jadwal pelaksanaan di masa lampau ({$checkMulai->translatedFormat('d F Y, H:i')} WIB) tidak dapat diterbitkan ke status Terjadwal. Silakan perbarui waktu mulai terlebih dahulu.");
+                }
+            }
+        }
+
         $oldData = $agenda->toArray();
         $newCircularPath = null;
         $supersededCircularPath = null;
@@ -226,9 +262,11 @@ class AgendaService
     }
 
     /**
-     * Update agenda status.
+     * Update agenda status with state machine verification and conflict prevention.
+     *
+     * @throws \DomainException If status transition is prohibited or time preconditions fail.
      */
-    public function updateStatus(Agenda $agenda, string $newStatus): string
+    public function updateStatus(Agenda $agenda, string $newStatus, ?User $actor = null): string
     {
         $statusLabels = [
             'draft' => 'Draft',
@@ -240,6 +278,73 @@ class AgendaService
 
         $statusText = $statusLabels[$newStatus] ?? $newStatus;
 
+        if ($agenda->status === $newStatus) {
+            return $statusText;
+        }
+
+        // 1. Validasi Matriks Transisi Resmi (State Machine)
+        if (! $agenda->canTransitionTo($newStatus)) {
+            throw new \DomainException("Perubahan status agenda dari '{$agenda->status}' menjadi '{$newStatus}' tidak diizinkan oleh sistem.");
+        }
+
+        // 2. Transisi scheduled -> ongoing: Penegakan Jendela Waktu Mulai (15 Menit)
+        if ($agenda->status === 'scheduled' && $newStatus === 'ongoing') {
+            if (! $agenda->can_start_now) {
+                if ($agenda->waktu_mulai && now()->lt($agenda->earliest_start_at)) {
+                    $earliestStr = $agenda->earliest_start_at->translatedFormat('H:i');
+                    throw new \DomainException("Sesi rapat belum dapat dimulai. Tombol mulai baru dapat diakses 15 menit sebelum jadwal rapat ({$earliestStr} WIB).");
+                }
+
+                if ($agenda->effective_end_at && now()->gt($agenda->effective_end_at)) {
+                    $effectiveEndStr = $agenda->effective_end_at->translatedFormat('H:i');
+                    throw new \DomainException("Sesi rapat tidak dapat dimulai karena telah melewati batas akhir pelaksanaan ({$effectiveEndStr} WIB).");
+                }
+            }
+        }
+
+        // 3. Transisi ongoing -> scheduled: Hanya diizinkan jika belum ada presensi
+        if ($agenda->status === 'ongoing' && $newStatus === 'scheduled') {
+            if ($agenda->attendances()->count() > 0) {
+                throw new \DomainException("Sesi rapat yang telah memiliki catatan presensi kehadiran pegawai tidak dapat dikembalikan ke status Terjadwal demi integritas Berita Acara.");
+            }
+        }
+
+        // 4. Transisi draft -> scheduled: Penguncian Ruangan, Validasi Konflik, dan Anti-Waktu Lampau
+        if ($agenda->status === 'draft' && $newStatus === 'scheduled') {
+            if ($agenda->waktu_mulai && $agenda->waktu_mulai->isPast()) {
+                throw new \DomainException("Agenda konsep dengan jadwal pelaksanaan di masa lampau ({$agenda->waktu_mulai->translatedFormat('d F Y, H:i')} WIB) tidak dapat diterbitkan ke status Terjadwal. Silakan perbarui waktu mulai terlebih dahulu.");
+            }
+
+            $data = [
+                'lokasi_ruang' => $agenda->lokasi_ruang,
+                'tipe_rapat' => $agenda->tipe_rapat,
+                'waktu_mulai' => $agenda->waktu_mulai?->format('Y-m-d H:i:s'),
+                'waktu_selesai' => $agenda->waktu_selesai?->format('Y-m-d H:i:s'),
+                'pimpinan_id' => $agenda->pimpinan_id,
+                'notulis_id' => $agenda->notulis_id,
+                'is_all_units' => $agenda->is_all_units,
+                'unit_ids' => $agenda->units()->pluck('units.id')->all(),
+                'status' => 'scheduled',
+            ];
+
+            return AgendaConflictService::runUnderRoomLock(
+                data: $data,
+                ignoreAgendaId: (int) $agenda->getKey(),
+                user: $actor,
+                callback: function () use ($agenda, $newStatus, $statusText) {
+                    return $this->applyStatusUpdate($agenda, $newStatus, $statusText);
+                }
+            );
+        }
+
+        return $this->applyStatusUpdate($agenda, $newStatus, $statusText);
+    }
+
+    /**
+     * Terapkan update status agenda dan catat activity log.
+     */
+    private function applyStatusUpdate(Agenda $agenda, string $newStatus, string $statusText): string
+    {
         DB::transaction(function () use ($agenda, $newStatus, $statusText) {
             $agenda->status = $newStatus;
             $agenda->save();

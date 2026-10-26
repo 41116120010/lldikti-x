@@ -1,6 +1,7 @@
 <?php
 
 use App\Console\Commands\PruneActivityLogs;
+use App\Console\Commands\SyncAgendaStatus;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -19,3 +20,14 @@ Schedule::command(PruneActivityLogs::class, ['--days' => 730])
     ->withoutOverlapping()
     ->onOneServer()
     ->description('Prune activity logs beyond the two-year retention window');
+
+/*
+ * Otomatisasi penutupan sesi presensi rapat kedinasan yang telah melewati batas akhir waktu pelaksanaan.
+ * Berjalan setiap 5 menit dengan locking pencegah tumpang tindih.
+ */
+Schedule::command(SyncAgendaStatus::class)
+    ->everyFiveMinutes()
+    ->withoutOverlapping()
+    ->onOneServer()
+    ->description('Otomatisasi penutupan sesi presensi rapat kedinasan yang telah melewati batas waktu pelaksanaan');
+

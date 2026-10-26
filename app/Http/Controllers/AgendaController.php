@@ -86,6 +86,7 @@ class AgendaController extends Controller
             'ongoing' => (int) $rawCounts->get('ongoing', 0),
             'scheduled' => (int) $rawCounts->get('scheduled', 0),
             'completed' => (int) $rawCounts->get('completed', 0),
+            'cancelled' => (int) $rawCounts->get('cancelled', 0),
         ];
 
         return view('agendas.index', compact('agendas', 'currentUser', 'statusCounts', 'units'));
@@ -208,13 +209,17 @@ class AgendaController extends Controller
     {
         $validated = $request->validated();
 
-        $agendaService->updateAgenda(
-            agenda: $agenda,
-            actor: Auth::user(),
-            validated: $validated,
-            isAllUnits: $request->boolean('is_all_units', true),
-            suratEdaran: $request->file('surat_edaran'),
-        );
+        try {
+            $agendaService->updateAgenda(
+                agenda: $agenda,
+                actor: Auth::user(),
+                validated: $validated,
+                isAllUnits: $request->boolean('is_all_units', true),
+                suratEdaran: $request->file('surat_edaran'),
+            );
+        } catch (\DomainException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
 
         return redirect()->route('admin.agendas.show', $agenda)
             ->with('success', "Agenda rapat '{$agenda->judul_rapat}' berhasil diperbarui.");
@@ -248,7 +253,12 @@ class AgendaController extends Controller
         Gate::authorize('manageStatus', $agenda);
 
         $validated = $request->validated();
-        $statusText = $agendaService->updateStatus($agenda, $validated['status']);
+
+        try {
+            $statusText = $agendaService->updateStatus($agenda, $validated['status'], Auth::user());
+        } catch (\DomainException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return back()->with('success', "Status agenda rapat berhasil diubah menjadi {$statusText}.");
     }
