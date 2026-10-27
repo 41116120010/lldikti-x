@@ -115,7 +115,7 @@
                     type="text"
                     name="login"
                     value="{{ old('login') }}"
-                    placeholder="Contoh: 198501152000031001 atau superadmin"
+                    placeholder="Masukkan Username atau NIP"
                     required
                     autocomplete="username"
                     autofocus
@@ -134,7 +134,7 @@
                         class="input @error('password') input-error @enderror"
                         type="password"
                         name="password"
-                        placeholder="••••••••••••"
+                        placeholder="Masukkan Kata Sandi"
                         required
                         autocomplete="current-password"
                     >
