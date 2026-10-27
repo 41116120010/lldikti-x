@@ -1160,6 +1160,10 @@ const OfficeWorkstation = {
         const ribbon = workstation.querySelector('.word-editor-ribbon');
         const zoomContainer = workstation.querySelector('#office-zoom-container');
         const deskCanvas = workstation.querySelector('.office-desk-canvas');
+        const s1Container = workstation.querySelector('#sheet-seksi-1-container');
+        const s1NWrap = workstation.querySelector('#sheet-section-notulensi-wrapper');
+        const s1KWrap = workstation.querySelector('#sheet-section-kesimpulan-wrapper');
+        const seksi2Wrapper = workstation.querySelector('#sheet-seksi-2-wrapper');
         const continuationContainer = workstation.querySelector('#dynamic-continuation-sheets');
         const sigWrapper = workstation.querySelector('#sheet-pengesahan-final');
         const docAnnex = workstation.querySelector('#sheet-documentation-annex');
@@ -1429,70 +1433,31 @@ const OfficeWorkstation = {
             } catch (e) {}
         };
 
-        // 2.3 Strict Page Margin Enforcement Helper
-        const isExceedingMargin = (sheet, element) => {
-            if (!sheet) return false;
-            const footer = sheet.querySelector('.doc-running-footer');
-            if (!footer) return sheet.scrollHeight > sheet.clientHeight;
-            const footerRect = footer.getBoundingClientRect();
+        // 2.3 Strict Page Margin Enforcement Helper (Zoom-Independent Geometry)
+        const getBottomInSheet = (sheet, element) => {
+            if (!sheet || !element) return 0;
+            const sheetRect = sheet.getBoundingClientRect();
             const elRect = element.getBoundingClientRect();
-            // 12px breathing buffer above the running footer line
-            return (elRect.bottom > footerRect.top - 12) || (sheet.scrollHeight > sheet.clientHeight + 2);
+            const scale = sheet.offsetWidth > 0 ? (sheetRect.width / sheet.offsetWidth) : 1;
+            return (elRect.bottom - sheetRect.top) / (scale || 1);
         };
 
-        const splitBlockToFit = (sheet, container, block) => {
-            container.appendChild(block);
-            if (!isExceedingMargin(sheet, block)) {
-                return null; // Entire block fits comfortably
-            }
-
-            // Word Processor Rule: If container already has previous blocks,
-            // move this entire paragraph cleanly to the next page
-            if (container.children.length > 1) {
-                container.removeChild(block);
-                return block;
-            }
-
-            // If this is the only block in this container, but it overflows the margin:
-            const text = block.textContent;
-            if (!text || text.trim().length < 20 || block.tagName === 'TABLE' || block.querySelector('table')) {
-                return null;
-            }
-
-            const words = text.split(/\s+/);
-            if (words.length <= 4) {
-                return null;
-            }
-
-            const originalHtml = block.innerHTML;
-            let low = 1, high = words.length - 1, best = 0;
-
-            while (low <= high) {
-                const mid = Math.floor((low + high) / 2);
-                block.textContent = words.slice(0, mid).join(' ');
-                if (!isExceedingMargin(sheet, block)) {
-                    best = mid;
-                    low = mid + 1;
-                } else {
-                    high = mid - 1;
-                }
-            }
-
-            if (best > 4) {
-                block.textContent = words.slice(0, best).join(' ');
-                const remBlock = document.createElement(block.tagName || 'p');
-                if (block.className) remBlock.className = block.className;
-                remBlock.textContent = words.slice(best).join(' ');
-                return remBlock;
-            } else {
-                block.innerHTML = originalHtml;
-                return null;
-            }
+        const isExceedingMargin = (sheet, element) => {
+            if (!sheet || !element) return false;
+            const curFormat = sheet.classList.contains('paper-f4') ? 'f4' : 'a4';
+            const pageMaxHeight = sheet.offsetWidth > 0
+                ? sheet.offsetWidth * (curFormat === 'f4' ? (330 / 215) : (297 / 210))
+                : (curFormat === 'f4' ? 1247 : 1122);
+            const footerReserve = sheet.offsetWidth > 0
+                ? sheet.offsetWidth * (24 / 210)
+                : 90;
+            const maxContentBottom = pageMaxHeight - footerReserve;
+            return getBottomInSheet(sheet, element) > maxContentBottom;
         };
 
-        // 2.4 Dynamic Multi-Page Reflow Engine
+        // 2.4 Dynamic Multi-Page Reflow Engine (Non-Destructive Whole-Section Flow)
         let reflowTimer = null;
-        const debouncedReflow = (delay = 600) => {
+        const debouncedReflow = (delay = 300) => {
             clearTimeout(reflowTimer);
             reflowTimer = setTimeout(() => {
                 if (paginationEngine) {
@@ -1500,6 +1465,11 @@ const OfficeWorkstation = {
                 }
             }, delay);
         };
+
+        if (s1KWrap) {
+            s1KWrap.addEventListener('pointerdown', () => clearTimeout(reflowTimer));
+            s1KWrap.addEventListener('focusin', () => clearTimeout(reflowTimer));
+        }
 
         const attachBoxEvents = (box) => {
             if (!box || box.dataset.eventsBound === 'true') return;
@@ -1510,83 +1480,24 @@ const OfficeWorkstation = {
 
             box.addEventListener('focus', () => setActiveEditor(box, hiddenInput));
             box.addEventListener('click', () => setActiveEditor(box, hiddenInput));
-            
+
             box.addEventListener('input', () => {
                 syncContent();
-                const sheet = box.closest('.office-paper-sheet');
-                if (sheet && isExceedingMargin(sheet, box)) {
-                    debouncedReflow(150); // Fast live reflow when encroaching margin
-                } else {
-                    debouncedReflow(600);
-                }
-            });
-
-            box.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    const sheet = box.closest('.office-paper-sheet');
-                    const footer = sheet ? sheet.querySelector('.doc-running-footer') : null;
-                    if (sheet && footer) {
-                        const footerTop = footer.getBoundingClientRect().top;
-                        const sel = window.getSelection();
-                        if (sel && sel.rangeCount > 0) {
-                            const range = sel.getRangeAt(0);
-                            const caretRect = range.getBoundingClientRect();
-                            let caretBottom = caretRect.bottom;
-                            if (!caretBottom || caretRect.height === 0) {
-                                const node = range.startContainer.nodeType === Node.ELEMENT_NODE 
-                                    ? range.startContainer 
-                                    : range.startContainer.parentElement;
-                                if (node) caretBottom = node.getBoundingClientRect().bottom;
-                            }
-                            
-                            // If caret is near bottom margin (within 36px of footer top)
-                            if (caretBottom && caretBottom > footerTop - 36) {
-                                e.preventDefault();
-                                document.execCommand('insertParagraph', false, null);
-                                syncContent();
-                                const curCaret = saveCaretInfo();
-                                paginationEngine.reflow({
-                                    caretInfo: {
-                                        editorType: box.dataset.editor,
-                                        globalOffset: (curCaret ? curCaret.globalOffset : 0) + 1
-                                    }
-                                });
-                                return;
-                            }
-                        }
-                    }
-                } else if (e.key === 'Backspace') {
-                    const sel = window.getSelection();
-                    if (sel && sel.rangeCount > 0) {
-                        const range = sel.getRangeAt(0);
-                        if (range.collapsed && range.startOffset === 0) {
-                            const curPage = parseInt(box.dataset.page || '1', 10);
-                            if (curPage > 1) {
-                                const prevBoxes = Array.from(workstation.querySelectorAll(`[data-editor="${box.dataset.editor}"][data-page="${curPage - 1}"]`));
-                                if (prevBoxes.length > 0) {
-                                    const prevBox = prevBoxes[0];
-                                    if (box.textContent.trim().length === 0) {
-                                        e.preventDefault();
-                                        setCaretAtEnd(prevBox);
-                                        syncContent();
-                                        debouncedReflow(100);
-                                    }
-                                }
-                            }
-                        }
-                    }
+                if (editorType === 'notulensi') {
+                    debouncedReflow(250);
                 }
             });
 
             box.addEventListener('blur', () => {
                 syncContent();
-                debouncedReflow(200);
             });
 
             box.addEventListener('paste', () => {
                 setTimeout(() => {
                     syncContent();
-                    paginationEngine.reflow({ restoreCaret: true });
+                    if (editorType === 'notulensi') {
+                        paginationEngine.reflow();
+                    }
                 }, 50);
             });
         };
@@ -1594,57 +1505,31 @@ const OfficeWorkstation = {
         const paginationEngine = {
             isReflowing: false,
 
-            reflow(options = {}) {
+            reflow() {
                 if (this.isReflowing) return;
                 this.isReflowing = true;
-
-                const caretToRestore = options.caretInfo || (options.restoreCaret && document.activeElement?.classList.contains('office-editable-box') ? saveCaretInfo() : null);
 
                 try {
                     const sheet1 = workstation.querySelector('.office-paper-sheet[data-page="1"]');
                     if (!sheet1) return;
 
                     const curFormat = sheet1.classList.contains('paper-f4') ? 'f4' : 'a4';
+                    const kesimpulanIsFocused = !!(s1KWrap && s1KWrap.contains(document.activeElement));
 
-                    // Gather all blocks across editors
-                    const nBoxes = Array.from(workstation.querySelectorAll('[data-editor="notulensi"]'));
-                    const kBoxes = Array.from(workstation.querySelectorAll('[data-editor="kesimpulan"]'));
+                    // If user is actively typing in Kesimpulan while it lives on a continuation sheet,
+                    // do not tear down continuationContainer under their cursor.
+                    if (kesimpulanIsFocused && continuationContainer && continuationContainer.contains(s1KWrap)) {
+                        syncContent();
+                        return;
+                    }
 
-                    const parseBlocks = (boxes, hiddenEl) => {
-                        const blocks = [];
-                        boxes.forEach(box => {
-                            Array.from(box.childNodes).forEach(node => {
-                                if (node.nodeType === Node.ELEMENT_NODE) {
-                                    if (node.outerHTML && node.outerHTML.trim()) {
-                                        blocks.push(node.cloneNode(true));
-                                    }
-                                } else if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
-                                    const p = document.createElement('p');
-                                    p.textContent = node.textContent.trim();
-                                    blocks.push(p);
-                                }
-                            });
-                        });
-                        if (blocks.length === 0 && hiddenEl && hiddenEl.value.trim()) {
-                            const tmp = document.createElement('div');
-                            tmp.innerHTML = hiddenEl.value.trim();
-                            Array.from(tmp.childNodes).forEach(node => {
-                                if (node.nodeType === Node.ELEMENT_NODE) {
-                                    blocks.push(node.cloneNode(true));
-                                } else if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
-                                    const p = document.createElement('p');
-                                    p.textContent = node.textContent.trim();
-                                    blocks.push(p);
-                                }
-                            });
-                        }
-                        return blocks;
-                    };
-
-                    const nBlocks = parseBlocks(nBoxes, notulensiHidden);
-                    const kBlocks = parseBlocks(kBoxes, kesimpulanHidden);
-
-                    // Temporarily detach signature block & documentation annex to ensure accurate margin calculation during text layout
+                    // 1. Reclaim modular sections before rebuilding continuation sheets
+                    if (s1KWrap && s1Container && s1KWrap.parentNode !== s1Container) {
+                        s1Container.appendChild(s1KWrap);
+                    }
+                    if (seksi2Wrapper && seksi2Wrapper.parentNode) {
+                        seksi2Wrapper.parentNode.removeChild(seksi2Wrapper);
+                    }
                     if (sigWrapper && sigWrapper.parentNode) {
                         sigWrapper.parentNode.removeChild(sigWrapper);
                     }
@@ -1652,81 +1537,30 @@ const OfficeWorkstation = {
                         docAnnex.parentNode.removeChild(docAnnex);
                     }
 
-                    // Clear continuation container
+                    // 2. Clear continuation container
                     if (continuationContainer) {
                         continuationContainer.innerHTML = '';
                     }
 
-                    // Reset Sheet 1
-                    const s1NBox = sheet1.querySelector('#notulensi-content');
-                    const s1KWrap = sheet1.querySelector('#sheet-section-kesimpulan-wrapper');
-                    const s1KBox = sheet1.querySelector('#kesimpulan-content');
+                    // Sync visibility with Document Config checkboxes
+                    const isConfigChecked = (name) => {
+                        const modal = document.getElementById('modal-notulen-document-config');
+                        if (!modal) return true;
+                        const input = modal.querySelector(`input[type="checkbox"][name="${name}"]`);
+                        return input ? input.checked : true;
+                    };
 
-                    if (s1NBox) s1NBox.innerHTML = '';
-                    if (s1KBox) s1KBox.innerHTML = '';
-                    if (s1KWrap) s1KWrap.style.display = 'block';
+                    const showNotulensi = isConfigChecked('show_notulensi');
+                    const showKesimpulan = isConfigChecked('show_kesimpulan');
 
-                    let nIdx = 0;
-                    let nOverflowed = false;
-                    let nRemainderBlock = null;
-
-                    for (let i = 0; i < nBlocks.length; i++) {
-                        const block = nBlocks[i].cloneNode(true);
-                        const rem = splitBlockToFit(sheet1, s1NBox, block);
-                        if (rem !== null) {
-                            nIdx = i + 1;
-                            nRemainderBlock = rem;
-                            nOverflowed = true;
-                            break;
-                        }
-                        nIdx = i + 1;
+                    if (s1NWrap) {
+                        s1NWrap.style.display = showNotulensi ? '' : 'none';
                     }
-
-                    let kIdx = 0;
-                    let kOverflowed = false;
-                    let kRemainderBlock = null;
-
-                    if (!nOverflowed) {
-                        if (s1KWrap) {
-                            s1KWrap.style.display = 'block';
-                            if (isExceedingMargin(sheet1, s1KWrap)) {
-                                s1KWrap.style.display = 'none';
-                                kIdx = 0;
-                                kOverflowed = kBlocks.length > 0;
-                            } else {
-                                for (let j = 0; j < kBlocks.length; j++) {
-                                    const block = kBlocks[j].cloneNode(true);
-                                    const rem = splitBlockToFit(sheet1, s1KBox, block);
-                                    if (rem !== null) {
-                                        kIdx = j + 1;
-                                        kRemainderBlock = rem;
-                                        kOverflowed = true;
-                                        break;
-                                    }
-                                    kIdx = j + 1;
-                                }
-                            }
-                        }
-                    } else {
-                        if (s1KWrap) s1KWrap.style.display = 'none';
-                        kIdx = 0;
-                        kOverflowed = kBlocks.length > 0;
+                    if (s1KWrap) {
+                        s1KWrap.style.display = showKesimpulan ? '' : 'none';
                     }
-
-                    const remN = [];
-                    if (nRemainderBlock) remN.push(nRemainderBlock);
-                    if (nBlocks.length > nIdx) {
-                        for (let idx = nIdx; idx < nBlocks.length; idx++) {
-                            remN.push(nBlocks[idx].cloneNode(true));
-                        }
-                    }
-
-                    const remK = [];
-                    if (kRemainderBlock) remK.push(kRemainderBlock);
-                    if (kBlocks.length > kIdx) {
-                        for (let idx = kIdx; idx < kBlocks.length; idx++) {
-                            remK.push(kBlocks[idx].cloneNode(true));
-                        }
+                    if (s1Container) {
+                        s1Container.style.display = (showNotulensi || showKesimpulan) ? '' : 'none';
                     }
 
                     const createContinuationSheet = (pageNum) => {
@@ -1765,91 +1599,77 @@ const OfficeWorkstation = {
                         return sep;
                     };
 
-                    let curPage = 2;
-                    while (remN.length > 0 || remK.length > 0) {
-                        if (continuationContainer.querySelectorAll('.office-paper-sheet').length > 0) {
-                            continuationContainer.appendChild(createPageSeparator(`Halaman ${curPage}`));
-                        }
-
-                        const sheet = createContinuationSheet(curPage);
-                        continuationContainer.appendChild(sheet);
-                        const contentArea = sheet.querySelector('.continuation-content-area');
-
-                        if (remN.length > 0) {
-                            const wrapper = document.createElement('div');
-                            wrapper.innerHTML = `
-                                <div class="text-[8.5pt] font-bold text-slate-800 mb-1 font-serif">
-                                    A. Notulensi / Catatan Jalannya Rapat (Lanjutan):
-                                </div>
-                                <div class="office-editable-box prose-gov" contenteditable="true" data-editor="notulensi" data-page="${curPage}" style="min-height: 60px;"></div>
-                            `;
-                            contentArea.appendChild(wrapper);
-                            const contBox = wrapper.querySelector('.office-editable-box');
-
-                            while (remN.length > 0) {
-                                const block = remN[0];
-                                const rem = splitBlockToFit(sheet, contBox, block);
-                                if (rem !== null) {
-                                    remN[0] = rem;
-                                    break;
-                                }
-                                remN.shift();
-                            }
-                        }
-
-                        if (remN.length === 0 && remK.length > 0) {
-                            const wrapper = document.createElement('div');
-                            const isContinuationK = (kIdx > 0);
-                            wrapper.innerHTML = `
-                                <div class="text-[8.5pt] font-bold text-slate-800 mb-1 font-serif">
-                                    B. Kesimpulan &amp; Rencana Tindak Lanjut (RTL)${isContinuationK ? ' (Lanjutan)' : ''}:
-                                </div>
-                                <div class="office-editable-box prose-gov" contenteditable="true" data-editor="kesimpulan" data-page="${curPage}" style="min-height: 60px;"></div>
-                            `;
-                            contentArea.appendChild(wrapper);
-                            
-                            if (isExceedingMargin(sheet, wrapper) && contentArea.children.length > 1) {
-                                contentArea.removeChild(wrapper);
+                    const appendToSheet = (sheet, el) => {
+                        if (sheet === sheet1) {
+                            sheet1.insertBefore(el, sheet1.querySelector('.doc-running-footer'));
+                        } else {
+                            const ca = sheet.querySelector('.continuation-content-area');
+                            if (ca) {
+                                ca.appendChild(el);
                             } else {
-                                const contBox = wrapper.querySelector('.office-editable-box');
-                                while (remK.length > 0) {
-                                    const block = remK[0];
-                                    const rem = splitBlockToFit(sheet, contBox, block);
-                                    if (rem !== null) {
-                                        remK[0] = rem;
-                                        break;
-                                    }
-                                    remK.shift();
-                                }
+                                sheet.insertBefore(el, sheet.querySelector('.doc-running-footer'));
                             }
                         }
+                    };
 
-                        curPage++;
-                        if (curPage > 25) break;
+                    const sheetHasPriorContent = (sheet) => {
+                        if (sheet === sheet1) return true;
+                        const ca = sheet.querySelector('.continuation-content-area');
+                        return ca ? ca.children.length > 1 : false;
+                    };
+
+                    const getLastSheet = () => {
+                        if (!continuationContainer) return sheet1;
+                        const contSheets = continuationContainer.querySelectorAll('.office-paper-sheet');
+                        return contSheets.length > 0 ? contSheets[contSheets.length - 1] : sheet1;
+                    };
+
+                    let curPage = 2;
+
+                    // 3. Flow Section I.B (#sheet-section-kesimpulan-wrapper) to Sheet 2 if Sheet 1 exceeds margin
+                    if (s1KWrap && showKesimpulan && continuationContainer) {
+                        if (showNotulensi && isExceedingMargin(sheet1, s1KWrap)) {
+                            if (s1KWrap.parentNode) {
+                                s1KWrap.parentNode.removeChild(s1KWrap);
+                            }
+                            const kSheet = createContinuationSheet(curPage);
+                            continuationContainer.appendChild(kSheet);
+                            appendToSheet(kSheet, s1KWrap);
+                            if (kesimpulanBox) kesimpulanBox.dataset.page = String(curPage);
+                            curPage++;
+                        } else if (kesimpulanBox) {
+                            kesimpulanBox.dataset.page = '1';
+                        }
                     }
 
-                    // --- PLACEMENT OF SIGNATURE BLOCK (#sheet-pengesahan-final) ---
-                    if (sigWrapper) {
-                        const contSheets = Array.from(continuationContainer.querySelectorAll('.office-paper-sheet'));
-                        const lastContentSheet = contSheets.length > 0 ? contSheets[contSheets.length - 1] : sheet1;
-                        const standaloneHeader = sigWrapper.querySelector('#sheet-signature-standalone-header');
+                    // 4. Flow Section II (#sheet-seksi-2-wrapper: Daftar Kehadiran Peserta)
+                    if (seksi2Wrapper) {
+                        const targetSheet = getLastSheet();
+                        appendToSheet(targetSheet, seksi2Wrapper);
 
-                        // Try placing signature block on lastContentSheet first (dynamic flow filling remaining space)
-                        if (lastContentSheet === sheet1) {
-                            sheet1.insertBefore(sigWrapper, sheet1.querySelector('.doc-running-footer'));
-                        } else {
-                            const ca = lastContentSheet.querySelector('.continuation-content-area');
-                            if (ca) {
-                                ca.appendChild(sigWrapper);
-                            } else {
-                                lastContentSheet.insertBefore(sigWrapper, lastContentSheet.querySelector('.doc-running-footer'));
+                        if (seksi2Wrapper.style.display !== 'none' && isExceedingMargin(targetSheet, seksi2Wrapper) && sheetHasPriorContent(targetSheet) && continuationContainer) {
+                            if (seksi2Wrapper.parentNode) seksi2Wrapper.parentNode.removeChild(seksi2Wrapper);
+
+                            if (continuationContainer.querySelectorAll('.office-paper-sheet').length > 0) {
+                                continuationContainer.appendChild(createPageSeparator(`Halaman ${curPage}`));
                             }
-                        }
 
+                            const s2Sheet = createContinuationSheet(curPage);
+                            continuationContainer.appendChild(s2Sheet);
+                            appendToSheet(s2Sheet, seksi2Wrapper);
+                            curPage++;
+                        }
+                    }
+
+                    // 5. Flow Signature Block (#sheet-pengesahan-final)
+                    if (sigWrapper) {
+                        const targetSheet = getLastSheet();
+                        const standaloneHeader = sigWrapper.querySelector('#sheet-signature-standalone-header');
                         if (standaloneHeader) standaloneHeader.style.display = 'none';
 
-                        // If it exceeds margin on lastContentSheet, flow it cleanly to a dedicated Lembar Pengesahan sheet!
-                        if (isExceedingMargin(lastContentSheet, sigWrapper)) {
+                        appendToSheet(targetSheet, sigWrapper);
+
+                        if (isExceedingMargin(targetSheet, sigWrapper) && sheetHasPriorContent(targetSheet) && continuationContainer) {
                             if (sigWrapper.parentNode) sigWrapper.parentNode.removeChild(sigWrapper);
 
                             if (continuationContainer.querySelectorAll('.office-paper-sheet').length > 0) {
@@ -1858,30 +1678,18 @@ const OfficeWorkstation = {
 
                             const sigSheet = createContinuationSheet(curPage);
                             continuationContainer.appendChild(sigSheet);
-                            const sigArea = sigSheet.querySelector('.continuation-content-area');
-                            sigArea.appendChild(sigWrapper);
+                            appendToSheet(sigSheet, sigWrapper);
                             if (standaloneHeader) standaloneHeader.style.display = 'block';
                             curPage++;
                         }
                     }
 
-                    // --- PLACEMENT OF DOCUMENTATION ANNEX (CLEAN PRINT VIEW ONLY IF EXISTS) ---
+                    // 6. Flow Documentation Annex (#sheet-documentation-annex)
                     if (docAnnex) {
-                        const allSheets = Array.from(workstation.querySelectorAll('.office-paper-sheet'));
-                        const targetSheet = allSheets[allSheets.length - 1];
+                        const targetSheet = getLastSheet();
+                        appendToSheet(targetSheet, docAnnex);
 
-                        if (targetSheet === sheet1) {
-                            sheet1.insertBefore(docAnnex, sheet1.querySelector('.doc-running-footer'));
-                        } else {
-                            const ca = targetSheet.querySelector('.continuation-content-area');
-                            if (ca) {
-                                ca.appendChild(docAnnex);
-                            } else {
-                                targetSheet.insertBefore(docAnnex, targetSheet.querySelector('.doc-running-footer'));
-                            }
-                        }
-
-                        if (isExceedingMargin(targetSheet, docAnnex)) {
+                        if (docAnnex.style.display !== 'none' && isExceedingMargin(targetSheet, docAnnex) && sheetHasPriorContent(targetSheet) && continuationContainer) {
                             if (docAnnex.parentNode) docAnnex.parentNode.removeChild(docAnnex);
 
                             if (continuationContainer.querySelectorAll('.office-paper-sheet').length > 0) {
@@ -1890,13 +1698,12 @@ const OfficeWorkstation = {
 
                             const annexSheet = createContinuationSheet(curPage);
                             continuationContainer.appendChild(annexSheet);
-                            const annexArea = annexSheet.querySelector('.continuation-content-area');
-                            annexArea.appendChild(docAnnex);
+                            appendToSheet(annexSheet, docAnnex);
                             curPage++;
                         }
                     }
 
-                    // Update all sheets page numbers and running headers/footers
+                    // 7. Update all sheets page numbers and running headers/footers
                     const allSheets = workstation.querySelectorAll('.office-paper-sheet');
                     const totPages = allSheets.length;
 
@@ -1909,7 +1716,7 @@ const OfficeWorkstation = {
                         if (rf) rf.textContent = `Halaman ${pNum} dari ${totPages}`;
                     });
 
-                    // Update Separator 1 (between Sheet 1 and dynamic sheets)
+                    // 8. Update Separator 1 (between Sheet 1 and dynamic sheets)
                     if (separator1) {
                         if (totPages <= 1) {
                             separator1.style.display = 'none';
@@ -1930,11 +1737,6 @@ const OfficeWorkstation = {
                     // Sync content
                     syncContent();
 
-                    // Restore Caret Position if requested
-                    if (caretToRestore) {
-                        restoreCaretInfo(caretToRestore);
-                    }
-
                     // Update status bar
                     if (statusPageEl) {
                         handleScroll();
@@ -1944,6 +1746,10 @@ const OfficeWorkstation = {
                 }
             }
         };
+
+        window.addEventListener('office:reflow', () => {
+            if (paginationEngine) paginationEngine.reflow();
+        });
 
         // Initialize active editor to notulensi by default
         setActiveEditor(notulensiBox, notulensiHidden);
@@ -2157,7 +1963,7 @@ const OfficeWorkstation = {
         // 4. Keyboard Shortcuts: Ctrl+S / Cmd+S to Save
         document.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
-                const saveForm = workstation.querySelector('form');
+                const saveForm = workstation.querySelector('#notulen-form') || workstation.querySelector('form');
                 if (saveForm) {
                     e.preventDefault();
                     syncContent();
@@ -2166,11 +1972,14 @@ const OfficeWorkstation = {
             }
         });
 
-        // Form Submit: Ensure latest sync
-        const form = workstation.querySelector('form');
+        // Form Submit: Ensure latest sync before submission
+        const form = workstation.querySelector('#notulen-form') || workstation.querySelector('form');
         if (form) {
             form.addEventListener('submit', () => syncContent());
         }
+        workstation.querySelectorAll('button[form="notulen-form"]').forEach(btn => {
+            btn.addEventListener('click', () => syncContent());
+        });
     }
 };
 

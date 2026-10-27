@@ -468,4 +468,97 @@ class WordEditorMinutesTest extends TestCase
         $response->assertSee('Lampiran Foto');
         $response->assertSee('openDokumentasiModal()', false);
     }
+
+    public function test_saved_minutes_with_stored_documentation_photos_have_no_nested_forms_and_can_be_edited_repeatedly(): void
+    {
+        // 1. Simpan notulensi awal dan tambahkan foto dokumentasi tersimpan
+        $this->actingAs($this->admin)->put(
+            route('admin.agendas.update-notulen', $this->agenda),
+            [
+                'notulensi' => '<p>Notulensi awal pertama yang disimpan.</p>',
+                'kesimpulan' => '<p>Kesimpulan awal pertama yang disimpan.</p>',
+            ]
+        )->assertRedirect(route('admin.agendas.show', $this->agenda));
+
+        $doc = $this->agenda->documentations()->create([
+            'file_path' => 'documentations/sample-doc-photo.jpg',
+            'caption' => 'Dokumentasi Rapat Koordinasi',
+            'uploaded_by' => $this->admin->id,
+        ]);
+
+        // 2. Buka kembali halaman edit notulensi (GET /admin/agendas/{agenda}/notulen)
+        $pageResponse = $this->actingAs($this->admin)->get(route('admin.agendas.notulen', $this->agenda));
+        $pageResponse->assertOk();
+
+        $html = $pageResponse->getContent();
+
+        // Pastikan tidak ada nested <form> atau @method('DELETE') di dalam #notulen-form
+        $formIdPos = strpos($html, 'id="notulen-form"');
+        $this->assertNotFalse($formIdPos, 'Form utama #notulen-form harus ditemukan.');
+        $formStart = strrpos(substr($html, 0, $formIdPos), '<form');
+        $this->assertNotFalse($formStart, 'Tag pembuka <form untuk #notulen-form harus ditemukan.');
+        $formEnd = strpos($html, '</form>', $formIdPos);
+        $this->assertNotFalse($formEnd, 'Penutup </form> untuk #notulen-form harus ditemukan.');
+
+        $notulenFormInnerHtml = substr($html, $formStart, $formEnd - $formStart + 7);
+        $this->assertSame(
+            1,
+            substr_count($notulenFormInnerHtml, '<form'),
+            '#notulen-form tidak boleh memiliki nested <form> di dalamnya.'
+        );
+        $this->assertStringNotContainsString(
+            'value="DELETE"',
+            $notulenFormInnerHtml,
+            '#notulen-form tidak boleh memuat input _method=DELETE yang menimpa _method=PUT.'
+        );
+        $this->assertStringContainsString(
+            'value="PUT"',
+            $notulenFormInnerHtml,
+            '#notulen-form harus mempertahankan _method=PUT.'
+        );
+
+        // Pastikan form hapus dokumentasi dirender secara terpisah di luar #notulen-form
+        $deleteFormPos = strpos($html, 'id="delete-doc-form-'.$doc->id.'"');
+        $this->assertNotFalse($deleteFormPos, 'Form hapus dokumentasi harus dirender dengan ID tersendiri.');
+        $this->assertGreaterThan(
+            $formEnd,
+            $deleteFormPos,
+            'Form hapus dokumentasi harus berada di luar (setelah) </form> milik #notulen-form.'
+        );
+
+        // Pastikan wrapper seksi utuh tersedia untuk non-destructive pagination
+        $pageResponse->assertSee('id="sheet-section-notulensi-wrapper"', false);
+        $pageResponse->assertSee('id="sheet-section-kesimpulan-wrapper"', false);
+        $pageResponse->assertSee('id="sheet-seksi-2-wrapper"', false);
+
+        // 3. Lakukan edit kedua dan ketiga secara beruntun untuk memastikan tidak ada error MethodNotAllowed / gagal simpan
+        $secondEditResponse = $this->actingAs($this->admin)->put(
+            route('admin.agendas.update-notulen', $this->agenda),
+            [
+                'notulensi' => '<p>Notulensi hasil revisi kedua setelah dokumentasi diunggah.</p>',
+                'kesimpulan' => '<p>Kesimpulan hasil revisi kedua.</p>',
+            ]
+        );
+        $secondEditResponse->assertRedirect(route('admin.agendas.show', $this->agenda));
+        $secondEditResponse->assertSessionHasNoErrors();
+
+        $this->agenda->refresh();
+        $this->assertStringContainsString('Notulensi hasil revisi kedua', $this->agenda->notulensi);
+        $this->assertStringContainsString('Kesimpulan hasil revisi kedua', $this->agenda->kesimpulan);
+
+        $thirdEditResponse = $this->actingAs($this->admin)->put(
+            route('admin.agendas.update-notulen', $this->agenda),
+            [
+                'notulensi' => '<p>Notulensi hasil revisi ketiga (final).</p>',
+                'kesimpulan' => '<p>Kesimpulan hasil revisi ketiga (final).</p>',
+            ]
+        );
+        $thirdEditResponse->assertRedirect(route('admin.agendas.show', $this->agenda));
+        $thirdEditResponse->assertSessionHasNoErrors();
+
+        $this->agenda->refresh();
+        $this->assertStringContainsString('Notulensi hasil revisi ketiga (final)', $this->agenda->notulensi);
+        $this->assertStringContainsString('Kesimpulan hasil revisi ketiga (final)', $this->agenda->kesimpulan);
+    }
 }
+

@@ -462,6 +462,7 @@
 
                     <!-- Seksi II: Daftar Kehadiran Peserta (Spreadsheet / Word Table) -->
                     @if($config['show_attendees'] ?? true)
+                    <div id="sheet-seksi-2-wrapper">
                     <div id="sheet-seksi-2-container" class="section-title" style="font-size: {{ \App\Support\DocumentLayout::SECTION_SIZE_PT }}pt; font-weight: bold; margin: {{ \App\Support\DocumentLayout::SECTION_GAP_TOP_PT }}pt 0 {{ \App\Support\DocumentLayout::SECTION_GAP_BOTTOM_PT }}pt 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif;">
                         II. DAFTAR KEHADIRAN PESERTA ({{ $attendances->count() }} Orang)
                     </div>
@@ -588,6 +589,7 @@
                             @endforelse
                         </tbody>
                     </table>
+                    </div>
                     @endif
 
                     <!-- Blok Pengesahan & Tanda Tangan (Dynamic Word Signature Flow) -->
@@ -918,23 +920,16 @@
                                                 >
                                                     Lihat
                                                 </button>
-                                                <form 
-                                                    action="{{ route('admin.agendas.delete-documentation', [$agenda, $doc]) }}" 
-                                                    method="POST" 
-                                                    class="inline"
-                                                    onsubmit="return confirm('Apakah Anda yakin ingin menghapus foto dokumentasi ini?')"
+                                                <button 
+                                                    type="submit" 
+                                                    form="delete-doc-form-{{ $doc->id }}"
+                                                    onclick="return confirm('Apakah Anda yakin ingin menghapus foto dokumentasi ini?')"
+                                                    class="text-rose-600 hover:text-rose-800 p-0.5 rounded hover:bg-rose-50 transition cursor-pointer" 
+                                                    title="Hapus foto dari database"
+                                                    aria-label="Hapus foto {{ $doc->caption ?? 'Dokumentasi' }}"
                                                 >
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button 
-                                                        type="submit" 
-                                                        class="text-rose-600 hover:text-rose-800 p-0.5 rounded hover:bg-rose-50 transition cursor-pointer" 
-                                                        title="Hapus foto dari database"
-                                                        aria-label="Hapus foto {{ $doc->caption ?? 'Dokumentasi' }}"
-                                                    >
-                                                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                                                    </button>
-                                                </form>
+                                                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
@@ -1398,6 +1393,20 @@
             </div>
         </div>
     </form>
+
+    @if($documentations->count() > 0)
+        @foreach($documentations as $doc)
+            <form
+                id="delete-doc-form-{{ $doc->id }}"
+                action="{{ route('admin.agendas.delete-documentation', [$agenda, $doc]) }}"
+                method="POST"
+                class="hidden"
+            >
+                @csrf
+                @method('DELETE')
+            </form>
+        @endforeach
+    @endif
 </div>
 
 <script>
@@ -1435,6 +1444,7 @@
             });
             // Re-apply original snapshot values to workstation preview
             applyDocConfigToWorkstation();
+            window.dispatchEvent(new CustomEvent('office:reflow'));
             modal.classList.add('hidden');
             document.body.style.overflow = '';
         }
@@ -1445,6 +1455,7 @@
         if (modal) {
             // Ensure workstation live preview is up to date with latest settings
             applyDocConfigToWorkstation();
+            window.dispatchEvent(new CustomEvent('office:reflow'));
             modal.classList.add('hidden');
             document.body.style.overflow = '';
         }
@@ -1500,6 +1511,7 @@
         setVisible('sheet-seksi-1-container', isChecked('show_notulensi') || isChecked('show_kesimpulan'));
         setVisible('sheet-section-notulensi-wrapper', isChecked('show_notulensi'));
         setVisible('sheet-section-kesimpulan-wrapper', isChecked('show_kesimpulan'));
+        setVisible('sheet-seksi-2-wrapper', isChecked('show_attendees'));
         setVisible('sheet-seksi-2-container', isChecked('show_attendees'));
         setVisible('sheet-meeting-info', isChecked('show_meeting_info'));
         setVisible('sheet-documentation-annex', isChecked('show_documentation'));

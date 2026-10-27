@@ -869,11 +869,11 @@
         border: 1px solid #94a3b8;
         box-sizing: border-box;
         margin: 0 auto;
-        padding: 16mm 18mm 22mm 18mm;
+        padding: 16mm 18mm 24mm 18mm;
         font-family: 'Times New Roman', Times, serif;
         color: #000000;
         position: relative;
-        transition: width 0.25s ease, height 0.25s ease;
+        transition: width 0.25s ease;
         word-wrap: break-word;
         overflow-wrap: break-word;
         display: flex;
@@ -884,19 +884,15 @@
     .office-paper-sheet.paper-a4 {
         width: 210mm;
         min-height: 297mm;
-        max-height: 297mm;
-        height: 297mm;
+        height: auto;
         max-width: 100%;
-        overflow: hidden;
     }
 
     .office-paper-sheet.paper-f4 {
         width: 215mm;
         min-height: 330mm;
-        max-height: 330mm;
-        height: 330mm;
+        height: auto;
         max-width: 100%;
-        overflow: hidden;
     }
 
     /* Spreadsheet / Word Table Styles for Attendees */
