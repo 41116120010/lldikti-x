@@ -116,7 +116,7 @@ class ReportVisualMonitoringTest extends TestCase
 
     /**
      * Memastikan Admin Unit yang ditugaskan sebagai Pimpinan atau Notulis melihat
-     * panel monitoring penugasan khusus resmi beserta badge status dan tautan kelola.
+     * agenda penugasan tersebut pada tabel rekapitulasi rapat.
      */
     public function test_admin_unit_with_assigned_roles_sees_assigned_agenda_panel(): void
     {
@@ -140,10 +140,7 @@ class ReportVisualMonitoringTest extends TestCase
         $response = $this->actingAs($this->adminUnitB)->get('/admin/reports');
 
         $response->assertStatus(200);
-        $response->assertSee('Monitoring Agenda Penugasan Resmi (Pimpinan & Notulis)');
-        $response->assertSee('Notulis Rapat');
         $response->assertSee($assignedAgenda->judul_rapat);
-        $response->assertSee('Belum Diisi');
     }
 
     /**
@@ -158,7 +155,7 @@ class ReportVisualMonitoringTest extends TestCase
     }
 
     /**
-     * Memastikan Administrator dapat memantau panel penugasan pimpinan & notulis resmi.
+     * Memastikan Administrator dapat memantau seluruh agenda penugasan pimpinan & notulis resmi pada tabel rekapitulasi.
      */
     public function test_administrator_sees_assigned_agenda_panel_when_assignments_exist(): void
     {
@@ -180,7 +177,6 @@ class ReportVisualMonitoringTest extends TestCase
         $response = $this->actingAs($this->administrator)->get('/admin/reports');
 
         $response->assertStatus(200);
-        $response->assertSee('Monitoring Agenda Penugasan Resmi (Pimpinan & Notulis)');
         $response->assertSee($assignedAgenda->judul_rapat);
     }
 }

@@ -2,33 +2,22 @@
 
 @section('title', 'Laporan & Rekapitulasi Rapat')
 @section('heading', 'Rekapitulasi & Laporan Rapat')
-@section('subtitle', 'Analitik kehadiran kedinasan, berita acara resmi, monitoring akuntabilitas, dan ekspor dokumen')
+@section('subtitle', 'Rekapitulasi kehadiran, notulensi resmi, dan ekspor dokumen rapat kedinasan.')
 
 @section('content')
 <div class="space-y-6">
-    <!-- Header Context Scoping Banner -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-slate-300 shadow-xs">
-        <div class="space-y-1">
-            <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-[11px] font-bold font-mono uppercase tracking-wider {{ $user->isAdministrator() ? 'bg-slate-900 text-white' : 'bg-indigo-900 text-indigo-100' }}">
-                <span class="w-1.5 h-1.5 rounded-full {{ $user->isAdministrator() ? 'bg-emerald-400' : 'bg-amber-400' }}"></span>
-                <span>{{ $user->isAdministrator() ? 'Cakupan: Seluruh Unit Kerja LLDIKTI (12 Unit)' : 'Cakupan: ' . ($user->unit?->nama_unit ?? 'Unit Kerja') . ' & Penugasan' }}</span>
-            </div>
-            <p class="text-xs text-slate-600 font-medium">
-                {{ $user->isAdministrator() 
-                    ? 'Pemantauan komprehensif kehadiran ASN, akuntabilitas berita acara, dan analitik pertemuan lintas subbagian di LLDIKTI Wilayah X.' 
-                    : 'Pemantauan kehadiran aparatur di unit kerja Anda serta rekapitulasi rapat di mana aparatur ditunjuk sebagai Pimpinan atau Notulis.' }}
-            </p>
+    <!-- Scope Context Indicator (Minimalist Gov-Tech) -->
+    <div class="flex items-center justify-between pb-1">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-lg text-xs font-semibold font-mono bg-slate-100 text-slate-800 border border-slate-200">
+            <span class="w-2 h-2 rounded-full {{ $user->isAdministrator() ? 'bg-slate-900' : 'bg-emerald-600' }}"></span>
+            <span>{{ $user->isAdministrator() ? 'Cakupan: Seluruh Unit Kerja LLDIKTI (12 Unit)' : 'Cakupan: ' . ($user->unit?->nama_unit ?? 'Unit Kerja') }}</span>
         </div>
-
         @if($user->isAdmin() && $user->unit)
-            <div class="shrink-0 flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-600"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                <span>{{ $user->unit->kode_unit }}</span>
-            </div>
+            <span class="text-xs font-mono font-bold text-slate-600 px-2 py-0.5 bg-slate-50 border border-slate-200 rounded-md">{{ $user->unit->kode_unit }}</span>
         @endif
     </div>
 
-    <!-- Stat Summary Cards -->
+    <!-- Stat Summary Cards (Clean Gov-Tech, Factual & Non-Redundant) -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <!-- Card 1: Total & Status Rapat -->
         <div class="panel p-5 space-y-2 border border-slate-300">
@@ -51,58 +40,47 @@
                 <span class="text-[10px] font-bold px-2 py-0.5 bg-slate-100 text-slate-800 rounded-md border border-slate-200 font-mono">{{ $avgPresensi }} / Rapat</span>
             </div>
             <div class="text-2xl font-bold font-mono text-slate-900">{{ $totalPresensi }}</div>
-            <div class="text-[11px] text-slate-600 font-medium">Presensi selfie &amp; TTD terverifikasi</div>
+            <div class="text-[11px] text-slate-600 font-medium">Total kehadiran sah tercatat</div>
         </div>
 
-        <!-- Card 3: Tingkat Kepatuhan Presensi -->
+        <!-- Card 3: Disiplin Presensi -->
         <div class="panel p-5 space-y-2 border border-slate-300">
             <div class="flex items-center justify-between">
                 <span class="text-[11px] font-bold uppercase tracking-wider text-slate-700 font-mono">Disiplin Presensi</span>
-                @php
-                    $rateBadge = 'bg-emerald-50 text-emerald-800 border-emerald-300';
-                    $rateLabel = 'Tinggi';
-                    if ($attendanceRate < 70) {
-                        $rateBadge = 'bg-rose-50 text-rose-800 border-rose-300';
-                        $rateLabel = 'Perhatian';
-                    } elseif ($attendanceRate < 85) {
-                        $rateBadge = 'bg-amber-50 text-amber-800 border-amber-300';
-                        $rateLabel = 'Baik';
-                    }
-                @endphp
-                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md border {{ $rateBadge }}">{{ $rateLabel }}</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md border bg-slate-100 text-slate-800 border-slate-200 font-mono">{{ $avgPresensi }} Rata-rata</span>
             </div>
             <div class="text-2xl font-bold font-mono text-slate-900">{{ $attendanceRate }}%</div>
             <div class="text-[11px] text-slate-600 font-medium truncate" title="{{ $attendanceRateSubtext }}">{{ $attendanceRateSubtext }}</div>
         </div>
 
-        <!-- Card 4: Akuntabilitas Notulensi & Dokumen -->
+        <!-- Card 4: Tata Kelola Notulen -->
         <div class="panel p-5 space-y-2 border border-slate-300">
             <div class="flex items-center justify-between">
                 <span class="text-[11px] font-bold uppercase tracking-wider text-slate-700 font-mono">Tata Kelola Notulen</span>
-                <span class="text-[10px] font-bold px-2 py-0.5 bg-slate-100 text-slate-800 rounded-md border border-slate-200">{{ $countWithNotulen }} / {{ max(1, $completedAgendas) }}</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 bg-slate-100 text-slate-800 rounded-md border border-slate-200 font-mono">{{ $countWithNotulen }} / {{ max(1, $completedAgendas) }}</span>
             </div>
             <div class="text-2xl font-bold font-mono text-slate-900">{{ $governanceRate }}%</div>
-            <div class="text-[11px] text-slate-600 font-medium">Berita acara rampung terarsip</div>
+            <div class="text-[11px] text-slate-600 font-medium">Notulensi resmi telah dilengkapi</div>
         </div>
     </div>
 
-    <!-- Visual Monitoring & Analytics Section -->
+    <!-- Visual Monitoring & Analytics Section (Clean Gov-Tech, Consolidated) -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <!-- Widget 1: Distribusi Format Pelaksanaan Rapat -->
+        <!-- Panel 1: Distribusi Format Rapat -->
         <div class="bg-white p-5 rounded-2xl border border-slate-300 shadow-xs space-y-4">
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-900"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
                     <h4 class="text-xs font-bold uppercase tracking-wider text-slate-900 font-mono">Distribusi Format Rapat</h4>
                 </div>
-                <span class="text-[11px] font-bold text-slate-600 font-mono">{{ $totalAgendas }} Rapat Total</span>
+                <span class="text-[11px] font-bold text-slate-600 font-mono">{{ $totalAgendas }} Total</span>
             </div>
 
             <!-- Proportional Multi-Segment Horizontal Bar -->
-            <div class="w-full h-3.5 bg-slate-100 rounded-full overflow-hidden flex shadow-inner border border-slate-200">
+            <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden flex shadow-inner border border-slate-200">
                 @if($totalAgendas > 0)
                     <div style="width: {{ $formatStats['pct_offline'] }}%;" class="bg-slate-900 transition-all duration-300" title="Tatap Muka (Luring): {{ $formatStats['offline'] }} ({{ $formatStats['pct_offline'] }}%)"></div>
-                    <div style="width: {{ $formatStats['pct_online'] }}%;" class="bg-indigo-600 transition-all duration-300" title="Daring (Virtual): {{ $formatStats['online'] }} ({{ $formatStats['pct_online'] }}%)"></div>
+                    <div style="width: {{ $formatStats['pct_online'] }}%;" class="bg-slate-600 transition-all duration-300" title="Daring: {{ $formatStats['online'] }} ({{ $formatStats['pct_online'] }}%)"></div>
                     <div style="width: {{ $formatStats['pct_hybrid'] }}%;" class="bg-emerald-600 transition-all duration-300" title="Hibrida: {{ $formatStats['hybrid'] }} ({{ $formatStats['pct_hybrid'] }}%)"></div>
                 @else
                     <div class="w-full bg-slate-200 flex items-center justify-center text-[9px] text-slate-500 font-medium">Belum ada agenda rapat</div>
@@ -123,7 +101,7 @@
 
                 <div class="space-y-0.5">
                     <div class="flex items-center gap-1.5 text-slate-700 font-medium">
-                        <span class="w-2.5 h-2.5 rounded-full bg-indigo-600 shrink-0"></span>
+                        <span class="w-2.5 h-2.5 rounded-full bg-slate-600 shrink-0"></span>
                         <span class="text-[11px]">Daring</span>
                     </div>
                     <div class="font-bold text-slate-900 font-mono text-sm pl-4">
@@ -143,7 +121,7 @@
             </div>
         </div>
 
-        <!-- Widget 2: Kesiapan Administrasi & Akuntabilitas Dokumen -->
+        <!-- Panel 2: Status Tata Kelola Dokumen -->
         <div class="bg-white p-5 rounded-2xl border border-slate-300 shadow-xs space-y-4">
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
@@ -160,10 +138,10 @@
             @endphp
 
             <!-- Progress Bar Notulensi -->
-            <div class="w-full h-3.5 bg-slate-100 rounded-full overflow-hidden flex shadow-inner border border-slate-200">
+            <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden flex shadow-inner border border-slate-200">
                 @if($completedAgendas > 0)
                     <div style="width: {{ $pctWithNotulen }}%;" class="bg-emerald-600 transition-all duration-300" title="Notulensi Rampung: {{ $countWithNotulen }} ({{ $pctWithNotulen }}%)"></div>
-                    <div style="width: {{ $pctPendingNotulen }}%;" class="bg-amber-500 transition-all duration-300" title="Notulensi Pending: {{ $pendingNotulen }} ({{ $pctPendingNotulen }}%)"></div>
+                    <div style="width: {{ $pctPendingNotulen }}%;" class="bg-slate-400 transition-all duration-300" title="Notulensi Pending: {{ $pendingNotulen }} ({{ $pctPendingNotulen }}%)"></div>
                 @else
                     <div class="w-full bg-slate-200 flex items-center justify-center text-[9px] text-slate-500 font-medium">Belum ada rapat dinas selesai</div>
                 @endif
@@ -183,7 +161,7 @@
 
                 <div class="space-y-0.5">
                     <div class="flex items-center gap-1.5 text-slate-700 font-medium">
-                        <span class="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0"></span>
+                        <span class="w-2.5 h-2.5 rounded-full bg-slate-400 shrink-0"></span>
                         <span class="text-[11px]">Notulen Pending</span>
                     </div>
                     <div class="font-bold text-slate-900 font-mono text-sm pl-4">
@@ -193,7 +171,7 @@
 
                 <div class="space-y-0.5 col-span-2 sm:col-span-1">
                     <div class="flex items-center gap-1.5 text-slate-700 font-medium">
-                        <span class="w-2.5 h-2.5 rounded-full bg-slate-400 shrink-0"></span>
+                        <span class="w-2.5 h-2.5 rounded-full bg-slate-300 shrink-0"></span>
                         <span class="text-[11px]">Rapat Terjadwal</span>
                     </div>
                     <div class="font-bold text-slate-900 font-mono text-sm pl-4">
@@ -203,78 +181,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Widget 3: Panel Monitoring Agenda Penugasan Resmi (Pimpinan & Notulis) -->
-    @if(($user->isAdministrator() || $user->isAdmin()) && $assignedAgendas->isNotEmpty())
-        <div class="bg-white p-5 rounded-2xl border border-amber-200 bg-linear-to-r from-amber-50/40 via-white to-white shadow-xs space-y-3.5">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-amber-100">
-                <div class="flex items-center gap-2">
-                    <div class="p-1.5 bg-amber-100 text-amber-900 rounded-lg">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
-                    </div>
-                    <div>
-                        <h4 class="text-xs font-bold uppercase tracking-wider text-amber-950 font-mono">Monitoring Agenda Penugasan Resmi (Pimpinan &amp; Notulis)</h4>
-                        <p class="text-[11px] text-amber-900/80 font-medium">{{ $user->isAdministrator() ? 'Agenda rapat kedinasan dengan penugasan pimpinan atau notulis resmi.' : 'Agenda rapat di mana Anda ditugaskan secara personal untuk memimpin pertemuan atau mencatat notulensi resmi.' }}</p>
-                    </div>
-                </div>
-                <span class="text-[11px] font-bold px-2.5 py-1 bg-amber-100 text-amber-900 rounded-full font-mono self-start sm:self-auto">
-                    {{ $assignedAgendas->count() }} Penugasan Aktif
-                </span>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                @foreach($assignedAgendas as $assigned)
-                    @php
-                        $isPimpinan = ($assigned->pimpinan_id == $user->id);
-                        $isNotulis = ($assigned->notulis_id == $user->id);
-                        $hasMinutes = !empty(trim($assigned->notulensi ?? ''));
-                    @endphp
-                    <div class="p-3.5 rounded-xl border border-slate-200 bg-white shadow-2xs space-y-2 hover:border-slate-300 transition">
-                        <div class="flex items-center justify-between gap-1.5">
-                            <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md {{ $isNotulis ? 'bg-amber-100 text-amber-900' : 'bg-indigo-100 text-indigo-900' }}">
-                                {{ $isNotulis ? 'Notulis Rapat' : 'Pimpinan Rapat' }}
-                            </span>
-                            <span class="status {{ $assigned->status }} text-[10px] py-0.5">
-                                {{ ucfirst($assigned->status) }}
-                            </span>
-                        </div>
-
-                        <div class="font-bold text-xs text-slate-900 line-clamp-1" title="{{ $assigned->judul_rapat }}">
-                            <a href="{{ route('admin.reports.show', $assigned) }}" class="hover:underline">
-                                {{ $assigned->judul_rapat }}
-                            </a>
-                        </div>
-
-                        <div class="text-[11px] text-slate-600 flex items-center justify-between pt-1 border-t border-slate-100">
-                            <span>{{ $assigned->waktu_mulai->translatedFormat('d M Y, H:i') }}</span>
-                            @if($hasMinutes)
-                                <span class="inline-flex items-center gap-1 text-emerald-700 font-bold text-[10px]">
-                                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                                    <span>Notulen Siap</span>
-                                </span>
-                            @else
-                                <span class="inline-flex items-center gap-1 text-amber-700 font-bold text-[10px]">
-                                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
-                                    <span>Belum Diisi</span>
-                                </span>
-                            @endif
-                        </div>
-
-                        <div class="pt-1 flex items-center gap-1.5">
-                            <a href="{{ route('admin.reports.show', $assigned) }}" class="button small secondary flex-1 text-[11px] justify-center py-1 font-bold">
-                                Rekap
-                            </a>
-                            @can('manageMinutes', $assigned)
-                                <a href="{{ route('admin.agendas.notulen', $assigned) }}" class="button small flex-1 text-[11px] justify-center py-1 font-bold bg-amber-400 text-slate-950 hover:bg-amber-500 border-amber-500">
-                                    Notulen
-                                </a>
-                            @endcan
-                        </div>
-                    </div>
-                @endforeach
-            </div>
-        </div>
-    @endif
 
     <!-- Filter Bar & Export CSV -->
     <div class="bg-white p-5 rounded-2xl border border-slate-300 shadow-xs space-y-4">
