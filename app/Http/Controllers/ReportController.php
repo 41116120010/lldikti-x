@@ -146,7 +146,7 @@ class ReportController extends Controller
                 : 'Belum ada rapat dinas selesai';
         }
 
-        // Agenda Penugasan Khusus (Pimpinan / Notulis Rapat) untuk Admin Unit
+        // Agenda Penugasan Khusus (Pimpinan / Notulis Rapat) untuk Admin Unit & Administrator
         $assignedAgendas = collect();
         if ($user->isAdmin() && $user->unit_id) {
             $assignedAgendas = Agenda::where(function ($q) use ($user) {
@@ -156,7 +156,20 @@ class ReportController extends Controller
             ->with(['creator.unit', 'units'])
             ->withCount('attendances')
             ->orderBy('waktu_mulai', 'desc')
-            ->take(5)
+            ->take(6)
+            ->get();
+        } elseif ($user->isAdministrator()) {
+            // Administrator memantau seluruh penugasan pimpinan / notulis resmi
+            $assignedAgendas = Agenda::where(function ($q) use ($user) {
+                $q->where('pimpinan_id', $user->id)
+                  ->orWhere('notulis_id', $user->id)
+                  ->orWhereNotNull('pimpinan_id')
+                  ->orWhereNotNull('notulis_id');
+            })
+            ->with(['creator.unit', 'units'])
+            ->withCount('attendances')
+            ->orderBy('waktu_mulai', 'desc')
+            ->take(6)
             ->get();
         }
 

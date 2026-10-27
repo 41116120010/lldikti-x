@@ -214,7 +214,10 @@ class Agenda extends Model
             ->where(function (Builder $q) {
                 $q->where(function (Builder $sub) {
                     $sub->whereNotNull('waktu_selesai')
-                        ->where('waktu_selesai', '>=', now());
+                        ->where(function (Builder $timeQ) {
+                            $timeQ->where('waktu_selesai', '>=', now())
+                                ->orWhere('waktu_mulai', '>=', now()->startOfDay());
+                        });
                 })->orWhere(function (Builder $sub) {
                     $sub->whereNull('waktu_selesai')
                         ->where('waktu_mulai', '>=', now()->startOfDay());

@@ -204,8 +204,8 @@
         </div>
     </div>
 
-    <!-- Widget 3 (Khusus Admin Unit): Panel Monitoring Agenda Penugasan Resmi -->
-    @if($user->isAdmin() && $assignedAgendas->isNotEmpty())
+    <!-- Widget 3: Panel Monitoring Agenda Penugasan Resmi (Pimpinan & Notulis) -->
+    @if(($user->isAdministrator() || $user->isAdmin()) && $assignedAgendas->isNotEmpty())
         <div class="bg-white p-5 rounded-2xl border border-amber-200 bg-linear-to-r from-amber-50/40 via-white to-white shadow-xs space-y-3.5">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-amber-100">
                 <div class="flex items-center gap-2">
@@ -214,7 +214,7 @@
                     </div>
                     <div>
                         <h4 class="text-xs font-bold uppercase tracking-wider text-amber-950 font-mono">Monitoring Agenda Penugasan Resmi (Pimpinan &amp; Notulis)</h4>
-                        <p class="text-[11px] text-amber-900/80 font-medium">Agenda rapat di mana Anda ditugaskan secara personal untuk memimpin pertemuan atau mencatat notulensi resmi.</p>
+                        <p class="text-[11px] text-amber-900/80 font-medium">{{ $user->isAdministrator() ? 'Agenda rapat kedinasan dengan penugasan pimpinan atau notulis resmi.' : 'Agenda rapat di mana Anda ditugaskan secara personal untuk memimpin pertemuan atau mencatat notulensi resmi.' }}</p>
                     </div>
                 </div>
                 <span class="text-[11px] font-bold px-2.5 py-1 bg-amber-100 text-amber-900 rounded-full font-mono self-start sm:self-auto">

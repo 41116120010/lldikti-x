@@ -24,15 +24,21 @@ class AgendaPolicy
             return true;
         }
 
-        if ($user->isAdmin()) {
-            return $agenda->created_by === $user->id
-                || ($user->unit_id !== null && ($agenda->creatorUnitId() === $user->unit_id || $agenda->units()->where('units.id', $user->unit_id)->exists() || $agenda->is_all_units));
+        // Designated Notulis, Pimpinan, or Creator can always view the agenda
+        if (
+            (int) $agenda->created_by === (int) $user->id
+            || ($agenda->notulis_id !== null && (int) $agenda->notulis_id === (int) $user->id)
+            || ($agenda->pimpinan_id !== null && (int) $agenda->pimpinan_id === (int) $user->id)
+        ) {
+            return true;
         }
 
-        // Designated Notulis or Pimpinan can view the agenda
-        if (($agenda->notulis_id && $agenda->notulis_id === $user->id) 
-            || ($agenda->pimpinan_id && $agenda->pimpinan_id === $user->id)) {
-            return true;
+        if ($user->isAdmin()) {
+            return $user->unit_id !== null && (
+                $agenda->creatorUnitId() === $user->unit_id
+                || $agenda->units()->where('units.id', $user->unit_id)->exists()
+                || $agenda->is_all_units
+            );
         }
 
         // Staff is strictly forbidden from accessing admin agenda management view unless designated

@@ -252,4 +252,76 @@ class CrossUnitNotulisAttendanceTest extends TestCase
             'user_id' => $this->staffNotulisUnitB->id,
         ]);
     }
+
+    /**
+     * Memastikan Admin Unit lain yang ditunjuk sebagai Notulis atau Pimpinan
+     * DAPAT mengakses halaman detail admin /admin/agendas/{id} tanpa terkena 403 Forbidden.
+     */
+    public function test_cross_unit_admin_notulis_can_view_agenda_show_without_403(): void
+    {
+        // Temukan atau buat admin unit B
+        $adminUnitB = User::where('unit_id', $this->unitB->id)->firstOrFail();
+        $adminUnitB->update(['role' => 'admin', 'is_active' => true]);
+
+        $agenda = Agenda::create([
+            'judul_rapat' => 'Rapat Koordinasi Khusus Admin B ' . uniqid(),
+            'slug' => 'rapat-koord-admin-b-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Akreditasi',
+            'waktu_mulai' => now()->addHour(),
+            'waktu_selesai' => now()->addHours(2),
+            'status' => 'scheduled',
+            'is_all_units' => false,
+            'created_by' => $this->adminHtk->id,
+            'pimpinan_id' => $this->adminHtk->id,
+            'notulis_id' => $adminUnitB->id,
+        ]);
+        $agenda->units()->sync([$this->unitHtk->id]);
+
+        $this->assertTrue($adminUnitB->can('view', $agenda), 'Admin Unit B harus diotorisasi melihat agenda di mana ia menjadi notulis');
+
+        // Buka halaman detail admin
+        $response = $this->actingAs($adminUnitB)->get("/admin/agendas/{$agenda->id}");
+        $response->assertStatus(200);
+        $response->assertSee($agenda->judul_rapat);
+    }
+
+    /**
+     * Memastikan agenda terjadwal hari ini yang waktu selesainya telah lewat (karena belum sempat dimulai)
+     * TETAP tampil pada Dashboard dan Portal Presensi anggota/notulis dengan penanda Terlewat.
+     */
+    public function test_scheduled_agenda_for_today_remains_visible_on_dashboard_even_if_passed_planned_end_time(): void
+    {
+        $agenda = Agenda::create([
+            'judul_rapat' => 'Rapat Terjadwal Terlewat Hari Ini ' . uniqid(),
+            'slug' => 'rapat-terlewat-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Rapat 2',
+            'waktu_mulai' => now()->subMinutes(40),
+            'waktu_selesai' => now()->subMinutes(15),
+            'status' => 'scheduled',
+            'is_all_units' => false,
+            'created_by' => $this->adminHtk->id,
+            'pimpinan_id' => $this->adminHtk->id,
+            'notulis_id' => $this->staffNotulisUnitB->id,
+        ]);
+        $agenda->units()->sync([$this->unitHtk->id]);
+
+        // 1. Masuk dalam query scopeUpcoming dan scopeRelevantForDashboard
+        $this->assertTrue(Agenda::visibleTo($this->staffNotulisUnitB)->upcoming()->where('agendas.id', $agenda->id)->exists());
+        $this->assertTrue(Agenda::visibleTo($this->staffNotulisUnitB)->relevantForDashboard()->where('agendas.id', $agenda->id)->exists());
+
+        // 2. Tampil di Dashboard staf dengan badge Terlewat
+        $responseDash = $this->actingAs($this->staffNotulisUnitB)->get('/dashboard');
+        $responseDash->assertStatus(200);
+        $responseDash->assertSee($agenda->judul_rapat);
+        $responseDash->assertSee('Terlewat');
+
+        // 3. Tampil di Portal Presensi
+        $responsePortal = $this->actingAs($this->staffNotulisUnitB)->get('/presensi');
+        $responsePortal->assertStatus(200);
+        $responsePortal->assertSee($agenda->judul_rapat);
+    }
 }

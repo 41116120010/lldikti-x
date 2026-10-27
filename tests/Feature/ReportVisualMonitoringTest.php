@@ -156,4 +156,31 @@ class ReportVisualMonitoringTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Reset');
     }
+
+    /**
+     * Memastikan Administrator dapat memantau panel penugasan pimpinan & notulis resmi.
+     */
+    public function test_administrator_sees_assigned_agenda_panel_when_assignments_exist(): void
+    {
+        $assignedAgenda = Agenda::create([
+            'judul_rapat' => 'Rapat Penugasan Global ' . uniqid(),
+            'slug' => 'rapat-global-' . uniqid(),
+            'jenis_rapat' => 'Koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Sidang Utama',
+            'waktu_mulai' => Carbon::now()->addHours(2),
+            'waktu_selesai' => Carbon::now()->addHours(4),
+            'status' => 'scheduled',
+            'is_all_units' => true,
+            'created_by' => $this->administrator->id,
+            'pimpinan_id' => $this->administrator->id,
+            'notulis_id' => $this->adminUnitA->id,
+        ]);
+
+        $response = $this->actingAs($this->administrator)->get('/admin/reports');
+
+        $response->assertStatus(200);
+        $response->assertSee('Monitoring Agenda Penugasan Resmi (Pimpinan & Notulis)');
+        $response->assertSee($assignedAgenda->judul_rapat);
+    }
 }
