@@ -74,18 +74,21 @@ class ReportVisualMonitoringTest extends TestCase
         $response = $this->actingAs($this->administrator)->get('/admin/reports');
 
         $response->assertStatus(200);
-        $response->assertSee('Cakupan: Seluruh Unit Kerja LLDIKTI (12 Unit)');
-        $response->assertSee('Distribusi Format Rapat');
-        $response->assertSee('Status Tata Kelola Dokumen');
+        $response->assertSee('Agenda Rapat');
+        $response->assertSee('Kehadiran Pegawai');
+        $response->assertSee('Kelengkapan Notulensi');
+        $response->assertSee('Distribusi Format Pelaksanaan Rapat');
         $response->assertSee('Partisipasi Per Unit Kerja');
-        $response->assertSee('Notulen Rampung');
+        $response->assertSee('Status Rapat');
+        $response->assertSee('Notulensi');
         $response->assertSee('Luring');
         $response->assertSee('Daring');
         $response->assertSee('Hibrida');
+        $response->assertSee('Lengkap');
     }
 
     /**
-     * Memastikan Admin Unit melihat banner cakupan lokal unitnya dan metrik partisipasi anggotanya.
+     * Memastikan Admin Unit melihat monitoring lokal unitnya dan metrik partisipasi anggotanya.
      */
     public function test_admin_unit_sees_scoped_unit_monitoring(): void
     {
@@ -107,11 +110,13 @@ class ReportVisualMonitoringTest extends TestCase
         $response = $this->actingAs($this->adminUnitA)->get('/admin/reports');
 
         $response->assertStatus(200);
-        $response->assertSee('Cakupan: ' . $this->unitA->nama_unit);
         $response->assertSee('Partisipasi Pegawai di Unit');
-        $response->assertSee('Distribusi Format Rapat');
-        $response->assertSee('Status Tata Kelola Dokumen');
-        $response->assertDontSee('Cakupan: Seluruh Unit Kerja LLDIKTI (12 Unit)');
+        $response->assertSee('Distribusi Format Pelaksanaan Rapat');
+        $response->assertSee('Kelengkapan Notulensi');
+        $response->assertSee('Status Rapat');
+        $response->assertSee('Notulensi');
+        $response->assertSee('Lengkap');
+        $response->assertSee($agendaUnitA->judul_rapat);
     }
 
     /**
