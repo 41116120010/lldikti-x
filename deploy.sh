@@ -93,6 +93,21 @@ else
     echo -e "      Composer    : ${CLR_SUCCESS}$(composer --version 2>/dev/null | head -n 1)${CLR_RESET}"
 fi
 
+# Auto-discovery NVM / Node jika npm tidak langsung berada di system PATH (misal eksekusi via sudo / non-login shell)
+if ! command -v npm &>/dev/null; then
+    for NVM_CANDIDATE in "$HOME/.nvm/nvm.sh" "/root/.nvm/nvm.sh" "/var/www/.nvm/nvm.sh"; do
+        if [ -s "$NVM_CANDIDATE" ]; then
+            export NVM_DIR="$(dirname "$NVM_CANDIDATE")"
+            # shellcheck disable=SC1090
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" 2>/dev/null || true
+            break
+        fi
+    done
+fi
+if ! command -v npm &>/dev/null && [ -d "/usr/local/bin" ]; then
+    export PATH="/usr/local/bin:$PATH"
+fi
+
 if command -v npm &>/dev/null; then
     NODE_VER=$(node -v 2>/dev/null || echo "unknown")
     NPM_VER=$(npm -v 2>/dev/null || echo "unknown")
@@ -155,7 +170,8 @@ if [ "$WITH_PULL" = true ]; then
     echo -e "${CLR_INFO}[2/9] Menarik perubahan kode terbaru (git pull origin ${CURRENT_BRANCH} --rebase)...${CLR_RESET}"
     git pull origin "${CURRENT_BRANCH}" --rebase
 else
-    echo -e "${CLR_INFO}[2/9] Melewati git pull (gunakan flag --pull jika ingin auto-pull).${CLR_RESET}"
+    echo -e "${CLR_INFO}[2/9] Melewati git pull (menggunakan kode lokal saat ini).${CLR_RESET}"
+    echo -e "      ${CLR_WARN}Pemberitahuan: Jalankan './deploy.sh --pull' jika ingin menarik commit terbaru dari remote repository.${CLR_RESET}"
 fi
 
 # ------------------------------------------------------------------------------
@@ -196,7 +212,8 @@ if command -v npm &>/dev/null; then
     npm run build
     echo -e "      ${CLR_SUCCESS}✓ Aset Vite berhasil dikompilasi (public/build/manifest.json terbarui).${CLR_RESET}"
 else
-    echo -e "${CLR_WARN}[5/9] NPM tidak terdeteksi, melewati kompilasi aset frontend.${CLR_RESET}"
+    echo -e "${CLR_WARN}[5/9] NPM tidak terdeteksi! Melewati instalasi paket dan kompilasi aset frontend.${CLR_RESET}"
+    echo -e "      ${CLR_WARN}Pemberitahuan: Jika terdapat pembaruan tampilan Blade/CSS/JS, jalankan 'npm install && npm run build' secara manual.${CLR_RESET}"
 fi
 
 # ------------------------------------------------------------------------------
@@ -266,12 +283,31 @@ if [ -f "${SCRIPT_DIR}/storage/framework/down" ]; then
     php artisan up 2>/dev/null || rm -f "${SCRIPT_DIR}/storage/framework/down" || true
 fi
 
-# Me-reload worker PHP-FPM jika service terdeteksi di OS
+# Me-restart antrean pekerja latar belakang agar memuat bytecode PHP terbaru
+echo -e "      Menyegarkan antrean worker (php artisan queue:restart)..."
+php artisan queue:restart 2>/dev/null || true
+
+# Me-reload worker PHP-FPM dengan prioritas versi aktif (misal: php8.4-fpm.service)
 if command -v systemctl &>/dev/null; then
-    PHP_FPM_UNIT=$(systemctl list-units --type=service --state=running 2>/dev/null | grep -oE "php[0-9\.]*-fpm\.service" | head -n 1 || true)
+    PHP_FPM_UNIT=""
+    TARGET_PHP_FPM="php${PHP_VERSION}-fpm.service"
+
+    if systemctl is-active --quiet "$TARGET_PHP_FPM" 2>/dev/null || systemctl is-enabled --quiet "$TARGET_PHP_FPM" 2>/dev/null; then
+        PHP_FPM_UNIT="$TARGET_PHP_FPM"
+    elif systemctl is-active --quiet "php-fpm.service" 2>/dev/null; then
+        PHP_FPM_UNIT="php-fpm.service"
+    else
+        PHP_FPM_UNIT=$(systemctl list-units --type=service --state=running 2>/dev/null | grep -oE "php[0-9\.]*-fpm\.service" | head -n 1 || true)
+    fi
+
     if [ -n "$PHP_FPM_UNIT" ]; then
         echo -e "      Me-reload worker PHP-FPM (${PHP_FPM_UNIT})..."
-        sudo systemctl reload "${PHP_FPM_UNIT}" 2>/dev/null || true
+        if sudo systemctl reload "${PHP_FPM_UNIT}" 2>/dev/null; then
+            echo -e "      ${CLR_SUCCESS}✓ Layanan ${PHP_FPM_UNIT} berhasil di-reload (OPcache disegarkan).${CLR_RESET}"
+        else
+            echo -e "      ${CLR_WARN}Pemberitahuan: Tidak dapat me-reload ${PHP_FPM_UNIT} secara otomatis (memerlukan izin sudo).${CLR_RESET}"
+            echo -e "      ${CLR_INFO}Saran: Jalankan manual 'sudo systemctl reload ${PHP_FPM_UNIT}' untuk menyegarkan OPcache.${CLR_RESET}"
+        fi
     fi
 fi
 
