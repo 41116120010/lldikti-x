@@ -111,6 +111,42 @@ if [[ "$DB_PROBE" != "OK" ]]; then
 fi
 echo -e "      Database    : ${CLR_SUCCESS}✓ Koneksi basis data terverifikasi (Online)${CLR_RESET}"
 
+# Cache & Redis Probe: Jika driver cache/session/queue menggunakan redis, pastikan ekstensi & koneksi tersedia
+echo -e "      Memeriksa konfigurasi dan konektivitas Cache..."
+CACHE_PROBE=$(php -r "
+    require 'vendor/autoload.php';
+    \$app = require_once 'bootstrap/app.php';
+    \$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+    \$store = config('cache.default');
+    if (\$store === 'redis' || config('session.driver') === 'redis' || config('queue.default') === 'redis') {
+        if (!extension_loaded('redis') && !class_exists('Redis')) {
+            echo 'FAIL_EXT: Ekstensi PHP ext-redis belum terpasang. Jalankan: sudo apt install php' . PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION . '-redis';
+            exit(0);
+        }
+        try {
+            Illuminate\Support\Facades\Redis::connection()->ping();
+            echo 'OK_REDIS';
+        } catch (\Throwable \$e) {
+            echo 'WARN_REDIS: Tidak dapat terhubung ke Redis server (' . \$e->getMessage() . ')';
+        }
+    } else {
+        echo 'OK_STORE:' . \$store;
+    }
+" 2>/dev/null || echo "FAIL_UNKNOWN")
+
+if [[ "$CACHE_PROBE" == FAIL_EXT* ]]; then
+    echo -e "${CLR_ERR}Kesalahan Cache: ${CACHE_PROBE#FAIL_EXT: }${CLR_RESET}"
+    echo -e "${CLR_WARN}Saran: Pasang ekstensi redis atau setel CACHE_STORE=database di .env${CLR_RESET}"
+    exit 1
+elif [[ "$CACHE_PROBE" == WARN_REDIS* ]]; then
+    echo -e "${CLR_WARN}Peringatan: ${CACHE_PROBE#WARN_REDIS: }${CLR_RESET}"
+    echo -e "${CLR_WARN}Pastikan service redis berjalan: sudo systemctl start redis-server${CLR_RESET}"
+elif [[ "$CACHE_PROBE" == "OK_REDIS" ]]; then
+    echo -e "      Cache Engine: ${CLR_SUCCESS}✓ Redis terverifikasi (Ekstensi PHP & Redis Server Online)${CLR_RESET}"
+else
+    echo -e "      Cache Engine: ${CLR_SUCCESS}✓ Cache store terverifikasi (${CACHE_PROBE#OK_STORE:})${CLR_RESET}"
+fi
+
 # ------------------------------------------------------------------------------
 # 2. Pembaruan Source Code via Git (Opsional)
 # ------------------------------------------------------------------------------

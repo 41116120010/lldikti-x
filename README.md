@@ -334,12 +334,14 @@ SIPERAPAT_STRICT_TEST_DB=true
   `public/storage`. Blok `location ^~ /storage/ { try_files $uri =404; }` pada
   konfigurasi nginx membuat berkas `.php`/`.phtml` di area tersebut tidak pernah
   diteruskan ke PHP-FPM. Jangan menghapus blok ini.
-* **Driver session dan cache bukan database.** Dengan ratusan pegawai yang check-in
-  bersamaan, session berbasis `database` menyebabkan lock contention. Gunakan
-  Redis (lihat `config/cache.php` yang sudah menyediakan store `redis`).
-* **Kredensial Redis sudah tersedia** di `config/database.php` (`redis.cache` +
-  `REDIS_CACHE_DB`) tetapi belum dipakai — tidak ada package tambahan yang perlu
-  dipasang, cukup variabel environment.
+* **Driver session, cache, dan queue.**
+  * *Opsi Default (Ponytail / Zero-Bloatware):* Menggunakan `database`. Sangat stabil, tabel `cache`, `cache_locks`, dan `sessions` sudah tersedia native dari migrasi skema.
+  * *Opsi High-Throughput (Redis):* Jika menggunakan Redis (`SESSION_DRIVER=redis`, `CACHE_STORE=redis`, `QUEUE_CONNECTION=redis`), pastikan sistem operasi server telah menginstal modul PHP Redis dan daemon Redis:
+    ```bash
+    sudo apt install -y redis-server php-redis  # atau php8.4-redis / php8.3-redis
+    sudo systemctl enable --now redis-server
+    ```
+    Kredensial Redis diatur di `config/database.php` (`redis.cache` + `REDIS_CACHE_DB`), dan driver cache siap digunakan via variabel environment.
 
 ### 10.2. Environment Produksi
 
