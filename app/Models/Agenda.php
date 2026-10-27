@@ -259,7 +259,10 @@ class Agenda extends Model
         }
 
         return $query->where(function (Builder $sub) use ($user) {
-            $sub->where('is_all_units', true);
+            $sub->where('is_all_units', true)
+                ->orWhere('pimpinan_id', $user->id)
+                ->orWhere('notulis_id', $user->id)
+                ->orWhere('created_by', $user->id);
 
             if ($user->unit_id) {
                 $sub->orWhereHas('units', function (Builder $uQuery) use ($user) {
@@ -300,6 +303,14 @@ class Agenda extends Model
         }
 
         if ($this->is_all_units) {
+            return true;
+        }
+
+        // Penugasan Individu: Pemimpin Rapat dan Notulis selalu memenuhi syarat hadir
+        if (
+            ($this->pimpinan_id !== null && (int) $this->pimpinan_id === (int) $user->id) ||
+            ($this->notulis_id !== null && (int) $this->notulis_id === (int) $user->id)
+        ) {
             return true;
         }
 

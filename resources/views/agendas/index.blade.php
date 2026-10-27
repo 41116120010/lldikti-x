@@ -126,7 +126,7 @@
                                 <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200 shrink-0">
                                     Penyelenggara
                                 </span>
-                            @elseif($agenda->status === 'ongoing' && ($agenda->pimpinan_id === $currentUser->id || $agenda->notulis_id === $currentUser->id))
+                            @elseif($agenda->pimpinan_id === $currentUser->id || $agenda->notulis_id === $currentUser->id)
                                 <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 shrink-0">
                                     {{ $agenda->pimpinan_id === $currentUser->id ? 'Pimpinan Rapat' : 'Notulis Rapat' }}
                                 </span>
