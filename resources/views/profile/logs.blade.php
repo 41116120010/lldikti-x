@@ -7,15 +7,15 @@
 @section('content')
 <div class="space-y-5">
     <!-- Header Card & User Summary -->
-    <div class="panel p-5 bg-white border border-slate-300 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div class="flex items-center gap-3.5">
+    <div class="panel p-5 bg-white border border-slate-300 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 overflow-hidden">
+        <div class="flex items-center gap-3.5 min-w-0">
             <div class="avatar bg-slate-950 text-white font-bold text-sm uppercase shrink-0 shadow-xs">
                 {{ substr($user->name, 0, 2) }}
             </div>
-            <div>
-                <div class="flex items-center gap-2">
-                    <h3 class="font-extrabold text-slate-950 text-base leading-tight">{{ $user->name }}</h3>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-900 border border-slate-300">
+            <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
+                    <h3 class="font-extrabold text-slate-950 text-base leading-tight break-words [overflow-wrap:anywhere]">{{ $user->name }}</h3>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-900 border border-slate-300 shrink-0">
                         @if($user->isAdministrator())
                             Administrator
                         @elseif($user->isAdmin())
@@ -25,7 +25,7 @@
                         @endif
                     </span>
                 </div>
-                <div class="text-xs text-slate-600 font-medium mt-0.5">
+                <div class="text-xs text-slate-600 font-medium mt-0.5 break-all [overflow-wrap:anywhere]">
                     <span>NIP: <strong class="font-mono text-slate-900">{{ $user->nip ?? '-' }}</strong></span>
                     <span class="mx-1.5 text-slate-400">&bull;</span>
                     <span>Username: <strong class="font-mono text-slate-900">{{ '@' . $user->username }}</strong></span>

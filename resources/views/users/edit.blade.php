@@ -180,15 +180,15 @@
     </div>
 
     <!-- User Profile & Activity Summary Card (1 Col) -->
-    <div class="space-y-4">
-        <div class="panel p-6 bg-slate-950 text-white border-slate-900 shadow-sm">
-            <div class="flex items-center gap-3 mb-4 pb-3 border-b border-slate-800">
-                <div class="w-11 h-11 rounded-xl bg-slate-800 text-white font-bold flex items-center justify-center text-sm shadow-xs">
+    <div class="space-y-4 min-w-0">
+        <div class="panel p-6 bg-slate-950 text-white border-slate-900 shadow-sm overflow-hidden min-w-0">
+            <div class="flex items-center gap-3 mb-4 pb-3 border-b border-slate-800 min-w-0">
+                <div class="w-11 h-11 rounded-xl bg-slate-800 text-white font-bold flex items-center justify-center text-sm shadow-xs shrink-0">
                     {{ substr($user->name, 0, 2) }}
                 </div>
-                <div>
-                    <h3 class="font-extrabold text-sm text-white">{{ $user->name }}</h3>
-                    <span class="text-xs text-slate-300 font-mono font-bold">NIP: {{ $user->nip }}</span>
+                <div class="min-w-0 flex-1">
+                    <h3 class="font-extrabold text-sm text-white break-words [overflow-wrap:anywhere]">{{ $user->name }}</h3>
+                    <span class="text-xs text-slate-300 font-mono font-bold break-all">NIP: {{ $user->nip }}</span>
                 </div>
             </div>
 

@@ -126,4 +126,35 @@ class ProfileTest extends TestCase
             'email' => $originalEmail,
         ]);
     }
+
+    public function test_profile_page_renders_gracefully_with_extremely_long_name_and_email(): void
+    {
+        $staff = User::where('role', 'staff')->firstOrFail();
+        $originalName = $staff->name;
+        $originalEmail = $staff->email;
+
+        $longName = 'Prof. Dr. Ir. H. Muhammad Abdurrahman Wahidul Qohar bin Abdul Somad, M.Kom., Ph.D.';
+        $longEmail = 'muhammad.fauzan.irfansyah.putra.kusumah@lldiktiwilayahx.kemdiktisaintek.go.id';
+
+        $staff->update([
+            'name' => $longName,
+            'email' => $longEmail,
+        ]);
+
+        $response = $this->actingAs($staff)->get(route('profile.edit'));
+
+        $response->assertStatus(200);
+        $response->assertSee($longName);
+        $response->assertSee($longEmail);
+        $response->assertSee('break-all');
+        $response->assertSee('select-all');
+        $response->assertSee('overflow-hidden');
+
+        // Restore original data for pristine database state
+        $staff->update([
+            'name' => $originalName,
+            'email' => $originalEmail,
+        ]);
+    }
 }
+

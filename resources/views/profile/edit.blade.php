@@ -261,51 +261,60 @@
     </div>
 
     <!-- Right: Account Summary & Security Card (1 col) -->
-    <div class="lg:col-span-1 space-y-6">
+    <div class="lg:col-span-1 space-y-6 min-w-0">
         <!-- Profile Summary Panel -->
-        <div class="panel p-6 text-center space-y-4">
-            <div class="avatar bg-slate-950 text-white font-bold text-lg uppercase w-16 h-16 rounded-2xl mx-auto flex items-center justify-center shadow-md">
+        <div class="panel p-6 text-center space-y-4 overflow-hidden">
+            <div class="avatar bg-slate-950 text-white font-bold text-lg uppercase w-16 h-16 rounded-2xl mx-auto flex items-center justify-center shadow-md shrink-0">
                 {{ substr($user->name, 0, 2) }}
             </div>
 
-            <div>
-                <h3 class="text-sm font-extrabold text-slate-950">{{ $user->name }}</h3>
-                <p class="text-xs text-slate-600 font-mono font-medium">{{ $user->email }}</p>
+            <div class="space-y-2 min-w-0 max-w-full px-1">
+                <h3 class="text-sm sm:text-base font-extrabold text-slate-950 break-words [overflow-wrap:anywhere] leading-snug">
+                    {{ $user->name }}
+                </h3>
+                <div class="inline-flex items-center justify-center max-w-full">
+                    <p 
+                        class="text-xs text-slate-600 font-mono font-medium break-all [overflow-wrap:anywhere] leading-relaxed px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg select-all" 
+                        title="{{ $user->email }}"
+                    >
+                        {{ $user->email }}
+                    </p>
+                </div>
             </div>
 
             <div class="pt-3 border-t border-slate-200 space-y-2.5 text-xs text-left">
-                <div class="flex items-center justify-between">
-                    <span class="text-slate-600 font-bold">Hak Akses:</span>
+                <div class="flex items-center justify-between gap-2">
+                    <span class="text-slate-600 font-bold shrink-0">Hak Akses:</span>
                     @if($user->isAdministrator())
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-900 text-white">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-900 text-white shrink-0">
                             Administrator
                         </span>
                     @elseif($user->isAdmin())
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-900 border border-slate-300">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-900 border border-slate-300 shrink-0">
                             Admin Unit
                         </span>
                     @else
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-900 border border-slate-300">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-900 border border-slate-300 shrink-0">
                             Pegawai Unit
                         </span>
                     @endif
                 </div>
 
-                <div class="flex items-center justify-between">
-                    <span class="text-slate-600 font-bold">Status Akun:</span>
-                    <span class="status completed font-bold">Aktif</span>
+                <div class="flex items-center justify-between gap-2">
+                    <span class="text-slate-600 font-bold shrink-0">Status Akun:</span>
+                    <span class="status completed font-bold shrink-0">Aktif</span>
                 </div>
 
                 @if($user->nip)
-                    <div class="flex items-center justify-between">
-                        <span class="text-slate-600 font-bold">Nomor Induk:</span>
-                        <span class="font-mono font-bold text-slate-950">{{ $user->nip }}</span>
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="text-slate-600 font-bold shrink-0">Nomor Induk:</span>
+                        <span class="font-mono font-bold text-slate-950 truncate" title="{{ $user->nip }}">{{ $user->nip }}</span>
                     </div>
                 @endif
 
-                <div class="flex items-center justify-between">
-                    <span class="text-slate-600 font-bold">Terdaftar Sejak:</span>
-                    <span class="text-slate-900 font-bold">{{ $user->created_at->translatedFormat('d F Y') }}</span>
+                <div class="flex items-center justify-between gap-2">
+                    <span class="text-slate-600 font-bold shrink-0">Terdaftar Sejak:</span>
+                    <span class="text-slate-900 font-bold text-right shrink-0">{{ $user->created_at->translatedFormat('d F Y') }}</span>
                 </div>
             </div>
         </div>
