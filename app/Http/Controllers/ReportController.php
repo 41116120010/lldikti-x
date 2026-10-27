@@ -76,23 +76,89 @@ class ReportController extends Controller
         $agendas = $query->orderBy('waktu_mulai', 'desc')->paginate(10)->withQueryString();
 
         // Direct database aggregate calculations (O(1) memory footprint).
-        // The three simple status tallies collapse into a single pass; `upcoming`
-        // keeps its own query because its predicate is not a plain equality.
+        // Format distribution and governance compliance calculated in a single aggregate pass.
         $baseScopedQuery = Agenda::visibleTo($user);
         $agendaCounts = (clone $baseScopedQuery)
             ->selectRaw('COUNT(*) AS total')
             ->selectRaw("SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed")
             ->selectRaw("SUM(CASE WHEN status = 'ongoing' THEN 1 ELSE 0 END) AS ongoing")
+            ->selectRaw("SUM(CASE WHEN status = 'scheduled' THEN 1 ELSE 0 END) AS scheduled")
+            ->selectRaw("SUM(CASE WHEN tipe_rapat = 'offline' THEN 1 ELSE 0 END) AS count_offline")
+            ->selectRaw("SUM(CASE WHEN tipe_rapat = 'online' THEN 1 ELSE 0 END) AS count_online")
+            ->selectRaw("SUM(CASE WHEN tipe_rapat = 'hybrid' THEN 1 ELSE 0 END) AS count_hybrid")
+            ->selectRaw("SUM(CASE WHEN notulensi IS NOT NULL AND TRIM(notulensi) != '' THEN 1 ELSE 0 END) AS count_with_notulen")
             ->first();
 
         $totalAgendas = (int) ($agendaCounts->total ?? 0);
         $completedAgendas = (int) ($agendaCounts->completed ?? 0);
         $ongoingAgendas = (int) ($agendaCounts->ongoing ?? 0);
+        $scheduledAgendas = (int) ($agendaCounts->scheduled ?? 0);
+
+        $countOffline = (int) ($agendaCounts->count_offline ?? 0);
+        $countOnline = (int) ($agendaCounts->count_online ?? 0);
+        $countHybrid = (int) ($agendaCounts->count_hybrid ?? 0);
+        $countWithNotulen = (int) ($agendaCounts->count_with_notulen ?? 0);
+
+        $formatStats = [
+            'offline' => $countOffline,
+            'online' => $countOnline,
+            'hybrid' => $countHybrid,
+            'pct_offline' => $totalAgendas > 0 ? round(($countOffline / $totalAgendas) * 100) : 0,
+            'pct_online' => $totalAgendas > 0 ? round(($countOnline / $totalAgendas) * 100) : 0,
+            'pct_hybrid' => $totalAgendas > 0 ? round(($countHybrid / $totalAgendas) * 100) : 0,
+        ];
+
+        // Tata kelola dokumen (Governance Compliance): persentase rapat selesai yang telah dilengkapi notulensi
+        $governanceRate = $completedAgendas > 0
+            ? round(min(($countWithNotulen / $completedAgendas) * 100, 100.0), 1)
+            : 100.0;
 
         // Correlated EXISTS instead of `whereIn('agenda_id', <subquery>)`, which
         // forced MySQL to materialise the entire scoped agenda id list.
         $totalPresensi = Attendance::whereHas('agenda', fn ($q) => $q->visibleTo($user))->count();
         $avgPresensi = $totalAgendas > 0 ? round($totalPresensi / $totalAgendas, 1) : 0;
+
+        // Tingkat Kepatuhan Presensi ASN
+        $attendanceRate = 100.0;
+        $attendanceRateSubtext = 'Belum ada rapat dinas selesai';
+
+        if ($user->isAdministrator()) {
+            $totalActiveUsers = User::where('is_active', true)->count();
+            $completedAttendances = Attendance::whereHas('agenda', fn ($q) => $q->where('status', 'completed'))->count();
+            $expected = $completedAgendas * max($totalActiveUsers, 1);
+            $attendanceRate = ($completedAgendas === 0 || $totalActiveUsers === 0)
+                ? 100.0
+                : round(min(($completedAttendances / max($expected, 1)) * 100, 100.0), 1);
+            $attendanceRateSubtext = $completedAgendas > 0
+                ? "Rata-rata Seluruh ASN ({$totalActiveUsers} Pegawai)"
+                : 'Belum ada rapat dinas selesai';
+        } elseif ($user->isAdmin() && $user->unit_id) {
+            $unitUsersCount = User::forUnit($user->unit_id)->count();
+            $unitCompletedAttendances = Attendance::whereHas('user', fn ($q) => $q->where('unit_id', $user->unit_id))
+                ->whereHas('agenda', fn ($q) => $q->where('status', 'completed'))
+                ->count();
+            $expected = $completedAgendas * max($unitUsersCount, 1);
+            $attendanceRate = ($completedAgendas === 0 || $unitUsersCount === 0)
+                ? 100.0
+                : round(min(($unitCompletedAttendances / max($expected, 1)) * 100, 100.0), 1);
+            $attendanceRateSubtext = $completedAgendas > 0
+                ? "Kehadiran Unit ({$unitUsersCount} Pegawai)"
+                : 'Belum ada rapat dinas selesai';
+        }
+
+        // Agenda Penugasan Khusus (Pimpinan / Notulis Rapat) untuk Admin Unit
+        $assignedAgendas = collect();
+        if ($user->isAdmin() && $user->unit_id) {
+            $assignedAgendas = Agenda::where(function ($q) use ($user) {
+                $q->where('pimpinan_id', $user->id)
+                  ->orWhere('notulis_id', $user->id);
+            })
+            ->with(['creator.unit', 'units'])
+            ->withCount('attendances')
+            ->orderBy('waktu_mulai', 'desc')
+            ->take(5)
+            ->get();
+        }
 
         $units = $user->isAdministrator() ? Unit::active()->orderBy('nama_unit')->get() : collect();
         $unitStats = null;
@@ -166,10 +232,17 @@ class ReportController extends Controller
             'totalAgendas',
             'completedAgendas',
             'ongoingAgendas',
+            'scheduledAgendas',
             'totalPresensi',
             'avgPresensi',
             'unitStats',
             'memberStats',
+            'formatStats',
+            'governanceRate',
+            'countWithNotulen',
+            'attendanceRate',
+            'attendanceRateSubtext',
+            'assignedAgendas',
             'user'
         ));
     }
