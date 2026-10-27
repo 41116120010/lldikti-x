@@ -124,4 +124,37 @@ class Attendance extends Model
 
         return "SIP-{$dateStr}-{$this->agenda_id}-{$this->id}-{$shortHash}";
     }
+
+    /**
+     * Dapatkan label ringkas perangkat & peramban yang mudah dibaca.
+     */
+    public function getDeviceLabelAttribute(): string
+    {
+        $ua = (string) $this->user_agent;
+        if (empty(trim($ua))) {
+            return 'Perangkat Tidak Terdeteksi';
+        }
+
+        $platform = match (true) {
+            str_contains($ua, 'Android') => 'Android',
+            str_contains($ua, 'iPhone') => 'iPhone (iOS)',
+            str_contains($ua, 'iPad') => 'iPad (iPadOS)',
+            str_contains($ua, 'Macintosh') || str_contains($ua, 'Mac OS') => 'macOS',
+            str_contains($ua, 'Windows') => 'Windows',
+            str_contains($ua, 'Linux') => 'Linux',
+            default => 'Perangkat Terdaftar',
+        };
+
+        $browser = match (true) {
+            str_contains($ua, 'Edg') => 'Microsoft Edge',
+            str_contains($ua, 'Chrome') => 'Google Chrome',
+            str_contains($ua, 'Safari') && !str_contains($ua, 'Chrome') => 'Safari',
+            str_contains($ua, 'Firefox') => 'Mozilla Firefox',
+            str_contains($ua, 'Opera') || str_contains($ua, 'OPR') => 'Opera',
+            default => 'Peramban Web',
+        };
+
+        return "{$browser} ({$platform})";
+    }
 }
+

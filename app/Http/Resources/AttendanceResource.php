@@ -71,6 +71,7 @@ class AttendanceResource extends JsonResource
                     'metode_verifikasi' => 'Swafoto Wajah & Tanda Tangan Digital',
                     'ip_address' => $this->ip_address,
                     'user_agent' => $this->user_agent,
+                    'device_label' => $this->device_label,
                     'signed_at' => $this->signed_at?->toIso8601String(),
                 ],
             ],
@@ -79,6 +80,7 @@ class AttendanceResource extends JsonResource
             'signature_url' => $this->signature_path ? url("/api/v1/attendances/{$this->id}/signature") : null,
             'ip_address' => $this->ip_address,
             'user_agent' => $this->user_agent,
+            'device_label' => $this->device_label,
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

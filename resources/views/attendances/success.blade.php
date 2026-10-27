@@ -103,9 +103,35 @@
                 </div>
 
                 <!-- Technical Metadata Footer -->
-                <div class="p-3 bg-slate-100 rounded-xl text-[10px] text-slate-700 font-mono space-y-0.5 print:border print:border-slate-300">
-                    <div><b class="text-slate-900">Alamat IP:</b> {{ $attendance->ip_address ?? '127.0.0.1' }}</div>
-                    <div class="truncate"><b class="text-slate-900">Perangkat:</b> {{ $attendance->user_agent }}</div>
+                <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-3 print:border-slate-300 print:bg-white">
+                    <div class="flex items-center justify-between gap-2 border-b border-slate-200 pb-2 print:border-slate-300">
+                        <div class="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-700 font-mono">
+                            <svg class="text-slate-500 shrink-0 print:hidden" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 8 6 4-6 4Z"/></svg>
+                            <span>Informasi Jaringan & Perangkat Autentikasi</span>
+                        </div>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-800 border border-slate-300 shrink-0 print:bg-transparent print:border-slate-400">
+                            {{ $attendance->device_label }}
+                        </span>
+                    </div>
+
+                    <div class="space-y-2 text-xs">
+                        <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                            <span class="text-slate-600 font-bold shrink-0 text-[11px]">Alamat IP:</span>
+                            <span class="font-mono font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200 text-[11px] inline-block w-fit print:border-slate-300">
+                                {{ $attendance->ip_address ?? '127.0.0.1' }}
+                            </span>
+                        </div>
+
+                        <div class="space-y-1">
+                            <span class="text-slate-600 font-bold block text-[11px]">Perangkat (User-Agent):</span>
+                            <div 
+                                class="p-2.5 bg-white rounded-lg border border-slate-200 font-mono text-[10px] sm:text-[11px] text-slate-700 break-words [overflow-wrap:anywhere] leading-relaxed select-all print:border-slate-300 print:p-1.5" 
+                                title="{{ $attendance->user_agent }}"
+                            >
+                                {{ $attendance->user_agent ?: 'Tidak terdeteksi' }}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 

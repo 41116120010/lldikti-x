@@ -364,4 +364,48 @@ class AttendanceCheckInTest extends TestCase
         $afterQueryCount = count(\Illuminate\Support\Facades\DB::getQueryLog());
         $this->assertEquals($initialQueryCount, $afterQueryCount);
     }
+
+    public function test_attendance_success_receipt_displays_full_device_metadata_without_truncation(): void
+    {
+        $staff = User::where('role', 'staff')->firstOrFail();
+        $agenda = Agenda::create([
+            'judul_rapat' => 'Rapat Koordinasi Uji Device User Agent ' . uniqid(),
+            'tanggal' => now()->toDateString(),
+            'waktu_mulai' => now()->subMinutes(10),
+            'waktu_selesai' => now()->addHours(2),
+            'tempat' => 'Ruang Sidang Utama',
+            'status' => 'ongoing',
+            'tipe_rapat' => 'offline',
+            'created_by' => $staff->id,
+        ]);
+
+        $fullUserAgent = 'Mozilla/5.0 (Linux; Android 14; SM-S928B Build/UP1A.231005.007; wv) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.6613.127 Mobile Safari/537.36';
+
+        $attendance = Attendance::create([
+            'agenda_id' => $agenda->id,
+            'user_id' => $staff->id,
+            'signed_at' => now(),
+            'ip_address' => '192.168.1.105',
+            'user_agent' => $fullUserAgent,
+            'selfie_path' => 'selfies/test.jpg',
+            'signature_path' => 'signatures/test.png',
+        ]);
+
+        $this->assertEquals('Google Chrome (Android)', $attendance->device_label);
+
+        $response = $this->actingAs($staff)->get(route('attendances.success', [$agenda, $attendance]));
+
+        $response->assertStatus(200);
+        $response->assertSee('Informasi Jaringan');
+        $response->assertSee('Google Chrome (Android)');
+        $response->assertSee('192.168.1.105');
+        $response->assertSee($fullUserAgent);
+        $response->assertSee('break-words');
+        $response->assertSee('select-all');
+
+        // Cleanup created test entities to preserve pristine state
+        $attendance->delete();
+        $agenda->delete();
+    }
 }
+
