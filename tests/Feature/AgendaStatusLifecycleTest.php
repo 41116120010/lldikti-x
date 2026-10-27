@@ -544,4 +544,21 @@ class AgendaStatusLifecycleTest extends TestCase
         $this->assertEquals('scheduled', $overdueScheduled->status);
         $this->assertTrue($overdueScheduled->is_overdue);
     }
+
+    /**
+     * 16. Verifikasi scheduler command terdaftar dengan frekuensi setiap menit (* * * * *).
+     */
+    public function test_sync_agenda_status_is_scheduled_every_minute(): void
+    {
+        $schedule = app(\Illuminate\Console\Scheduling\Schedule::class);
+        $events = collect($schedule->events());
+
+        $syncEvent = $events->first(function ($event) {
+            return str_contains($event->command ?? '', 'agendas:sync-status');
+        });
+
+        $this->assertNotNull($syncEvent, 'Command agendas:sync-status harus terdaftar dalam scheduler.');
+        $this->assertEquals('* * * * *', $syncEvent->expression, 'SyncAgendaStatus harus dieksekusi setiap menit (* * * * *).');
+    }
 }
+

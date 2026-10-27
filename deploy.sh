@@ -195,7 +195,7 @@ php artisan storage:link 2>/dev/null || true
 
 # Normalisasi hak akses direktori storage, cache, dan build aset
 mkdir -p storage/logs public/build
-touch storage/logs/laravel.log 2>/dev/null || true
+touch storage/logs/laravel.log storage/logs/cron.log 2>/dev/null || true
 find storage bootstrap/cache public/build -type d -exec chmod 775 {} + 2>/dev/null || true
 find storage bootstrap/cache public/build -type f -exec chmod 664 {} + 2>/dev/null || true
 echo -e "      ${CLR_SUCCESS}✓ Seluruh cache performa (Config, Route, View) berhasil dikompilasi.${CLR_RESET}"
@@ -204,7 +204,8 @@ echo -e "      ${CLR_SUCCESS}✓ Seluruh cache performa (Config, Route, View) be
 # 8. Verifikasi Layanan Scheduler & Crontab OS
 # ------------------------------------------------------------------------------
 echo -e "${CLR_INFO}[8/9] Memeriksa status Cron Scheduler...${CLR_RESET}"
-CRON_ENTRY="* * * * * cd ${SCRIPT_DIR} && php artisan schedule:run >> /dev/null 2>&1"
+PHP_BIN=$(command -v php || echo "/usr/bin/php")
+CRON_ENTRY="* * * * * cd ${SCRIPT_DIR} && ${PHP_BIN} artisan schedule:run >> ${SCRIPT_DIR}/storage/logs/cron.log 2>&1"
 
 if crontab -l 2>/dev/null | grep -q "schedule:run"; then
     echo -e "      ${CLR_SUCCESS}✓ Cron job Laravel scheduler terdeteksi aktif di crontab.${CLR_RESET}"

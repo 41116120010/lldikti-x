@@ -17,17 +17,16 @@ Artisan::command('inspire', function () {
  */
 Schedule::command(PruneActivityLogs::class, ['--days' => 730])
     ->dailyAt('02:15')
-    ->withoutOverlapping()
-    ->onOneServer()
+    ->withoutOverlapping(60)
     ->description('Prune activity logs beyond the two-year retention window');
 
 /*
  * Otomatisasi penutupan sesi presensi rapat kedinasan yang telah melewati batas akhir waktu pelaksanaan.
- * Berjalan setiap 5 menit dengan locking pencegah tumpang tindih.
+ * Berjalan setiap 1 menit dengan locking pencegah tumpang tindih (timeout 10 menit anti-stale lock).
  */
 Schedule::command(SyncAgendaStatus::class)
-    ->everyFiveMinutes()
-    ->withoutOverlapping()
-    ->onOneServer()
+    ->everyMinute()
+    ->withoutOverlapping(10)
     ->description('Otomatisasi penutupan sesi presensi rapat kedinasan yang telah melewati batas waktu pelaksanaan');
+
 
