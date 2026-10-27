@@ -167,10 +167,35 @@ fi
 # ------------------------------------------------------------------------------
 if [ "$WITH_PULL" = true ]; then
     CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
-    echo -e "${CLR_INFO}[2/9] Menarik perubahan kode terbaru (git pull origin ${CURRENT_BRANCH} --rebase)...${CLR_RESET}"
-    git pull origin "${CURRENT_BRANCH}" --rebase
+    if [ "$CURRENT_BRANCH" = "HEAD" ]; then
+        CURRENT_BRANCH="main"
+        git checkout main 2>/dev/null || true
+    fi
+    echo -e "${CLR_INFO}[2/9] Menarik perubahan kode terbaru dari origin/${CURRENT_BRANCH}...${CLR_RESET}"
+
+    # Auto-stash jika terdapat uncommitted changes (mencegah error 'cannot pull with rebase')
+    if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
+        echo -e "      ${CLR_WARN}Mendeteksi uncommitted changes lokal di server. Mengamankan file ke git stash...${CLR_RESET}"
+        git stash --include-untracked -m "auto-deploy-stash-$(date +%s)" 2>/dev/null || true
+    fi
+
+    echo -e "      Mengambil metadata commit terbaru (git fetch origin ${CURRENT_BRANCH})..."
+    git fetch origin "${CURRENT_BRANCH}"
+
+    if [ "$IS_PROD" = true ]; then
+        echo -e "      Menyelaraskan codebase produksi persis 100% dengan origin/${CURRENT_BRANCH}..."
+        git reset --hard "origin/${CURRENT_BRANCH}"
+    else
+        echo -e "      Menjalankan git pull origin ${CURRENT_BRANCH}..."
+        git pull origin "${CURRENT_BRANCH}" --rebase 2>/dev/null || git reset --hard "origin/${CURRENT_BRANCH}"
+    fi
+
+    LATEST_COMMIT=$(git log -n 1 --oneline 2>/dev/null || echo "Unknown")
+    echo -e "      ${CLR_SUCCESS}✓ Codebase aktif: ${LATEST_COMMIT}${CLR_RESET}"
 else
-    echo -e "${CLR_INFO}[2/9] Melewati git pull (menggunakan kode lokal saat ini).${CLR_RESET}"
+    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+    LATEST_COMMIT=$(git log -n 1 --oneline 2>/dev/null || echo "Unknown")
+    echo -e "${CLR_INFO}[2/9] Melewati git pull (menggunakan kode lokal saat ini: ${LATEST_COMMIT}).${CLR_RESET}"
     echo -e "      ${CLR_WARN}Pemberitahuan: Jalankan './deploy.sh --pull' jika ingin menarik commit terbaru dari remote repository.${CLR_RESET}"
 fi
 
