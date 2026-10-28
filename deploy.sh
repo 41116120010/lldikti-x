@@ -278,6 +278,14 @@ find storage bootstrap/cache public/build -type d -exec chmod 775 {} + 2>/dev/nu
 find storage bootstrap/cache public/build -type f -exec chmod 664 {} + 2>/dev/null || true
 echo -e "      ${CLR_SUCCESS}✓ Seluruh cache performa (Config, Route, View) berhasil dikompilasi.${CLR_RESET}"
 
+MAIL_PROBE=$(php -r "require 'vendor/autoload.php'; \$app = require_once 'bootstrap/app.php'; \$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap(); \$m = config('mail.default'); \$f = config('mail.from.address'); if (\$m === 'smtp') { echo 'SMTP (' . config('mail.mailers.smtp.host') . ':' . config('mail.mailers.smtp.port') . ', scheme=' . config('mail.mailers.smtp.scheme') . ', from=' . \$f . ')'; } elseif (\$m === 'brevo') { echo 'BREVO_API (HTTPS Port 443, from=' . \$f . ')'; } else { echo 'WARN:' . \$m; }" 2>/dev/null || echo "UNKNOWN")
+if [[ "$MAIL_PROBE" == WARN:* ]]; then
+    echo -e "      ${CLR_WARN}Mail Engine : Mode '${MAIL_PROBE#WARN:}' aktif (email hanya ditulis ke log lokal, belum mengirim ke Brevo).${CLR_RESET}"
+else
+    echo -e "      Mail Engine : ${CLR_SUCCESS}✓ ${MAIL_PROBE}${CLR_RESET}"
+fi
+echo -e "      ${CLR_INFO}Tip Uji Mail: Jalankan 'php artisan mail:test email@tujuan.com' untuk menguji pengiriman Brevo.${CLR_RESET}"
+
 # ------------------------------------------------------------------------------
 # 8. Verifikasi Layanan Scheduler & Crontab OS
 # ------------------------------------------------------------------------------

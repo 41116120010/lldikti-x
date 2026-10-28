@@ -1,5 +1,24 @@
 <?php
 
+$rawScheme = strtolower(trim((string) (env('MAIL_SCHEME') ?: env('MAIL_ENCRYPTION', ''))));
+$smtpPort = (int) env('MAIL_PORT', 587);
+$normalizedScheme = match ($rawScheme) {
+    'ssl', 'smtps' => 'smtps',
+    'tls', 'starttls', 'smtp' => 'smtp',
+    default => $smtpPort === 465 ? 'smtps' : 'smtp',
+};
+
+$defaultMailer = (string) env('MAIL_MAILER', 'log');
+$mailPassword = trim((string) env('MAIL_PASSWORD', ''));
+$brevoApiKey = trim((string) env('BREVO_API_KEY', ''));
+
+// Jika admin mengisi API Key Brevo v3 (berawalan xkeysib-) pada MAIL_PASSWORD atau BREVO_API_KEY
+// saat MAIL_MAILER=smtp, otomatis arahkan ke transport 'brevo' (HTTPS Port 443) agar tidak gagal
+// autentikasi SMTP (535) dan bebas dari blokir port 587 pada VPS.
+if ($defaultMailer === 'smtp' && (str_starts_with($mailPassword, 'xkeysib-') || str_starts_with($brevoApiKey, 'xkeysib-'))) {
+    $defaultMailer = 'brevo';
+}
+
 return [
 
     /*
@@ -14,7 +33,7 @@ return [
     |
     */
 
-    'default' => env('MAIL_MAILER', 'log'),
+    'default' => $defaultMailer,
 
     /*
     |--------------------------------------------------------------------------
@@ -29,7 +48,7 @@ return [
     | when delivering an email. You may specify which one you're using for
     | your mailers below. You may also add additional mailers if needed.
     |
-    | Supported: "smtp", "sendmail", "mailgun", "ses", "ses-v2",
+    | Supported: "smtp", "brevo", "sendmail", "mailgun", "ses", "ses-v2",
     |            "postmark", "resend", "log", "array",
     |            "failover", "roundrobin"
     |
@@ -39,15 +58,19 @@ return [
 
         'smtp' => [
             'transport' => 'smtp',
-            'scheme' => env('MAIL_SCHEME'),
+            'scheme' => $normalizedScheme,
             'url' => env('MAIL_URL'),
-            'host' => env('MAIL_HOST', '127.0.0.1'),
-            'port' => env('MAIL_PORT', 2525),
+            'host' => env('MAIL_HOST', 'smtp-relay.brevo.com'),
+            'port' => $smtpPort,
             'username' => env('MAIL_USERNAME'),
             'password' => env('MAIL_PASSWORD'),
-            'encryption' => env('MAIL_ENCRYPTION'),
-            'timeout' => null,
+            'timeout' => (int) env('MAIL_TIMEOUT', 15),
             'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
+        ],
+
+        'brevo' => [
+            'transport' => 'brevo',
+            'api_key' => $brevoApiKey !== '' ? $brevoApiKey : $mailPassword,
         ],
 
         'ses' => [

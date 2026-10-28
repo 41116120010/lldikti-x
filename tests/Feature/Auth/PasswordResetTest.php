@@ -2,11 +2,11 @@
 
 namespace Tests\Feature\Auth;
 
-use App\Models\ActivityLog;
 use App\Models\User;
 use App\Notifications\ResetPasswordNotification;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
 use Tests\TestCase;
@@ -51,24 +51,26 @@ class PasswordResetTest extends TestCase
         ]);
     }
 
-    public function test_reset_link_can_be_requested_using_nip(): void
+    public function test_reset_link_can_be_requested_using_nip_including_spaces(): void
     {
         Notification::fake();
 
+        $spacedNip = substr($this->user->nip, 0, 8) . ' ' . substr($this->user->nip, 8, 6) . ' ' . substr($this->user->nip, 14);
+
         $response = $this->post(route('password.email'), [
-            'identity' => $this->user->nip,
+            'identity' => $spacedNip,
         ]);
 
         $response->assertSessionHas('status');
         Notification::assertSentTo($this->user, ResetPasswordNotification::class);
     }
 
-    public function test_reset_link_can_be_requested_using_username(): void
+    public function test_reset_link_can_be_requested_using_case_insensitive_username_and_email(): void
     {
         Notification::fake();
 
         $response = $this->post(route('password.email'), [
-            'identity' => $this->user->username,
+            'identity' => strtoupper($this->user->username),
         ]);
 
         $response->assertSessionHas('status');
@@ -94,16 +96,50 @@ class PasswordResetTest extends TestCase
         Notification::assertNothingSent();
     }
 
-    public function test_reset_link_request_for_unknown_user_returns_safe_generic_response(): void
+    public function test_reset_link_request_for_unknown_user_returns_explicit_validation_error(): void
     {
         Notification::fake();
 
         $response = $this->post(route('password.email'), [
-            'identity' => 'unknown_nonexistent_user',
+            'identity' => 'unknown_nonexistent_user@gmail.com',
+        ]);
+
+        $response->assertSessionHasErrors('identity');
+        $response->assertSessionMissing('status');
+        Notification::assertNothingSent();
+    }
+
+    public function test_brevo_http_api_v3_transport_dispatches_to_brevo_endpoint(): void
+    {
+        Http::fake([
+            'https://api.brevo.com/v3/smtp/email' => Http::response(['messageId' => '<test-id@brevo.com>'], 201),
+        ]);
+
+        config([
+            'mail.default' => 'brevo',
+            'mail.mailers.brevo.api_key' => 'xkeysib-test-api-key-1234567890',
+            'mail.from.address' => 'noreply@lldiktiwilayahx.kemdiktisaintek.go.id',
+            'mail.from.name' => 'SIPERAPAT LLDIKTI Wilayah X',
+        ]);
+
+        $response = $this->post(route('password.email'), [
+            'identity' => $this->user->username,
         ]);
 
         $response->assertSessionHas('status');
-        Notification::assertNothingSent();
+
+        Http::assertSent(function ($request) {
+            return $request->url() === 'https://api.brevo.com/v3/smtp/email'
+                && $request->hasHeader('api-key', 'xkeysib-test-api-key-1234567890')
+                && ($request['to'][0]['email'] ?? null) === $this->user->email
+                && str_contains($request['subject'] ?? '', '[SIPERAPAT]');
+        });
+    }
+
+    public function test_mail_test_artisan_command_executes_successfully(): void
+    {
+        $this->artisan('mail:test', ['email' => 'uji@lldiktiwilayahx.kemdiktisaintek.go.id'])
+            ->assertExitCode(0);
     }
 
     public function test_reset_password_screen_can_be_rendered_with_token(): void
@@ -144,7 +180,6 @@ class PasswordResetTest extends TestCase
 
     public function test_sanctum_tokens_are_revoked_upon_password_reset(): void
     {
-        // Issue active mobile Sanctum token
         $this->user->createToken('Mobile App Device');
         $this->assertEquals(1, $this->user->tokens()->count());
 
@@ -158,8 +193,6 @@ class PasswordResetTest extends TestCase
         ]);
 
         $response->assertRedirect(route('login'));
-
-        // AGENTS.md §3.6 Rule: Mobile tokens must be strictly revoked
         $this->assertEquals(0, $this->user->fresh()->tokens()->count());
     }
 

@@ -7,8 +7,15 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Symfony\Component\Mailer\Exception\TransportException;
+use Symfony\Component\Mailer\SentMessage;
+use Symfony\Component\Mailer\Transport\AbstractTransport;
+use Symfony\Component\Mime\Address;
+use Symfony\Component\Mime\MessageConverter;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -31,9 +38,82 @@ class AppServiceProvider extends ServiceProvider
         Paginator::defaultView('vendor.pagination.custom');
         Paginator::defaultSimpleView('vendor.pagination.custom');
 
+        $this->configureBrevoTransport();
         $this->configureRateLimiting();
         $this->assertDatabaseTimezoneMatchesAppTimezone();
         $this->registerStrictnessGuards();
+    }
+
+    /**
+     * Register native Brevo HTTP API v3 transport (https://api.brevo.com/v3/smtp/email).
+     *
+     * ponytail: zero-dependency Symfony Mailer transport over HTTPS port 443 so
+     * production servers that block outbound SMTP port 587/465 or configure a
+     * Brevo v3 API key (xkeysib-...) can deliver transactional emails directly.
+     */
+    private function configureBrevoTransport(): void
+    {
+        Mail::extend('brevo', function (array $config = []) {
+            $apiKey = trim((string) ($config['api_key'] ?? config('mail.mailers.brevo.api_key') ?? ''));
+
+            return new class($apiKey) extends AbstractTransport
+            {
+                public function __construct(private readonly string $apiKey)
+                {
+                    parent::__construct();
+                }
+
+                protected function doSend(SentMessage $message): void
+                {
+                    if ($this->apiKey === '') {
+                        throw new TransportException('Brevo API Key (BREVO_API_KEY / MAIL_PASSWORD) belum dikonfigurasi.');
+                    }
+
+                    $email = MessageConverter::toEmail($message->getOriginalMessage());
+                    $sender = $email->getFrom()[0] ?? null;
+
+                    $payload = [
+                        'sender' => [
+                            'email' => $sender?->getAddress() ?: (string) config('mail.from.address'),
+                            'name' => $sender?->getName() ?: (string) config('mail.from.name', 'SIPERAPAT LLDIKTI Wilayah X'),
+                        ],
+                        'to' => array_values(array_map(fn (Address $addr) => array_filter([
+                            'email' => $addr->getAddress(),
+                            'name' => $addr->getName() !== '' ? $addr->getName() : null,
+                        ]), $email->getTo())),
+                        'subject' => (string) ($email->getSubject() ?? ''),
+                    ];
+
+                    if ($html = $email->getHtmlBody()) {
+                        $payload['htmlContent'] = is_resource($html) ? (string) stream_get_contents($html) : (string) $html;
+                    }
+
+                    if ($text = $email->getTextBody()) {
+                        $payload['textContent'] = is_resource($text) ? (string) stream_get_contents($text) : (string) $text;
+                    }
+
+                    $response = Http::timeout(15)
+                        ->withHeaders([
+                            'accept' => 'application/json',
+                            'api-key' => $this->apiKey,
+                            'content-type' => 'application/json',
+                        ])
+                        ->post('https://api.brevo.com/v3/smtp/email', $payload);
+
+                    if ($response->failed()) {
+                        throw new TransportException(
+                            sprintf('Brevo HTTP API error (%d): %s', $response->status(), $response->body()),
+                            $response->status()
+                        );
+                    }
+                }
+
+                public function __toString(): string
+                {
+                    return 'brevo+api://api.brevo.com';
+                }
+            };
+        });
     }
 
     /**

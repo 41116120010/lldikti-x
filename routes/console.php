@@ -29,4 +29,39 @@ Schedule::command(SyncAgendaStatus::class)
     ->withoutOverlapping(10)
     ->description('Otomatisasi penutupan sesi presensi rapat kedinasan yang telah melewati batas waktu pelaksanaan');
 
+Artisan::command('mail:test {email : Alamat email tujuan pengujian Brevo}', function (string $email) {
+    $this->info('=== Diagnostik Pengiriman Email SIPERAPAT (Brevo) ===');
+    $this->line('Config Cached   : ' . (app()->configurationIsCached() ? 'YA (bootstrap/cache/config.php aktif)' : 'TIDAK (membaca langsung .env)'));
+    $defaultMailer = (string) config('mail.default');
+    $this->line('Default Mailer  : ' . $defaultMailer);
+    $this->line('From Address    : ' . config('mail.from.address') . ' (' . config('mail.from.name') . ')');
 
+    if ($defaultMailer === 'smtp') {
+        $this->line('SMTP Host       : ' . config('mail.mailers.smtp.host') . ':' . config('mail.mailers.smtp.port') . ' (scheme: ' . config('mail.mailers.smtp.scheme') . ')');
+        $this->line('SMTP Username   : ' . (config('mail.mailers.smtp.username') ?: '(kosong)'));
+    } elseif ($defaultMailer === 'brevo') {
+        $apiKey = (string) config('mail.mailers.brevo.api_key');
+        $maskedKey = strlen($apiKey) > 12 ? substr($apiKey, 0, 10) . '...' . substr($apiKey, -4) : '(belum diatur)';
+        $this->line('Brevo API Mode  : HTTPS Port 443 (https://api.brevo.com/v3/smtp/email)');
+        $this->line('Brevo API Key   : ' . $maskedKey);
+    } elseif (in_array($defaultMailer, ['log', 'array'], true)) {
+        $this->warn("PERINGATAN: Default mailer saat ini adalah '{$defaultMailer}'! Email hanya ditulis ke log lokal dan TIDAK dikirim ke Brevo.");
+        $this->warn('Jika Anda baru saja mengubah .env, jalankan: php artisan config:clear && php artisan config:cache');
+    }
+
+    try {
+        \Illuminate\Support\Facades\Mail::raw(
+            "Ini adalah email uji coba diagnostik dari server SIPERAPAT LLDIKTI Wilayah X.\nWaktu Server: " . now()->toDateTimeString() . " WIB\nMailer Aktif: {$defaultMailer}",
+            function ($message) use ($email) {
+                $message->to($email)->subject('[SIPERAPAT] Uji Koneksi Email Kedinasan (Brevo)');
+            }
+        );
+        $this->info("✓ BERHASIL: Perintah pengiriman email ke [{$email}] sukses dieksekusi menggunakan driver [{$defaultMailer}].");
+
+        return 0;
+    } catch (\Throwable $e) {
+        $this->error('✗ GAGAL MENGIRIM EMAIL: ' . $e->getMessage());
+
+        return 1;
+    }
+})->purpose('Uji coba dan diagnosa konfigurasi pengiriman email Brevo (SMTP / HTTP API)');
