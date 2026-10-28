@@ -93,6 +93,14 @@ class ReportAndExportTest extends TestCase
         $response->assertStatus(200);
         $this->assertStringContainsString('text/csv', $response->headers->get('Content-Type'));
         $this->assertStringContainsString('.csv', $response->headers->get('Content-Disposition'));
+
+        $content = $response->streamedContent();
+        $this->assertStringContainsString('Judul Rapat', $content);
+        $this->assertStringContainsString('Status Rapat', $content);
+        $this->assertStringContainsString('Status Notulensi', $content);
+        $this->assertStringContainsString('Pemimpin Rapat', $content);
+        $this->assertStringContainsString('Notulis Rapat', $content);
+        $this->assertStringContainsString('Penyelenggara / Creator', $content);
     }
 
     public function test_user_can_view_single_report_recap_page(): void

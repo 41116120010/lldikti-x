@@ -382,7 +382,13 @@ class ReportController extends Controller
     public function exportSummaryCsv(Request $request): StreamedResponse
     {
         $user = Auth::user();
-        $query = Agenda::visibleTo($user)->with('creator:id,name')->withCount('attendances');
+        $query = Agenda::visibleTo($user)
+            ->with([
+                'creator:id,name',
+                'pimpinan:id,name',
+                'notulis:id,name',
+            ])
+            ->withCount('attendances');
 
         ActivityLogger::log(
             type: 'EXPORT_CSV',
@@ -435,7 +441,10 @@ class ReportController extends Controller
                 'Lokasi / Ruang',
                 'Waktu Mulai',
                 'Waktu Selesai',
-                'Status',
+                'Status Rapat',
+                'Status Notulensi',
+                'Pemimpin Rapat',
+                'Notulis Rapat',
                 'Penyelenggara / Creator',
                 'Jumlah Peserta Hadir',
             ]);
@@ -460,6 +469,28 @@ class ReportController extends Controller
                     $safeLocation = $this->sanitizeCsvValue($agenda->lokasi_ruang ?? 'Daring / Online');
                     $safeCreator = $this->sanitizeCsvValue($agenda->creator?->name ?? 'Sistem');
 
+                    // Status Rapat dalam Bahasa Indonesia Baku
+                    $statusRapat = match ($agenda->status) {
+                        'completed' => 'Selesai',
+                        'ongoing' => 'Sedang Berlangsung',
+                        'scheduled' => 'Terjadwal',
+                        'cancelled' => 'Dibatalkan',
+                        default => ucfirst($agenda->status),
+                    };
+
+                    // Status Notulensi Resmi
+                    $hasNotulen = !empty(trim(strip_tags((string) $agenda->notulensi)));
+                    $statusNotulensi = match (true) {
+                        $hasNotulen => 'Lengkap',
+                        $agenda->status === 'completed' => 'Belum Diisi',
+                        $agenda->status === 'ongoing' => 'Sedang Berlangsung',
+                        default => 'Belum Dimulai',
+                    };
+
+                    // Pemimpin Rapat dan Notulis Rapat
+                    $safePimpinan = $this->sanitizeCsvValue($agenda->nama_pimpinan);
+                    $safeNotulis = $this->sanitizeCsvValue($agenda->nama_notulis);
+
                     fputcsv($file, [
                         $index,
                         $safeTitle,
@@ -468,7 +499,10 @@ class ReportController extends Controller
                         $safeLocation,
                         $agenda->waktu_mulai->format('d/m/Y H:i'),
                         $agenda->waktu_selesai ? $agenda->waktu_selesai->format('d/m/Y H:i') : '-',
-                        ucfirst($agenda->status),
+                        $statusRapat,
+                        $statusNotulensi,
+                        $safePimpinan,
+                        $safeNotulis,
                         $safeCreator,
                         $agenda->attendances_count,
                     ]);
