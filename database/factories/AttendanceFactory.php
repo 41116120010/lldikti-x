@@ -30,8 +30,8 @@ class AttendanceFactory extends Factory
             'signed_at' => now(),
             'selfie_path' => 'attendances/seeded/sample-selfie.jpg',
             'signature_path' => 'attendances/seeded/sample-signature.png',
-            'ip_address' => '10.10.' . fake()->numberBetween(1, 10) . '.' . fake()->numberBetween(10, 250),
-            'user_agent' => fake()->randomElement([
+            'ip_address' => '10.10.' . mt_rand(1, 10) . '.' . mt_rand(10, 250),
+            'user_agent' => \Illuminate\Support\Arr::random([
                 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
                 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
                 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',

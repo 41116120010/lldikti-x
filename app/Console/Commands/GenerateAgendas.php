@@ -114,9 +114,9 @@ class GenerateAgendas extends Command
 
             // Terapkan status
             $factory = match ($status) {
-                'completed' => $factory->completed(fake()->numberBetween(1, 30))->withNotulen(),
-                'ongoing' => $factory->ongoing(fake()->numberBetween(15, 60)),
-                'scheduled' => $factory->scheduled(fake()->numberBetween(1, 14)),
+                'completed' => $factory->completed(mt_rand(1, 30))->withNotulen(),
+                'ongoing' => $factory->ongoing(mt_rand(15, 60)),
+                'scheduled' => $factory->scheduled(mt_rand(1, 14)),
                 'draft' => $factory->draft(),
                 'cancelled' => $factory->cancelled(),
             };
@@ -131,10 +131,10 @@ class GenerateAgendas extends Command
             }
 
             // Tentukan cakupan unit: 40% seluruh unit, 60% unit spesifik
-            if (fake()->boolean(40)) {
+            if (mt_rand(1, 100) <= 40) {
                 $factory = $factory->universal();
             } else {
-                $randomUnits = Unit::query()->inRandomOrder()->take(fake()->numberBetween(1, 3))->get();
+                $randomUnits = Unit::query()->inRandomOrder()->take(mt_rand(1, 3))->get();
                 $factory = $factory->forUnits($randomUnits->all());
             }
 
@@ -144,12 +144,12 @@ class GenerateAgendas extends Command
                 if (is_numeric($attendeesOpt)) {
                     $numAttendees = max(0, (int) $attendeesOpt);
                 } elseif ($attendeesOpt === 'auto') {
-                    $numAttendees = fake()->numberBetween(5, 20);
+                    $numAttendees = mt_rand(5, 20);
                 }
             }
 
             if ($numAttendees > 0) {
-                $factory = $factory->withAttendances($numAttendees)->withDocumentation(fake()->numberBetween(1, 3));
+                $factory = $factory->withAttendances($numAttendees)->withDocumentation(mt_rand(1, 3));
             }
 
             $agenda = $factory->create();

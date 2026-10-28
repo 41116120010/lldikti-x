@@ -9,6 +9,7 @@ use App\Models\Unit;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 
 /**
@@ -90,27 +91,27 @@ class AgendaFactory extends Factory
      */
     public function definition(): array
     {
-        $jenis = fake()->randomElement(['pleno', 'koordinasi', 'sosialisasi', 'bimtek', 'evaluasi', 'perencanaan', 'khusus']);
-        $tipe = fake()->randomElement(['offline', 'online', 'hybrid']);
+        $jenis = Arr::random(['pleno', 'koordinasi', 'sosialisasi', 'bimtek', 'evaluasi', 'perencanaan', 'khusus']);
+        $tipe = Arr::random(['offline', 'online', 'hybrid']);
 
         $topicList = static::$topics[$jenis] ?? static::$topics['koordinasi'];
-        $baseTitle = fake()->randomElement($topicList);
-        $periodSuffix = fake()->randomElement(['Tahun Anggaran ' . date('Y'), 'Semester Ganjil', 'Semester Genap', 'Triwulan Berjalan']);
+        $baseTitle = Arr::random($topicList);
+        $periodSuffix = Arr::random(['Tahun Anggaran ' . date('Y'), 'Semester Ganjil', 'Semester Genap', 'Triwulan Berjalan']);
         $judulRapat = "{$baseTitle} {$periodSuffix}";
 
         $slug = Str::slug($judulRapat) . '-' . Str::lower(Str::random(6));
 
-        $room = in_array($tipe, ['offline', 'hybrid'], true) ? fake()->randomElement(static::$rooms) : null;
+        $room = in_array($tipe, ['offline', 'hybrid'], true) ? Arr::random(static::$rooms) : null;
         $link = in_array($tipe, ['online', 'hybrid'], true)
-            ? 'https://zoom.us/j/' . fake()->numerify('##########') . '?pwd=lldikti-' . Str::lower(Str::random(6))
+            ? 'https://zoom.us/j/' . mt_rand(1000000000, 9999999999) . '?pwd=lldikti-' . Str::lower(Str::random(6))
             : null;
 
         // Penjadwalan realistis (default: scheduled 1-14 hari mendatang)
-        $waktuMulai = Carbon::now()->addDays(fake()->numberBetween(1, 14))->setTime(
-            fake()->randomElement([8, 9, 10, 13, 14]),
-            fake()->randomElement([0, 30])
+        $waktuMulai = Carbon::now()->addDays(mt_rand(1, 14))->setTime(
+            Arr::random([8, 9, 10, 13, 14]),
+            Arr::random([0, 30])
         );
-        $waktuSelesai = (clone $waktuMulai)->addHours(fake()->numberBetween(2, 3));
+        $waktuSelesai = (clone $waktuMulai)->addHours(mt_rand(2, 3));
 
         $creator = fn () => User::query()->inRandomOrder()->first()?->id ?? User::factory();
         $pimpinan = fn () => User::query()->where('role', 'administrator')->inRandomOrder()->first()?->id
@@ -159,8 +160,8 @@ class AgendaFactory extends Factory
     {
         return $this->state(function () use ($daysAhead) {
             $waktuMulai = Carbon::now()->addDays($daysAhead)->setTime(
-                fake()->randomElement([9, 10, 13, 14]),
-                fake()->randomElement([0, 30])
+                Arr::random([9, 10, 13, 14]),
+                Arr::random([0, 30])
             );
 
             return [
@@ -284,7 +285,7 @@ class AgendaFactory extends Factory
     {
         return $this->state(fn () => [
             'tipe_rapat' => 'offline',
-            'lokasi_ruang' => $room ?? fake()->randomElement(static::$rooms),
+            'lokasi_ruang' => $room ?? Arr::random(static::$rooms),
             'link_meeting' => null,
         ]);
     }
@@ -297,7 +298,7 @@ class AgendaFactory extends Factory
         return $this->state(fn () => [
             'tipe_rapat' => 'online',
             'lokasi_ruang' => null,
-            'link_meeting' => $link ?? ('https://zoom.us/j/' . fake()->numerify('##########') . '?pwd=lldikti-' . Str::lower(Str::random(6))),
+            'link_meeting' => $link ?? ('https://zoom.us/j/' . mt_rand(1000000000, 9999999999) . '?pwd=lldikti-' . Str::lower(Str::random(6))),
         ]);
     }
 
@@ -308,8 +309,8 @@ class AgendaFactory extends Factory
     {
         return $this->state(fn () => [
             'tipe_rapat' => 'hybrid',
-            'lokasi_ruang' => $room ?? fake()->randomElement(static::$rooms),
-            'link_meeting' => $link ?? ('https://zoom.us/j/' . fake()->numerify('##########') . '?pwd=lldikti-' . Str::lower(Str::random(6))),
+            'lokasi_ruang' => $room ?? Arr::random(static::$rooms),
+            'link_meeting' => $link ?? ('https://zoom.us/j/' . mt_rand(1000000000, 9999999999) . '?pwd=lldikti-' . Str::lower(Str::random(6))),
         ]);
     }
 
@@ -411,7 +412,7 @@ class AgendaFactory extends Factory
                         'selfie_path' => 'attendances/seeded/sample-selfie.jpg',
                         'signature_path' => 'attendances/seeded/sample-signature.png',
                         'signed_at' => $signedAt,
-                        'ip_address' => '10.10.' . fake()->numberBetween(1, 10) . '.' . (10 + $index),
+                        'ip_address' => '10.10.' . mt_rand(1, 10) . '.' . (10 + $index),
                         'user_agent' => 'Mozilla/5.0 (Enterprise SIPERAPAT)',
                     ]
                 );

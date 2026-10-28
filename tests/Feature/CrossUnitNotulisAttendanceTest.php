@@ -7,6 +7,7 @@ use App\Models\Attendance;
 use App\Models\Unit;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -46,6 +47,12 @@ class CrossUnitNotulisAttendanceTest extends TestCase
             ->where('id', '!=', $this->staffNotulisUnitB->id)
             ->firstOrFail();
         $this->otherStaffUnitB->update(['role' => 'staff', 'is_active' => true]);
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
     }
 
     /**
@@ -293,35 +300,41 @@ class CrossUnitNotulisAttendanceTest extends TestCase
      */
     public function test_scheduled_agenda_for_today_remains_visible_on_dashboard_even_if_passed_planned_end_time(): void
     {
-        $agenda = Agenda::create([
-            'judul_rapat' => 'Rapat Terjadwal Terlewat Hari Ini ' . uniqid(),
-            'slug' => 'rapat-terlewat-' . uniqid(),
-            'jenis_rapat' => 'koordinasi',
-            'tipe_rapat' => 'offline',
-            'lokasi_ruang' => 'Ruang Rapat 2',
-            'waktu_mulai' => now()->subMinutes(40),
-            'waktu_selesai' => now()->subMinutes(15),
-            'status' => 'scheduled',
-            'is_all_units' => false,
-            'created_by' => $this->adminHtk->id,
-            'pimpinan_id' => $this->adminHtk->id,
-            'notulis_id' => $this->staffNotulisUnitB->id,
-        ]);
-        $agenda->units()->sync([$this->unitHtk->id]);
+        Carbon::setTestNow(now()->startOfDay()->addHours(14));
 
-        // 1. Masuk dalam query scopeUpcoming dan scopeRelevantForDashboard
-        $this->assertTrue(Agenda::visibleTo($this->staffNotulisUnitB)->upcoming()->where('agendas.id', $agenda->id)->exists());
-        $this->assertTrue(Agenda::visibleTo($this->staffNotulisUnitB)->relevantForDashboard()->where('agendas.id', $agenda->id)->exists());
+        try {
+            $agenda = Agenda::create([
+                'judul_rapat' => 'Rapat Terjadwal Terlewat Hari Ini ' . uniqid(),
+                'slug' => 'rapat-terlewat-' . uniqid(),
+                'jenis_rapat' => 'koordinasi',
+                'tipe_rapat' => 'offline',
+                'lokasi_ruang' => 'Ruang Rapat 2',
+                'waktu_mulai' => now()->subMinutes(40),
+                'waktu_selesai' => now()->subMinutes(15),
+                'status' => 'scheduled',
+                'is_all_units' => false,
+                'created_by' => $this->adminHtk->id,
+                'pimpinan_id' => $this->adminHtk->id,
+                'notulis_id' => $this->staffNotulisUnitB->id,
+            ]);
+            $agenda->units()->sync([$this->unitHtk->id]);
 
-        // 2. Tampil di Dashboard staf dengan badge Terlewat
-        $responseDash = $this->actingAs($this->staffNotulisUnitB)->get('/dashboard');
-        $responseDash->assertStatus(200);
-        $responseDash->assertSee($agenda->judul_rapat);
-        $responseDash->assertSee('Terlewat');
+            // 1. Masuk dalam query scopeUpcoming dan scopeRelevantForDashboard
+            $this->assertTrue(Agenda::visibleTo($this->staffNotulisUnitB)->upcoming()->where('agendas.id', $agenda->id)->exists());
+            $this->assertTrue(Agenda::visibleTo($this->staffNotulisUnitB)->relevantForDashboard()->where('agendas.id', $agenda->id)->exists());
 
-        // 3. Tampil di Portal Presensi
-        $responsePortal = $this->actingAs($this->staffNotulisUnitB)->get('/presensi');
-        $responsePortal->assertStatus(200);
-        $responsePortal->assertSee($agenda->judul_rapat);
+            // 2. Tampil di Dashboard staf dengan badge Terlewat
+            $responseDash = $this->actingAs($this->staffNotulisUnitB)->get('/dashboard');
+            $responseDash->assertStatus(200);
+            $responseDash->assertSee($agenda->judul_rapat);
+            $responseDash->assertSee('Terlewat');
+
+            // 3. Tampil di Portal Presensi
+            $responsePortal = $this->actingAs($this->staffNotulisUnitB)->get('/presensi');
+            $responsePortal->assertStatus(200);
+            $responsePortal->assertSee($agenda->judul_rapat);
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 }
