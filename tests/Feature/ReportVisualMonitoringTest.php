@@ -85,6 +85,10 @@ class ReportVisualMonitoringTest extends TestCase
         $response->assertSee('Daring');
         $response->assertSee('Hibrida');
         $response->assertSee('Lengkap');
+        $response->assertSee('lg:grid-cols-12', false);
+        $response->assertSee('lg:col-span-5', false);
+        $response->assertSee('lg:col-span-7', false);
+        $response->assertSee('panel w-full border border-slate-300', false);
     }
 
     /**
@@ -117,6 +121,9 @@ class ReportVisualMonitoringTest extends TestCase
         $response->assertSee('Notulensi');
         $response->assertSee('Lengkap');
         $response->assertSee($agendaUnitA->judul_rapat);
+        $response->assertSee('lg:col-span-5', false);
+        $response->assertSee('lg:col-span-7', false);
+        $response->assertSee('panel w-full border border-slate-300', false);
     }
 
     /**
