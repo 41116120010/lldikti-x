@@ -37,8 +37,26 @@ Artisan::command('mail:test {email : Alamat email tujuan pengujian Brevo}', func
     $this->line('From Address    : ' . config('mail.from.address') . ' (' . config('mail.from.name') . ')');
 
     if ($defaultMailer === 'smtp') {
-        $this->line('SMTP Host       : ' . config('mail.mailers.smtp.host') . ':' . config('mail.mailers.smtp.port') . ' (scheme: ' . config('mail.mailers.smtp.scheme') . ')');
+        $host = (string) config('mail.mailers.smtp.host');
+        $port = (int) config('mail.mailers.smtp.port');
+        $scheme = (string) config('mail.mailers.smtp.scheme');
+        $this->line("SMTP Host       : {$host}:{$port} (scheme: {$scheme})");
         $this->line('SMTP Username   : ' . (config('mail.mailers.smtp.username') ?: '(kosong)'));
+
+        $socketTarget = ($scheme === 'smtps' ? 'ssl://' : 'tcp://') . $host . ':' . $port;
+        $this->line("Socket Probe    : Menghubungi {$socketTarget} (timeout 5s)...");
+        $errno = 0;
+        $errstr = '';
+        $socket = @stream_socket_client($socketTarget, $errno, $errstr, 5, STREAM_CLIENT_CONNECT);
+        if ($socket) {
+            fclose($socket);
+            $this->info("✓ Pre-flight: Berhasil membuka koneksi socket ke [{$socketTarget}].");
+        } else {
+            $this->warn("⚠ Pre-flight: Gagal membuka koneksi socket ke [{$socketTarget}]: {$errstr} (Error {$errno})");
+            if ($port === 587) {
+                $this->warn('TIPS: Port 587 sering diblokir firewall provider hosting/VPS. Ubah MAIL_PORT=465 dan MAIL_ENCRYPTION=ssl di .env!');
+            }
+        }
     } elseif ($defaultMailer === 'brevo') {
         $apiKey = (string) config('mail.mailers.brevo.api_key');
         $maskedKey = strlen($apiKey) > 12 ? substr($apiKey, 0, 10) . '...' . substr($apiKey, -4) : '(belum diatur)';

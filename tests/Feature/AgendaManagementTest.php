@@ -106,7 +106,19 @@ class AgendaManagementTest extends TestCase
     public function test_agenda_status_transition_works(): void
     {
         $superadmin = User::where('role', 'administrator')->first();
-        $agenda = Agenda::first();
+        $agenda = Agenda::create([
+            'created_by' => $superadmin->id,
+            'judul_rapat' => 'Rapat Uji Transisi Status ' . uniqid(),
+            'slug' => 'rapat-uji-transisi-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Rapat 1',
+            'waktu_mulai' => now()->subMinutes(5),
+            'waktu_selesai' => now()->addHour(),
+            'is_all_units' => true,
+            'status' => 'scheduled',
+            'pimpinan_id' => $superadmin->id,
+        ]);
 
         $response = $this->actingAs($superadmin)->patch("/admin/agendas/{$agenda->id}/status", [
             'status' => 'ongoing',

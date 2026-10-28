@@ -142,6 +142,67 @@ class PasswordResetTest extends TestCase
             ->assertExitCode(0);
     }
 
+    public function test_smtp_port_465_configuration_forces_smtps_scheme(): void
+    {
+        $repo = \Illuminate\Support\Env::getRepository();
+        $origPort = $repo->get('MAIL_PORT');
+        $origEnc = $repo->get('MAIL_ENCRYPTION');
+        $origScheme = $repo->get('MAIL_SCHEME');
+
+        try {
+            $repo->set('MAIL_PORT', '465');
+            $repo->set('MAIL_ENCRYPTION', 'tls');
+            $repo->clear('MAIL_SCHEME');
+
+            $config = require config_path('mail.php');
+
+            $this->assertEquals(465, $config['mailers']['smtp']['port']);
+            $this->assertEquals('smtps', $config['mailers']['smtp']['scheme']);
+        } finally {
+            $origPort !== null ? $repo->set('MAIL_PORT', $origPort) : $repo->clear('MAIL_PORT');
+            $origEnc !== null ? $repo->set('MAIL_ENCRYPTION', $origEnc) : $repo->clear('MAIL_ENCRYPTION');
+            $origScheme !== null ? $repo->set('MAIL_SCHEME', $origScheme) : $repo->clear('MAIL_SCHEME');
+        }
+    }
+
+    public function test_smtp_port_587_configuration_resolves_to_smtp_scheme(): void
+    {
+        $repo = \Illuminate\Support\Env::getRepository();
+        $origPort = $repo->get('MAIL_PORT');
+        $origEnc = $repo->get('MAIL_ENCRYPTION');
+        $origScheme = $repo->get('MAIL_SCHEME');
+
+        try {
+            $repo->set('MAIL_PORT', '587');
+            $repo->set('MAIL_ENCRYPTION', 'tls');
+            $repo->clear('MAIL_SCHEME');
+
+            $config = require config_path('mail.php');
+
+            $this->assertEquals(587, $config['mailers']['smtp']['port']);
+            $this->assertEquals('smtp', $config['mailers']['smtp']['scheme']);
+        } finally {
+            $origPort !== null ? $repo->set('MAIL_PORT', $origPort) : $repo->clear('MAIL_PORT');
+            $origEnc !== null ? $repo->set('MAIL_ENCRYPTION', $origEnc) : $repo->clear('MAIL_ENCRYPTION');
+            $origScheme !== null ? $repo->set('MAIL_SCHEME', $origScheme) : $repo->clear('MAIL_SCHEME');
+        }
+    }
+
+    public function test_mail_test_artisan_command_with_smtp_displays_socket_probe(): void
+    {
+        config([
+            'mail.default' => 'smtp',
+            'mail.mailers.smtp.host' => '127.0.0.1',
+            'mail.mailers.smtp.port' => 465,
+            'mail.mailers.smtp.scheme' => 'smtps',
+            'mail.mailers.smtp.username' => 'test-user',
+        ]);
+
+        $this->artisan('mail:test', ['email' => 'uji@lldiktiwilayahx.kemdiktisaintek.go.id'])
+            ->expectsOutputToContain('SMTP Host       : 127.0.0.1:465 (scheme: smtps)')
+            ->expectsOutputToContain('Socket Probe    : Menghubungi ssl://127.0.0.1:465 (timeout 5s)...');
+    }
+
     public function test_reset_password_screen_can_be_rendered_with_token(): void
     {
         $response = $this->get(route('password.reset', [

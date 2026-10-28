@@ -1,11 +1,14 @@
 <?php
 
+$smtpPort = (int) env('MAIL_PORT', 465);
 $rawScheme = strtolower(trim((string) (env('MAIL_SCHEME') ?: env('MAIL_ENCRYPTION', ''))));
-$smtpPort = (int) env('MAIL_PORT', 587);
-$normalizedScheme = match ($rawScheme) {
-    'ssl', 'smtps' => 'smtps',
-    'tls', 'starttls', 'smtp' => 'smtp',
-    default => $smtpPort === 465 ? 'smtps' : 'smtp',
+
+// Port 465 wajib menggunakan Implicit TLS (smtps / SSL). Port 587 & 25 menggunakan STARTTLS (smtp).
+// Logika defensif: jika MAIL_PORT=465, otomatis gunakan 'smtps' meskipun di .env tertulis MAIL_ENCRYPTION=tls.
+$normalizedScheme = match (true) {
+    $smtpPort === 465 => 'smtps',
+    in_array($rawScheme, ['ssl', 'smtps'], true) => 'smtps',
+    default => 'smtp',
 };
 
 $defaultMailer = (string) env('MAIL_MAILER', 'log');
