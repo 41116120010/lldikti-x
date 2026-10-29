@@ -188,7 +188,7 @@ Sesuai aturan keamanan instansi (**AGENTS.md §3.2 & §3.6**):
       "pangkat_golongan": "Penata Tingkat I (Gol. III/d)",
       "avatar_url": null,
       "role": {
-        "value": "admin_unit",
+        "value": "admin",
         "label": "Admin Unit"
       },
       "is_active": true,
@@ -591,7 +591,7 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
 #### 9. Simpan Notulensi, Kesimpulan & Foto Dokumentasi Kegiatan
 * **Endpoint:** `PUT /api/v1/agendas/{id}/notulen` atau `POST /api/v1/agendas/{id}/notulen` (dengan `_method=PUT` atau header `X-HTTP-Method-Override: PUT`)
 * **Headers:** `Authorization: Bearer <token>`, `Content-Type: application/json` (hanya teks) atau `Content-Type: multipart/form-data` (disertai foto)
-* **Otorisasi:** Pegawai yang ditunjuk sebagai Notulis (`notulis_id`) atau Pimpinan (`pimpinan_id`), Admin Unit penyelenggara, atau Administrator (`manageMinutes`). Dapat diisi dan dimutakhirkan pada agenda rapat berstatus `scheduled`, `ongoing`, maupun `completed`.
+* **Otorisasi:** Sesuai `AgendaPolicy::manageMinutes`: Administrator dan Admin Unit penyelenggara/pembuat agenda dapat mengisi serta memperbarui notulensi pada agenda berstatus `scheduled`, `ongoing`, maupun `completed`; sedangkan pegawai yang ditunjuk sebagai Notulis (`notulis_id`) atau Pimpinan (`pimpinan_id`) (termasuk lintas unit kerja) dapat mengisi serta memperbarui notulensi selama rapat berstatus `ongoing`.
 * **Form / JSON Fields:**
   - `notulensi` (string HTML / teks, optional, otomatis disanitasi dari script XSS)
   - `kesimpulan` (string HTML / teks, optional, otomatis disanitasi dari script XSS)
@@ -1344,7 +1344,7 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
         "pangkat_golongan": "Penata Tingkat I (Gol. III/d)",
         "avatar_url": null,
         "role": {
-          "value": "admin_unit",
+          "value": "admin",
           "label": "Admin Unit"
         },
         "is_active": true,
@@ -1413,7 +1413,7 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
         "pangkat_golongan": "Penata Tingkat I (Gol. III/d)",
         "avatar_url": null,
         "role": {
-          "value": "admin_unit",
+          "value": "admin",
           "label": "Admin Unit"
         },
         "is_active": true,
@@ -1549,12 +1549,12 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
 
 ### 4.8. Laporan & Ekspor Berkas (Reports)
 
-* **`GET /api/v1/reports/summary`**: Statistik rekapitulasi rapat (total agenda, tingkat kehadiran).
-* **`GET /api/v1/reports/summary/csv`**: Unduh berkas rekapitulasi agenda spreadsheet CSV/Excel (`throttle:export`). Otomatis disanitasi terhadap bahaya CSV Formula Injection (CWE-1236) dan menyertakan UTF-8 BOM.
+* **`GET /api/v1/reports/summary`**: Statistik rekapitulasi rapat (total agenda, tingkat kehadiran, distribusi format, dan partisipasi per unit kerja).
+* **`GET /api/v1/reports/summary/csv`**: Unduh berkas rekapitulasi keseluruhan agenda spreadsheet CSV/Excel (`throttle:export`) dengan **13 kolom lengkap berbahasa Indonesia** (`No`, `Judul Agenda`, `Jenis Rapat`, `Format`, `Status Rapat`, `Status Notulensi`, `Pemimpin Rapat`, `Notulis Rapat`, `Tanggal Mulai`, `Waktu Mulai`, `Waktu Selesai`, `Unit Penyelenggara`, `Total Kehadiran`). Otomatis disanitasi terhadap bahaya CSV Formula Injection (CWE-1236) dan menyertakan UTF-8 BOM.
 * **`GET /api/v1/reports/agendas/{id}`**: Rekapitulasi agenda tunggal beserta tautan unduh dokumen.
 * **`POST /api/v1/reports/agendas/{id}/config/reset`**: Mereset konfigurasi kop surat, penandatangan, dan tata letak dokumen agenda kembali ke standar sistem instansi.
 * **`GET /api/v1/reports/agendas/{id}/export/pdf`**: Unduh dokumen resmi Berita Acara & Daftar Hadir format PDF (`throttle:export`).
-* **`GET /api/v1/reports/agendas/{id}/export/word`**: Unduh dokumen resmi Berita Acara format Microsoft Word (.doc) (`throttle:export`).
+* **`GET /api/v1/reports/agendas/{id}/export/word`**: Unduh dokumen resmi Berita Acara format Microsoft Word (`.docx`) (`throttle:export`).
 * **`GET /api/v1/reports/agendas/{id}/export/csv`**: Unduh berkas tabulasi daftar kehadiran ASN untuk satu agenda rapat spesifik format CSV spreadsheet (Excel-ready) (`throttle:export`). Otomatis disanitasi terhadap bahaya CSV Formula Injection (CWE-1236) dan menyertakan UTF-8 BOM.
 
 ---
@@ -1625,7 +1625,7 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
 
 ---
 
-### 4.10. Matriks Hak Akses RBAC 44 Endpoint REST API v1
+### 4.10. Matriks Hak Akses RBAC Seluruh Endpoint REST API v1
 
 ```
 ┌────┬────────────────────────────────────────────────┬───────────────┬────────────┬─────────┐
@@ -1634,50 +1634,54 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
 │ 1  │ POST   /api/v1/auth/login                      │ Publik        │ Publik     │ Publik  │
 │ 2  │ GET    /api/v1/auth/me                         │ Ya            │ Ya         │ Ya      │
 │ 3  │ POST   /api/v1/auth/logout                     │ Ya            │ Ya         │ Ya      │
-│ 4  │ GET    /api/v1/dashboard                       │ Ya (Semua)    │ Ya (Scoped)│ Ya      │
-│ 5  │ GET    /api/v1/profile                         │ Ya            │ Ya         │ Ya      │
-│ 6  │ PUT    /api/v1/profile                         │ Ya            │ Ya         │ Ya      │
-│ 7  │ GET    /api/v1/profile/logs                    │ Ya (Pribadi)  │ Ya(Pribadi)│ Ya      │
-│ 8  │ GET    /api/v1/activity-logs                   │ Ya (Semua)    │ ❌ (403)   │ ❌ (403)│
-│ 9  │ GET    /api/v1/agendas                         │ Ya (Semua)    │ Ya (Scoped)│ Ya(Sesi)│
-│ 10 │ POST   /api/v1/agendas                         │ Ya            │ Ya         │ ❌ (403)│
-│ 11 │ GET    /api/v1/agendas/{id}                    │ Ya            │ Ya (Scoped)│ Ya(Sesi)│
-│ 12 │ PUT    /api/v1/agendas/{id}                    │ Ya            │ Ya (Scoped)│ ❌ (403)│
-│ 13 │ DELETE /api/v1/agendas/{id}                    │ Ya            │ Ya (Scoped)│ ❌ (403)│
-│ 14 │ PATCH  /api/v1/agendas/{id}/status             │ Ya            │ Ya (Scoped)│ ❌ (403)│
-│ 15 │ PATCH  /api/v1/agendas/{id}/roles              │ Ya            │ Ya (Scoped)│ ❌ (403)│
-│ 16 │ PUT    /api/v1/agendas/{id}/notulen            │ Ya            │ Ya (Scoped)│ Ya(Notu)│
-│ 17 │ DELETE /api/v1/agendas/{a}/documentations/{d}  │ Ya            │ Ya (Scoped)│ Ya(Notu)│
-│ 18 │ GET    /api/v1/attendances/portal              │ Ya            │ Ya         │ Ya      │
-│ 19 │ GET    /api/v1/agendas/{id}/attendance-portal  │ Ya            │ Ya         │ Ya      │
-│ 20 │ POST   /api/v1/agendas/{id}/attendances        │ Ya            │ Ya         │ Ya      │
-│ 21 │ GET    /api/v1/agendas/{id}/attendances        │ Ya            │ Ya (Scoped)│ ❌ (403)│
-│ 22 │ GET    /api/v1/attendances/my-history          │ Ya            │ Ya         │ Ya      │
-│ 23 │ GET    /api/v1/attendances/{id}                │ Ya            │ Ya (Scoped)│ Ya(Milik│
-│ 24 │ GET    /api/v1/attendances/{id}/selfie         │ Ya            │ Ya (Scoped)│ Ya(Milik│
-│ 25 │ GET    /api/v1/attendances/{id}/signature      │ Ya            │ Ya (Scoped)│ Ya(Milik│
-│ 26 │ GET    /api/v1/users                           │ Ya (Semua)    │ Ya (Scoped)│ ❌ (403)│
-│ 27 │ POST   /api/v1/users                           │ Ya            │ Ya (Scoped)│ ❌ (403)│
-│ 28 │ GET    /api/v1/users/{id}                      │ Ya            │ Ya (Scoped)│ ❌ (403)│
-│ 29 │ PUT    /api/v1/users/{id}                      │ Ya            │ Ya (Scoped)│ ❌ (403)│
-│ 30 │ DELETE /api/v1/users/{id}                      │ Ya            │ Ya (Scoped)│ ❌ (403)│
-│ 31 │ PATCH  /api/v1/users/{id}/toggle-status        │ Ya            │ Ya (Scoped)│ ❌ (403)│
-│ 32 │ GET    /api/v1/units                           │ Ya (Semua)    │ Ya (Baca)  │ Ya(Baca)│
-│ 33 │ POST   /api/v1/units                           │ Ya            │ ❌ (403)   │ ❌ (403)│
-│ 34 │ GET    /api/v1/units/{id}                      │ Ya            │ Ya         │ Ya      │
-│ 35 │ PUT    /api/v1/units/{id}                      │ Ya            │ ❌ (403)   │ ❌ (403)│
-│ 36 │ DELETE /api/v1/units/{id}                      │ Ya            │ ❌ (403)   │ ❌ (403)│
-│ 37 │ PATCH  /api/v1/units/{id}/toggle-status        │ Ya            │ ❌ (403)   │ ❌ (403)│
-│ 38 │ GET    /api/v1/reports/summary                 │ Ya (Semua)    │ Ya (Scoped)│ Ya      │
-│ 39 │ GET    /api/v1/reports/summary/csv             │ Ya (Semua)    │ Ya (Scoped)│ Ya      │
-│ 40 │ GET    /api/v1/reports/agendas/{id}            │ Ya            │ Ya (Scoped)│ ❌ (403)│
-│ 41 │ POST   /api/v1/reports/agendas/{id}/config/rst │ Ya            │ Ya (Scoped)│ ❌ (403)│
-│ 42 │ GET    /api/v1/reports/agendas/{id}/export/pdf │ Ya            │ Ya (Scoped)│ ❌ (403)│
-│ 43 │ GET    /api/v1/reports/agendas/{id}/export/word│ Ya            │ Ya (Scoped)│ ❌ (403)│
-│ 44 │ GET    /api/v1/reports/agendas/{id}/export/csv │ Ya            │ Ya (Scoped)│ ❌ (403)│
+│ 4  │ PUT    /api/v1/auth/password                   │ Ya            │ Ya         │ Ya      │
+│ 5  │ GET    /api/v1/dashboard                       │ Ya (Semua)    │ Ya (Scoped)│ Ya      │
+│ 6  │ GET    /api/v1/profile                         │ Ya            │ Ya         │ Ya      │
+│ 7  │ PUT    /api/v1/profile                         │ Ya            │ Ya         │ Ya      │
+│ 8  │ PUT    /api/v1/profile/password                │ Ya            │ Ya         │ Ya      │
+│ 9  │ GET    /api/v1/profile/logs                    │ Ya (Pribadi)  │ Ya(Pribadi)│ Ya      │
+│ 10 │ GET    /api/v1/activity-logs                   │ Ya (Semua)    │ ❌ (403)   │ ❌ (403)│
+│ 11 │ GET    /api/v1/agendas                         │ Ya (Semua)    │ Ya (Scoped)│ Ya(Sesi)│
+│ 12 │ POST   /api/v1/agendas                         │ Ya            │ Ya         │ ❌ (403)│
+│ 13 │ GET    /api/v1/agendas/{id}                    │ Ya            │ Ya (Scoped)│ Ya(Sesi)│
+│ 14 │ PUT    /api/v1/agendas/{id}                    │ Ya            │ Ya (Scoped)│ ❌ (403)│
+│ 15 │ DELETE /api/v1/agendas/{id}                    │ Ya            │ Ya (Scoped)│ ❌ (403)│
+│ 16 │ PATCH  /api/v1/agendas/{id}/status             │ Ya            │ Ya (Scoped)│ ❌ (403)│
+│ 17 │ PATCH  /api/v1/agendas/{id}/roles              │ Ya            │ Ya (Scoped)│ ❌ (403)│
+│ 18 │ POST   /api/v1/agendas/{id}/surat-edaran       │ Ya            │ Ya (Scoped)│ ❌ (403)│
+│ 19 │ PUT    /api/v1/agendas/{id}/notulen            │ Ya            │ Ya (Scoped)│ Ya(Notu)│
+│ 20 │ DELETE /api/v1/agendas/{a}/documentations/{d}  │ Ya            │ Ya (Scoped)│ Ya(Notu)│
+│ 21 │ GET    /api/v1/attendances/portal              │ Ya            │ Ya         │ Ya      │
+│ 22 │ GET    /api/v1/agendas/{id}/attendance-portal  │ Ya            │ Ya         │ Ya      │
+│ 23 │ POST   /api/v1/agendas/{id}/attendances        │ Ya            │ Ya         │ Ya      │
+│ 24 │ GET    /api/v1/agendas/{id}/attendances        │ Ya            │ Ya (Scoped)│ ❌ (403)│
+│ 25 │ GET    /api/v1/attendances/my-history          │ Ya            │ Ya         │ Ya      │
+│ 26 │ GET    /api/v1/attendances/{id}                │ Ya            │ Ya (Scoped)│ Ya(Milik│
+│ 27 │ GET    /api/v1/attendances/{id}/receipt        │ Ya            │ Ya (Scoped)│ Ya(Milik│
+│ 28 │ GET    /api/v1/attendances/{id}/selfie         │ Ya            │ Ya (Scoped)│ Ya(Milik│
+│ 29 │ GET    /api/v1/attendances/{id}/signature      │ Ya            │ Ya (Scoped)│ Ya(Milik│
+│ 30 │ GET    /api/v1/users                           │ Ya (Semua)    │ Ya (Scoped)│ ❌ (403)│
+│ 31 │ POST   /api/v1/users                           │ Ya            │ Ya (Scoped)│ ❌ (403)│
+│ 32 │ GET    /api/v1/users/{id}                      │ Ya            │ Ya (Scoped)│ ❌ (403)│
+│ 33 │ PUT    /api/v1/users/{id}                      │ Ya            │ Ya (Scoped)│ ❌ (403)│
+│ 34 │ DELETE /api/v1/users/{id}                      │ Ya            │ Ya (Scoped)│ ❌ (403)│
+│ 35 │ PATCH  /api/v1/users/{id}/toggle-status        │ Ya            │ Ya (Scoped)│ ❌ (403)│
+│ 36 │ GET    /api/v1/units                           │ Ya (Semua)    │ Ya (Baca)  │ Ya(Baca)│
+│ 37 │ POST   /api/v1/units                           │ Ya            │ ❌ (403)   │ ❌ (403)│
+│ 38 │ GET    /api/v1/units/{id}                      │ Ya            │ Ya (Scoped)│ ❌ (403)│
+│ 39 │ PUT    /api/v1/units/{id}                      │ Ya            │ ❌ (403)   │ ❌ (403)│
+│ 40 │ DELETE /api/v1/units/{id}                      │ Ya            │ ❌ (403)   │ ❌ (403)│
+│ 41 │ PATCH  /api/v1/units/{id}/toggle-status        │ Ya            │ ❌ (403)   │ ❌ (403)│
+│ 42 │ GET    /api/v1/reports/summary                 │ Ya (Semua)    │ Ya (Scoped)│ Ya      │
+│ 43 │ GET    /api/v1/reports/summary/csv             │ Ya (Semua)    │ Ya (Scoped)│ Ya      │
+│ 44 │ GET    /api/v1/reports/agendas/{id}            │ Ya            │ Ya (Scoped)│ ❌ (403)│
+│ 45 │ POST   /api/v1/reports/agendas/{id}/config/rst │ Ya            │ Ya (Scoped)│ ❌ (403)│
+│ 46 │ GET    /api/v1/reports/agendas/{id}/export/pdf │ Ya            │ Ya (Scoped)│ ❌ (403)│
+│ 47 │ GET    /api/v1/reports/agendas/{id}/export/word│ Ya            │ Ya (Scoped)│ ❌ (403)│
+│ 48 │ GET    /api/v1/reports/agendas/{id}/export/csv │ Ya            │ Ya (Scoped)│ ❌ (403)│
 └────┴────────────────────────────────────────────────┴───────────────┴────────────┴─────────┘
-*Keterangan: Ya(Notu) = Hanya jika pegawai bertugas sebagai Notulis rapat yang bersangkutan. 
-Ya(Milik) = Hanya jika data kehadiran tersebut adalah milik pegawai itu sendiri.*
+*Keterangan: Ya(Notu) = Pegawai yang ditugaskan sebagai Notulis atau Pimpinan rapat yang bersangkutan saat rapat berstatus ongoing (termasuk lintas unit kerja).
+Ya(Milik) = Data kehadiran milik pegawai itu sendiri (atau Pimpinan/Notulis rapat terkait).*
 ```
 
 ---
