@@ -24,10 +24,16 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
 
-    // 1. Authentication (Multi-Identifier Login)
+    // 1. Authentication (Multi-Identifier Login & Self-Service Password Recovery)
     Route::post('/auth/login', [AuthController::class, 'login'])
         ->middleware('throttle:login')
         ->name('api.v1.auth.login');
+    Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword'])
+        ->middleware('throttle:5,1')
+        ->name('api.v1.auth.forgot-password');
+    Route::post('/auth/reset-password', [AuthController::class, 'resetPassword'])
+        ->middleware('throttle:10,1')
+        ->name('api.v1.auth.reset-password');
 
     // 2. Protected Routes (Bearer Token via Sanctum)
     Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
@@ -53,16 +59,19 @@ Route::prefix('v1')->group(function () {
         // Agency-Wide Activity Audit (Administrator Only)
         Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('api.v1.activity-logs.index');
 
-        // Agenda Rapat Management
+        // Agenda Rapat Management, Roles, Notulensi & Documentation
         Route::get('/agendas', [AgendaController::class, 'index'])->name('api.v1.agendas.index');
         Route::post('/agendas', [AgendaController::class, 'store'])->name('api.v1.agendas.store');
         Route::get('/agendas/{agenda}', [AgendaController::class, 'show'])->name('api.v1.agendas.show');
         Route::match(['PUT', 'POST'], '/agendas/{agenda}', [AgendaController::class, 'update'])->name('api.v1.agendas.update');
+        Route::get('/agendas/{agenda}/surat-edaran', [AgendaController::class, 'streamSuratEdaran'])->name('api.v1.agendas.surat-edaran.stream');
         Route::post('/agendas/{agenda}/surat-edaran', [AgendaController::class, 'updateSuratEdaran'])->name('api.v1.agendas.surat-edaran');
         Route::delete('/agendas/{agenda}', [AgendaController::class, 'destroy'])->name('api.v1.agendas.destroy');
         Route::patch('/agendas/{agenda}/status', [AgendaController::class, 'updateStatus'])->name('api.v1.agendas.status');
         Route::patch('/agendas/{agenda}/roles', [AgendaController::class, 'updateRoles'])->name('api.v1.agendas.roles');
+        Route::get('/agendas/{agenda}/notulen', [AgendaController::class, 'notulen'])->name('api.v1.agendas.notulen.show');
         Route::match(['PUT', 'POST'], '/agendas/{agenda}/notulen', [AgendaController::class, 'updateNotulen'])->name('api.v1.agendas.notulen');
+        Route::post('/agendas/{agenda}/documentations', [AgendaController::class, 'uploadDocumentation'])->name('api.v1.agendas.documentations.store');
         Route::delete('/agendas/{agenda}/documentations/{documentation}', [AgendaController::class, 'deleteDocumentation'])->name('api.v1.agendas.documentations.destroy');
 
         // Attendance Portal & Check-in
@@ -80,7 +89,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/attendances/{attendance}/selfie', [AttendanceController::class, 'selfie'])->name('api.v1.attendances.selfie');
         Route::get('/attendances/{attendance}/signature', [AttendanceController::class, 'signature'])->name('api.v1.attendances.signature');
 
-        // User Management (RBAC & Scoped)
+        // User Management (RBAC, Scoped & Cross-Unit Agenda Candidates)
+        Route::get('/users/candidates', [UserController::class, 'candidates'])->name('api.v1.users.candidates');
         Route::get('/users', [UserController::class, 'index'])->name('api.v1.users.index');
         Route::post('/users', [UserController::class, 'store'])->name('api.v1.users.store');
         Route::get('/users/{user}', [UserController::class, 'show'])->name('api.v1.users.show');
@@ -98,15 +108,16 @@ Route::prefix('v1')->group(function () {
 
         // Reports & Export Downloads
         Route::get('/reports/summary', [ReportController::class, 'summary'])->name('api.v1.reports.summary');
+        Route::get('/reports/agendas', [ReportController::class, 'agendas'])->name('api.v1.reports.agendas');
         Route::get('/reports/summary/csv', [ReportController::class, 'exportSummaryCsv'])
             ->middleware('throttle:export')
             ->name('api.v1.reports.summary.csv');
         Route::get('/reports/agendas/{agenda}', [ReportController::class, 'agendaRecap'])->name('api.v1.reports.agenda');
         Route::post('/reports/agendas/{agenda}/config/reset', [ReportController::class, 'resetReportConfig'])->name('api.v1.reports.agenda.config.reset');
-        Route::get('/reports/agendas/{agenda}/export/pdf', [ReportController::class, 'exportPdf'])
+        Route::match(['GET', 'POST'], '/reports/agendas/{agenda}/export/pdf', [ReportController::class, 'exportPdf'])
             ->middleware('throttle:export')
             ->name('api.v1.reports.export.pdf');
-        Route::get('/reports/agendas/{agenda}/export/word', [ReportController::class, 'exportWord'])
+        Route::match(['GET', 'POST'], '/reports/agendas/{agenda}/export/word', [ReportController::class, 'exportWord'])
             ->middleware('throttle:export')
             ->name('api.v1.reports.export.word');
         Route::get('/reports/agendas/{agenda}/export/csv', [ReportController::class, 'exportAgendaCsv'])

@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Gate;
 
 class AgendaResource extends JsonResource
 {
@@ -15,6 +16,9 @@ class AgendaResource extends JsonResource
     public function toArray(Request $request): array
     {
         $currentUser = $request->user();
+        $hasNotulensi = ! empty(trim(strip_tags((string) $this->notulensi)));
+        $isEligible = $currentUser ? $this->isUserEligible($currentUser) : false;
+        $hasAttended = $currentUser ? $this->hasUserAttended($currentUser) : false;
 
         return [
             'id' => $this->id,
@@ -40,6 +44,7 @@ class AgendaResource extends JsonResource
             'effective_end_at' => $this->effective_end_at?->toIso8601String(),
             'surat_edaran' => [
                 'url' => $this->surat_edaran_path ? url('/storage/' . ltrim($this->surat_edaran_path, '/')) : null,
+                'stream_url' => $this->surat_edaran_path ? url("/api/v1/agendas/{$this->id}/surat-edaran") : null,
                 'extension' => $this->surat_edaran_extension,
                 'is_pdf' => (bool) $this->is_surat_edaran_pdf,
                 'is_image' => (bool) $this->is_surat_edaran_image,
@@ -47,10 +52,12 @@ class AgendaResource extends JsonResource
             'creator' => new UserResource($this->whenLoaded('creator')),
             'pimpinan' => new UserResource($this->whenLoaded('pimpinan')),
             'notulis' => new UserResource($this->whenLoaded('notulis')),
+            'nama_pimpinan' => $this->nama_pimpinan,
+            'nama_notulis' => $this->nama_notulis,
             'units' => UnitResource::collection($this->whenLoaded('units')),
             'attendances_count' => $this->when(isset($this->attendances_count), (int) ($this->attendances_count ?? 0)),
-            'is_eligible' => $currentUser ? $this->isUserEligible($currentUser) : false,
-            'has_attended' => $currentUser ? $this->hasUserAttended($currentUser) : false,
+            'is_eligible' => $isEligible,
+            'has_attended' => $hasAttended,
             'my_attendance' => $this->when($currentUser !== null, function () use ($currentUser) {
                 if ($this->relationLoaded('attendances')) {
                     $att = $this->attendances->firstWhere('user_id', $currentUser->id);
@@ -59,8 +66,11 @@ class AgendaResource extends JsonResource
                 $att = $this->attendances()->where('user_id', $currentUser->id)->first();
                 return $att ? new AttendanceResource($att) : null;
             }),
+            'has_notulensi' => $hasNotulensi,
             'notulensi_html' => $this->formatted_notulensi,
             'kesimpulan_html' => $this->formatted_kesimpulan,
+            'notulensi_raw' => $this->notulensi,
+            'kesimpulan_raw' => $this->kesimpulan,
             'documentations' => DocumentationResource::collection($this->whenLoaded('documentations')),
             'attendances' => AttendanceResource::collection($this->whenLoaded('attendances')),
             'nomor_ba' => $this->nomor_ba,
@@ -69,6 +79,18 @@ class AgendaResource extends JsonResource
             'unattended_count' => $this->unattended_count,
             'participation_rate' => $this->participation_rate,
             'participation_rate_label' => $this->participation_rate_label,
+            'report_config' => $this->when(
+                $this->relationLoaded('documentations') || $request->routeIs('api.v1.agendas.show', 'api.v1.agendas.notulen*', 'api.v1.reports.agenda'),
+                fn () => $this->resolved_report_config
+            ),
+            'permissions' => $currentUser ? [
+                'can_update' => Gate::forUser($currentUser)->allows('update', $this->resource),
+                'can_delete' => Gate::forUser($currentUser)->allows('delete', $this->resource),
+                'can_manage_status' => Gate::forUser($currentUser)->allows('manageStatus', $this->resource),
+                'can_manage_minutes' => Gate::forUser($currentUser)->allows('manageMinutes', $this->resource),
+                'can_attend' => $this->status === 'ongoing' && $isEligible && ! $hasAttended,
+                'can_export' => Gate::forUser($currentUser)->allows('view', $this->resource),
+            ] : null,
             'export_links' => [
                 'pdf' => url("/api/v1/reports/agendas/{$this->id}/export/pdf"),
                 'word' => url("/api/v1/reports/agendas/{$this->id}/export/word"),
@@ -79,3 +101,4 @@ class AgendaResource extends JsonResource
         ];
     }
 }
+

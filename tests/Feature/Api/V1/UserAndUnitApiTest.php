@@ -478,5 +478,28 @@ class UserAndUnitApiTest extends TestCase
         $this->assertGreaterThan(0, $response->json('summary.total_units'));
         $this->assertGreaterThan(0, $response->json('summary.active_units'));
     }
+
+    public function test_admin_unit_can_fetch_cross_unit_agenda_candidates_via_api(): void
+    {
+        $unit = Unit::first();
+        $this->assertNotNull($unit);
+
+        $adminUnitUser = User::where('role', 'staff')->first();
+        $this->assertNotNull($adminUnitUser);
+        $adminUnitUser->update([
+            'role' => 'admin',
+            'unit_id' => $unit->id,
+        ]);
+
+        $totalActiveAcrossAllUnits = User::where('is_active', true)->count();
+
+        $res = $this->actingAs($adminUnitUser->fresh(), 'sanctum')
+            ->getJson('/api/v1/users/candidates');
+
+        $res->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('meta.total', $totalActiveAcrossAllUnits);
+    }
 }
+
 

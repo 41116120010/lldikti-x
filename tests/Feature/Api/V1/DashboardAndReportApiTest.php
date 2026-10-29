@@ -139,9 +139,37 @@ class DashboardAndReportApiTest extends TestCase
                     'total_agendas',
                     'completed_agendas',
                     'ongoing_agendas',
+                    'scheduled_agendas',
                     'total_attendances',
                     'avg_attendances_per_agenda',
+                    'format_stats' => [
+                        'offline',
+                        'online',
+                        'hybrid',
+                        'pct_offline',
+                        'pct_online',
+                        'pct_hybrid',
+                    ],
+                    'governance_rate',
+                    'count_with_notulen',
+                    'attendance_rate',
+                    'attendance_rate_subtext',
+                    'unit_stats',
+                    'member_stats',
                 ],
+            ]);
+
+        $this->assertNotEmpty($response->json('data.unit_stats'));
+
+        // Verify paginated report agendas endpoint
+        $agendasRes = $this->actingAs($admin, 'sanctum')
+            ->getJson('/api/v1/reports/agendas');
+
+        $agendasRes->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonStructure([
+                'data',
+                'meta' => ['current_page', 'last_page', 'per_page', 'total'],
             ]);
     }
 
@@ -159,6 +187,7 @@ class DashboardAndReportApiTest extends TestCase
             ->assertJsonStructure([
                 'data' => [
                     'agenda',
+                    'report_config',
                     'export_links' => [
                         'pdf',
                         'word',
@@ -205,7 +234,12 @@ class DashboardAndReportApiTest extends TestCase
 
         $content = $response->streamedContent();
         $this->assertStringContainsString('Judul Rapat', $content);
+        $this->assertStringContainsString('Status Rapat', $content);
+        $this->assertStringContainsString('Status Notulensi', $content);
+        $this->assertStringContainsString('Pemimpin Rapat', $content);
+        $this->assertStringContainsString('Notulis Rapat', $content);
         $this->assertStringContainsString('Penyelenggara / Creator', $content);
+        $this->assertStringContainsString('Selesai', $content);
     }
 
     public function test_administrator_can_reset_report_config_via_api(): void

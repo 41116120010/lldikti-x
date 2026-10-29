@@ -32,6 +32,8 @@ class AttendanceController extends Controller
             ->where('status', 'ongoing')
             ->with([
                 'creator.unit',
+                'pimpinan.unit',
+                'notulis.unit',
                 'units',
                 'attendances' => fn ($q) => $q->where('user_id', $user->id),
             ])
@@ -42,7 +44,7 @@ class AttendanceController extends Controller
         // Upcoming scheduled meetings that have not passed yet
         $scheduledAgendas = Agenda::visibleTo($user)
             ->upcoming()
-            ->with(['creator.unit', 'units'])
+            ->with(['creator.unit', 'pimpinan.unit', 'notulis.unit', 'units'])
             ->orderBy('waktu_mulai', 'asc')
             ->take(10)
             ->get();
@@ -148,7 +150,7 @@ class AttendanceController extends Controller
             'success' => true,
             'message' => 'Status portal presensi berhasil diperiksa.',
             'data' => [
-                'agenda' => new AgendaResource($agenda->load(['creator.unit', 'units'])),
+                'agenda' => new AgendaResource($agenda->load(['creator.unit', 'pimpinan.unit', 'notulis.unit', 'units'])),
                 'is_ongoing' => $agenda->status === 'ongoing',
                 'is_eligible' => $isEligible,
                 'has_attended' => $existingAttendance !== null,

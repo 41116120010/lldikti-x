@@ -9,12 +9,16 @@ use App\Http\Requests\Agenda\UpdateAgendaStatusRequest;
 use App\Http\Requests\Agenda\UpdateMinutesRequest;
 use App\Http\Requests\Agenda\UpdateRolesRequest;
 use App\Http\Resources\AgendaResource;
+use App\Http\Resources\AttendanceResource;
+use App\Http\Resources\DocumentationResource;
 use App\Models\Agenda;
 use App\Models\AgendaDocumentation;
 use App\Services\AgendaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\Response;
 
 class AgendaController extends Controller
 {
@@ -25,27 +29,14 @@ class AgendaController extends Controller
     {
         $user = $request->user();
 
-        $query = Agenda::visibleTo($user)
-            ->with([
-                'creator.unit',
-                'pimpinan.unit',
-                'notulis.unit',
-                'units',
-                'attendances' => fn ($q) => $q->where('user_id', $user->id),
-            ])
-            ->withCount('attendances');
+        $query = Agenda::visibleTo($user);
 
         // Staff should not see draft or cancelled agendas unless designated
         if ($user->isStaff()) {
             $query->whereNotIn('status', ['draft', 'cancelled']);
         }
 
-        // Filter: Status
-        if ($request->filled('status')) {
-            $query->where('status', $request->query('status'));
-        }
-
-        // Filter: Tipe Rapat (daring, luring, hybrid)
+        // Filter: Tipe Rapat (daring/online, luring/offline, hybrid)
         if ($request->filled('tipe_rapat')) {
             $query->where('tipe_rapat', $request->query('tipe_rapat'));
         }
@@ -55,23 +46,59 @@ class AgendaController extends Controller
             $query->where('jenis_rapat', $request->query('jenis_rapat'));
         }
 
-        // Filter: Search title or location
+        // Filter: Search title, location, or meeting category
         if ($request->filled('search')) {
             $search = trim((string) $request->query('search'));
             $query->where(function ($q) use ($search) {
                 $q->whereLike('judul_rapat', "%{$search}%")
-                    ->orWhereLike('lokasi_ruang', "%{$search}%");
+                    ->orWhereLike('lokasi_ruang', "%{$search}%")
+                    ->orWhereLike('jenis_rapat', "%{$search}%");
             });
         }
 
-        // Filter: Unit (for Administrator)
-        if ($request->filled('unit_id') && $user->isAdministrator()) {
-            $unitId = (int) $request->query('unit_id');
-            $query->whereHas('units', fn ($q) => $q->where('units.id', $unitId));
+        // Filter: Unit (for Administrator & Admin Unit, including 'all_units' pleno filter)
+        if ($request->filled('unit_id')) {
+            $unitId = $request->query('unit_id');
+            if ($unitId === 'all_units') {
+                $query->where('is_all_units', true);
+            } elseif ($user->isAdministrator()) {
+                $query->whereHas('units', fn ($q) => $q->where('units.id', (int) $unitId));
+            }
+        }
+
+        // Calculate status counts before applying status filter and withCount (mirrors Web AgendaController::index)
+        $rawCounts = (clone $query)
+            ->reorder()
+            ->selectRaw('status, count(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status');
+
+        $statusCounts = [
+            'all' => (int) $rawCounts->sum(),
+            'draft' => (int) ($rawCounts['draft'] ?? 0),
+            'ongoing' => (int) ($rawCounts['ongoing'] ?? 0),
+            'scheduled' => (int) ($rawCounts['scheduled'] ?? 0),
+            'completed' => (int) ($rawCounts['completed'] ?? 0),
+            'cancelled' => (int) ($rawCounts['cancelled'] ?? 0),
+        ];
+
+        // Filter: Status
+        if ($request->filled('status') && $request->query('status') !== 'all') {
+            $query->where('status', $request->query('status'));
         }
 
         $perPage = min(max((int) $request->query('per_page', 15), 1), 50);
-        $agendas = $query->latest('waktu_mulai')->paginate($perPage);
+        $agendas = $query
+            ->with([
+                'creator.unit',
+                'pimpinan.unit',
+                'notulis.unit',
+                'units',
+                'attendances' => fn ($q) => $q->where('user_id', $user->id),
+            ])
+            ->withCount('attendances')
+            ->latest('waktu_mulai')
+            ->paginate($perPage);
 
         return response()->json([
             'success' => true,
@@ -82,6 +109,9 @@ class AgendaController extends Controller
                 'last_page' => $agendas->lastPage(),
                 'per_page' => $agendas->perPage(),
                 'total' => $agendas->total(),
+            ],
+            'summary' => [
+                'status_counts' => $statusCounts,
             ],
         ]);
     }
@@ -168,6 +198,28 @@ class AgendaController extends Controller
             'message' => "Agenda rapat '{$agenda->judul_rapat}' berhasil diperbarui.",
             'data' => new AgendaResource($agenda),
         ]);
+    }
+
+    /**
+     * Stream protected circular letter (Surat Edaran) document for authorized mobile clients.
+     */
+    public function streamSuratEdaran(Agenda $agenda, Request $request): Response
+    {
+        $canView = Gate::allows('view', $agenda) || Gate::allows('viewStaff', $agenda);
+        if (! $canView) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mengunduh surat edaran agenda rapat ini.');
+        }
+
+        if (! $agenda->surat_edaran_path || ! Storage::disk('public')->exists($agenda->surat_edaran_path)) {
+            abort(404, 'Berkas surat edaran tidak ditemukan.');
+        }
+
+        return Storage::disk('public')->response(
+            $agenda->surat_edaran_path,
+            headers: [
+                'Cache-Control' => 'private, no-cache, no-store, must-revalidate',
+            ]
+        );
     }
 
     /**
@@ -262,6 +314,41 @@ class AgendaController extends Controller
     }
 
     /**
+     * Retrieve complete Notulensi & Documentation workstation payload for mobile editor.
+     */
+    public function notulen(Agenda $agenda, Request $request): JsonResponse
+    {
+        Gate::authorize('manageMinutes', $agenda);
+
+        $agenda->load([
+            'creator.unit',
+            'pimpinan.unit',
+            'notulis.unit',
+            'units',
+            'documentations',
+        ]);
+        $agenda->loadCount('attendances');
+
+        $attendances = $agenda->attendances()
+            ->with('user.unit')
+            ->orderBy('signed_at', 'asc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Data editor notulensi dan konfigurasi dokumen berhasil diambil.',
+            'data' => [
+                'agenda' => new AgendaResource($agenda),
+                'notulensi_raw' => $agenda->notulensi,
+                'kesimpulan_raw' => $agenda->kesimpulan,
+                'report_config' => $agenda->resolved_report_config,
+                'documentations' => DocumentationResource::collection($agenda->documentations),
+                'attendances' => AttendanceResource::collection($attendances),
+            ],
+        ]);
+    }
+
+    /**
      * Update minutes of meeting, conclusions, photos, and optional document configurations.
      */
     public function updateNotulen(UpdateMinutesRequest $request, Agenda $agenda, AgendaService $agendaService): JsonResponse
@@ -295,6 +382,56 @@ class AgendaController extends Controller
     }
 
     /**
+     * Upload one or more documentation photos directly to an agenda from mobile camera/gallery.
+     */
+    public function uploadDocumentation(Request $request, Agenda $agenda, AgendaService $agendaService): JsonResponse
+    {
+        Gate::authorize('manageMinutes', $agenda);
+
+        $request->validate([
+            'photos' => ['required_without:photo', 'nullable', 'array', 'max:10'],
+            'photos.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'photo' => ['required_without:photos', 'nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'captions' => ['nullable', 'array', 'max:10'],
+            'captions.*' => ['nullable', 'string', 'max:255'],
+            'caption' => ['nullable', 'string', 'max:255'],
+        ], [
+            'photos.required_without' => 'Pilih minimal satu berkas foto dokumentasi kegiatan.',
+            'photos.*.image' => 'Berkas dokumentasi wajib berupa gambar.',
+            'photos.*.mimes' => 'Format foto dokumentasi harus JPG, PNG, atau WebP.',
+            'photos.*.max' => 'Ukuran setiap foto dokumentasi maksimal 4 MB.',
+            'photo.image' => 'Berkas dokumentasi wajib berupa gambar.',
+            'photo.mimes' => 'Format foto dokumentasi harus JPG, PNG, atau WebP.',
+            'photo.max' => 'Ukuran foto dokumentasi maksimal 4 MB.',
+        ]);
+
+        $photos = $request->file('photos') ?? ($request->hasFile('photo') ? [$request->file('photo')] : []);
+        $captions = $request->input('captions') ?? ($request->filled('caption') ? [$request->input('caption')] : []);
+
+        $agendaService->updateNotulen(
+            agenda: $agenda,
+            data: [
+                'photos' => $photos,
+                'captions' => $captions,
+            ],
+        );
+
+        $agenda->refresh()->load([
+            'creator.unit',
+            'pimpinan.unit',
+            'notulis.unit',
+            'units',
+            'documentations',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Foto dokumentasi kegiatan berhasil diunggah.',
+            'data' => new AgendaResource($agenda),
+        ], 201);
+    }
+
+    /**
      * Remove a specific documentation photo from the agenda.
      */
     public function deleteDocumentation(Agenda $agenda, AgendaDocumentation $documentation, AgendaService $agendaService): JsonResponse
@@ -316,4 +453,5 @@ class AgendaController extends Controller
         ]);
     }
 }
+
 

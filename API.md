@@ -234,6 +234,48 @@ Sesuai aturan keamanan instansi (**AGENTS.md §3.2 & §3.6**):
   }
   ```
 
+#### 4. Lupa Kata Sandi Mandiri (*Forgot Password* Multi-Identifier via Brevo)
+* **Endpoint:** `POST /api/v1/auth/forgot-password`
+* **Middleware:** `throttle:5,1`
+* **Deskripsi:** Menerima input `identity` yang secara otomatis mengenali **NIP (18 digit)**, **Username**, atau **Email Kedinasan**, mengirimkan tautan & token reset secara sinkron melalui Brevo (SMTP Port 465 SSL / HTTP API v3), dan mengembalikan alamat email ter-masking demi privasi ASN.
+* **Request Body (JSON):**
+  ```json
+  {
+    "identity": "197012051992032002"
+  }
+  ```
+* **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "message": "Tautan atur ulang kata sandi telah dikirimkan ke email kedinasan terdaftar: a*******a@lldiktiwilayahx.kemdiktisaintek.go.id. Silakan periksa kotak masuk atau folder spam Anda.",
+    "data": {
+      "masked_email": "a*******a@lldiktiwilayahx.kemdiktisaintek.go.id"
+    }
+  }
+  ```
+
+#### 5. Atur Ulang Kata Sandi (*Reset Password* & Pencabutan Token Aktif)
+* **Endpoint:** `POST /api/v1/auth/reset-password`
+* **Middleware:** `throttle:10,1`
+* **Deskripsi:** Memvalidasi token pemulihan kata sandi, menyimpan kata sandi baru, dan secara otomatis mencabut seluruh token Sanctum aktif (`$user->tokens()->delete()`) sesuai standar keamanan **AGENTS.md §3.6**.
+* **Request Body (JSON):**
+  ```json
+  {
+    "token": "64-char-reset-token-from-email",
+    "email": "afdalisma@lldiktiwilayahx.kemdiktisaintek.go.id",
+    "password": "NewPassword123!",
+    "password_confirmation": "NewPassword123!"
+  }
+  ```
+* **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "message": "Kata sandi berhasil diperbarui. Silakan masuk menggunakan kata sandi baru Anda."
+  }
+  ```
+
 ---
 
 ### 4.2. Dashboard & Ringkasan
@@ -2433,4 +2475,41 @@ if (record) {
    - Unit kerja tidak diundang: `"Unit kerja Anda tidak termasuk dalam daftar undangan agenda rapat ini."`
    - Sudah pernah presensi: `"Presensi Anda pada agenda rapat ini sudah pernah tercatat."`
 
+---
 
+### 5.14. Panduan Paritas Penuh Web-to-Mobile (Fase 49: Pemulihan Kata Sandi, Workstation Notulensi, Kandidat Lintas Unit & Analitik Laporan)
+
+Bagian ini merangkum seluruh endpoint dan pengayaan payload pada **Fase 49** untuk memastikan aplikasi React Native (Android) memiliki **100% paritas fitur** dengan aplikasi Web SIPERAPAT:
+
+#### A. Pemulihan Kata Sandi Mandiri (*Forgot & Reset Password*)
+* **`POST /api/v1/auth/forgot-password` (`throttle:5,1`):**
+  - Menerima `identifier` tunggal berupa **NIP 18 digit**, **Username**, atau **Email Kedinasan**.
+  - Mengirimkan tautan reset secara sinkron melalui Brevo (SMTP Port 465 SSL / HTTP API v3) dan mengembalikan `masked_email` (contoh: `af***a@lldiktiwilayahx.kemdiktisaintek.go.id`) untuk ditampilkan pada modal konfirmasi di aplikasi Android.
+* **`POST /api/v1/auth/reset-password` (`throttle:10,1`):**
+  - Menerima `token`, `email`, `password`, dan `password_confirmation`.
+  - Memperbarui kata sandi dengan aman, mencabut seluruh token Sanctum aktif (`$user->tokens()->delete()`), dan mencatat jejak audit `RESET_PASSWORD`.
+
+#### B. Workstation Notulensi, Unggah Dokumentasi & Streaming Surat Edaran
+* **`GET /api/v1/agendas/{id}/notulen`:**
+  - Mengambil payload lengkap Workstation Notulensi bagi Notulis, Pimpinan Rapat, Admin Unit, atau Administrator (`AgendaPolicy::manageMinutes`), mencakup `notulensi_raw`, `kesimpulan_raw`, `report_config` (termerged dengan default `ReportConfigService`), daftar `documentations`, dan daftar `attendances`.
+* **`POST /api/v1/agendas/{id}/documentations`:**
+  - Mendukung unggah foto dokumentasi kegiatan rapat baik melalui `multipart/form-data` (`photos[]` atau `photo`) maupun **Base64 Data URI JSON** (`photos_base64: ["data:image/jpeg;base64,..."]`), disertai `caption` opsional.
+* **`GET /api/v1/agendas/{id}/surat-edaran`:**
+  - Streaming terautentikasi (`auth:sanctum`) untuk berkas lampiran Surat Edaran / Undangan Rapat (`application/pdf` atau gambar) dengan header `Cache-Control: private, no-cache, no-store, must-revalidate`.
+* **Pengayaan `AgendaResource`:**
+  - Setiap respons agenda kini menyertakan `has_notulensi`, `nama_pimpinan`, `nama_notulis`, `surat_edaran.stream_url`, serta matriks izin `permissions` (`can_update`, `can_delete`, `can_manage_status`, `can_manage_minutes`, `can_attend`, `can_export`) sehingga tombol aksi di React Native selalu sinkron dengan kebijakan otorisasi backend.
+
+#### C. Kandidat Pejabat Rapat Lintas Unit Kerja
+* **`GET /api/v1/users/candidates` (atau `GET /api/v1/users?for_agenda_assignment=1`):**
+  - Memungkinkan **Admin Unit** maupun **Administrator** memuat daftar seluruh pegawai ASN aktif lintas unit kerja (`id`, `name`, `nip`, `jabatan`, `pangkat_golongan`, `unit_id`, `unit.nama_unit`, `unit.kode_unit`) khusus untuk dropdown penunjukan **Pemimpin Rapat (`pimpinan_id`)** dan **Notulis Rapat (`notulis_id`)** saat membuat atau menyunting agenda rapat.
+
+#### D. Paritas Analitik Laporan, Tabel Rekap & Ekspor Dokumen
+* **`GET /api/v1/reports/summary`:**
+  - Mendukung filter `start_date`, `end_date`, `status`, dan `unit_id`.
+  - Mengembalikan metrik yang 100% selaras dengan Web: `total_agendas`, `completed_agendas`, `ongoing_agendas`, `scheduled_agendas`, `cancelled_agendas`, `total_attendances`, `format_stats` (`offline`, `online`, `hybrid`), `governance_rate`, `count_with_notulen`, `attendance_rate`, `attendance_rate_subtext`, `unit_stats` (Partisipasi per Unit Kerja), dan `member_stats` (Partisipasi Pegawai dalam Unit untuk Admin Unit).
+* **`GET /api/v1/reports/agendas`:**
+  - Menyajikan daftar agenda rapat terpaginasi khusus untuk **Tabel Daftar Rekap Rapat** pada layar laporan mobile, lengkap dengan filter `start_date`, `end_date`, `status`, `unit_id`, dan `search`.
+* **`GET /api/v1/reports/summary/csv`:**
+  - Menghasilkan berkas CSV ringkasan **13 kolom berbahasa Indonesia** dengan UTF-8 BOM dan proteksi CSV Injection (CWE-1236) yang identik dengan unduhan CSV pada aplikasi Web.
+* **`GET|POST /api/v1/reports/agendas/{id}/export/pdf` & `/export/word`:**
+  - Mendukung pengiriman kustomisasi pengaturan dokumen (`ReportConfigService::extractReportConfig`) baik melalui query string (`GET`) maupun JSON body (`POST`).

@@ -302,11 +302,90 @@ class AgendaApiTest extends TestCase
             ->getJson("/api/v1/agendas?status={$agenda->status}&tipe_rapat={$agenda->tipe_rapat}&search=Evaluasi");
 
         $response->assertOk()
-            ->assertJsonPath('success', true);
+            ->assertJsonPath('success', true)
+            ->assertJsonStructure([
+                'summary' => [
+                    'status_counts' => [
+                        'all',
+                        'draft',
+                        'ongoing',
+                        'scheduled',
+                        'completed',
+                        'cancelled',
+                    ],
+                ],
+            ]);
 
         $data = $response->json('data');
         $this->assertNotEmpty($data);
     }
+
+    public function test_authorized_user_can_fetch_notulen_workstation_and_upload_documentation_via_api(): void
+    {
+        Storage::fake('public');
+
+        $admin = User::where('role', 'administrator')->first();
+        $agenda = Agenda::first();
+        $this->assertNotNull($admin);
+        $this->assertNotNull($agenda);
+
+        // 1. Fetch GET /api/v1/agendas/{agenda}/notulen workstation payload
+        $notulenRes = $this->actingAs($admin, 'sanctum')
+            ->getJson("/api/v1/agendas/{$agenda->id}/notulen");
+
+        $notulenRes->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonStructure([
+                'data' => [
+                    'agenda',
+                    'notulensi_raw',
+                    'kesimpulan_raw',
+                    'report_config',
+                    'documentations',
+                    'attendances',
+                ],
+            ]);
+
+        // 2. Upload documentation photo directly via POST /api/v1/agendas/{agenda}/documentations
+        $photo = UploadedFile::fake()->image('kamera_mobile.jpg', 800, 600);
+        $uploadRes = $this->actingAs($admin, 'sanctum')
+            ->postJson("/api/v1/agendas/{$agenda->id}/documentations", [
+                'photo' => $photo,
+                'caption' => 'Dokumentasi langsung dari kamera Android',
+            ]);
+
+        $uploadRes->assertStatus(201)
+            ->assertJsonPath('success', true);
+    }
+
+    public function test_agenda_detail_includes_permissions_and_streams_surat_edaran_via_api(): void
+    {
+        Storage::fake('public');
+
+        $admin = User::where('role', 'administrator')->first();
+        $agenda = Agenda::first();
+        $this->assertNotNull($admin);
+        $this->assertNotNull($agenda);
+
+        Storage::disk('public')->put('surat-edaran/test-edaran.pdf', '%PDF-1.4 dummy content');
+        $agenda->update(['surat_edaran_path' => 'surat-edaran/test-edaran.pdf']);
+
+        $showRes = $this->actingAs($admin, 'sanctum')
+            ->getJson("/api/v1/agendas/{$agenda->id}");
+
+        $showRes->assertOk()
+            ->assertJsonPath('data.permissions.can_update', true)
+            ->assertJsonPath('data.permissions.can_manage_minutes', true)
+            ->assertJsonPath('data.permissions.can_export', true);
+
+        $this->assertNotEmpty($showRes->json('data.surat_edaran.stream_url'));
+
+        $streamRes = $this->actingAs($admin, 'sanctum')
+            ->get("/api/v1/agendas/{$agenda->id}/surat-edaran");
+
+        $streamRes->assertOk();
+    }
 }
+
 
 

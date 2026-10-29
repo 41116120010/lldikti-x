@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\User\StoreUserRequest;
 use App\Http\Requests\User\UpdateUserRequest;
 use App\Http\Resources\UserResource;
+use App\Models\Agenda;
 use App\Models\User;
 use App\Services\UserService;
 use Illuminate\Http\JsonResponse;
@@ -15,10 +16,48 @@ use Illuminate\Support\Facades\Gate;
 class UserController extends Controller
 {
     /**
+     * Retrieve active ASN employees across all units for Agenda Pimpinan & Notulis selection.
+     * Accessible by Administrator and Admin Unit (mirrors Web AgendaController::create/edit/show).
+     */
+    public function candidates(Request $request): JsonResponse
+    {
+        Gate::authorize('create', Agenda::class);
+
+        $query = User::where('is_active', true)->with('unit');
+
+        if ($search = trim((string) $request->query('search', ''))) {
+            $query->where(function ($q) use ($search) {
+                $q->whereLike('name', "%{$search}%")
+                    ->orWhereLike('nip', "%{$search}%")
+                    ->orWhereLike('jabatan', "%{$search}%");
+            });
+        }
+
+        if ($unitId = $request->query('unit_id')) {
+            $query->where('unit_id', (int) $unitId);
+        }
+
+        $candidates = $query->orderBy('name', 'asc')->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Daftar kandidat pejabat rapat (Pimpinan & Notulis) lintas unit berhasil diambil.',
+            'data' => UserResource::collection($candidates),
+            'meta' => [
+                'total' => $candidates->count(),
+            ],
+        ]);
+    }
+
+    /**
      * Display a listing of users scoped by role and unit.
      */
     public function index(Request $request): JsonResponse
     {
+        if ($request->boolean('for_agenda_assignment')) {
+            return $this->candidates($request);
+        }
+
         Gate::authorize('viewAny', User::class);
 
         $currentUser = $request->user();

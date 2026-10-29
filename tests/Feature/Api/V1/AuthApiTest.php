@@ -4,7 +4,11 @@ namespace Tests\Feature\Api\V1;
 
 use App\Models\ActivityLog;
 use App\Models\User;
+use App\Notifications\ResetPasswordNotification;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Password;
 use Tests\TestCase;
 
 class AuthApiTest extends TestCase
@@ -262,5 +266,52 @@ class AuthApiTest extends TestCase
             $this->assertEquals('presensi', $item['category']['value']);
         }
     }
+
+    public function test_user_can_request_password_reset_via_api_with_nip_username_or_email(): void
+    {
+        Notification::fake();
+
+        $user = User::where('is_active', true)->whereNotNull('nip')->whereNotNull('email')->first();
+        $this->assertNotNull($user);
+
+        $response = $this->postJson('/api/v1/auth/forgot-password', [
+            'identity' => $user->nip,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonStructure([
+                'success',
+                'message',
+                'data' => ['masked_email'],
+            ]);
+
+        Notification::assertSentTo($user, ResetPasswordNotification::class);
+    }
+
+    public function test_user_can_reset_password_via_api_and_active_tokens_are_revoked(): void
+    {
+        $user = User::where('is_active', true)->whereNotNull('email')->first();
+        $this->assertNotNull($user);
+
+        $oldToken = $user->createToken('AndroidDevice')->plainTextToken;
+        $this->assertEquals(1, $user->tokens()->count());
+
+        $resetToken = Password::broker()->createToken($user);
+
+        $response = $this->postJson('/api/v1/auth/reset-password', [
+            'token' => $resetToken,
+            'email' => $user->email,
+            'password' => 'ResetPass99!',
+            'password_confirmation' => 'ResetPass99!',
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('success', true);
+
+        $this->assertTrue(Hash::check('ResetPass99!', $user->fresh()->password));
+        $this->assertEquals(0, $user->tokens()->count());
+    }
 }
+
 
