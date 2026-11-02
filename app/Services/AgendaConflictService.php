@@ -186,7 +186,9 @@ class AgendaConflictService
         $ruangan = isset($data['lokasi_ruang']) ? trim((string) $data['lokasi_ruang']) : null;
         $pimpinanId = !empty($data['pimpinan_id']) ? (int) $data['pimpinan_id'] : null;
         $notulisId = !empty($data['notulis_id']) ? (int) $data['notulis_id'] : null;
-        $isAllUnits = isset($data['is_all_units']) ? (bool) $data['is_all_units'] : true;
+        $isAllUnits = isset($data['target_type'])
+            ? ($data['target_type'] === 'all_units')
+            : (isset($data['is_all_units']) ? (bool) $data['is_all_units'] : true);
         $unitIds = $data['unit_ids'] ?? [];
 
         // 1. Pencegahan Waktu Mulai di Masa Lampau (Hanya untuk Agenda Baru 'scheduled')

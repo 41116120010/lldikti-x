@@ -412,10 +412,35 @@
             <!-- Target Unit Card -->
             <div class="panel">
                 <div class="toolbar">
-                    <h3 class="font-bold text-slate-900 text-sm">Target Partisipan Unit</h3>
+                    <h3 class="font-bold text-slate-900 text-sm">Target Partisipan Rapat</h3>
                 </div>
                 <div class="p-5">
-                    @if($agenda->is_all_units)
+                    @if($agenda->target_type === 'selected_users')
+                        <div class="space-y-3">
+                            <div class="p-3 bg-indigo-50 border border-indigo-200 rounded-xl text-xs text-indigo-950 font-bold flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" class="text-indigo-600 shrink-0"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                    <span>Khusus ASN Tertentu (Personal Terpilih)</span>
+                                </div>
+                                <span class="px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-indigo-100 text-indigo-900 border border-indigo-200">
+                                    {{ $agenda->invitedUsers->count() }} Pegawai
+                                </span>
+                            </div>
+                            <div class="text-[11px] text-slate-600 font-semibold">Daftar Pegawai yang Diundang:</div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                                @forelse($agenda->invitedUsers as $u)
+                                    <div class="p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                                        <div class="font-bold text-slate-900 truncate">{{ $u->name }}</div>
+                                        <div class="text-[10px] text-slate-500 font-mono truncate">
+                                            NIP: {{ $u->nip ?? '-' }} &bull; {{ $u->unit?->kode_unit ?? 'Pusat' }}
+                                        </div>
+                                    </div>
+                                @empty
+                                    <div class="text-xs text-slate-500 italic">Belum ada ASN yang ditugaskan.</div>
+                                @endforelse
+                            </div>
+                        </div>
+                    @elseif($agenda->is_all_units || $agenda->target_type === 'all_units')
                         <div class="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-xs text-emerald-950 font-bold flex items-center gap-2">
                             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                             <span>Terbuka untuk Seluruh Unit LLDIKTI</span>

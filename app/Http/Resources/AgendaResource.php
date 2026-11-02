@@ -32,6 +32,8 @@ class AgendaResource extends JsonResource
             'waktu_selesai' => $this->waktu_selesai?->toIso8601String(),
             'rentang_waktu' => $this->rentang_waktu,
             'jadwal_lengkap' => $this->jadwal_lengkap,
+            'target_type' => $this->target_type ?? ($this->is_all_units ? 'all_units' : 'selected_units'),
+            'target_label' => $this->target_label,
             'is_all_units' => (bool) $this->is_all_units,
             'status' => [
                 'value' => $this->status,
@@ -55,6 +57,7 @@ class AgendaResource extends JsonResource
             'nama_pimpinan' => $this->nama_pimpinan,
             'nama_notulis' => $this->nama_notulis,
             'units' => UnitResource::collection($this->whenLoaded('units')),
+            'invited_users' => UserResource::collection($this->whenLoaded('invitedUsers')),
             'attendances_count' => $this->when(isset($this->attendances_count), (int) ($this->attendances_count ?? 0)),
             'is_eligible' => $isEligible,
             'has_attended' => $hasAttended,

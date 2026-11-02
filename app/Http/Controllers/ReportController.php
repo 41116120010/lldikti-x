@@ -244,6 +244,7 @@ class ReportController extends Controller
             'pimpinan.unit',
             'notulis.unit',
             'units',
+            'invitedUsers.unit',
         ]);
 
         $attendances = $agenda->attendances()

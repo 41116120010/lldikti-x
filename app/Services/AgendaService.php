@@ -24,13 +24,16 @@ class AgendaService
      */
     public function createAgenda(User $creator, array $validated, bool $isAllUnits, ?UploadedFile $suratEdaran = null): Agenda
     {
+        $targetType = $validated['target_type'] ?? ($isAllUnits ? 'all_units' : (!empty($validated['user_ids']) ? 'selected_users' : 'selected_units'));
+        $effectiveIsAllUnits = ($targetType === 'all_units');
+
         /** @var Agenda $agenda */
         $agenda = AgendaConflictService::runUnderRoomLock(
             data: $validated,
             ignoreAgendaId: null,
             user: $creator,
-            callback: function () use ($creator, $validated, $isAllUnits, $suratEdaran) {
-                return DB::transaction(function () use ($creator, $validated, $isAllUnits, $suratEdaran) {
+            callback: function () use ($creator, $validated, $targetType, $effectiveIsAllUnits, $suratEdaran) {
+                return DB::transaction(function () use ($creator, $validated, $targetType, $effectiveIsAllUnits, $suratEdaran) {
                     $waktuMulai = $validated['waktu_mulai'];
                     $waktuSelesai = !empty($validated['waktu_selesai']) ? $validated['waktu_selesai'] : null;
 
@@ -46,7 +49,8 @@ class AgendaService
                         'link_meeting' => $validated['link_meeting'] ?? null,
                         'waktu_mulai' => $waktuMulai,
                         'waktu_selesai' => $waktuSelesai,
-                        'is_all_units' => $isAllUnits,
+                        'target_type' => $targetType,
+                        'is_all_units' => $effectiveIsAllUnits,
                         'status' => $validated['status'] ?? 'scheduled',
                     ];
 
@@ -58,16 +62,22 @@ class AgendaService
 
                     $agenda = Agenda::create($agendaData);
 
-                    // Sync units
-                    if ($isAllUnits) {
+                    // Sync participants according to target_type
+                    if ($targetType === 'all_units') {
                         $allUnitIds = Unit::active()->pluck('id')->toArray();
                         $agenda->units()->sync($allUnitIds);
+                        $agenda->invitedUsers()->sync([]);
+                    } elseif ($targetType === 'selected_users') {
+                        $userIds = $validated['user_ids'] ?? [];
+                        $agenda->invitedUsers()->sync($userIds);
+                        $agenda->units()->sync([]);
                     } else {
                         $unitIds = $validated['unit_ids'] ?? ($validated['units'] ?? []);
                         if ($creator->isAdmin() && empty($unitIds)) {
                             $unitIds = [$creator->unit_id];
                         }
                         $agenda->units()->sync($unitIds);
+                        $agenda->invitedUsers()->sync([]);
                     }
 
                     return $agenda;
@@ -77,10 +87,10 @@ class AgendaService
 
         ActivityLogger::log(
             type: 'CREATE_AGENDA',
-            description: "Agenda rapat baru '{$agenda->judul_rapat}' ({$agenda->jenis_rapat}, {$agenda->tipe_rapat}) berhasil dibuat.",
+            description: "Agenda rapat baru '{$agenda->judul_rapat}' ({$agenda->jenis_rapat}, {$agenda->tipe_rapat}, {$agenda->target_label}) berhasil dibuat.",
             targetModel: Agenda::class,
             targetId: $agenda->id,
-            properties: $agenda->only(['judul_rapat', 'jenis_rapat', 'tipe_rapat', 'waktu_mulai', 'waktu_selesai', 'is_all_units'])
+            properties: $agenda->only(['judul_rapat', 'jenis_rapat', 'tipe_rapat', 'waktu_mulai', 'waktu_selesai', 'is_all_units', 'target_type'])
         );
 
         return $agenda;
@@ -135,12 +145,15 @@ class AgendaService
             $supersededCircularPath = $agenda->surat_edaran_path;
         }
 
+        $targetType = $validated['target_type'] ?? ($isAllUnits ? 'all_units' : (!empty($validated['user_ids']) ? 'selected_users' : 'selected_units'));
+        $effectiveIsAllUnits = ($targetType === 'all_units');
+
         AgendaConflictService::runUnderRoomLock(
             data: $validated,
             ignoreAgendaId: (int) $agenda->getKey(),
             user: $actor,
-            callback: function () use ($validated, $agenda, $oldData, $newCircularPath, $isAllUnits) {
-                DB::transaction(function () use ($validated, $agenda, $oldData, $newCircularPath, $isAllUnits) {
+            callback: function () use ($validated, $agenda, $oldData, $newCircularPath, $targetType, $effectiveIsAllUnits) {
+                DB::transaction(function () use ($validated, $agenda, $oldData, $newCircularPath, $targetType, $effectiveIsAllUnits) {
                     $waktuMulai = $validated['waktu_mulai'];
                     $waktuSelesai = !empty($validated['waktu_selesai']) ? $validated['waktu_selesai'] : null;
 
@@ -154,7 +167,8 @@ class AgendaService
                         'link_meeting' => $validated['link_meeting'] ?? null,
                         'waktu_mulai' => $waktuMulai,
                         'waktu_selesai' => $waktuSelesai,
-                        'is_all_units' => $isAllUnits,
+                        'target_type' => $targetType,
+                        'is_all_units' => $effectiveIsAllUnits,
                         'status' => $validated['status'] ?? $agenda->status,
                     ];
 
@@ -164,11 +178,19 @@ class AgendaService
 
                     $agenda->update($updateData);
 
-                    if ($isAllUnits) {
+                    // Sync participants according to target_type
+                    if ($targetType === 'all_units') {
                         $allUnitIds = Unit::active()->pluck('id')->toArray();
                         $agenda->units()->sync($allUnitIds);
-                    } elseif (!empty($validated['unit_ids'])) {
-                        $agenda->units()->sync($validated['unit_ids']);
+                        $agenda->invitedUsers()->sync([]);
+                    } elseif ($targetType === 'selected_users') {
+                        $userIds = $validated['user_ids'] ?? [];
+                        $agenda->invitedUsers()->sync($userIds);
+                        $agenda->units()->sync([]);
+                    } else {
+                        $unitIds = $validated['unit_ids'] ?? ($validated['units'] ?? []);
+                        $agenda->units()->sync($unitIds);
+                        $agenda->invitedUsers()->sync([]);
                     }
 
                     ActivityLogger::log(

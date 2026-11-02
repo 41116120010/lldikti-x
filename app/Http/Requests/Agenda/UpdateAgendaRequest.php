@@ -86,10 +86,37 @@ class UpdateAgendaRequest extends FormRequest
         if ($this->exists('notulis_id') && blank($this->input('notulis_id'))) {
             $this->merge(['notulis_id' => null]);
         }
+
+        // Resolve target_type and is_all_units seamlessly
+        if ($this->has('target_type')) {
+            $targetType = (string) $this->input('target_type');
+            $this->merge([
+                'is_all_units' => ($targetType === 'all_units'),
+            ]);
+        } elseif ($this->has('is_all_units')) {
+            $isAll = $this->boolean('is_all_units');
+            if ($isAll) {
+                $this->merge(['target_type' => 'all_units']);
+            } elseif ($this->filled('user_ids')) {
+                $this->merge(['target_type' => 'selected_users']);
+            } else {
+                $this->merge(['target_type' => 'selected_units']);
+            }
+        }
     }
 
     public function rules(): array
     {
+        $user = $this->user();
+        $isAdministrator = $user?->isAdministrator() ?? false;
+
+        $targetTypeRule = ['required', 'string'];
+        if (! $isAdministrator) {
+            $targetTypeRule[] = Rule::in(['selected_units', 'selected_users']);
+        } else {
+            $targetTypeRule[] = Rule::in(['all_units', 'selected_units', 'selected_users']);
+        }
+
         return [
             'judul_rapat' => ['required', 'string', 'max:255'],
             'pimpinan_id' => ['nullable', 'exists:users,id'],
@@ -102,9 +129,12 @@ class UpdateAgendaRequest extends FormRequest
             'link_meeting' => ['nullable', 'string', 'max:500', Rule::requiredIf(fn () => in_array($this->input('tipe_rapat'), ['online', 'hybrid']))],
             'waktu_mulai' => ['required', 'date'],
             'waktu_selesai' => ['nullable', 'date', 'after:waktu_mulai'],
+            'target_type' => $targetTypeRule,
             'is_all_units' => ['nullable', 'boolean'],
-            'unit_ids' => ['nullable', 'array', Rule::requiredIf(fn () => !$this->boolean('is_all_units', true))],
+            'unit_ids' => ['nullable', 'array', Rule::requiredIf(fn () => $this->input('target_type') === 'selected_units')],
             'unit_ids.*' => ['exists:units,id'],
+            'user_ids' => ['nullable', 'array', Rule::requiredIf(fn () => $this->input('target_type') === 'selected_users')],
+            'user_ids.*' => ['exists:users,id'],
             'surat_edaran' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:5120'],
             'status' => ['nullable', 'string', Rule::in(['draft', 'scheduled', 'ongoing', 'completed', 'cancelled'])],
         ];
@@ -122,10 +152,21 @@ class UpdateAgendaRequest extends FormRequest
             'link_meeting' => 'Tautan Daring (Zoom/GMeet)',
             'waktu_mulai' => 'Waktu Mulai',
             'waktu_selesai' => 'Waktu Selesai',
+            'target_type' => 'Sasaran Peserta Rapat',
             'is_all_units' => 'Target Peserta',
             'unit_ids' => 'Unit Kerja yang Diundang',
+            'user_ids' => 'Daftar ASN yang Diundang',
             'surat_edaran' => 'Berkas Surat Edaran / Undangan',
             'status' => 'Status Agenda',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'unit_ids.required' => 'Pilih sekurang-kurangnya satu unit kerja sasaran rapat.',
+            'user_ids.required' => 'Pilih sekurang-kurangnya satu ASN sasaran rapat.',
+            'target_type.in' => 'Pilihan sasaran peserta rapat tidak valid.',
         ];
     }
 }

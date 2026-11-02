@@ -134,15 +134,16 @@
             <div class="space-y-4 pt-4 border-t border-slate-200">
                 <h3 class="text-sm font-extrabold uppercase tracking-wider text-slate-900">2. Sasaran Peserta & Unit Kerja</h3>
 
-                @if($currentUser->isAdministrator())
-                    <div class="space-y-3">
-                        <label class="flex items-center gap-3 p-3.5 bg-slate-50 border border-slate-300 rounded-xl cursor-pointer hover:bg-slate-100 transition">
+                <div class="space-y-3">
+                    @if($currentUser->isAdministrator())
+                        {{-- Opsi 1: Pleno Seluruh Unit (Khusus Administrator) --}}
+                        <label class="flex items-center gap-3.5 p-3.5 bg-slate-50 border border-slate-300 rounded-xl cursor-pointer hover:bg-slate-100 transition min-h-[44px]">
                             <input 
                                 type="radio" 
-                                name="is_all_units" 
-                                value="1" 
-                                {{ old('is_all_units', '1') == '1' ? 'checked' : '' }} 
-                                onchange="toggleUnitList(false)"
+                                name="target_type" 
+                                value="all_units" 
+                                {{ old('target_type', 'all_units') === 'all_units' ? 'checked' : '' }} 
+                                onchange="handleTargetTypeChange('all_units')"
                                 class="w-4 h-4 accent-slate-950"
                             >
                             <div>
@@ -151,13 +152,14 @@
                             </div>
                         </label>
 
-                        <label class="flex items-center gap-3 p-3.5 bg-slate-50 border border-slate-300 rounded-xl cursor-pointer hover:bg-slate-100 transition">
+                        {{-- Opsi 2: Unit Kerja Tertentu --}}
+                        <label class="flex items-center gap-3.5 p-3.5 bg-slate-50 border border-slate-300 rounded-xl cursor-pointer hover:bg-slate-100 transition min-h-[44px]">
                             <input 
                                 type="radio" 
-                                name="is_all_units" 
-                                value="0" 
-                                {{ old('is_all_units') === '0' ? 'checked' : '' }} 
-                                onchange="toggleUnitList(true)"
+                                name="target_type" 
+                                value="selected_units" 
+                                {{ old('target_type') === 'selected_units' ? 'checked' : '' }} 
+                                onchange="handleTargetTypeChange('selected_units')"
                                 class="w-4 h-4 accent-slate-950"
                             >
                             <div>
@@ -165,20 +167,64 @@
                                 <span class="text-[11px] text-slate-600 font-medium">Hanya pegawai dari unit kerja terpilih yang dapat mengisi presensi.</span>
                             </div>
                         </label>
-                    </div>
+                    @else
+                        {{-- Untuk Admin Unit: Opsi Rapat Unit Sendiri --}}
+                        <label class="flex items-center gap-3.5 p-3.5 bg-slate-50 border border-slate-300 rounded-xl cursor-pointer hover:bg-slate-100 transition min-h-[44px]">
+                            <input 
+                                type="radio" 
+                                name="target_type" 
+                                value="selected_units" 
+                                {{ old('target_type', 'selected_units') === 'selected_units' ? 'checked' : '' }} 
+                                onchange="handleTargetTypeChange('selected_units')"
+                                class="w-4 h-4 accent-slate-950"
+                            >
+                            <div>
+                                <span class="font-bold text-slate-950 text-xs block">Internal Unit Kerja: {{ $currentUser->unit?->nama_unit ?? 'Unit Anda' }}</span>
+                                <span class="text-[11px] text-slate-600 font-medium">Agenda ditujukan khusus untuk seluruh pegawai di lingkungan unit kerja Anda.</span>
+                            </div>
+                        </label>
+                    @endif
 
-                    <!-- Checklist Unit Kerja -->
-                    <div id="unit-selection-wrap" class="{{ old('is_all_units', '1') === '1' ? 'hidden' : '' }} p-4 bg-slate-50 border border-slate-300 rounded-xl space-y-3">
-                        <div class="text-xs font-bold text-slate-900">Pilih Unit Kerja yang Ditugaskan:</div>
+                    {{-- Opsi 3: Khusus ASN Tertentu (Personal Terpilih) --}}
+                    <label class="flex items-center gap-3.5 p-3.5 bg-slate-50 border border-slate-300 rounded-xl cursor-pointer hover:bg-slate-100 transition min-h-[44px]">
+                        <input 
+                            type="radio" 
+                            name="target_type" 
+                            value="selected_users" 
+                            {{ old('target_type') === 'selected_users' ? 'checked' : '' }} 
+                            onchange="handleTargetTypeChange('selected_users')"
+                            class="w-4 h-4 accent-slate-950"
+                        >
+                        <div>
+                            <span class="font-bold text-slate-950 text-xs flex items-center gap-2">
+                                <span>Khusus ASN Tertentu (Personal Terpilih)</span>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-indigo-100 text-indigo-900 border border-indigo-200">Personal</span>
+                            </span>
+                            <span class="text-[11px] text-slate-600 font-medium">Hanya pegawai ASN tertentu yang dipilih secara khusus yang dapat mengisi presensi rapat.</span>
+                        </div>
+                    </label>
+                </div>
+
+                <!-- 1. Checklist Unit Kerja (Ditampilkan jika target_type = selected_units dan user adalah Administrator) -->
+                @if($currentUser->isAdministrator())
+                    <div id="unit-selection-wrap" class="{{ old('target_type', 'all_units') === 'selected_units' ? '' : 'hidden' }} p-4 bg-slate-50 border border-slate-300 rounded-xl space-y-3">
+                        <div class="flex items-center justify-between">
+                            <div class="text-xs font-bold text-slate-900">Pilih Unit Kerja yang Ditugaskan:</div>
+                            <div class="flex items-center gap-2">
+                                <button type="button" onclick="selectAllUnits(true)" class="text-[11px] font-bold text-blue-900 hover:underline">Pilih Semua</button>
+                                <span class="text-slate-300">|</span>
+                                <button type="button" onclick="selectAllUnits(false)" class="text-[11px] font-bold text-slate-600 hover:underline">Hapus Semua</button>
+                            </div>
+                        </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-2">
                             @foreach($units as $unit)
-                                <label class="flex items-center gap-2 p-2 bg-white border border-slate-300 rounded-lg cursor-pointer hover:bg-slate-100 text-xs font-medium">
+                                <label class="flex items-center gap-2 p-2 bg-white border border-slate-300 rounded-lg cursor-pointer hover:bg-slate-100 text-xs font-medium min-h-[44px]">
                                     <input 
                                         type="checkbox" 
                                         name="unit_ids[]" 
                                         value="{{ $unit->id }}" 
                                         {{ in_array($unit->id, old('unit_ids', [])) ? 'checked' : '' }}
-                                        class="w-4 h-4 accent-slate-950 rounded"
+                                        class="w-4 h-4 accent-slate-950 rounded unit-checkbox"
                                     >
                                     <span class="font-mono font-bold text-slate-950">{{ $unit->kode_unit }}</span>
                                     <span class="text-slate-700 truncate">— {{ $unit->nama_unit }}</span>
@@ -190,13 +236,72 @@
                         @enderror
                     </div>
                 @else
-                    <div class="p-3.5 bg-slate-100 border border-slate-300 rounded-xl text-xs text-slate-900 flex items-center gap-2">
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                        <span>Agenda ini otomatis ditugaskan untuk unit Anda: <strong class="text-slate-950">{{ $currentUser->unit?->nama_unit }}</strong>.</span>
-                    </div>
-                    <input type="hidden" name="is_all_units" value="0">
-                    <input type="hidden" name="unit_ids[]" value="{{ $currentUser->unit_id }}">
+                    {{-- Hidden input unit_ids jika Admin Unit memilih selected_units --}}
+                    <input type="hidden" id="admin-unit-default-id" name="unit_ids[]" value="{{ $currentUser->unit_id }}" {{ old('target_type', 'selected_units') === 'selected_users' ? 'disabled' : '' }}>
                 @endif
+
+                <!-- 2. Checklist ASN Tertentu (Ditampilkan jika target_type = selected_users) -->
+                <div id="user-selection-wrap" class="{{ old('target_type') === 'selected_users' ? '' : 'hidden' }} p-4 bg-slate-50 border border-slate-300 rounded-xl space-y-3">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-bold text-slate-900">Pilih ASN yang Diundang:</span>
+                            <span id="selected-asn-badge" class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-indigo-100 text-indigo-900 border border-indigo-200">
+                                0 ASN Terpilih
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-2 text-xs">
+                            <button type="button" onclick="selectAllFilteredAsn(true)" class="text-[11px] font-bold text-indigo-900 hover:underline">Pilih Semua Terlihat</button>
+                            <span class="text-slate-300">|</span>
+                            <button type="button" onclick="selectAllFilteredAsn(false)" class="text-[11px] font-bold text-slate-600 hover:underline">Kosongkan Pilihan</button>
+                        </div>
+                    </div>
+
+                    <!-- Filter Pencarian Cepat ASN -->
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        </div>
+                        <input 
+                            type="text" 
+                            id="asn-search-input" 
+                            placeholder="Cari berdasarkan nama pegawai, NIP, atau unit kerja..." 
+                            oninput="filterAsnList(this.value)"
+                            class="input pl-9 text-xs w-full bg-white border-slate-300"
+                        >
+                    </div>
+
+                    <!-- Daftar Pegawai ASN -->
+                    <div id="asn-list-container" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
+                        @foreach($users as $u)
+                            <label class="asn-item flex items-center gap-2.5 p-2 bg-white border border-slate-300 rounded-lg cursor-pointer hover:bg-slate-100 text-xs font-medium min-h-[44px]"
+                                data-name="{{ strtolower($u->name) }}"
+                                data-nip="{{ $u->nip ?? '' }}"
+                                data-unit="{{ strtolower($u->unit?->nama_unit ?? '') }}"
+                            >
+                                <input 
+                                    type="checkbox" 
+                                    name="user_ids[]" 
+                                    value="{{ $u->id }}" 
+                                    {{ in_array($u->id, old('user_ids', [])) ? 'checked' : '' }}
+                                    onchange="updateAsnCount()"
+                                    class="w-4 h-4 accent-indigo-950 rounded asn-checkbox shrink-0"
+                                >
+                                <div class="min-w-0 flex-1">
+                                    <div class="font-bold text-slate-900 truncate">{{ $u->name }}</div>
+                                    <div class="text-[10px] text-slate-500 font-mono truncate">
+                                        NIP: {{ $u->nip ?? '-' }} &bull; {{ $u->unit?->kode_unit ?? 'Umum' }}
+                                    </div>
+                                </div>
+                            </label>
+                        @endforeach
+                    </div>
+                    <div id="asn-empty-state" class="hidden text-center py-4 text-xs text-slate-500 font-medium">
+                        Tidak ditemukan ASN yang cocok dengan kata kunci pencarian.
+                    </div>
+                    @error('user_ids')
+                        <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
             </div>
 
             <!-- 3. Penugasan Pimpinan & Notulis Rapat (Hybrid / Fleksibel) -->
@@ -393,6 +498,84 @@ function toggleUnitList(show) {
     }
 }
 
+function handleTargetTypeChange(targetType) {
+    const unitWrap = document.getElementById('unit-selection-wrap');
+    const userWrap = document.getElementById('user-selection-wrap');
+    const adminUnitDefaultId = document.getElementById('admin-unit-default-id');
+
+    if (targetType === 'all_units') {
+        if (unitWrap) unitWrap.classList.add('hidden');
+        if (userWrap) userWrap.classList.add('hidden');
+        if (adminUnitDefaultId) adminUnitDefaultId.disabled = true;
+    } else if (targetType === 'selected_units') {
+        if (unitWrap) unitWrap.classList.remove('hidden');
+        if (userWrap) userWrap.classList.add('hidden');
+        if (adminUnitDefaultId) adminUnitDefaultId.disabled = false;
+    } else if (targetType === 'selected_users') {
+        if (unitWrap) unitWrap.classList.add('hidden');
+        if (userWrap) userWrap.classList.remove('hidden');
+        if (adminUnitDefaultId) adminUnitDefaultId.disabled = true;
+        updateAsnCount();
+    }
+}
+
+function selectAllUnits(checked) {
+    const checkboxes = document.querySelectorAll('.unit-checkbox');
+    checkboxes.forEach(cb => cb.checked = checked);
+}
+
+function updateAsnCount() {
+    const checked = document.querySelectorAll('.asn-checkbox:checked').length;
+    const badge = document.getElementById('selected-asn-badge');
+    if (badge) {
+        badge.textContent = `${checked} ASN Terpilih`;
+        if (checked > 0) {
+            badge.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-indigo-600 text-white shadow-xs';
+        } else {
+            badge.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-indigo-100 text-indigo-900 border border-indigo-200';
+        }
+    }
+}
+
+function filterAsnList(query) {
+    const q = (query || '').toLowerCase().trim();
+    const items = document.querySelectorAll('.asn-item');
+    const emptyState = document.getElementById('asn-empty-state');
+    let visibleCount = 0;
+
+    items.forEach(item => {
+        const name = item.getAttribute('data-name') || '';
+        const nip = item.getAttribute('data-nip') || '';
+        const unit = item.getAttribute('data-unit') || '';
+
+        if (!q || name.includes(q) || nip.includes(q) || unit.includes(q)) {
+            item.classList.remove('hidden');
+            visibleCount++;
+        } else {
+            item.classList.add('hidden');
+        }
+    });
+
+    if (emptyState) {
+        if (visibleCount === 0) {
+            emptyState.classList.remove('hidden');
+        } else {
+            emptyState.classList.add('hidden');
+        }
+    }
+}
+
+function selectAllFilteredAsn(checked) {
+    const items = document.querySelectorAll('.asn-item');
+    items.forEach(item => {
+        if (!item.classList.contains('hidden')) {
+            const cb = item.querySelector('.asn-checkbox');
+            if (cb) cb.checked = checked;
+        }
+    });
+    updateAsnCount();
+}
+
 function handleSuratEdaranChange(event) {
     const fileInput = event.target;
     const previewContainer = document.getElementById('surat-edaran-client-preview');
@@ -468,6 +651,12 @@ function initAgendaForm() {
     if (tipeRapat) {
         toggleFormatFields(tipeRapat.value);
     }
+
+    const activeTargetRadio = document.querySelector('input[name="target_type"]:checked');
+    if (activeTargetRadio) {
+        handleTargetTypeChange(activeTargetRadio.value);
+    }
+    updateAsnCount();
 
     const suratEdaranInput = document.getElementById('surat_edaran');
     if (suratEdaranInput && !suratEdaranInput.dataset.previewBound) {

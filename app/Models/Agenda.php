@@ -41,6 +41,7 @@ class Agenda extends Model
         'waktu_mulai',
         'waktu_selesai',
         'is_all_units',
+        'target_type',
         'surat_edaran_path',
         'notulensi',
         'kesimpulan',
@@ -54,6 +55,7 @@ class Agenda extends Model
             'waktu_mulai' => 'datetime',
             'waktu_selesai' => 'datetime',
             'is_all_units' => 'boolean',
+            'target_type' => 'string',
             'report_config' => 'array',
         ];
     }
@@ -71,6 +73,11 @@ class Agenda extends Model
         });
 
         static::saving(function (Agenda $agenda) {
+            if (empty($agenda->target_type)) {
+                $agenda->target_type = $agenda->is_all_units ? 'all_units' : 'selected_units';
+            }
+            $agenda->is_all_units = ($agenda->target_type === 'all_units');
+
             if ($agenda->isDirty(['pimpinan_id', 'notulis_id']) && is_array($agenda->report_config)) {
                 $config = $agenda->report_config;
 
@@ -152,6 +159,17 @@ class Agenda extends Model
     public function units(): BelongsToMany
     {
         return $this->belongsToMany(Unit::class, 'agenda_units')
+            ->withTimestamps();
+    }
+
+    /**
+     * Relationship to specific civil servants (ASN) invited to this agenda.
+     *
+     * @return BelongsToMany<User, $this>
+     */
+    public function invitedUsers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'agenda_users')
             ->withTimestamps();
     }
 
@@ -265,9 +283,15 @@ class Agenda extends Model
             $sub->where('is_all_units', true)
                 ->orWhere('pimpinan_id', $user->id)
                 ->orWhere('notulis_id', $user->id)
-                ->orWhere('created_by', $user->id);
+                ->orWhere('created_by', $user->id)
+                ->orWhereHas('invitedUsers', function (Builder $uQuery) use ($user) {
+                    $uQuery->where('users.id', $user->id);
+                });
 
             if ($user->unit_id) {
+                $sub->orWhereHas('creator', function (Builder $cQuery) use ($user) {
+                    $cQuery->where('unit_id', $user->unit_id);
+                });
                 $sub->orWhereHas('units', function (Builder $uQuery) use ($user) {
                     $uQuery->where('units.id', $user->unit_id);
                 });
@@ -305,7 +329,7 @@ class Agenda extends Model
             return true;
         }
 
-        if ($this->is_all_units) {
+        if ($this->target_type === 'all_units' || $this->is_all_units) {
             return true;
         }
 
@@ -315,6 +339,15 @@ class Agenda extends Model
             ($this->notulis_id !== null && (int) $this->notulis_id === (int) $user->id)
         ) {
             return true;
+        }
+
+        // Jika sasaran adalah ASN tertentu
+        if ($this->target_type === 'selected_users') {
+            if ($this->relationLoaded('invitedUsers')) {
+                return $this->invitedUsers->contains('id', $user->id);
+            }
+
+            return $this->invitedUsers()->where('users.id', $user->id)->exists();
         }
 
         if (! $user->unit_id) {
@@ -760,12 +793,42 @@ class Agenda extends Model
     }
 
     /**
+     * Human-readable label for target participant scope.
+     */
+    public function getTargetLabelAttribute(): string
+    {
+        return match ($this->target_type) {
+            'all_units' => 'Seluruh Unit LLDIKTI (Pleno)',
+            'selected_users' => 'Khusus ASN Tertentu',
+            'selected_units' => 'Unit Kerja Tertentu',
+            default => $this->is_all_units ? 'Seluruh Unit LLDIKTI (Pleno)' : 'Unit Kerja Tertentu',
+        };
+    }
+
+    /**
      * Get total active civil servants (ASN) invited to this agenda.
      */
     public function getTotalInvitedAttribute(): int
     {
-        if ($this->is_all_units) {
+        if ($this->target_type === 'all_units' || $this->is_all_units) {
             return User::where('is_active', true)->count();
+        }
+
+        if ($this->target_type === 'selected_users') {
+            $invitedIds = $this->relationLoaded('invitedUsers')
+                ? $this->invitedUsers->pluck('id')->all()
+                : $this->invitedUsers()->pluck('users.id')->all();
+
+            if ($this->pimpinan_id) {
+                $invitedIds[] = (int) $this->pimpinan_id;
+            }
+            if ($this->notulis_id) {
+                $invitedIds[] = (int) $this->notulis_id;
+            }
+
+            $uniqueIds = array_values(array_unique(array_filter($invitedIds)));
+
+            return empty($uniqueIds) ? 0 : User::where('is_active', true)->whereIn('id', $uniqueIds)->count();
         }
 
         if ($this->relationLoaded('units')) {

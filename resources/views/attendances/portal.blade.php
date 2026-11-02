@@ -135,7 +135,9 @@
                                 <div class="flex items-center gap-1.5 text-slate-600 truncate">
                                     <svg class="text-slate-500 shrink-0" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/></svg>
                                     <span class="truncate">
-                                        @if($agenda->is_all_units)
+                                        @if($agenda->target_type === 'selected_users')
+                                            Khusus ASN Tertentu
+                                        @elseif($agenda->is_all_units || $agenda->target_type === 'all_units')
                                             Pleno Seluruh Unit
                                         @else
                                             {{ $agenda->units->pluck('kode_unit')->join(', ') }}

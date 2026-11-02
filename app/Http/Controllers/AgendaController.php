@@ -138,6 +138,7 @@ class AgendaController extends Controller
             'pimpinan.unit',
             'notulis.unit',
             'units',
+            'invitedUsers.unit',
         ]);
         $agenda->loadCount('attendances');
 
@@ -172,6 +173,7 @@ class AgendaController extends Controller
             'pimpinan.unit',
             'notulis.unit',
             'units',
+            'invitedUsers.unit',
         ]);
 
         $documentations = $agenda->documentations()
@@ -196,6 +198,7 @@ class AgendaController extends Controller
             $agenda->load([
                 'creator.unit',
                 'units',
+                'invitedUsers',
                 'pimpinan.unit',
                 'notulis.unit',
             ]);
@@ -314,6 +317,7 @@ class AgendaController extends Controller
             'pimpinan.unit',
             'notulis.unit',
             'units',
+            'invitedUsers.unit',
         ]);
 
         $attendances = $agenda->attendances()
