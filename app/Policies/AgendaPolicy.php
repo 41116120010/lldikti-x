@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\Agenda;
 use App\Models\User;
+use Illuminate\Auth\Access\Response;
 
 class AgendaPolicy
 {
@@ -48,19 +49,48 @@ class AgendaPolicy
     /**
      * Determine whether the user can view public/staff meeting details.
      */
-    public function viewStaff(User $user, Agenda $agenda): bool
+    public function viewStaff(User $user, Agenda $agenda): Response
     {
         // Staff cannot view draft or cancelled agendas (anti-bypass)
         if (in_array($agenda->status, ['draft', 'cancelled'])) {
-            return $user->isAdministrator() || ($user->isAdmin() && $agenda->created_by === $user->id);
+            return ($user->isAdministrator() || ($user->isAdmin() && (int) $agenda->created_by === (int) $user->id))
+                ? Response::allow()
+                : Response::deny('Agenda rapat ini berstatus draft atau telah dibatalkan.');
         }
 
+        // Administrator memiliki hak pengawasan penuh atas seluruh agenda rapat
         if ($user->isAdministrator()) {
-            return true;
+            return Response::allow();
         }
 
-        // Must be eligible for the agenda (Pleno or matching user's unit)
-        return $agenda->isUserEligible($user);
+        // Pembuat agenda, admin unit penyelenggara, serta pimpinan dan notulis yang ditunjuk
+        // selalu berhak melihat rincian agenda rapat
+        if (
+            (int) $agenda->created_by === (int) $user->id
+            || ($agenda->pimpinan_id !== null && (int) $agenda->pimpinan_id === (int) $user->id)
+            || ($agenda->notulis_id !== null && (int) $agenda->notulis_id === (int) $user->id)
+            || ($user->isAdmin() && $user->unit_id !== null && $agenda->creatorUnitId() === $user->unit_id)
+        ) {
+            return Response::allow();
+        }
+
+        // Peserta harus terdaftar sebagai sasaran agenda (Pleno / Unit Terpilih / ASN Terpilih)
+        if (! $agenda->isUserEligible($user)) {
+            return Response::deny('Anda tidak terdaftar sebagai peserta pada agenda rapat ini.');
+        }
+
+        // ATURAN KERAHASIAAN RAPAT SELESAI:
+        // Jika status rapat telah selesai (completed), peserta biasa hanya diizinkan melihat
+        // detail agenda dan notulensi jika terbukti telah mengisi presensi kehadiran.
+        if ($agenda->status === 'completed') {
+            return $agenda->hasUserAttended($user)
+                ? Response::allow()
+                : Response::deny('Agenda rapat ini telah selesai dan bersifat rahasia. Akses dokumentasi dan notulensi hanya diberikan kepada peserta yang telah mengisi presensi kehadiran serta pejabat yang ditunjuk.');
+        }
+
+        // Untuk sesi mendatang (scheduled) dan sedang berjalan (ongoing), peserta yang eligible
+        // diizinkan melihat informasi rapat agar dapat hadir dan melakukan presensi.
+        return Response::allow();
     }
 
     /**

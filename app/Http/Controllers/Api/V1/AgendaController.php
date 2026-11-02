@@ -14,6 +14,7 @@ use App\Http\Resources\DocumentationResource;
 use App\Models\Agenda;
 use App\Models\AgendaDocumentation;
 use App\Services\AgendaService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -34,6 +35,17 @@ class AgendaController extends Controller
         // Staff should not see draft or cancelled agendas unless designated
         if ($user->isStaff()) {
             $query->whereNotIn('status', ['draft', 'cancelled']);
+
+            // Aturan Kerahasiaan Rapat: Staf hanya dapat melihat agenda berstatus selesai (completed)
+            // apabila tercatat telah menghadiri rapat tersebut atau ditugaskan sebagai pimpinan/notulis
+            $query->where(function (Builder $q) use ($user) {
+                $q->where('status', '!=', 'completed')
+                    ->orWhere('pimpinan_id', $user->id)
+                    ->orWhere('notulis_id', $user->id)
+                    ->orWhereHas('attendances', function (Builder $attQuery) use ($user) {
+                        $attQuery->where('user_id', $user->id);
+                    });
+            });
         }
 
         // Filter: Tipe Rapat (daring/online, luring/offline, hybrid)
@@ -147,9 +159,22 @@ class AgendaController extends Controller
         $user = $request->user();
 
         // Check view permissions (Admin view or Staff view)
-        $canView = Gate::allows('view', $agenda) || Gate::allows('viewStaff', $agenda);
-        if (!$canView) {
-            abort(403, 'Anda tidak memiliki hak akses untuk melihat agenda rapat ini.');
+        if ($user->isStaff()) {
+            $response = Gate::inspect('viewStaff', $agenda);
+            if ($response->denied() && ! Gate::allows('view', $agenda)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $response->message() ?: 'Anda tidak memiliki hak akses untuk melihat agenda rapat ini.',
+                ], 403);
+            }
+        } else {
+            $canView = Gate::allows('view', $agenda) || Gate::allows('viewStaff', $agenda);
+            if (! $canView) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Anda tidak memiliki hak akses untuk melihat agenda rapat ini.',
+                ], 403);
+            }
         }
 
         $agenda->load([
