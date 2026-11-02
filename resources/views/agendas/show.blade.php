@@ -787,35 +787,28 @@
                 </div>
 
                 <!-- Pemimpin Rapat Selector -->
-                <div class="space-y-1.5">
-                    <label for="modal_pimpinan_id" class="block text-xs font-bold text-slate-800">
-                        Pemimpin Rapat
-                    </label>
-                    <select name="pimpinan_id" id="modal_pimpinan_id" class="w-full text-xs rounded-xl border-slate-300 focus:border-slate-900 focus:ring-slate-900 py-2.5 px-3 font-medium">
-                        <option value="">-- Gunakan Default: Pembuat Agenda ({{ $agenda->creator?->name }}) --</option>
-                        @foreach($users as $userItem)
-                            <option value="{{ $userItem->id }}" @selected(old('pimpinan_id', $agenda->pimpinan_id) == $userItem->id)>
-                                {{ $userItem->name }} ({{ $userItem->nip }}) &bull; {{ $userItem->unit?->kode_unit ?? 'Pusat' }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
+                <x-asn-role-selector 
+                    name="pimpinan_id"
+                    label="Pemimpin Rapat"
+                    roleTitle="(Penanggung Jawab Acara)"
+                    helpText="Nama dan NIP akan otomatis tertera di lembar pengesahan Berita Acara."
+                    :selectedId="old('pimpinan_id', $agenda->pimpinan_id)"
+                    :defaultUser="$agenda->creator ?? $currentUser"
+                    :users="$users"
+                    :invitedUserIds="$agenda->invitedUsers->pluck('id')->toArray()"
+                />
 
                 <!-- Notulis Rapat Selector -->
-                <div class="space-y-1.5">
-                    <label for="modal_notulis_id" class="block text-xs font-bold text-slate-800">
-                        Notulis Rapat
-                    </label>
-                    <select name="notulis_id" id="modal_notulis_id" class="w-full text-xs rounded-xl border-slate-300 focus:border-slate-900 focus:ring-slate-900 py-2.5 px-3 font-medium">
-                        <option value="">-- Gunakan Default: Pembuat Agenda ({{ $agenda->creator?->name }}) --</option>
-                        @foreach($users as $userItem)
-                            <option value="{{ $userItem->id }}" @selected(old('notulis_id', $agenda->notulis_id) == $userItem->id)>
-                                {{ $userItem->name }} ({{ $userItem->nip }}) &bull; {{ $userItem->unit?->kode_unit ?? 'Pusat' }}
-                            </option>
-                        @endforeach
-                    </select>
-                    <p class="text-[11px] text-slate-500 font-medium">Notulis yang ditunjuk berhak mengisi notulensi dan mengunggah dokumentasi foto saat status rapat <strong>Sedang Berlangsung (ongoing)</strong>.</p>
-                </div>
+                <x-asn-role-selector 
+                    name="notulis_id"
+                    label="Notulis Rapat"
+                    roleTitle="(Pencatat Notulensi & Dokumentasi)"
+                    helpText="Notulis yang ditunjuk berhak mengisi notulensi dan mengunggah dokumentasi foto saat status rapat Sedang Berlangsung."
+                    :selectedId="old('notulis_id', $agenda->notulis_id)"
+                    :defaultUser="$agenda->creator ?? $currentUser"
+                    :users="$users"
+                    :invitedUserIds="$agenda->invitedUsers->pluck('id')->toArray()"
+                />
             </div>
 
             <!-- 3. Pinned Modal Footer Actions -->

@@ -310,44 +310,28 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <!-- Pemimpin Rapat -->
-                    <div class="field">
-                        <label for="pimpinan_id" class="text-xs font-bold text-slate-900 block mb-1">
-                            Pemimpin Rapat
-                            <span class="text-[11px] font-normal text-slate-700">(Penanggung Jawab Acara)</span>
-                        </label>
-                        <select id="pimpinan_id" name="pimpinan_id" class="input w-full font-medium @error('pimpinan_id') input-error @enderror">
-                            <option value="">Default: Pembuat Agenda ({{ $currentUser->name }})</option>
-                            @foreach($users as $user)
-                                <option value="{{ $user->id }}" {{ old('pimpinan_id') == $user->id ? 'selected' : '' }}>
-                                    {{ $user->name }} (NIP: {{ $user->nip ?? '-' }}) — {{ $user->unit?->kode_unit ?? 'Pusat' }}
-                                </option>
-                            @endforeach
-                        </select>
-                        <p class="text-[11px] text-slate-600 font-medium mt-1">Nama dan NIP akan otomatis tertera di lembar pengesahan Berita Acara.</p>
-                        @error('pimpinan_id')
-                            <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>
-                        @enderror
-                    </div>
+                    <x-asn-role-selector 
+                        name="pimpinan_id"
+                        label="Pemimpin Rapat"
+                        roleTitle="(Penanggung Jawab Acara)"
+                        helpText="Nama dan NIP akan otomatis tertera di lembar pengesahan Berita Acara."
+                        :selectedId="old('pimpinan_id')"
+                        :defaultUser="$currentUser"
+                        :users="$users"
+                        :invitedUserIds="old('user_ids', [])"
+                    />
 
                     <!-- Notulis Rapat -->
-                    <div class="field">
-                        <label for="notulis_id" class="text-xs font-bold text-slate-900 block mb-1">
-                            Notulis Rapat
-                            <span class="text-[11px] font-normal text-slate-700">(Pencatat Notulensi & Dokumentasi)</span>
-                        </label>
-                        <select id="notulis_id" name="notulis_id" class="input w-full font-medium @error('notulis_id') input-error @enderror">
-                            <option value="">Default: Pembuat Agenda ({{ $currentUser->name }})</option>
-                            @foreach($users as $user)
-                                <option value="{{ $user->id }}" {{ old('notulis_id') == $user->id ? 'selected' : '' }}>
-                                    {{ $user->name }} (NIP: {{ $user->nip ?? '-' }}) — {{ $user->unit?->kode_unit ?? 'Pusat' }}
-                                </option>
-                            @endforeach
-                        </select>
-                        <p class="text-[11px] text-slate-600 font-medium mt-1">Pegawai yang ditunjuk otomatis berhak mengisi notulen saat rapat berlangsung.</p>
-                        @error('notulis_id')
-                            <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>
-                        @enderror
-                    </div>
+                    <x-asn-role-selector 
+                        name="notulis_id"
+                        label="Notulis Rapat"
+                        roleTitle="(Pencatat Notulensi & Dokumentasi)"
+                        helpText="Pegawai yang ditunjuk otomatis berhak mengisi notulen saat rapat berlangsung."
+                        :selectedId="old('notulis_id')"
+                        :defaultUser="$currentUser"
+                        :users="$users"
+                        :invitedUserIds="old('user_ids', [])"
+                    />
                 </div>
             </div>
 
@@ -514,6 +498,20 @@ function handleTargetTypeChange(targetType) {
         if (adminUnitDefaultId) adminUnitDefaultId.disabled = true;
         updateAsnCount();
     }
+    notifyRoleSelectors(targetType);
+}
+
+function notifyRoleSelectors(targetType) {
+    document.querySelectorAll('.asn-role-selector-field').forEach(field => {
+        const instId = field.getAttribute('data-instance');
+        if (instId && window[instId]) {
+            if (targetType) {
+                window[instId].syncWithTargetType(targetType);
+            } else {
+                window[instId].refreshInvitedFromForm();
+            }
+        }
+    });
 }
 
 function selectAllUnits(checked) {
@@ -532,6 +530,7 @@ function updateAsnCount() {
             badge.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-200 text-slate-800';
         }
     }
+    notifyRoleSelectors();
 }
 
 function filterAsnList(query) {
