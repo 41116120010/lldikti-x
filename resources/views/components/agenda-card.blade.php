@@ -68,7 +68,7 @@
                 <div class="flex items-center gap-2 pt-1">
                     <svg class="text-slate-600 shrink-0" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/></svg>
                     @if ($agenda->target_type === 'selected_users')
-                        <span class="text-indigo-950 font-bold truncate">Khusus ASN Tertentu</span>
+                        <span class="text-slate-900 font-bold truncate">Khusus ASN Tertentu</span>
                     @elseif ($agenda->is_all_units || $agenda->target_type === 'all_units')
                         <span class="text-emerald-900 font-bold">Seluruh Unit LLDIKTI (Pleno)</span>
                     @else

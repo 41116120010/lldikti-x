@@ -348,23 +348,23 @@
                 <div class="p-5">
                     @if($agenda->target_type === 'selected_users')
                         <div class="space-y-3">
-                            <div class="p-3 bg-indigo-50 border border-indigo-200 rounded-xl text-xs text-indigo-950 font-bold flex items-center justify-between">
+                            <div class="p-3 bg-slate-100 border border-slate-300 rounded-xl text-xs text-slate-900 font-bold flex items-center justify-between">
                                 <div class="flex items-center gap-2">
-                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" class="text-indigo-600 shrink-0"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                                    <span>Khusus ASN Tertentu (Personal Terpilih)</span>
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-700 shrink-0"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                    <span>Khusus Pegawai ASN Tertentu</span>
                                 </div>
-                                <span class="px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-indigo-100 text-indigo-900 border border-indigo-200">
+                                <span class="px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-white text-slate-900 border border-slate-300 shadow-2xs">
                                     {{ $agenda->invitedUsers->count() }} Pegawai
                                 </span>
                             </div>
                             <div class="text-[11px] text-slate-600 font-semibold">Daftar Pegawai yang Diundang:</div>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
                                 @forelse($agenda->invitedUsers as $u)
-                                    <div class="p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs {{ $u->id === $currentUser->id ? 'border-indigo-400 bg-indigo-50/50' : '' }}">
-                                        <div class="font-bold text-slate-900 truncate">
-                                            {{ $u->name }}
+                                    <div class="p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs {{ $u->id === $currentUser->id ? 'border-blue-300 bg-blue-50/50' : '' }}">
+                                        <div class="font-bold text-slate-900 truncate flex items-center gap-1.5">
+                                            <span>{{ $u->name }}</span>
                                             @if($u->id === $currentUser->id)
-                                                <span class="text-[10px] font-bold text-indigo-700">(Anda)</span>
+                                                <span class="text-[10px] font-bold text-blue-900 bg-blue-100 border border-blue-200 px-1.5 py-0.5 rounded">Anda</span>
                                             @endif
                                         </div>
                                         <div class="text-[10px] text-slate-500 font-mono truncate">

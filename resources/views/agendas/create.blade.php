@@ -185,7 +185,7 @@
                         </label>
                     @endif
 
-                    {{-- Opsi 3: Khusus ASN Tertentu (Personal Terpilih) --}}
+                    {{-- Opsi 3: Khusus Pegawai ASN Tertentu --}}
                     <label class="flex items-center gap-3.5 p-3.5 bg-slate-50 border border-slate-300 rounded-xl cursor-pointer hover:bg-slate-100 transition min-h-[44px]">
                         <input 
                             type="radio" 
@@ -196,11 +196,8 @@
                             class="w-4 h-4 accent-slate-950"
                         >
                         <div>
-                            <span class="font-bold text-slate-950 text-xs flex items-center gap-2">
-                                <span>Khusus ASN Tertentu (Personal Terpilih)</span>
-                                <span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-indigo-100 text-indigo-900 border border-indigo-200">Personal</span>
-                            </span>
-                            <span class="text-[11px] text-slate-600 font-medium">Hanya pegawai ASN tertentu yang dipilih secara khusus yang dapat mengisi presensi rapat.</span>
+                            <span class="font-bold text-slate-950 text-xs block">Khusus Pegawai ASN Tertentu</span>
+                            <span class="text-[11px] text-slate-600 font-medium">Hanya pegawai ASN yang dipilih secara spesifik yang dapat melihat dan mengisi presensi rapat.</span>
                         </div>
                     </label>
                 </div>
@@ -245,12 +242,12 @@
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div class="flex items-center gap-2">
                             <span class="text-xs font-bold text-slate-900">Pilih ASN yang Diundang:</span>
-                            <span id="selected-asn-badge" class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-indigo-100 text-indigo-900 border border-indigo-200">
+                            <span id="selected-asn-badge" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-200 text-slate-800">
                                 0 ASN Terpilih
                             </span>
                         </div>
                         <div class="flex items-center gap-2 text-xs">
-                            <button type="button" onclick="selectAllFilteredAsn(true)" class="text-[11px] font-bold text-indigo-900 hover:underline">Pilih Semua Terlihat</button>
+                            <button type="button" onclick="selectAllFilteredAsn(true)" class="text-[11px] font-bold text-blue-900 hover:underline">Pilih Semua Terlihat</button>
                             <span class="text-slate-300">|</span>
                             <button type="button" onclick="selectAllFilteredAsn(false)" class="text-[11px] font-bold text-slate-600 hover:underline">Kosongkan Pilihan</button>
                         </div>
@@ -284,7 +281,7 @@
                                     value="{{ $u->id }}" 
                                     {{ in_array($u->id, old('user_ids', [])) ? 'checked' : '' }}
                                     onchange="updateAsnCount()"
-                                    class="w-4 h-4 accent-indigo-950 rounded asn-checkbox shrink-0"
+                                    class="w-4 h-4 accent-slate-950 rounded asn-checkbox shrink-0"
                                 >
                                 <div class="min-w-0 flex-1">
                                     <div class="font-bold text-slate-900 truncate">{{ $u->name }}</div>
@@ -530,9 +527,9 @@ function updateAsnCount() {
     if (badge) {
         badge.textContent = `${checked} ASN Terpilih`;
         if (checked > 0) {
-            badge.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-indigo-600 text-white shadow-xs';
+            badge.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-slate-900 text-white shadow-2xs';
         } else {
-            badge.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-indigo-100 text-indigo-900 border border-indigo-200';
+            badge.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-200 text-slate-800';
         }
     }
 }
