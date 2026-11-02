@@ -239,10 +239,22 @@ class PasswordResetTest extends TestCase
         ]);
     }
 
-    public function test_sanctum_tokens_are_revoked_upon_password_reset(): void
+    public function test_sanctum_tokens_and_web_sessions_are_revoked_upon_password_reset(): void
     {
         $this->user->createToken('Mobile App Device');
         $this->assertEquals(1, $this->user->tokens()->count());
+
+        if (\Illuminate\Support\Facades\Schema::hasTable(config('session.table', 'sessions'))) {
+            \Illuminate\Support\Facades\DB::table(config('session.table', 'sessions'))->insert([
+                'id' => 'dummy_session_id_123',
+                'user_id' => $this->user->id,
+                'ip_address' => '127.0.0.1',
+                'user_agent' => 'PHPUnit Browser',
+                'payload' => 'dummy_payload',
+                'last_activity' => time(),
+            ]);
+            $this->assertEquals(1, \Illuminate\Support\Facades\DB::table(config('session.table', 'sessions'))->where('user_id', $this->user->id)->count());
+        }
 
         $token = Password::broker()->createToken($this->user);
 
@@ -255,6 +267,24 @@ class PasswordResetTest extends TestCase
 
         $response->assertRedirect(route('login'));
         $this->assertEquals(0, $this->user->fresh()->tokens()->count());
+
+        if (\Illuminate\Support\Facades\Schema::hasTable(config('session.table', 'sessions'))) {
+            $this->assertEquals(0, \Illuminate\Support\Facades\DB::table(config('session.table', 'sessions'))->where('user_id', $this->user->id)->count());
+        }
+    }
+
+    public function test_password_reset_rejects_weak_passwords(): void
+    {
+        $token = Password::broker()->createToken($this->user);
+
+        $response = $this->post(route('password.update'), [
+            'token' => $token,
+            'email' => $this->user->email,
+            'password' => 'weakpassword',
+            'password_confirmation' => 'weakpassword',
+        ]);
+
+        $response->assertSessionHasErrors('password');
     }
 
     public function test_user_can_authenticate_with_new_password_after_reset(): void

@@ -27,19 +27,7 @@ class PasswordResetLinkController extends Controller
     public function store(ForgotPasswordRequest $request): RedirectResponse
     {
         $identity = trim((string) $request->validated('identity'));
-        $digitsOnly = (string) preg_replace('/\s+/', '', $identity);
-        $lowerIdentity = strtolower($identity);
-
-        // Support multi-identifier (Email, NIP 18 Digit, or Username) case-insensitively across PostgreSQL & MySQL
-        $user = User::query()
-            ->whereRaw('LOWER(email) = ?', [$lowerIdentity])
-            ->orWhereRaw('LOWER(username) = ?', [$lowerIdentity])
-            ->when($digitsOnly !== '' && ctype_digit($digitsOnly), function ($query) use ($digitsOnly) {
-                $query->orWhere('nip', $digitsOnly);
-            }, function ($query) use ($identity) {
-                $query->orWhere('nip', $identity);
-            })
-            ->first();
+        $user = User::findByMultiIdentifier($identity, includeEmail: true);
 
         // 1. Explicit validation when identity is not registered in employee database
         if (! $user) {
@@ -110,34 +98,11 @@ class PasswordResetLinkController extends Controller
         );
 
         // 7. Mask email address for civil servant privacy
-        $maskedEmail = $this->maskEmail($user->email);
+        $maskedEmail = User::maskEmail($user->email);
 
         return back()->with(
             'status',
             'Tautan atur ulang kata sandi telah dikirimkan ke email kedinasan terdaftar: ' . $maskedEmail . '. Silakan periksa kotak masuk atau folder spam Anda.'
         );
-    }
-
-    /**
-     * Mask email address for privacy (e.g. a***a@lldiktiwilayahx.kemdiktisaintek.go.id).
-     */
-    private function maskEmail(string $email): string
-    {
-        $parts = explode('@', $email, 2);
-        if (count($parts) < 2) {
-            return $email;
-        }
-
-        $name = $parts[0];
-        $domain = $parts[1];
-        $len = strlen($name);
-
-        if ($len <= 2) {
-            $maskedName = substr($name, 0, 1) . '***';
-        } else {
-            $maskedName = substr($name, 0, 1) . str_repeat('*', max($len - 2, 3)) . substr($name, -1);
-        }
-
-        return $maskedName . '@' . $domain;
     }
 }

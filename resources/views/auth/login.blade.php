@@ -118,6 +118,7 @@
                     placeholder="Masukkan Username atau NIP"
                     required
                     autocomplete="username"
+                    @error('login') aria-invalid="true" @enderror
                     autofocus
                 >
             </div>
@@ -137,8 +138,9 @@
                         placeholder="Masukkan Kata Sandi"
                         required
                         autocomplete="current-password"
+                        @error('password') aria-invalid="true" @enderror
                     >
-                    <button type="button" class="auth-password-toggle" data-toggle-password="password-input" aria-label="Tampilkan kata sandi" title="Tampilkan/Sembunyikan">
+                    <button type="button" class="auth-password-toggle" data-toggle-password="password-input" aria-label="Tampilkan kata sandi" aria-pressed="false" title="Tampilkan/Sembunyikan">
                         <svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                     </button>
                 </div>

@@ -12,9 +12,11 @@ use App\Services\ActivityLogger;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class AuthController extends Controller
@@ -58,18 +60,7 @@ class AuthController extends Controller
     public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
     {
         $identity = trim((string) $request->validated('identity'));
-        $digitsOnly = (string) preg_replace('/\s+/', '', $identity);
-        $lowerIdentity = strtolower($identity);
-
-        $user = User::query()
-            ->whereRaw('LOWER(email) = ?', [$lowerIdentity])
-            ->orWhereRaw('LOWER(username) = ?', [$lowerIdentity])
-            ->when($digitsOnly !== '' && ctype_digit($digitsOnly), function ($query) use ($digitsOnly) {
-                $query->orWhere('nip', $digitsOnly);
-            }, function ($query) use ($identity) {
-                $query->orWhere('nip', $identity);
-            })
-            ->first();
+        $user = User::findByMultiIdentifier($identity, includeEmail: true);
 
         if (! $user) {
             return response()->json([
@@ -144,7 +135,7 @@ class AuthController extends Controller
             user: $user
         );
 
-        $maskedEmail = $this->maskEmail($user->email);
+        $maskedEmail = User::maskEmail($user->email);
 
         return response()->json([
             'success' => true,
@@ -171,6 +162,13 @@ class AuthController extends Controller
 
                 // Strict Rule AGENTS.md §3.6: Revoke all active Sanctum mobile tokens on password change
                 $user->tokens()->delete();
+
+                // Revoke all existing web sessions across devices (SESSION_DRIVER=database)
+                if (Schema::hasTable(config('session.table', 'sessions'))) {
+                    DB::table(config('session.table', 'sessions'))
+                        ->where('user_id', $user->id)
+                        ->delete();
+                }
 
                 ActivityLogger::log(
                     type: 'AUTH_PASSWORD_RESET',
@@ -234,29 +232,6 @@ class AuthController extends Controller
             'success' => true,
             'message' => 'Berhasil keluar dan token dicabut.',
         ]);
-    }
-
-    /**
-     * Mask email address for civil servant privacy.
-     */
-    private function maskEmail(string $email): string
-    {
-        $parts = explode('@', $email, 2);
-        if (count($parts) < 2) {
-            return $email;
-        }
-
-        $name = $parts[0];
-        $domain = $parts[1];
-        $len = strlen($name);
-
-        if ($len <= 2) {
-            $maskedName = substr($name, 0, 1) . '***';
-        } else {
-            $maskedName = substr($name, 0, 1) . str_repeat('*', max($len - 2, 3)) . substr($name, -1);
-        }
-
-        return $maskedName . '@' . $domain;
     }
 }
 

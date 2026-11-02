@@ -455,8 +455,9 @@
     .auth-field-row label { text-transform: uppercase; font-size: 11px; font-weight: 800; letter-spacing: .04em; margin: 0; color: #0f172a }
 
     .auth-password-wrap { position: relative }
-    .auth-password-wrap .input { width: 100%; padding-right: 44px }
-    .auth-password-toggle { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); border: 0; background: transparent; color: #334155; cursor: pointer; padding: 8px; display: grid; place-items: center }
+    .auth-password-wrap .input { width: 100%; padding-right: 48px }
+    .auth-password-toggle { position: absolute; right: 0; top: 50%; transform: translateY(-50%); border: 0; background: transparent; color: #334155; cursor: pointer; padding: 0; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; min-width: 44px; min-height: 44px; border-radius: 6px }
+    .auth-password-toggle:focus-visible { outline: 2px solid #0f172a; outline-offset: -2px }
     .auth-password-toggle svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round }
 
     .auth-row { display: flex; align-items: center; margin: 18px 0 22px }

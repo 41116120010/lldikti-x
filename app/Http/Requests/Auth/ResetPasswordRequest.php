@@ -25,7 +25,7 @@ class ResetPasswordRequest extends FormRequest
         return [
             'token' => ['required', 'string'],
             'email' => ['required', 'email'],
-            'password' => ['required', 'confirmed', Password::min(8)],
+            'password' => ['required', 'confirmed', Password::defaults()],
         ];
     }
 
@@ -56,7 +56,10 @@ class ResetPasswordRequest extends FormRequest
             'email.required' => 'Alamat email wajib diisi.',
             'email.email' => 'Format alamat email tidak valid.',
             'password.required' => 'Kata sandi baru wajib diisi.',
-            'password.min' => 'Kata sandi baru harus memiliki panjang minimal :min karakter.',
+            'password.min' => 'Kata sandi baru minimal harus terdiri dari :min karakter.',
+            'password.letters' => 'Kata sandi baru harus memuat huruf.',
+            'password.mixed_case' => 'Kata sandi baru harus memuat kombinasi huruf besar dan huruf kecil.',
+            'password.numbers' => 'Kata sandi baru harus memuat sekurang-kurangnya satu angka (0-9).',
             'password.confirmed' => 'Konfirmasi kata sandi baru tidak cocok.',
         ];
     }

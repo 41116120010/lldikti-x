@@ -106,6 +106,7 @@
                     placeholder="nama@lldiktiwilayahx.kemdiktisaintek.go.id"
                     required
                     autocomplete="email"
+                    @error('email') aria-invalid="true" @enderror
                 >
             </div>
 
@@ -121,9 +122,10 @@
                         placeholder="Minimal 8 karakter"
                         required
                         autocomplete="new-password"
+                        @error('password') aria-invalid="true" @enderror
                         autofocus
                     >
-                    <button type="button" class="auth-password-toggle" data-toggle-password="password-input" aria-label="Tampilkan kata sandi" title="Tampilkan/Sembunyikan">
+                    <button type="button" class="auth-password-toggle" data-toggle-password="password-input" aria-label="Tampilkan kata sandi" aria-pressed="false" title="Tampilkan/Sembunyikan">
                         <svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                     </button>
                 </div>
@@ -141,8 +143,9 @@
                         placeholder="Ulangi kata sandi baru"
                         required
                         autocomplete="new-password"
+                        @error('password_confirmation') aria-invalid="true" @enderror
                     >
-                    <button type="button" class="auth-password-toggle" data-toggle-password="password-confirm-input" aria-label="Tampilkan konfirmasi kata sandi" title="Tampilkan/Sembunyikan">
+                    <button type="button" class="auth-password-toggle" data-toggle-password="password-confirm-input" aria-label="Tampilkan konfirmasi kata sandi" aria-pressed="false" title="Tampilkan/Sembunyikan">
                         <svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                     </button>
                 </div>
@@ -156,7 +159,7 @@
                 </div>
                 <ul class="list-disc list-inside text-slate-500 space-y-0.5 pl-1">
                     <li>Panjang minimal 8 karakter.</li>
-                    <li>Disarankan memuat huruf besar, huruf kecil, dan angka.</li>
+                    <li>Wajib memuat kombinasi huruf besar, huruf kecil, dan angka.</li>
                 </ul>
             </div>
 

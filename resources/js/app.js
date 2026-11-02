@@ -89,6 +89,9 @@ function initGlobalListeners() {
     document.querySelectorAll('[data-toggle-password]').forEach(button => {
         if (button.dataset.hasListener === 'true') return;
         button.dataset.hasListener = 'true';
+        if (!button.hasAttribute('aria-pressed')) {
+            button.setAttribute('aria-pressed', 'false');
+        }
 
         button.addEventListener('click', () => {
             const input = document.querySelector('#' + button.dataset.togglePassword);
@@ -98,6 +101,7 @@ function initGlobalListeners() {
             const svg = button.querySelector('svg');
             if (svg) svg.innerHTML = show ? eyeOffIcon : eyeIcon;
             button.setAttribute('aria-label', show ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi');
+            button.setAttribute('aria-pressed', show ? 'true' : 'false');
         });
     });
 

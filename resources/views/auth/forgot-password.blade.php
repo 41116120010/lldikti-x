@@ -110,6 +110,7 @@
                     value="{{ old('identity') }}"
                     placeholder="Contoh: 19701205... / afdalisma / nama@..."
                     required
+                    @error('identity') aria-invalid="true" @enderror
                     autofocus
                 >
             </div>

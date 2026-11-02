@@ -80,6 +80,27 @@ class MultiIdentifierAuthenticationTest extends TestCase
 
         $this->assertGuest();
         $response->assertSessionHasErrors('login');
+
+        $this->assertDatabaseHas('activity_logs', [
+            'activity_type' => 'AUTH_LOGIN_FAILED',
+            'target_id' => $user->id,
+        ]);
+    }
+
+    public function test_non_existent_user_login_attempt_triggers_audit_telemetry(): void
+    {
+        $response = $this->post('/login', [
+            'login' => 'nonexistent_nip_or_username',
+            'password' => 'WrongPassword123!',
+        ]);
+
+        $this->assertGuest();
+        $response->assertSessionHasErrors('login');
+
+        $this->assertDatabaseHas('activity_logs', [
+            'activity_type' => 'AUTH_LOGIN_FAILED',
+            'target_id' => null,
+        ]);
     }
 
     public function test_inactive_user_cannot_login(): void

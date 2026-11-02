@@ -183,4 +183,64 @@ class User extends Authenticatable
     {
         $this->notify(new ResetPasswordNotification($token));
     }
+
+    /**
+     * Find user by multi-identifier (NIP, Username, or optional Email).
+     *
+     * Handles 18-digit NIP with or without whitespace, case-insensitive username,
+     * and optional case-insensitive official agency email.
+     */
+    public static function findByMultiIdentifier(string $identifier, bool $includeEmail = true): ?self
+    {
+        $identity = trim($identifier);
+        if ($identity === '') {
+            return null;
+        }
+
+        $digitsOnly = (string) preg_replace('/\s+/', '', $identity);
+        $lowerIdentity = strtolower($identity);
+
+        return static::query()
+            ->where(function (Builder $query) use ($digitsOnly, $lowerIdentity, $identity, $includeEmail) {
+                $query->whereRaw('LOWER(username) = ?', [$lowerIdentity]);
+
+                if ($includeEmail) {
+                    $query->orWhereRaw('LOWER(email) = ?', [$lowerIdentity]);
+                }
+
+                if ($digitsOnly !== '' && ctype_digit($digitsOnly)) {
+                    $query->orWhere('nip', $digitsOnly);
+                } else {
+                    $query->orWhere('nip', $identity);
+                }
+            })
+            ->first();
+    }
+
+    /**
+     * Mask email address for civil servant privacy (e.g. a***a@lldiktiwilayahx.kemdiktisaintek.go.id).
+     */
+    public static function maskEmail(?string $email): string
+    {
+        if (empty($email)) {
+            return '-';
+        }
+
+        $parts = explode('@', $email, 2);
+        if (count($parts) < 2) {
+            return $email;
+        }
+
+        $name = $parts[0];
+        $domain = $parts[1];
+        $len = strlen($name);
+
+        if ($len <= 2) {
+            $maskedName = substr($name, 0, 1) . '***';
+        } else {
+            $maskedName = substr($name, 0, 1) . str_repeat('*', max($len - 2, 3)) . substr($name, -1);
+        }
+
+        return $maskedName . '@' . $domain;
+    }
 }

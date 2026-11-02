@@ -9,8 +9,10 @@ use App\Services\ActivityLogger;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -44,6 +46,13 @@ class NewPasswordController extends Controller
 
                 // Strict Rule AGENTS.md §3.6: Revoke all active Sanctum mobile tokens on password change
                 $user->tokens()->delete();
+
+                // Revoke all existing web sessions across devices (SESSION_DRIVER=database)
+                if (Schema::hasTable(config('session.table', 'sessions'))) {
+                    DB::table(config('session.table', 'sessions'))
+                        ->where('user_id', $user->id)
+                        ->delete();
+                }
 
                 // Audit Trail
                 ActivityLogger::log(

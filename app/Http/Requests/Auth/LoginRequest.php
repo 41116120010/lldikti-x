@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Auth;
 
 use App\Models\User;
+use App\Services\ActivityLogger;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -88,17 +89,7 @@ class LoginRequest extends FormRequest
         $rawInput = trim($this->input('login'));
         $password = (string) $this->input('password');
 
-        // Check if raw input stripped of spaces consists solely of digits (NIP format)
-        $digitsOnly = preg_replace('/\s+/', '', $rawInput);
-        if ($digitsOnly !== '' && ctype_digit($digitsOnly)) {
-            $field = 'nip';
-            $loginValue = $digitsOnly;
-            $user = User::where('nip', $loginValue)->first();
-        } else {
-            $field = 'username';
-            $loginValue = $rawInput;
-            $user = User::whereRaw('LOWER(username) = ?', [strtolower($loginValue)])->first();
-        }
+        $user = User::findByMultiIdentifier($rawInput, includeEmail: false);
 
         /*
          * Always run a real hash comparison, even when no account matches.
@@ -117,6 +108,20 @@ class LoginRequest extends FormRequest
 
         if ($user === null || ! $passwordMatches || ! $isActive) {
             RateLimiter::hit($this->throttleKey());
+
+            // Telemetry / Audit Trail: Log failed login attempt for security monitoring
+            ActivityLogger::log(
+                type: 'AUTH_LOGIN_FAILED',
+                description: "Percobaan login gagal untuk identitas: [{$rawInput}] dari IP: {$this->ip()}.",
+                targetModel: $user ? get_class($user) : null,
+                targetId: $user?->id,
+                properties: [
+                    'ip' => $this->ip(),
+                    'user_agent' => $this->userAgent(),
+                    'identifier_attempted' => $rawInput,
+                ],
+                user: null
+            );
 
             /*
              * One message for every failure mode: unknown identifier, wrong

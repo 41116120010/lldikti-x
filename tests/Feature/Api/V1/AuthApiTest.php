@@ -297,6 +297,18 @@ class AuthApiTest extends TestCase
         $oldToken = $user->createToken('AndroidDevice')->plainTextToken;
         $this->assertEquals(1, $user->tokens()->count());
 
+        if (\Illuminate\Support\Facades\Schema::hasTable(config('session.table', 'sessions'))) {
+            \Illuminate\Support\Facades\DB::table(config('session.table', 'sessions'))->insert([
+                'id' => 'dummy_api_session_456',
+                'user_id' => $user->id,
+                'ip_address' => '127.0.0.1',
+                'user_agent' => 'Mobile API Test',
+                'payload' => 'payload',
+                'last_activity' => time(),
+            ]);
+            $this->assertEquals(1, \Illuminate\Support\Facades\DB::table(config('session.table', 'sessions'))->where('user_id', $user->id)->count());
+        }
+
         $resetToken = Password::broker()->createToken($user);
 
         $response = $this->postJson('/api/v1/auth/reset-password', [
@@ -311,6 +323,28 @@ class AuthApiTest extends TestCase
 
         $this->assertTrue(Hash::check('ResetPass99!', $user->fresh()->password));
         $this->assertEquals(0, $user->tokens()->count());
+
+        if (\Illuminate\Support\Facades\Schema::hasTable(config('session.table', 'sessions'))) {
+            $this->assertEquals(0, \Illuminate\Support\Facades\DB::table(config('session.table', 'sessions'))->where('user_id', $user->id)->count());
+        }
+    }
+
+    public function test_reset_password_via_api_rejects_weak_password(): void
+    {
+        $user = User::where('is_active', true)->whereNotNull('email')->first();
+        $this->assertNotNull($user);
+
+        $resetToken = Password::broker()->createToken($user);
+
+        $response = $this->postJson('/api/v1/auth/reset-password', [
+            'token' => $resetToken,
+            'email' => $user->email,
+            'password' => 'weakpassword',
+            'password_confirmation' => 'weakpassword',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['password']);
     }
 }
 
