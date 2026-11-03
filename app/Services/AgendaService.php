@@ -37,6 +37,8 @@ class AgendaService
                     $waktuMulai = $validated['waktu_mulai'];
                     $waktuSelesai = !empty($validated['waktu_selesai']) ? $validated['waktu_selesai'] : null;
 
+                    $suratEdaranType = $validated['surat_edaran_type'] ?? ($suratEdaran ? 'upload' : 'upload');
+
                     $agendaData = [
                         'created_by' => $creator->id,
                         'pimpinan_id' => $validated['pimpinan_id'] ?? null,
@@ -51,6 +53,7 @@ class AgendaService
                         'waktu_selesai' => $waktuSelesai,
                         'target_type' => $targetType,
                         'is_all_units' => $effectiveIsAllUnits,
+                        'surat_edaran_type' => $suratEdaranType,
                         'status' => $validated['status'] ?? 'scheduled',
                     ];
 
@@ -171,6 +174,10 @@ class AgendaService
                         'is_all_units' => $effectiveIsAllUnits,
                         'status' => $validated['status'] ?? $agenda->status,
                     ];
+
+                    if (isset($validated['surat_edaran_type'])) {
+                        $updateData['surat_edaran_type'] = $validated['surat_edaran_type'];
+                    }
 
                     if ($newCircularPath !== null) {
                         $updateData['surat_edaran_path'] = $newCircularPath;

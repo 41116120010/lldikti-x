@@ -66,6 +66,8 @@ Route::prefix('v1')->group(function () {
         Route::match(['PUT', 'POST'], '/agendas/{agenda}', [AgendaController::class, 'update'])->name('api.v1.agendas.update');
         Route::get('/agendas/{agenda}/surat-edaran', [AgendaController::class, 'streamSuratEdaran'])->name('api.v1.agendas.surat-edaran.stream');
         Route::post('/agendas/{agenda}/surat-edaran', [AgendaController::class, 'updateSuratEdaran'])->name('api.v1.agendas.surat-edaran');
+        Route::get('/agendas/{agenda}/surat-edaran/digital', [AgendaController::class, 'digitalSuratEdaran'])->name('api.v1.agendas.surat-edaran.digital.show');
+        Route::match(['PUT', 'POST'], '/agendas/{agenda}/surat-edaran/digital', [AgendaController::class, 'updateDigitalSuratEdaran'])->name('api.v1.agendas.surat-edaran.digital.update');
         Route::delete('/agendas/{agenda}', [AgendaController::class, 'destroy'])->name('api.v1.agendas.destroy');
         Route::patch('/agendas/{agenda}/status', [AgendaController::class, 'updateStatus'])->name('api.v1.agendas.status');
         Route::patch('/agendas/{agenda}/roles', [AgendaController::class, 'updateRoles'])->name('api.v1.agendas.roles');

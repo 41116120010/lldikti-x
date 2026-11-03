@@ -509,9 +509,12 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
   - `link_meeting` (string URL, required jika online/hybrid)
   - `waktu_mulai` (datetime string, required)
   - `waktu_selesai` (datetime string, optional)
-  - `is_all_units` (boolean, optional, default true)
-  - `unit_ids` (array integer, required jika is_all_units = false)
-  - `surat_edaran` (file PDF/Image max 5MB, optional)
+  - `target_type` (string, optional: `all_units`, `selected_units`, `selected_users`, default: `all_units`)
+  - `is_all_units` (boolean, optional, default true bila target_type all_units)
+  - `unit_ids` (array integer, required jika target_type = selected_units)
+  - `user_ids` (array integer, required jika target_type = selected_users, daftar ASN terundang)
+  - `surat_edaran_type` (string, optional: `upload` atau `digital`, default `upload`)
+  - `surat_edaran` (file PDF/Image max 5MB, optional jika tipe upload)
   - `status` (string, optional: `draft` atau `scheduled`, default `scheduled`. Pembuatan agenda langsung dengan status `ongoing` atau `completed` dilarang demi integritas alur).
 
 #### 4. Perbarui Agenda Rapat Secara Lengkap (Admin / Administrator)
@@ -528,8 +531,11 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
   - `waktu_selesai` (datetime ISO-8601 dengan offset `+07:00`, optional, wajib setelah waktu_mulai)
   - `pimpinan_id` (integer, optional, ID ASN pimpinan rapat)
   - `notulis_id` (integer, optional, ID ASN notulis rapat)
+  - `target_type` (string, optional: `all_units`, `selected_units`, `selected_users`)
   - `is_all_units` (boolean, optional)
-  - `unit_ids` (array integer, required jika is_all_units = false)
+  - `unit_ids` (array integer, required jika target_type = selected_units)
+  - `user_ids` (array integer, required jika target_type = selected_users)
+  - `surat_edaran_type` (string, optional: `upload` atau `digital`)
   - `surat_edaran` (file PDF/Image max 5MB, optional pengganti berkas lama)
   - `status` (string, optional: status yang diizinkan sesuai State Machine `allowed_transitions`)
 * **Response (200 OK):**
@@ -564,7 +570,7 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
   }
   ```
 
-#### 6. Unggah / Ganti Berkas Surat Edaran Rapat (Admin / Administrator)
+#### 6. Unggah / Ganti Berkas Fisik Surat Edaran (Admin / Administrator)
 * **Endpoint:** `POST /api/v1/agendas/{id}/surat-edaran`
 * **Headers:** `Authorization: Bearer <token>`, `Content-Type: multipart/form-data`
 * **Otorisasi:** Administrator atau Admin Unit penyelenggara / pembuat agenda (`update`).
@@ -576,6 +582,89 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
     "success": true,
     "message": "Berkas surat edaran rapat berhasil diunggah.",
     "data": { ... }
+  }
+  ```
+
+#### 6a. Streaming Dokumen Surat Edaran / Undangan Rapat (PDF / Gambar)
+* **Endpoint:** `GET /api/v1/agendas/{id}/surat-edaran`
+* **Headers:** `Authorization: Bearer <token>`
+* **Otorisasi:** Peserta rapat yang berhak melihat agenda (`view` atau `viewStaff`).
+* **Karakteristik:** Mengalirkan berkas PDF/Gambar dengan header `Cache-Control: private, no-cache`. Apabila agenda menggunakan naskah digital (`is_surat_edaran_digital = true`), endpoint ini otomatis menyajikan PDF resmi hasil kompilasi sistem secara langsung (*on-the-fly*).
+
+#### 6b. Ambil Konfigurasi Naskah Dinas Digital (In-App Document Workstation)
+* **Endpoint:** `GET /api/v1/agendas/{id}/surat-edaran/digital`
+* **Headers:** `Authorization: Bearer <token>`
+* **Otorisasi:** Peserta yang berhak melihat agenda (`view` atau `viewStaff`).
+* **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "message": "Konfigurasi naskah dinas digital berhasil diambil.",
+    "data": {
+      "agenda_id": 1,
+      "judul_rapat": "Rapat Koordinasi Evaluasi Anggaran",
+      "is_digital": true,
+      "surat_edaran_type": "digital",
+      "surat_edaran_content": "<p>Rincian agenda rapat...</p>",
+      "config": {
+        "template_type": "undangan",
+        "nomor_surat": "0001/LL10/KP/2026",
+        "sifat": "Biasa",
+        "lampiran": "-",
+        "perihal": "Undangan Rapat Evaluasi Anggaran",
+        "tempat_surat": "Padang",
+        "tanggal_surat": "15 Oktober 2026",
+        "tujuan_surat": "Pimpinan Unit Kerja dan Seluruh Pegawai ASN di Lingkungan LLDIKTI Wilayah X",
+        "signer_role": "Kepala Lembaga Layanan Pendidikan Tinggi Wilayah X",
+        "signer_name": "Afdalisma, S.H., M.Pd.",
+        "signer_nip": "196909281994032001",
+        "show_kop": true,
+        "show_logo": true,
+        "show_signature": true,
+        "tembusan": "1. Sekretaris Ditjen Diktisaintek\n2. Pertinggal"
+      },
+      "pdf_stream_url": "https://<DOMAIN>/api/v1/agendas/1/surat-edaran",
+      "can_manage": true
+    }
+  }
+  ```
+
+#### 6c. Simpan / Perbarui Naskah Dinas Digital (In-App Document Workstation)
+* **Endpoint:** `PUT /api/v1/agendas/{id}/surat-edaran/digital` atau `POST` dengan `_method=PUT`
+* **Headers:** `Authorization: Bearer <token>`, `Content-Type: application/json` atau `multipart/form-data` (jika upload logo custom)
+* **Otorisasi:** Administrator atau Admin Unit pembuat agenda (`manageCircular`).
+* **Payload Fields:**
+  - `template_type` (string, `undangan` atau `edaran`, required)
+  - `nomor_surat` (string, max 255, required)
+  - `sifat` (string, max 100, required)
+  - `lampiran` (string, max 150, optional)
+  - `perihal` (string, max 255, required)
+  - `tempat_surat` (string, max 100, required)
+  - `tanggal_surat` (string, max 100, required)
+  - `tujuan_surat` (string text, required)
+  - `pembuka` (string text, optional)
+  - `surat_edaran_content` (string HTML/text rincian acara, optional, otomatis disanitasi)
+  - `catatan` (string text, optional)
+  - `penutup` (string text, optional)
+  - `signer_role` (string, max 150, required)
+  - `signer_name` (string, max 150, required)
+  - `signer_nip` (string, max 50, optional)
+  - `show_signature` (boolean, optional)
+  - `tembusan` (string text, optional)
+  - `show_kop` (boolean, optional)
+  - `show_logo` (boolean, optional)
+  - `custom_logo` (file image max 512 KB, optional)
+* **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "message": "Naskah dinas digital berhasil disimpan dan disinkronkan ke PDF.",
+    "data": {
+      "agenda": { ... },
+      "config": { ... },
+      "surat_edaran_content": "<p>...</p>",
+      "pdf_url": "https://<DOMAIN>/api/v1/agendas/1/surat-edaran"
+    }
   }
   ```
 
@@ -638,7 +727,8 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
   - `notulensi` (string HTML / teks, optional, otomatis disanitasi dari script XSS)
   - `kesimpulan` (string HTML / teks, optional, otomatis disanitasi dari script XSS)
   - `photos[]` (array file gambar JPEG/PNG/WebP, max 3 MB per foto, max 10 foto)
-  - `captions[]` (array string judul/keterangan tiap foto)
+  - `captions[]` (array string judul/keterangan tiap foto baru)
+  - `existing_captions` (objek key-value / array asosiatif `{ [doc_id]: "Keterangan foto baru" }` untuk memperbarui caption foto dokumentasi yang sudah tersimpan sebelumnya)
   - Pengaturan tata letak dokumen (opsional: `show_kop`, `show_meeting_info`, `show_attendees`, `signer1_name`, dll.)
 * **Response (200 OK):**
   ```json

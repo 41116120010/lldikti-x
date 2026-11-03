@@ -8,12 +8,14 @@ use App\Http\Requests\Agenda\UpdateAgendaRequest;
 use App\Http\Requests\Agenda\UpdateAgendaStatusRequest;
 use App\Http\Requests\Agenda\UpdateMinutesRequest;
 use App\Http\Requests\Agenda\UpdateRolesRequest;
+use App\Http\Requests\Agenda\UpdateSuratEdaranRequest;
 use App\Http\Resources\AgendaResource;
 use App\Http\Resources\AttendanceResource;
 use App\Http\Resources\DocumentationResource;
 use App\Models\Agenda;
 use App\Models\AgendaDocumentation;
 use App\Services\AgendaService;
+use App\Services\SuratEdaranService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -228,11 +230,33 @@ class AgendaController extends Controller
     /**
      * Stream protected circular letter (Surat Edaran) document for authorized mobile clients.
      */
-    public function streamSuratEdaran(Agenda $agenda, Request $request): Response
+    public function streamSuratEdaran(Agenda $agenda, Request $request, SuratEdaranService $suratEdaranService): Response
     {
         $canView = Gate::allows('view', $agenda) || Gate::allows('viewStaff', $agenda);
         if (! $canView) {
             abort(403, 'Anda tidak memiliki hak akses untuk mengunduh surat edaran agenda rapat ini.');
+        }
+
+        // Support digital circular fallback streaming
+        if ($agenda->is_surat_edaran_digital) {
+            if ($agenda->surat_edaran_path && Storage::disk('public')->exists($agenda->surat_edaran_path)) {
+                return Storage::disk('public')->response(
+                    $agenda->surat_edaran_path,
+                    headers: [
+                        'Content-Type' => 'application/pdf',
+                        'Cache-Control' => 'private, no-cache, no-store, must-revalidate',
+                    ]
+                );
+            }
+
+            $pdfBinary = $suratEdaranService->generatePdf($agenda);
+            $filename = 'surat_undangan_' . ($agenda->slug ?? $agenda->id) . '.pdf';
+
+            return response($pdfBinary, 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="' . $filename . '"',
+                'Cache-Control' => 'private, no-cache, no-store, must-revalidate',
+            ]);
         }
 
         if (! $agenda->surat_edaran_path || ! Storage::disk('public')->exists($agenda->surat_edaran_path)) {
@@ -245,6 +269,57 @@ class AgendaController extends Controller
                 'Cache-Control' => 'private, no-cache, no-store, must-revalidate',
             ]
         );
+    }
+
+    /**
+     * Get digital circular configuration and content for mobile workstation editor.
+     */
+    public function digitalSuratEdaran(Agenda $agenda, Request $request): JsonResponse
+    {
+        $canView = Gate::allows('view', $agenda) || Gate::allows('viewStaff', $agenda);
+        if (! $canView) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda tidak memiliki hak akses untuk melihat naskah surat agenda rapat ini.',
+            ], 403);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Konfigurasi naskah dinas digital berhasil diambil.',
+            'data' => [
+                'agenda_id' => $agenda->id,
+                'judul_rapat' => $agenda->judul_rapat,
+                'is_digital' => (bool) $agenda->is_surat_edaran_digital,
+                'surat_edaran_type' => $agenda->surat_edaran_type ?? 'upload',
+                'surat_edaran_content' => $agenda->surat_edaran_content,
+                'config' => $agenda->resolved_surat_edaran_config,
+                'pdf_stream_url' => url("/api/v1/agendas/{$agenda->id}/surat-edaran"),
+                'can_manage' => (bool) $request->user()?->can('manageCircular', $agenda),
+            ],
+        ]);
+    }
+
+    /**
+     * Store or update digital circular configuration and content via API.
+     */
+    public function updateDigitalSuratEdaran(UpdateSuratEdaranRequest $request, Agenda $agenda, SuratEdaranService $suratEdaranService): JsonResponse
+    {
+        $validated = $request->validated();
+        $agenda = $suratEdaranService->saveDigitalSurat($agenda, $validated, $request);
+
+        $agenda->load(['creator.unit', 'pimpinan.unit', 'notulis.unit', 'units', 'documentations']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Naskah dinas digital berhasil disimpan dan disinkronkan ke PDF.',
+            'data' => [
+                'agenda' => new AgendaResource($agenda),
+                'config' => $agenda->resolved_surat_edaran_config,
+                'surat_edaran_content' => $agenda->surat_edaran_content,
+                'pdf_url' => url("/api/v1/agendas/{$agenda->id}/surat-edaran"),
+            ],
+        ]);
     }
 
     /**
@@ -387,6 +462,7 @@ class AgendaController extends Controller
                 'kesimpulan' => $validated['kesimpulan'] ?? null,
                 'photos' => $request->file('photos'),
                 'captions' => $request->input('captions', []),
+                'existing_captions' => $request->input('existing_captions', []),
             ],
             request: $request,
         );
