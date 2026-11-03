@@ -2593,17 +2593,84 @@ const SuratEdaranWorkstation = {
             }
         };
 
+        const saveSelection = () => {
+            const sel = window.getSelection();
+            if (sel && sel.rangeCount > 0) {
+                const range = sel.getRangeAt(0);
+                if (workstation.contains(range.commonAncestorContainer)) {
+                    savedRange = range.cloneRange();
+                }
+            }
+        };
+
+        const restoreSelection = () => {
+            if (!savedRange) return;
+            const sel = window.getSelection();
+            if (sel) {
+                sel.removeAllRanges();
+                sel.addRange(savedRange);
+            }
+        };
+
+        const setActiveEditor = (box) => {
+            activeBox = box;
+            editableBoxes.forEach(b => {
+                b.classList.remove('is-active-editor');
+            });
+            if (box) {
+                box.classList.add('is-active-editor');
+            }
+            if (typeof updateActiveStates === 'function') {
+                updateActiveStates();
+            }
+        };
+
         editableBoxes.forEach(box => {
             box.addEventListener('focus', () => {
-                activeBox = box;
+                setActiveEditor(box);
+                saveSelection();
             });
             box.addEventListener('click', () => {
-                activeBox = box;
+                setActiveEditor(box);
+                saveSelection();
+            });
+            box.addEventListener('keyup', () => {
+                saveSelection();
+                if (typeof updateActiveStates === 'function') {
+                    updateActiveStates();
+                }
+            });
+            box.addEventListener('mouseup', () => {
+                saveSelection();
+                if (typeof updateActiveStates === 'function') {
+                    updateActiveStates();
+                }
             });
             box.addEventListener('input', () => {
+                saveSelection();
                 syncToHiddenInputs();
                 updateWordCounter();
                 updateSaveStateUI(true);
+            });
+
+            // Local formatting keyboard shortcuts: Ctrl+B, Ctrl+I, Ctrl+U
+            box.addEventListener('keydown', (e) => {
+                if (e.ctrlKey || e.metaKey) {
+                    const key = e.key.toLowerCase();
+                    if (key === 'b' || key === 'i' || key === 'u') {
+                        e.preventDefault();
+                        saveSelection();
+                        const cmd = key === 'b' ? 'bold' : (key === 'i' ? 'italic' : 'underline');
+                        document.execCommand(cmd, false, null);
+                        saveSelection();
+                        syncToHiddenInputs();
+                        updateWordCounter();
+                        updateSaveStateUI(true);
+                        if (typeof updateActiveStates === 'function') {
+                            updateActiveStates();
+                        }
+                    }
+                }
             });
 
             // Clean Paste Sanitizer
@@ -2612,6 +2679,7 @@ const SuratEdaranWorkstation = {
                 const text = (e.clipboardData || window.clipboardData).getData('text/plain');
                 if (text) {
                     document.execCommand('insertText', false, text);
+                    saveSelection();
                     syncToHiddenInputs();
                     updateWordCounter();
                     updateSaveStateUI(true);
@@ -2619,36 +2687,30 @@ const SuratEdaranWorkstation = {
             });
         });
 
+        // Initialize active editor class
+        setActiveEditor(activeBox);
+
         // Ribbon Commands
+        let updateActiveStates = () => {};
         if (ribbon) {
             const formatSelect = ribbon.querySelector('select[data-command="formatBlock"]');
             const fontSizeSelect = ribbon.querySelector('select[data-action="fontSize"]');
 
-            const saveSelection = () => {
-                const sel = window.getSelection();
-                if (sel.rangeCount > 0) {
-                    savedRange = sel.getRangeAt(0).cloneRange();
-                }
-            };
-
-            const restoreSelection = () => {
-                if (!savedRange) return;
-                const sel = window.getSelection();
-                sel.removeAllRanges();
-                sel.addRange(savedRange);
-            };
-
             const exec = (cmd, val = null) => {
-                if (activeBox) activeBox.focus();
                 restoreSelection();
+                if (activeBox && document.activeElement !== activeBox) {
+                    activeBox.focus();
+                    restoreSelection();
+                }
                 document.execCommand(cmd, false, val);
+                saveSelection();
                 syncToHiddenInputs();
                 updateWordCounter();
                 updateSaveStateUI(true);
                 updateActiveStates();
             };
 
-            const updateActiveStates = () => {
+            updateActiveStates = () => {
                 ribbon.querySelectorAll('.word-btn[data-command]').forEach(btn => {
                     const cmd = btn.dataset.command;
                     if (['bold', 'italic', 'underline', 'strikeThrough', 'justifyLeft', 'justifyCenter', 'justifyRight', 'justifyFull', 'insertUnorderedList', 'insertOrderedList'].includes(cmd)) {
@@ -2667,8 +2729,17 @@ const SuratEdaranWorkstation = {
 
             document.addEventListener('selectionchange', () => {
                 if (workstation.contains(document.activeElement)) {
+                    saveSelection();
                     updateActiveStates();
                 }
+            });
+
+            // Prevent focus loss and collapse of selection on ribbon button click
+            ribbon.querySelectorAll('.word-btn').forEach(btn => {
+                btn.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    saveSelection();
+                });
             });
 
             ribbon.addEventListener('click', (e) => {
@@ -2679,6 +2750,7 @@ const SuratEdaranWorkstation = {
                 if (btn.dataset.command) {
                     exec(btn.dataset.command);
                 } else if (btn.dataset.action === 'textColor' || btn.dataset.action === 'highlight') {
+                    saveSelection();
                     const input = ribbon.querySelector(`input[data-color-for="${btn.dataset.action}"]`);
                     if (input) input.click();
                 } else if (btn.dataset.action === 'openTablePicker') {
@@ -2704,6 +2776,7 @@ const SuratEdaranWorkstation = {
             });
 
             if (formatSelect) {
+                formatSelect.addEventListener('focus', saveSelection);
                 formatSelect.addEventListener('change', () => {
                     if (formatSelect.value) {
                         exec('formatBlock', formatSelect.value);
@@ -2712,6 +2785,7 @@ const SuratEdaranWorkstation = {
             }
 
             if (fontSizeSelect) {
+                fontSizeSelect.addEventListener('focus', saveSelection);
                 fontSizeSelect.addEventListener('change', () => {
                     if (fontSizeSelect.value) {
                         exec('fontSize', fontSizeSelect.value);
@@ -2792,6 +2866,8 @@ const SuratEdaranWorkstation = {
 
                 if (sheet) {
                     sheet.dataset.paperFormat = format;
+                    sheet.classList.remove('paper-a4', 'paper-f4');
+                    sheet.classList.add(`paper-${format}`);
                     if (format === 'f4') {
                         sheet.style.minHeight = '1247px';
                     } else {

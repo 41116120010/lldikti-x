@@ -270,8 +270,8 @@
     <div class="office-desk-canvas">
         <div id="office-document-ruler" class="office-ruler-bar" aria-hidden="true"></div>
 
-        <div id="office-zoom-container" class="office-zoom-wrapper" data-zoom="100">
-            <div id="surat-sheet-page-1" class="office-paper-sheet" data-paper-format="a4" data-page-number="1">
+        <div id="office-zoom-container" class="office-zoom-container" data-zoom="100">
+            <div id="surat-sheet-page-1" class="office-paper-sheet paper-a4" data-paper-format="a4" data-page-number="1">
                 <div class="office-paper-margin-guide">
                     
                     {{-- KOP SURAT RESMI --}}
@@ -355,7 +355,7 @@
                                 contenteditable="true"
                                 data-editor="pembuka"
                                 data-placeholder="Ketik alinea pembuka surat undangan di sini..."
-                                style="min-height: 48px; font-size: 11pt; line-height: 1.5; text-align: justify; padding: 4pt 6pt; border: 1px dashed #cbd5e1; background: #ffffff;"
+                                style="min-height: 48px; font-size: 11pt; font-weight: normal; line-height: 1.5; text-align: justify; padding: 4pt 6pt; border: 1px dashed #cbd5e1; background: #ffffff; outline: none;"
                             >{!! $config['pembuka'] ?? '' !!}</div>
                         </div>
 
@@ -402,7 +402,7 @@
                                 contenteditable="true"
                                 data-editor="body"
                                 data-placeholder="Ketik rincian pembahasan, rundown kegiatan, atau instruksi agenda tambahan di sini (opsional)..."
-                                style="min-height: 60px; font-size: 11pt; line-height: 1.5; text-align: justify; padding: 4pt 6pt; border: 1px dashed #cbd5e1; background: #ffffff;"
+                                style="min-height: 60px; font-size: 11pt; font-weight: normal; line-height: 1.5; text-align: justify; padding: 4pt 6pt; border: 1px dashed #cbd5e1; background: #ffffff; outline: none;"
                             >{!! $agenda->surat_edaran_content ?? '' !!}</div>
                         </div>
 
@@ -414,7 +414,7 @@
                                 contenteditable="true"
                                 data-editor="catatan"
                                 data-placeholder="Catatan tambahan (contoh: Pakaian dinas yang digunakan, berkas yang wajib dibawa)..."
-                                style="min-height: 38px; font-size: 10.5pt; font-style: italic; line-height: 1.4; padding: 4pt 6pt; border: 1px dashed #cbd5e1; background: #ffffff;"
+                                style="min-height: 38px; font-size: 10.5pt; font-style: italic; font-weight: normal; line-height: 1.4; padding: 4pt 6pt; border: 1px dashed #cbd5e1; background: #ffffff; outline: none;"
                             >{!! $config['catatan'] ?? '' !!}</div>
                         </div>
 
@@ -426,7 +426,7 @@
                                 contenteditable="true"
                                 data-editor="penutup"
                                 data-placeholder="Ketik alinea penutup surat undangan di sini..."
-                                style="min-height: 48px; font-size: 11pt; line-height: 1.5; text-align: justify; padding: 4pt 6pt; border: 1px dashed #cbd5e1; background: #ffffff;"
+                                style="min-height: 48px; font-size: 11pt; font-weight: normal; line-height: 1.5; text-align: justify; padding: 4pt 6pt; border: 1px dashed #cbd5e1; background: #ffffff; outline: none;"
                             >{!! $config['penutup'] ?? '' !!}</div>
                         </div>
                     </div>
@@ -454,7 +454,7 @@
                                 contenteditable="true"
                                 data-editor="edaran-body"
                                 data-placeholder="Ketik butir-butir Surat Edaran (A. Latar Belakang, B. Maksud dan Tujuan, C. Ruang Lingkup, D. Penutup) di sini..."
-                                style="min-height: 240px; font-size: 11pt; line-height: 1.5; text-align: justify; padding: 6pt 8pt; border: 1px dashed #cbd5e1; background: #ffffff;"
+                                style="min-height: 240px; font-size: 11pt; font-weight: normal; line-height: 1.5; text-align: justify; padding: 6pt 8pt; border: 1px dashed #cbd5e1; background: #ffffff; outline: none;"
                             >{!! $agenda->surat_edaran_content ?? '' !!}</div>
                         </div>
                     </div>
