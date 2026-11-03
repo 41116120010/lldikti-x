@@ -15,6 +15,7 @@ use App\Services\ActivityLogger;
 use App\Services\AgendaConflictService;
 use App\Services\AgendaService;
 use App\Services\ReportConfigService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -328,9 +329,9 @@ class AgendaController extends Controller
         $config = $agenda->resolved_report_config;
 
         $documentations = $agenda->documentations()
-            ->latest('id')
-            ->paginate(6, ['*'], 'page_docs')
-            ->withQueryString();
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
 
         return view('agendas.notulen', compact('agenda', 'documentations', 'config', 'attendances'));
     }
@@ -349,6 +350,7 @@ class AgendaController extends Controller
                 'kesimpulan' => $validated['kesimpulan'] ?? null,
                 'photos' => $request->file('photos'),
                 'captions' => $request->input('captions', []),
+                'existing_captions' => $request->input('existing_captions', []),
             ],
             request: $request,
         );
@@ -364,7 +366,7 @@ class AgendaController extends Controller
     /**
      * Delete a single photo documentation item.
      */
-    public function deleteDocumentation(Agenda $agenda, AgendaDocumentation $documentation, AgendaService $agendaService): RedirectResponse
+    public function deleteDocumentation(Request $request, Agenda $agenda, AgendaDocumentation $documentation, AgendaService $agendaService): RedirectResponse|JsonResponse
     {
         Gate::authorize('manageMinutes', $agenda);
 
@@ -372,6 +374,15 @@ class AgendaController extends Controller
             $agendaService->deleteDocumentation($agenda, $documentation);
         } catch (\InvalidArgumentException $e) {
             abort(404);
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Foto dokumentasi berhasil dihapus.',
+                'documentation_id' => $documentation->id,
+                'remaining_count' => $agenda->documentations()->count(),
+            ]);
         }
 
         return back()->with('success', "Foto dokumentasi berhasil dihapus.");

@@ -758,12 +758,22 @@
     /* Ribbon responsive adjustments */
     @media (max-width: 639px) {
         .word-editor-ribbon {
-            gap: 0.25rem;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+            gap: 0.375rem;
             padding: 0.375rem 0.5rem;
         }
+        .word-editor-ribbon > * {
+            flex-shrink: 0;
+        }
         .word-btn {
-            width: 30px;
-            height: 30px;
+            width: 34px;
+            height: 34px;
+        }
+        .word-select {
+            height: 34px;
         }
     }
 

@@ -27,6 +27,8 @@ class UpdateMinutesRequest extends FormRequest
             'photos.*' => ['file', 'mimes:jpg,jpeg,png,webp', 'max:3072'],
             'captions' => ['nullable', 'array'],
             'captions.*' => ['nullable', 'string', 'max:255'],
+            'existing_captions' => ['nullable', 'array'],
+            'existing_captions.*' => ['nullable', 'string', 'max:255'],
 
             // Document Customization Configuration (Optional / Unified)
             'has_document_config' => ['nullable', 'boolean'],
@@ -78,6 +80,8 @@ class UpdateMinutesRequest extends FormRequest
             'kesimpulan' => 'Kesimpulan & Tindak Lanjut',
             'photos' => 'Foto Dokumentasi Kegiatan',
             'photos.*' => 'Berkas Foto Dokumentasi',
+            'captions.*' => 'Keterangan Foto Dokumentasi Baru',
+            'existing_captions.*' => 'Keterangan Foto Dokumentasi Tersimpan',
             'custom_logo' => 'Berkas Logo Kustom',
             'document_title' => 'Judul Dokumen',
             'document_number' => 'Nomor Dokumen',

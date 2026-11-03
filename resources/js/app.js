@@ -954,6 +954,13 @@ const PhotoPreviewUploader = {
         let currentFiles = [];
         let objectUrls = [];
 
+        const escapeHtml = (str) => String(str ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+
         const formatSize = (bytes) => {
             if (bytes < 1024) return bytes + ' B';
             if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
@@ -968,11 +975,24 @@ const PhotoPreviewUploader = {
         const syncDataTransfer = () => {
             try {
                 const dt = new DataTransfer();
-                currentFiles.forEach(file => dt.items.add(file));
+                currentFiles.forEach(item => dt.items.add(item.file));
                 fileInput.files = dt.files;
             } catch (err) {
                 console.warn('DataTransfer sync warning:', err);
             }
+        };
+
+        const syncWorkstationAnnex = () => {
+            window.__queuedNotulenPhotos = currentFiles.map((item, idx) => ({
+                name: item.file.name,
+                size: item.file.size,
+                caption: item.caption || '',
+                previewUrl: objectUrls[idx] || '',
+            }));
+            if (typeof window.rebuildSheetDocumentationAnnex === 'function') {
+                window.rebuildSheetDocumentationAnnex();
+            }
+            window.dispatchEvent(new CustomEvent('office:reflow'));
         };
 
         const render = () => {
@@ -987,12 +1007,13 @@ const PhotoPreviewUploader = {
                     const stored = parseInt(navBadge.dataset.storedCount || '0', 10);
                     navBadge.textContent = stored;
                 }
+                syncWorkstationAnnex();
                 return;
             }
 
             previewGrid.classList.remove('hidden');
             if (counterBadge) {
-                counterBadge.textContent = `${currentFiles.length} Foto Terpilih`;
+                counterBadge.textContent = `${currentFiles.length} Foto Baru Terpilih`;
                 counterBadge.classList.remove('hidden');
             }
             const navBadge = document.querySelector('#nav-photo-count');
@@ -1001,15 +1022,16 @@ const PhotoPreviewUploader = {
                 navBadge.textContent = stored + currentFiles.length;
             }
 
-            currentFiles.forEach((file, index) => {
+            currentFiles.forEach((item, index) => {
+                const file = item.file;
                 const url = URL.createObjectURL(file);
                 objectUrls.push(url);
 
                 const card = document.createElement('div');
-                card.className = 'relative group bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs hover:border-slate-300 transition';
+                card.className = 'relative group bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs hover:border-slate-300 transition flex flex-col justify-between';
                 card.innerHTML = `
                     <div class="aspect-4/3 relative bg-slate-100 overflow-hidden flex items-center justify-center cursor-pointer group/thumb" title="Klik untuk pratinjau perbesar">
-                        <img src="${url}" alt="${file.name}" class="w-full h-24 sm:h-28 object-cover group-hover/thumb:scale-105 transition duration-300">
+                        <img src="${url}" alt="${escapeHtml(file.name)}" class="w-full h-24 sm:h-28 object-cover group-hover/thumb:scale-105 transition duration-300">
                         <div class="absolute inset-0 bg-slate-950/0 group-hover/thumb:bg-slate-950/25 transition flex items-center justify-center">
                             <div class="w-7 h-7 rounded-full bg-slate-900/80 text-white flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition shadow-md">
                                 <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
@@ -1019,7 +1041,7 @@ const PhotoPreviewUploader = {
                             type="button" 
                             class="photo-preview-remove absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shadow-md transition cursor-pointer z-10"
                             title="Hapus foto ini dari antrean upload"
-                            aria-label="Hapus foto ${file.name}"
+                            aria-label="Hapus foto ${escapeHtml(file.name)}"
                             data-index="${index}"
                         >
                             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -1028,9 +1050,20 @@ const PhotoPreviewUploader = {
                             </svg>
                         </button>
                     </div>
-                    <div class="p-2 border-t border-slate-100 bg-white">
-                        <div class="text-[11px] font-bold text-slate-800 truncate" title="${file.name}">${file.name}</div>
-                        <div class="text-[10px] text-slate-500 font-mono font-medium">${formatSize(file.size)}</div>
+                    <div class="p-2 border-t border-slate-100 bg-white space-y-1.5">
+                        <div class="flex items-center justify-between gap-1">
+                            <div class="text-[11px] font-bold text-slate-800 truncate" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</div>
+                            <div class="text-[10px] text-slate-500 font-mono font-medium shrink-0">${formatSize(file.size)}</div>
+                        </div>
+                        <input
+                            type="text"
+                            name="captions[]"
+                            value="${escapeHtml(item.caption || '')}"
+                            maxlength="255"
+                            placeholder="Ketik keterangan foto (opsional)..."
+                            aria-label="Keterangan foto ${escapeHtml(file.name)}"
+                            class="photo-caption-input w-full text-[11px] rounded-lg border border-slate-200 focus:border-slate-900 focus:ring-slate-900 py-1.5 px-2 text-slate-800 bg-slate-50 focus:bg-white transition font-medium"
+                        >
                     </div>
                 `;
 
@@ -1042,7 +1075,7 @@ const PhotoPreviewUploader = {
                             window.documentationPreviewModal.open({
                                 items: [{
                                     url: url,
-                                    caption: file.name,
+                                    caption: item.caption || file.name,
                                     agendaTitle: 'Pratinjau Antrean Berkas',
                                     date: formatSize(file.size),
                                     downloadUrl: url,
@@ -1051,6 +1084,16 @@ const PhotoPreviewUploader = {
                                 currentIndex: 0
                             });
                         }
+                    });
+                }
+
+                const captionInput = card.querySelector('.photo-caption-input');
+                if (captionInput) {
+                    captionInput.addEventListener('input', (e) => {
+                        item.caption = e.target.value;
+                        window.__officeDirtyState = true;
+                        window.dispatchEvent(new CustomEvent('office:dirty-change', { detail: { dirty: true } }));
+                        syncWorkstationAnnex();
                     });
                 }
 
@@ -1063,6 +1106,8 @@ const PhotoPreviewUploader = {
 
                 previewGrid.appendChild(card);
             });
+
+            syncWorkstationAnnex();
         };
 
         const removeFile = (index) => {
@@ -1091,9 +1136,9 @@ const PhotoPreviewUploader = {
                 }
 
                 // Avoid exact duplicates in current list
-                const isDuplicate = currentFiles.some(f => f.name === file.name && f.size === file.size && f.lastModified === file.lastModified);
+                const isDuplicate = currentFiles.some(item => item.file.name === file.name && item.file.size === file.size && item.file.lastModified === file.lastModified);
                 if (!isDuplicate) {
-                    currentFiles.push(file);
+                    currentFiles.push({ file, caption: '' });
                 }
             });
 
@@ -1104,6 +1149,11 @@ const PhotoPreviewUploader = {
                     type: 'warning',
                     confirmText: 'Mengerti'
                 });
+            }
+
+            if (currentFiles.length > 0) {
+                window.__officeDirtyState = true;
+                window.dispatchEvent(new CustomEvent('office:dirty-change', { detail: { dirty: true } }));
             }
 
             syncDataTransfer();
@@ -1181,8 +1231,43 @@ const OfficeWorkstation = {
         let activeBox = notulensiBox;
         let activeHidden = notulensiHidden;
         let savedRange = null;
+        let isSubmittingForm = false;
+        window.__officeDirtyState = false;
 
-        const syncContent = () => {
+        const statusWordsEl = workstation.querySelector('#office-status-words');
+        const statusSaveStateEl = workstation.querySelector('#office-status-save-state');
+        const statusSaveDotEl = workstation.querySelector('#office-status-save-dot');
+        const statusSaveLabelEl = workstation.querySelector('#office-status-save-label');
+
+        const updateSaveStateUI = (dirty) => {
+            window.__officeDirtyState = Boolean(dirty);
+            if (!statusSaveStateEl || !statusSaveDotEl || !statusSaveLabelEl) return;
+            if (window.__officeDirtyState) {
+                statusSaveStateEl.className = 'inline-flex items-center gap-1.5 text-amber-400 font-semibold';
+                statusSaveDotEl.className = 'w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse';
+                statusSaveLabelEl.textContent = 'Perubahan Belum Disimpan';
+            } else {
+                statusSaveStateEl.className = 'inline-flex items-center gap-1.5 text-emerald-400 font-semibold';
+                statusSaveDotEl.className = 'w-1.5 h-1.5 rounded-full bg-emerald-400';
+                statusSaveLabelEl.textContent = 'Tersimpan';
+            }
+        };
+
+        window.addEventListener('office:dirty-change', (e) => {
+            updateSaveStateUI(e.detail?.dirty ?? true);
+        });
+
+        const updateWordCounter = () => {
+            if (!statusWordsEl) return;
+            let combinedText = '';
+            workstation.querySelectorAll('.office-editable-box').forEach(b => {
+                combinedText += ' ' + (b.innerText || '');
+            });
+            const words = combinedText.trim() ? combinedText.trim().split(/\s+/).filter(Boolean).length : 0;
+            statusWordsEl.textContent = `${words} Kata`;
+        };
+
+        const syncContent = (markDirty = false) => {
             const nBoxes = workstation.querySelectorAll('[data-editor="notulensi"]');
             let joinedN = '';
             nBoxes.forEach(box => {
@@ -1202,6 +1287,45 @@ const OfficeWorkstation = {
                 }
             });
             if (kesimpulanHidden) kesimpulanHidden.value = joinedK;
+
+            updateWordCounter();
+            if (markDirty) {
+                updateSaveStateUI(true);
+            }
+        };
+
+        const updateActiveStates = () => {
+            if (!ribbon) return;
+            const commands = [
+                'bold', 'italic', 'underline', 'strikeThrough',
+                'justifyLeft', 'justifyCenter', 'justifyRight', 'justifyFull',
+                'insertUnorderedList', 'insertOrderedList',
+                'superscript', 'subscript'
+            ];
+            commands.forEach(cmd => {
+                const btn = ribbon.querySelector(`button[data-command="${cmd}"]`);
+                if (btn) {
+                    try {
+                        if (document.queryCommandState(cmd)) {
+                            btn.classList.add('is-active');
+                        } else {
+                            btn.classList.remove('is-active');
+                        }
+                    } catch (e) {}
+                }
+            });
+
+            const formatSelect = ribbon.querySelector('select[data-command="formatBlock"]');
+            if (formatSelect) {
+                try {
+                    const block = (document.queryCommandValue('formatBlock') || '').toLowerCase();
+                    if (['h2', 'h3', 'h4', 'p', 'blockquote'].includes(block)) {
+                        formatSelect.value = block;
+                    } else {
+                        formatSelect.value = 'p';
+                    }
+                } catch (e) {}
+            }
         };
 
         const setActiveEditor = (box, hidden) => {
@@ -1211,6 +1335,7 @@ const OfficeWorkstation = {
                 b.classList.remove('is-active-editor');
             });
             if (box) box.classList.add('is-active-editor');
+            updateActiveStates();
         };
 
         const rulerEl = workstation.querySelector('#office-document-ruler');
@@ -1279,10 +1404,28 @@ const OfficeWorkstation = {
             });
         });
 
-        // 2. Zoom & Scaling Controls
+        // 2. Zoom & Scaling Controls (with Layout Height Compensation & Ruler Sync)
         const zoomButtons = workstation.querySelectorAll('[data-zoom]');
+        let currentZoomMode = window.innerWidth < 768 ? 'fit' : '100';
+        let currentZoomScale = 1;
+
+        const updateZoomCompensation = () => {
+            if (!zoomContainer) return;
+            zoomContainer.style.marginBottom = '0px';
+            const unscaledHeight = zoomContainer.offsetHeight;
+            if (unscaledHeight > 0 && currentZoomScale !== 1) {
+                const heightDiff = Math.round(unscaledHeight * (currentZoomScale - 1));
+                zoomContainer.style.marginBottom = `${heightDiff}px`;
+            }
+            if (rulerEl) {
+                rulerEl.style.transformOrigin = 'top center';
+                rulerEl.style.transform = currentZoomScale === 1 ? 'none' : `scaleX(${currentZoomScale})`;
+            }
+        };
+
         const setZoom = (zoomVal) => {
             if (!zoomContainer) return;
+            currentZoomMode = zoomVal;
             zoomButtons.forEach(b => b.classList.remove('active-zoom', 'bg-slate-900', 'text-white'));
 
             const activeBtn = workstation.querySelector(`[data-zoom="${zoomVal}"]`);
@@ -1293,16 +1436,17 @@ const OfficeWorkstation = {
                 const canvasWidth = deskCanvas ? deskCanvas.clientWidth - 48 : window.innerWidth;
                 const firstSheet = workstation.querySelector('.office-paper-sheet');
                 const sheetWidthPx = firstSheet ? firstSheet.offsetWidth : 794;
-                const scale = Math.min(1, Math.max(0.4, canvasWidth / sheetWidthPx));
-                zoomContainer.style.transform = `scale(${scale})`;
-                currentZoomText = `Zoom: Sesuaikan (${Math.round(scale * 100)}%)`;
+                currentZoomScale = Math.min(1, Math.max(0.4, canvasWidth / sheetWidthPx));
+                zoomContainer.style.transform = `scale(${currentZoomScale})`;
+                currentZoomText = `Zoom: Sesuaikan (${Math.round(currentZoomScale * 100)}%)`;
             } else {
-                const scale = parseFloat(zoomVal) / 100;
-                zoomContainer.style.transform = `scale(${scale})`;
+                currentZoomScale = parseFloat(zoomVal) / 100;
+                zoomContainer.style.transform = currentZoomScale === 1 ? 'none' : `scale(${currentZoomScale})`;
             }
             if (statusZoomEl) {
                 statusZoomEl.textContent = currentZoomText;
             }
+            updateZoomCompensation();
         };
 
         zoomButtons.forEach(btn => {
@@ -1312,11 +1456,7 @@ const OfficeWorkstation = {
             });
         });
 
-        if (window.innerWidth < 768) {
-            setZoom('fit');
-        } else {
-            setZoom('100');
-        }
+        setZoom(currentZoomMode);
 
         // 2.1. Viewport Scroll Detection for Active Sheet Indicator
         const handleScroll = () => {
@@ -1484,25 +1624,92 @@ const OfficeWorkstation = {
 
             box.addEventListener('focus', () => setActiveEditor(box, hiddenInput));
             box.addEventListener('click', () => setActiveEditor(box, hiddenInput));
+            box.addEventListener('keyup', updateActiveStates);
+            box.addEventListener('mouseup', updateActiveStates);
 
-            box.addEventListener('input', () => {
-                syncContent();
-                if (editorType === 'notulensi') {
-                    debouncedReflow(250);
+            box.addEventListener('keydown', (e) => {
+                if (e.ctrlKey || e.metaKey) {
+                    const key = e.key.toLowerCase();
+                    if (key === 'b' || key === 'i' || key === 'u') {
+                        e.preventDefault();
+                        const cmd = key === 'b' ? 'bold' : (key === 'i' ? 'italic' : 'underline');
+                        document.execCommand(cmd, false, null);
+                        syncContent(true);
+                        updateActiveStates();
+                    }
                 }
             });
 
-            box.addEventListener('blur', () => {
-                syncContent();
+            box.addEventListener('input', () => {
+                syncContent(true);
+                debouncedReflow(250);
             });
 
-            box.addEventListener('paste', () => {
-                setTimeout(() => {
-                    syncContent();
-                    if (editorType === 'notulensi') {
-                        paginationEngine.reflow();
+            box.addEventListener('blur', () => {
+                syncContent(false);
+            });
+
+            // Clean Paste Sanitizer (Strip MS Word & external inline style cruft)
+            box.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const clipboardData = e.clipboardData || window.clipboardData;
+                const htmlData = clipboardData ? clipboardData.getData('text/html') : '';
+                const textData = clipboardData ? clipboardData.getData('text/plain') : '';
+
+                if (htmlData) {
+                    try {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(htmlData, 'text/html');
+
+                        doc.querySelectorAll('script, style, meta, link, object, embed, iframe').forEach(el => el.remove());
+
+                        const allowedTags = [
+                            'p', 'br', 'b', 'strong', 'i', 'em', 'u', 's', 'strike',
+                            'h2', 'h3', 'h4', 'ul', 'ol', 'li', 'blockquote', 'hr',
+                            'table', 'thead', 'tbody', 'tr', 'th', 'td', 'sup', 'sub'
+                        ];
+
+                        Array.from(doc.body.querySelectorAll('*')).forEach(el => {
+                            const tag = el.tagName.toLowerCase();
+                            if (!allowedTags.includes(tag)) {
+                                el.replaceWith(...el.childNodes);
+                            } else {
+                                Array.from(el.attributes).forEach(attr => {
+                                    if (['colspan', 'rowspan'].includes(attr.name)) return;
+                                    el.removeAttribute(attr.name);
+                                });
+                            }
+                        });
+
+                        const cleanHtml = doc.body.innerHTML.trim();
+                        if (cleanHtml) {
+                            document.execCommand('insertHTML', false, cleanHtml);
+                        } else {
+                            document.execCommand('insertText', false, textData);
+                        }
+                    } catch (err) {
+                        document.execCommand('insertText', false, textData);
                     }
-                }, 50);
+                } else if (textData) {
+                    const paragraphs = textData
+                        .split(/\r?\n\r?\n/)
+                        .map(p => p.trim())
+                        .filter(Boolean)
+                        .map(p => `<p>${p.replace(/\r?\n/g, '<br>')}</p>`)
+                        .join('');
+
+                    if (paragraphs) {
+                        document.execCommand('insertHTML', false, paragraphs);
+                    } else {
+                        document.execCommand('insertText', false, textData);
+                    }
+                }
+
+                setTimeout(() => {
+                    syncContent(true);
+                    updateActiveStates();
+                    paginationEngine.reflow();
+                }, 30);
             });
         };
 
@@ -1519,13 +1726,7 @@ const OfficeWorkstation = {
 
                     const curFormat = sheet1.classList.contains('paper-f4') ? 'f4' : 'a4';
                     const kesimpulanIsFocused = !!(s1KWrap && s1KWrap.contains(document.activeElement));
-
-                    // If user is actively typing in Kesimpulan while it lives on a continuation sheet,
-                    // do not tear down continuationContainer under their cursor.
-                    if (kesimpulanIsFocused && continuationContainer && continuationContainer.contains(s1KWrap)) {
-                        syncContent();
-                        return;
-                    }
+                    const savedCaret = kesimpulanIsFocused ? saveCaretInfo() : null;
 
                     // 1. Reclaim modular sections before rebuilding continuation sheets
                     if (s1KWrap && s1Container && s1KWrap.parentNode !== s1Container) {
@@ -1738,10 +1939,16 @@ const OfficeWorkstation = {
                         attachBoxEvents(b);
                     });
 
-                    // Sync content
-                    syncContent();
+                    // Restore caret if Kesimpulan was focused during reflow
+                    if (savedCaret) {
+                        restoreCaretInfo(savedCaret);
+                    }
 
-                    // Update status bar
+                    // Sync content (without marking dirty on initial reflow)
+                    syncContent(false);
+
+                    // Update zoom compensation & status bar
+                    updateZoomCompensation();
                     if (statusPageEl) {
                         handleScroll();
                     }
@@ -1803,7 +2010,9 @@ const OfficeWorkstation = {
                     } else {
                         document.execCommand(cmd, false, null);
                     }
-                    syncContent();
+                    syncContent(true);
+                    updateActiveStates();
+                    debouncedReflow(200);
                 });
             });
 
@@ -1814,7 +2023,9 @@ const OfficeWorkstation = {
                     const val = e.target.value;
                     if (val) {
                         document.execCommand('formatBlock', false, val);
-                        syncContent();
+                        syncContent(true);
+                        updateActiveStates();
+                        debouncedReflow(200);
                     }
                 });
             }
@@ -1826,7 +2037,8 @@ const OfficeWorkstation = {
                     const val = e.target.value;
                     if (val) {
                         document.execCommand('fontSize', false, val);
-                        syncContent();
+                        syncContent(true);
+                        debouncedReflow(200);
                     }
                 });
             }
@@ -1860,7 +2072,7 @@ const OfficeWorkstation = {
                                 document.execCommand('backColor', false, selectedColor);
                             }
                         }
-                        syncContent();
+                        syncContent(true);
                     });
                 }
             });
@@ -1929,7 +2141,8 @@ const OfficeWorkstation = {
                         tablePicker.classList.remove('open');
                         restoreSelection();
                         document.execCommand('insertHTML', false, tableHtml);
-                        syncContent();
+                        syncContent(true);
+                        paginationEngine.reflow();
                     });
                 });
 
@@ -1950,15 +2163,35 @@ const OfficeWorkstation = {
                 });
             }
 
-            // Clear All Button
+            // Clear All Button (Consistent System Modal + Reflow)
             const clearAllBtn = ribbon.querySelector('button[data-action="clearAll"]');
             if (clearAllBtn) {
                 clearAllBtn.addEventListener('click', (e) => {
                     e.preventDefault();
                     if (!activeBox || !activeBox.innerText.trim()) return;
-                    if (confirm('Kosongkan teks pada bagian yang sedang aktif?')) {
+                    const sectionLabel = activeBox.dataset.editor === 'kesimpulan'
+                        ? 'Kesimpulan & Rencana Tindak Lanjut (RTL)'
+                        : 'Catatan Jalannya Rapat (Notulensi)';
+
+                    const executeClear = () => {
                         activeBox.innerHTML = '';
-                        syncContent();
+                        syncContent(true);
+                        updateActiveStates();
+                        paginationEngine.reflow();
+                        activeBox.focus();
+                    };
+
+                    if (typeof window.showModal === 'function') {
+                        window.showModal({
+                            title: 'Kosongkan Isi Bagian Ini?',
+                            message: `Seluruh teks pada bagian "${sectionLabel}" akan dihapus dari editor. Anda masih dapat membatalkannya sebelum menyimpan ke server.`,
+                            type: 'danger',
+                            confirmText: 'Ya, Kosongkan',
+                            cancelText: 'Batal',
+                            onConfirm: executeClear,
+                        });
+                    } else if (confirm('Kosongkan teks pada bagian yang sedang aktif?')) {
+                        executeClear();
                     }
                 });
             }
@@ -1970,19 +2203,37 @@ const OfficeWorkstation = {
                 const saveForm = workstation.querySelector('#notulen-form') || workstation.querySelector('form');
                 if (saveForm) {
                     e.preventDefault();
-                    syncContent();
+                    isSubmittingForm = true;
+                    updateSaveStateUI(false);
+                    syncContent(false);
                     saveForm.requestSubmit ? saveForm.requestSubmit() : saveForm.submit();
                 }
+            }
+        });
+
+        // 5. Beforeunload Guard for Unsaved Changes
+        window.addEventListener('beforeunload', (e) => {
+            if (window.__officeDirtyState && !isSubmittingForm) {
+                e.preventDefault();
+                e.returnValue = '';
             }
         });
 
         // Form Submit: Ensure latest sync before submission
         const form = workstation.querySelector('#notulen-form') || workstation.querySelector('form');
         if (form) {
-            form.addEventListener('submit', () => syncContent());
+            form.addEventListener('submit', () => {
+                isSubmittingForm = true;
+                updateSaveStateUI(false);
+                syncContent(false);
+            });
         }
         workstation.querySelectorAll('button[form="notulen-form"]').forEach(btn => {
-            btn.addEventListener('click', () => syncContent());
+            btn.addEventListener('click', () => {
+                isSubmittingForm = true;
+                updateSaveStateUI(false);
+                syncContent(false);
+            });
         });
     }
 };

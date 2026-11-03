@@ -5,7 +5,19 @@
 @section('subtitle', 'Agenda: ' . $agenda->judul_rapat)
 
 @section('content')
-<div id="office-workstation" class="space-y-4" data-agenda-title="{{ $agenda->judul_rapat }}">
+@php
+    $defaultBundledLogoUrl = asset('images/tut-wuri-handayani.png');
+    $currentSavedLogoUrl = (!empty($config['custom_logo_path']) && Storage::disk('public')->exists($config['custom_logo_path']))
+        ? Storage::disk('public')->url($config['custom_logo_path'])
+        : $defaultBundledLogoUrl;
+@endphp
+<div
+    id="office-workstation"
+    class="space-y-4"
+    data-agenda-title="{{ $agenda->judul_rapat }}"
+    data-default-logo-src="{{ $defaultBundledLogoUrl }}"
+    data-current-logo-src="{{ $currentSavedLogoUrl }}"
+>
     <!-- 1. Workstation Top Control Bar -->
     <div class="bg-white border border-slate-300 rounded-2xl p-3 sm:p-4 shadow-xs flex flex-wrap items-center justify-between gap-3">
         <!-- Left: Back Navigation -->
@@ -92,8 +104,8 @@
                     <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
                 </svg>
                 <span>Lampiran Foto</span>
-                <span id="nav-photo-count" class="px-1.5 py-0.2 rounded-full bg-slate-100 border border-slate-300 text-[10px] font-bold text-slate-700" data-stored-count="{{ $documentations->total() }}">
-                    {{ $documentations->total() }}
+                <span id="nav-photo-count" class="px-1.5 py-0.2 rounded-full bg-slate-100 border border-slate-300 text-[10px] font-bold text-slate-700" data-stored-count="{{ $documentations->count() }}">
+                    {{ $documentations->count() }}
                 </span>
             </button>
 
@@ -139,6 +151,7 @@
                 >
                     <a 
                         href="{{ route('admin.reports.export.pdf', $agenda) }}" 
+                        data-export-link="pdf"
                         class="flex items-center gap-2 px-3.5 py-2.5 text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium"
                     >
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" class="text-rose-600"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>
@@ -146,6 +159,7 @@
                     </a>
                     <a 
                         href="{{ route('admin.reports.export.word', $agenda) }}" 
+                        data-export-link="word"
                         class="flex items-center gap-2 px-3.5 py-2.5 text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium"
                     >
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" class="text-blue-600"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
@@ -373,12 +387,11 @@
                     </div>
 
                     <!-- Informasi Pelaksanaan Rapat -->
-                    @if($config['show_meeting_info'] ?? true)
-                    <table id="sheet-meeting-info" class="info-table" width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; margin-bottom: {{ \App\Support\DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt; border-collapse: collapse; font-size: {{ \App\Support\DocumentLayout::INFO_SIZE_PT }}pt; border: none; font-family: 'Times New Roman', Times, serif;">
+                    <table id="sheet-meeting-info" class="info-table" width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; margin-bottom: {{ \App\Support\DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt; border-collapse: collapse; font-size: {{ \App\Support\DocumentLayout::INFO_SIZE_PT }}pt; border: none; font-family: 'Times New Roman', Times, serif; {{ ($config['show_meeting_info'] ?? true) ? '' : 'display: none;' }}">
                         <tr>
                             <td style="font-weight: bold; padding: {{ \App\Support\DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ \App\Support\DocumentLayout::DETAIL_LABEL_COLUMN }};">Perihal / Agenda</td>
                             <td style="padding: {{ \App\Support\DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ \App\Support\DocumentLayout::DETAIL_COLON_COLUMN }};">:</td>
-                            <td style="padding: {{ \App\Support\DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; word-wrap: break-word; overflow-wrap: break-word; width: {{ \App\Support\DocumentLayout::DETAIL_VALUE_COLUMN }};"><strong>{{ $config['custom_agenda_title'] ?? $agenda->judul_rapat }}</strong></td>
+                            <td style="padding: {{ \App\Support\DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; word-wrap: break-word; overflow-wrap: break-word; width: {{ \App\Support\DocumentLayout::DETAIL_VALUE_COLUMN }};"><strong id="sheet-info-title" data-default-title="{{ $agenda->judul_rapat }}">{{ $config['custom_agenda_title'] ?? $agenda->judul_rapat }}</strong></td>
                         </tr>
                         <tr>
                             <td style="font-weight: bold; padding: {{ \App\Support\DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ \App\Support\DocumentLayout::DETAIL_LABEL_COLUMN }};">Hari / Tanggal</td>
@@ -393,7 +406,7 @@
                         <tr>
                             <td style="font-weight: bold; padding: {{ \App\Support\DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ \App\Support\DocumentLayout::DETAIL_LABEL_COLUMN }};">Format &amp; Tempat</td>
                             <td style="padding: {{ \App\Support\DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ \App\Support\DocumentLayout::DETAIL_COLON_COLUMN }};">:</td>
-                            <td style="padding: {{ \App\Support\DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; word-wrap: break-word; overflow-wrap: break-word; width: {{ \App\Support\DocumentLayout::DETAIL_VALUE_COLUMN }};">{{ ucfirst($agenda->tipe_rapat) }} &mdash; {{ $config['custom_location'] ?? ($agenda->lokasi_ruang ?? 'Daring (Online Meeting)') }}</td>
+                            <td style="padding: {{ \App\Support\DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; word-wrap: break-word; overflow-wrap: break-word; width: {{ \App\Support\DocumentLayout::DETAIL_VALUE_COLUMN }};">{{ ucfirst($agenda->tipe_rapat) }} &mdash; <span id="sheet-info-location" data-default-location="{{ $agenda->lokasi_ruang ?? 'Daring (Online Meeting)' }}">{{ $config['custom_location'] ?? ($agenda->lokasi_ruang ?? 'Daring (Online Meeting)') }}</span></td>
                         </tr>
                         <tr>
                             <td style="font-weight: bold; padding: {{ \App\Support\DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ \App\Support\DocumentLayout::DETAIL_LABEL_COLUMN }};">Penyelenggara Rapat</td>
@@ -401,18 +414,15 @@
                             <td style="padding: {{ \App\Support\DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; word-wrap: break-word; overflow-wrap: break-word; width: {{ \App\Support\DocumentLayout::DETAIL_VALUE_COLUMN }};">{{ $agenda->creator?->name ?? 'Penyelenggara Rapat' }} ({{ $agenda->creator?->unit?->nama_unit ?? 'Tingkat Lembaga' }})</td>
                         </tr>
                     </table>
-                    @endif
 
                     <!-- Seksi I: Notulensi & Kesimpulan Rapat (Interactive WYSIWYG Editors) -->
-                    @if(($config['show_notulensi'] ?? true) || ($config['show_kesimpulan'] ?? true))
-                    <div id="sheet-seksi-1-container" style="margin-top: {{ \App\Support\DocumentLayout::SECTION_GAP_TOP_PT }}pt;">
+                    <div id="sheet-seksi-1-container" style="margin-top: {{ \App\Support\DocumentLayout::SECTION_GAP_TOP_PT }}pt; {{ (($config['show_notulensi'] ?? true) || ($config['show_kesimpulan'] ?? true)) ? '' : 'display: none;' }}">
                         <div id="sheet-seksi-1-title" class="section-title" style="font-size: {{ \App\Support\DocumentLayout::SECTION_SIZE_PT }}pt; font-weight: bold; margin: 0 0 {{ \App\Support\DocumentLayout::SECTION_GAP_BOTTOM_PT }}pt 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif;">
                             I. NOTULENSI &amp; KESIMPULAN RAPAT
                         </div>
 
                         <!-- Bagian A: Catatan Jalannya Rapat (Notulensi) -->
-                        @if($config['show_notulensi'] ?? true)
-                        <div id="sheet-section-notulensi-wrapper" style="margin-bottom: {{ \App\Support\DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt;">
+                        <div id="sheet-section-notulensi-wrapper" style="margin-bottom: {{ \App\Support\DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt; {{ ($config['show_notulensi'] ?? true) ? '' : 'display: none;' }}">
                             <div class="flex items-center justify-between mb-1">
                                 <label for="notulensi-content" style="font-weight: bold; font-size: {{ \App\Support\DocumentLayout::SUBHEADING_SIZE_PT }}pt; font-family: 'Times New Roman', Times, serif;" class="text-slate-900">
                                     A. Catatan Jalannya Rapat (Notulensi):
@@ -432,11 +442,9 @@
                                 <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>
                             @enderror
                         </div>
-                        @endif
 
                         <!-- Bagian B: Kesimpulan & Rencana Tindak Lanjut (RTL) -->
-                        @if($config['show_kesimpulan'] ?? true)
-                        <div id="sheet-section-kesimpulan-wrapper">
+                        <div id="sheet-section-kesimpulan-wrapper" style="{{ ($config['show_kesimpulan'] ?? true) ? '' : 'display: none;' }}">
                             <div class="flex items-center justify-between mb-1">
                                 <label for="kesimpulan-content" style="font-weight: bold; font-size: {{ \App\Support\DocumentLayout::SUBHEADING_SIZE_PT }}pt; font-family: 'Times New Roman', Times, serif;" class="text-slate-900">
                                     B. Kesimpulan &amp; Rencana Tindak Lanjut (RTL):
@@ -456,13 +464,10 @@
                                 <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>
                             @enderror
                         </div>
-                        @endif
                     </div>
-                    @endif
 
                     <!-- Seksi II: Daftar Kehadiran Peserta (Spreadsheet / Word Table) -->
-                    @if($config['show_attendees'] ?? true)
-                    <div id="sheet-seksi-2-wrapper">
+                    <div id="sheet-seksi-2-wrapper" style="{{ ($config['show_attendees'] ?? true) ? '' : 'display: none;' }}">
                     <div id="sheet-seksi-2-container" class="section-title" style="font-size: {{ \App\Support\DocumentLayout::SECTION_SIZE_PT }}pt; font-weight: bold; margin: {{ \App\Support\DocumentLayout::SECTION_GAP_TOP_PT }}pt 0 {{ \App\Support\DocumentLayout::SECTION_GAP_BOTTOM_PT }}pt 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif;">
                         II. DAFTAR KEHADIRAN PESERTA ({{ $attendances->count() }} Orang)
                     </div>
@@ -497,40 +502,24 @@
 
                         $presenceHeaderPad = fn (string $side): string => '3pt '.$side;
                     @endphp
-                    <table class="doc-spreadsheet-table attendance-table" width="100%" border="1" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; border-collapse: collapse; border: {{ \App\Support\DocumentLayout::BORDER_PT }}px solid #{{ \App\Support\DocumentLayout::BORDER_COLOR }}; font-size: {{ \App\Support\DocumentLayout::ATTENDANCE_SIZE_PT }}pt; line-height: {{ \App\Support\DocumentLayout::ATTENDANCE_LINE_PT }}pt; font-family: 'Times New Roman', Times, serif;">
+                    <table id="sheet-attendance-table" class="doc-spreadsheet-table attendance-table" width="100%" border="1" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; border-collapse: collapse; border: {{ \App\Support\DocumentLayout::BORDER_PT }}px solid #{{ \App\Support\DocumentLayout::BORDER_COLOR }}; font-size: {{ \App\Support\DocumentLayout::ATTENDANCE_SIZE_PT }}pt; line-height: {{ \App\Support\DocumentLayout::ATTENDANCE_LINE_PT }}pt; font-family: 'Times New Roman', Times, serif;">
                         <colgroup>
-                            <col style="width: {{ $presenceWidths['no'] }};">
-                            <col style="width: {{ $presenceWidths['name'] }};">
-                            @if($config['show_nip'] ?? true)
-                                <col style="width: {{ $presenceWidths['nip'] }};">
-                            @endif
-                            @if($config['show_unit'] ?? true)
-                                <col style="width: {{ $presenceWidths['unit'] }};">
-                            @endif
-                            @if($config['show_attendance_time'] ?? true)
-                                <col style="width: {{ $presenceWidths['time'] }};">
-                            @endif
-                            @if($config['show_selfie_photos'] ?? true)
-                                <col style="width: {{ $presenceWidths['photo'] }};">
-                            @endif
-                            <col style="width: {{ $presenceWidths['sign'] }};">
+                            <col data-col="no" data-col-width="{{ $presenceWidths['no'] }}" style="width: {{ $presenceWidths['no'] }};">
+                            <col data-col="name" style="width: {{ $presenceWidths['name'] }};">
+                            <col data-col="nip" data-col-width="{{ $presenceWidths['nip'] }}" style="width: {{ $presenceWidths['nip'] }}; {{ ($config['show_nip'] ?? true) ? '' : 'display: none;' }}">
+                            <col data-col="unit" data-col-width="{{ $presenceWidths['unit'] }}" style="width: {{ $presenceWidths['unit'] }}; {{ ($config['show_unit'] ?? true) ? '' : 'display: none;' }}">
+                            <col data-col="time" data-col-width="{{ $presenceWidths['time'] }}" style="width: {{ $presenceWidths['time'] }}; {{ ($config['show_attendance_time'] ?? true) ? '' : 'display: none;' }}">
+                            <col data-col="photo" data-col-width="{{ $presenceWidths['photo'] }}" style="width: {{ $presenceWidths['photo'] }}; {{ ($config['show_selfie_photos'] ?? true) ? '' : 'display: none;' }}">
+                            <col data-col="sign" data-col-width="{{ $presenceWidths['sign'] }}" style="width: {{ $presenceWidths['sign'] }};">
                         </colgroup>
                         <thead>
                             <tr style="background-color: #{{ \App\Support\DocumentLayout::ATTENDANCE_HEADER_FILL }};">
                                 <th style="text-align: center;">No</th>
                                 <th style="text-align: left;">Nama Lengkap</th>
-                                @if($config['show_nip'] ?? true)
-                                    <th style="text-align: left;">NIP</th>
-                                @endif
-                                @if($config['show_unit'] ?? true)
-                                    <th style="text-align: left;">Unit Kerja / Pokja</th>
-                                @endif
-                                @if($config['show_attendance_time'] ?? true)
-                                    <th style="text-align: center;">Waktu</th>
-                                @endif
-                                @if($config['show_selfie_photos'] ?? true)
-                                    <th style="text-align: center;">Foto Kehadiran</th>
-                                @endif
+                                <th data-col="nip" style="text-align: left; {{ ($config['show_nip'] ?? true) ? '' : 'display: none;' }}">NIP</th>
+                                <th data-col="unit" style="text-align: left; {{ ($config['show_unit'] ?? true) ? '' : 'display: none;' }}">Unit Kerja / Pokja</th>
+                                <th data-col="time" style="text-align: center; {{ ($config['show_attendance_time'] ?? true) ? '' : 'display: none;' }}">Waktu</th>
+                                <th data-col="photo" style="text-align: center; {{ ($config['show_selfie_photos'] ?? true) ? '' : 'display: none;' }}">Foto Kehadiran</th>
                                 <th style="text-align: center;">Tanda Tangan</th>
                             </tr>
                         </thead>
@@ -539,42 +528,35 @@
                                 <tr>
                                     <td style="text-align: center; vertical-align: middle;">{{ $index + 1 }}</td>
                                     <td style="vertical-align: middle; padding: 2pt 4pt;"><strong>{{ $att->user->name }}</strong></td>
-                                    @if($config['show_nip'] ?? true)
-                                        <td style="vertical-align: middle; padding: 2pt 3pt;">{{ $att->user->nip }}</td>
-                                    @endif
-                                    @if($config['show_unit'] ?? true)
-                                        <td style="vertical-align: middle; padding: 2pt 3pt;">{{ $att->user->unit?->kode_unit ?? 'Pusat' }}</td>
-                                    @endif
-                                    @if($config['show_attendance_time'] ?? true)
-                                        <td style="text-align: center; vertical-align: middle; padding: 2pt 2pt;">{{ $att->signed_at?->format('H:i') ?? '-' }}</td>
-                                    @endif
-                                    @if($config['show_selfie_photos'] ?? true)
-                                        <td style="text-align: center; vertical-align: middle; padding: 1.5pt;">
-                                            @if($att->selfie_path)
-                                                <button 
-                                                    type="button" 
-                                                    data-selfie-modal-trigger
-                                                    data-selfie-url="{{ Storage::disk('public')->url($att->selfie_path) }}"
-                                                    data-user-name="{{ $att->user->name }}"
-                                                    data-user-nip="{{ $att->user->nip ?? '-' }}"
-                                                    data-unit-name="{{ $att->user->unit?->kode_unit ? $att->user->unit->kode_unit . ' — ' . $att->user->unit->nama_unit : 'Tingkat Lembaga' }}"
-                                                    data-signed-at="{{ $att->signed_at?->format('d/m/Y H:i:s') ?? '-' }} WIB"
-                                                    data-ip-address="{{ $att->ip_address ?? '127.0.0.1' }}"
-                                                    class="inline-block p-0 m-0 border-0 bg-transparent cursor-pointer hover:opacity-80 transition"
-                                                    style="vertical-align: middle; line-height: 0;"
-                                                    title="Klik untuk memverifikasi foto selfie {{ $att->user->name }}"
-                                                    aria-label="Verifikasi foto selfie {{ $att->user->name }}"
-                                                >
-                                                    <img src="{{ Storage::disk('public')->url($att->selfie_path) }}" alt="Selfie" width="26" height="26" style="width: 26px; height: 26px; object-fit: cover; border-radius: 2px; border: 1px solid #cbd5e1; display: inline-block; vertical-align: middle;">
-                                                </button>
-                                            @else
-                                                <span style="font-size: 7pt; color: #94a3b8; font-style: italic;">Tanpa Foto</span>
-                                            @endif
-                                        </td>
-                                    @endif
+                                    <td data-col="nip" style="vertical-align: middle; padding: 2pt 3pt; {{ ($config['show_nip'] ?? true) ? '' : 'display: none;' }}">{{ $att->user->nip }}</td>
+                                    <td data-col="unit" style="vertical-align: middle; padding: 2pt 3pt; {{ ($config['show_unit'] ?? true) ? '' : 'display: none;' }}">{{ $att->user->unit?->kode_unit ?? 'Pusat' }}</td>
+                                    <td data-col="time" style="text-align: center; vertical-align: middle; padding: 2pt 2pt; {{ ($config['show_attendance_time'] ?? true) ? '' : 'display: none;' }}">{{ $att->signed_at?->format('H:i') ?? '-' }}</td>
+                                    <td data-col="photo" style="text-align: center; vertical-align: middle; padding: 1.5pt; {{ ($config['show_selfie_photos'] ?? true) ? '' : 'display: none;' }}">
+                                        @if($att->selfie_path)
+                                            <button 
+                                                type="button" 
+                                                data-selfie-modal-trigger
+                                                data-selfie-url="{{ Storage::disk('public')->url($att->selfie_path) }}"
+                                                data-user-name="{{ $att->user->name }}"
+                                                data-user-nip="{{ $att->user->nip ?? '-' }}"
+                                                data-unit-name="{{ $att->user->unit?->kode_unit ? $att->user->unit->kode_unit . ' — ' . $att->user->unit->nama_unit : 'Tingkat Lembaga' }}"
+                                                data-signed-at="{{ $att->signed_at?->format('d/m/Y H:i:s') ?? '-' }} WIB"
+                                                data-ip-address="{{ $att->ip_address ?? '127.0.0.1' }}"
+                                                class="inline-block p-0 m-0 border-0 bg-transparent cursor-pointer hover:opacity-80 transition"
+                                                style="vertical-align: middle; line-height: 0;"
+                                                title="Klik untuk memverifikasi foto selfie {{ $att->user->name }}"
+                                                aria-label="Verifikasi foto selfie {{ $att->user->name }}"
+                                            >
+                                                <img src="{{ Storage::disk('public')->url($att->selfie_path) }}" alt="Selfie" width="26" height="26" style="width: 26px; height: 26px; object-fit: cover; border-radius: 2px; border: 1px solid #cbd5e1; display: inline-block; vertical-align: middle;">
+                                            </button>
+                                        @else
+                                            <span style="font-size: 7pt; color: #94a3b8; font-style: italic;">Tanpa Foto</span>
+                                        @endif
+                                    </td>
                                     <td style="text-align: center; vertical-align: middle; padding: 1.5pt;">
-                                        @if(($config['show_attendee_signatures'] ?? true) && $att->signature_path)
-                                            <img src="{{ Storage::disk('public')->url($att->signature_path) }}" alt="TTD" width="75" height="22" style="width: 75px; height: 22px; max-height: 24px; object-fit: contain; display: block; margin: 0 auto; border: none;">
+                                        @if($att->signature_path)
+                                            <img class="attendee-sig-img" src="{{ Storage::disk('public')->url($att->signature_path) }}" alt="TTD" width="75" height="22" style="width: 75px; height: 22px; max-height: 24px; object-fit: contain; display: {{ ($config['show_attendee_signatures'] ?? true) ? 'block' : 'none' }}; margin: 0 auto; border: none;">
+                                            <span class="attendee-sig-fallback" style="font-size: 7.5pt; color: #166534; font-weight: bold; display: {{ ($config['show_attendee_signatures'] ?? true) ? 'none' : 'inline' }};">(HADIR)</span>
                                         @else
                                             <span style="font-size: 7.5pt; color: #166534; font-weight: bold;">(HADIR)</span>
                                         @endif
@@ -582,7 +564,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="{{ 2 + ($config['show_nip'] ?? true ? 1 : 0) + ($config['show_unit'] ?? true ? 1 : 0) + ($config['show_attendance_time'] ?? true ? 1 : 0) + ($config['show_selfie_photos'] ?? true ? 1 : 0) }}" style="text-align: center; padding: 8pt; font-style: italic; color: #64748b;">
+                                    <td id="sheet-attendance-empty-cell" colspan="{{ 2 + ($config['show_nip'] ?? true ? 1 : 0) + ($config['show_unit'] ?? true ? 1 : 0) + ($config['show_attendance_time'] ?? true ? 1 : 0) + ($config['show_selfie_photos'] ?? true ? 1 : 0) }}" style="text-align: center; padding: 8pt; font-style: italic; color: #64748b;">
                                         Belum ada peserta yang mengisi presensi rapat.
                                     </td>
                                 </tr>
@@ -590,7 +572,6 @@
                         </tbody>
                     </table>
                     </div>
-                    @endif
 
                     <!-- Blok Pengesahan & Tanda Tangan (Dynamic Word Signature Flow) -->
                     <div id="sheet-pengesahan-final" class="sheet-signature-wrapper" style="margin-top: 18pt;">
@@ -605,78 +586,76 @@
                         </div>
 
                         <!-- Tanda Tangan Pengesahan. Satu loop untuk semua penanda
-                             tangan, dengan tiga baris: label, tanda tangan, nama.
-                             Duplikat per penanda tangan seperti sebelumnya justru
-                             membuat kolom ketiga mustahil ditambahkan tanpa
-                             menyalin blok yang sama sekali lagi. -->
+                             tangan, dengan tiga baris: label, tanda tangan, nama. -->
                         @php
                             $pimpinanAtt = $agenda->pimpinan_attendance;
                             $notulisAtt = $agenda->notulis_attendance;
+                            $showSigner3Initial = (bool) ($config['show_signer3'] ?? false);
 
-                            $signatureSigners = [[
-                                'label' => 'Mengetahui,',
-                                'role' => $config['signer1_role'] ?? 'Pemimpin Rapat',
-                                'roleId' => 'sheet-signer1-role',
-                                'name' => $config['signer1_name'] ?? $agenda->nama_pimpinan,
-                                'nameId' => 'sheet-signer1-name',
-                                'nip' => $config['signer1_nip'] ?? $agenda->nip_pimpinan,
-                                'nipId' => 'sheet-signer1-nip',
-                                'mark' => $pimpinanAtt?->signature_path,
-                                'markId' => 'sheet-signer1-mark',
-                                'showMark' => $config['show_signer1_signature'] ?? true,
-                            ]];
-
-                            if ($config['show_signer3'] ?? false) {
-                                $signatureSigners[] = [
+                            $signatureSigners = [
+                                [
+                                    'label' => 'Mengetahui,',
+                                    'role' => $config['signer1_role'] ?? 'Pemimpin Rapat',
+                                    'roleId' => 'sheet-signer1-role',
+                                    'name' => $config['signer1_name'] ?? $agenda->nama_pimpinan,
+                                    'nameId' => 'sheet-signer1-name',
+                                    'nip' => $config['signer1_nip'] ?? $agenda->nip_pimpinan,
+                                    'nipId' => 'sheet-signer1-nip',
+                                    'mark' => $pimpinanAtt?->signature_path,
+                                    'markId' => 'sheet-signer1-mark',
+                                    'showMark' => $config['show_signer1_signature'] ?? true,
+                                    'isSigner3' => false,
+                                ],
+                                [
                                     'label' => 'Menyetujui,',
-                                    'role' => $config['signer3_role'] ?? 'Kepala LLDIKTI',
-                                    'roleId' => null,
-                                    'name' => $config['signer3_name'] ?? '-',
-                                    'nameId' => null,
-                                    'nip' => $config['signer3_nip'] ?? '-',
-                                    'nipId' => null,
+                                    'role' => $config['signer3_role'] ?? 'Kepala LLDIKTI Wilayah X',
+                                    'roleId' => 'sheet-signer3-role',
+                                    'name' => ($config['signer3_name'] ?? '') !== '' ? $config['signer3_name'] : '-',
+                                    'nameId' => 'sheet-signer3-name',
+                                    'nip' => ($config['signer3_nip'] ?? '') !== '' ? $config['signer3_nip'] : '-',
+                                    'nipId' => 'sheet-signer3-nip',
                                     'mark' => null,
                                     'markId' => 'sheet-signer3-mark',
                                     'showMark' => false,
-                                ];
-                            }
-
-                            $signatureSigners[] = [
-                                'label' => '<span id="sheet-signing-city">'
-                                    .e($config['signing_city'] ?? 'Padang').'</span>, '
-                                    .'<span id="sheet-signing-date">'
-                                    .e($config['signing_date'] ?? ($agenda->waktu_mulai ? $agenda->waktu_mulai->translatedFormat('d F Y') : now()->translatedFormat('d F Y')))
-                                    .'</span>',
-                                'role' => $config['signer2_role'] ?? 'Notulis Rapat',
-                                'roleId' => 'sheet-signer2-role',
-                                'name' => $config['signer2_name'] ?? $agenda->nama_notulis,
-                                'nameId' => 'sheet-signer2-name',
-                                'nip' => $config['signer2_nip'] ?? $agenda->nip_notulis,
-                                'nipId' => 'sheet-signer2-nip',
-                                'mark' => $notulisAtt?->signature_path,
-                                'markId' => 'sheet-signer2-mark',
-                                'showMark' => $config['show_signer2_signature'] ?? true,
+                                    'isSigner3' => true,
+                                ],
+                                [
+                                    'label' => '<span id="sheet-signing-city">'
+                                        .e($config['signing_city'] ?? 'Padang').'</span>, '
+                                        .'<span id="sheet-signing-date">'
+                                        .e($config['signing_date'] ?? ($agenda->waktu_mulai ? $agenda->waktu_mulai->translatedFormat('d F Y') : now()->translatedFormat('d F Y')))
+                                        .'</span>',
+                                    'role' => $config['signer2_role'] ?? 'Notulis Rapat',
+                                    'roleId' => 'sheet-signer2-role',
+                                    'name' => $config['signer2_name'] ?? $agenda->nama_notulis,
+                                    'nameId' => 'sheet-signer2-name',
+                                    'nip' => $config['signer2_nip'] ?? $agenda->nip_notulis,
+                                    'nipId' => 'sheet-signer2-nip',
+                                    'mark' => $notulisAtt?->signature_path,
+                                    'markId' => 'sheet-signer2-mark',
+                                    'showMark' => $config['show_signer2_signature'] ?? true,
+                                    'isSigner3' => false,
+                                ],
                             ];
 
-                            $signatureCount = count($signatureSigners);
-                            $signatureColWidth = $signatureCount >= 3 ? '33.4%' : '50%';
-                            $signatureInner = $signatureCount >= 3
+                            $signatureColWidth = $showSigner3Initial ? '33.4%' : '50%';
+                            $signatureInner = $showSigner3Initial
                                 ? \App\Support\DocumentLayout::TTD_INNER_WIDTH_THREE_COLUMN
                                 : \App\Support\DocumentLayout::TTD_INNER_WIDTH_TWO_COLUMN;
                             $signatureFont = 'font-size: '.\App\Support\DocumentLayout::BODY_SIZE_PT
                                 .'pt; font-family: \'Times New Roman\', Times, serif;';
                         @endphp
                         <div class="signature-block" style="margin-top: {{ \App\Support\DocumentLayout::TTD_GAP_PT }}pt; page-break-inside: avoid; break-inside: avoid;">
-                            <table class="signature-table" width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; border-collapse: collapse; border: none; font-family: 'Times New Roman', Times, serif;">
+                            <table id="sheet-signature-table" class="signature-table" width="100%" border="0" cellspacing="0" cellpadding="0" data-inner-two="{{ \App\Support\DocumentLayout::TTD_INNER_WIDTH_TWO_COLUMN }}" data-inner-three="{{ \App\Support\DocumentLayout::TTD_INNER_WIDTH_THREE_COLUMN }}" style="width: 100%; table-layout: fixed; border-collapse: collapse; border: none; font-family: 'Times New Roman', Times, serif;">
                                 <colgroup>
                                     @foreach($signatureSigners as $signatureSigner)
-                                        <col style="width: {{ $signatureColWidth }};">
+                                        <col @if($signatureSigner['isSigner3']) data-signer3-col @endif data-signer-col style="width: {{ $signatureColWidth }}; {{ ($signatureSigner['isSigner3'] && !$showSigner3Initial) ? 'display: none;' : '' }}">
                                     @endforeach
                                 </colgroup>
                                 <tr>
                                     @foreach($signatureSigners as $signatureSigner)
-                                        <td style="width: {{ $signatureColWidth }}; text-align: center; vertical-align: top; border: none; padding: 0 4pt;">
-                                            <div style="display: inline-block; width: {{ $signatureInner }}; text-align: left;">
+                                        <td @if($signatureSigner['isSigner3']) data-signer3-col @endif data-signer-col style="width: {{ $signatureColWidth }}; text-align: center; vertical-align: top; border: none; padding: 0 4pt; {{ ($signatureSigner['isSigner3'] && !$showSigner3Initial) ? 'display: none;' : '' }}">
+                                            <div data-signer-inner style="display: inline-block; width: {{ $signatureInner }}; text-align: left;">
                                                 <span style="{{ $signatureFont }}">{!! $signatureSigner['label'] !!}</span><br>
                                                 <strong style="{{ $signatureFont }}">@if($signatureSigner['roleId'])<span id="{{ $signatureSigner['roleId'] }}">@endif{{ $signatureSigner['role'] }}@if($signatureSigner['roleId'])</span>@endif</strong>
                                             </div>
@@ -685,9 +664,9 @@
                                 </tr>
                                 <tr>
                                     @foreach($signatureSigners as $signatureSigner)
-                                        <td style="width: {{ $signatureColWidth }}; text-align: center; vertical-align: middle; border: none; padding: 1pt 0; height: {{ \App\Support\DocumentLayout::TTD_ROW_HEIGHT_PT }}pt;">
-                                            <div id="{{ $signatureSigner['markId'] }}" style="display: inline-block; width: {{ $signatureInner }}; text-align: left;">
-                                                @if($signatureSigner['showMark'] && $signatureSigner['mark'])
+                                        <td @if($signatureSigner['isSigner3']) data-signer3-col @endif data-signer-col style="width: {{ $signatureColWidth }}; text-align: center; vertical-align: middle; border: none; padding: 1pt 0; height: {{ \App\Support\DocumentLayout::TTD_ROW_HEIGHT_PT }}pt; {{ ($signatureSigner['isSigner3'] && !$showSigner3Initial) ? 'display: none;' : '' }}">
+                                            <div id="{{ $signatureSigner['markId'] }}" data-signer-inner style="display: inline-block; width: {{ $signatureInner }}; text-align: left; {{ $signatureSigner['showMark'] ? '' : 'display: none;' }}">
+                                                @if($signatureSigner['mark'])
                                                     <img src="{{ Storage::disk('public')->url($signatureSigner['mark']) }}" alt="TTD" width="95" height="32" style="width: 95px; height: 32px; max-height: 34px; max-width: 100px; object-fit: contain; display: block; border: none;">
                                                 @endif
                                             </div>
@@ -696,8 +675,8 @@
                                 </tr>
                                 <tr>
                                     @foreach($signatureSigners as $signatureSigner)
-                                        <td style="width: {{ $signatureColWidth }}; text-align: center; vertical-align: top; border: none; padding: 0 4pt;">
-                                            <div style="display: inline-block; width: {{ $signatureInner }}; text-align: left; {{ $signatureFont }}">
+                                        <td @if($signatureSigner['isSigner3']) data-signer3-col @endif data-signer-col style="width: {{ $signatureColWidth }}; text-align: center; vertical-align: top; border: none; padding: 0 4pt; {{ ($signatureSigner['isSigner3'] && !$showSigner3Initial) ? 'display: none;' : '' }}">
+                                            <div data-signer-inner style="display: inline-block; width: {{ $signatureInner }}; text-align: left; {{ $signatureFont }}">
                                                 <strong>@if($signatureSigner['nameId'])<span id="{{ $signatureSigner['nameId'] }}">@endif{{ $signatureSigner['name'] }}@if($signatureSigner['nameId'])</span>@endif</strong><br>
                                                 NIP @if($signatureSigner['nipId'])<span id="{{ $signatureSigner['nipId'] }}">@endif{{ $signatureSigner['nip'] }}@if($signatureSigner['nipId'])</span>@endif
                                             </div>
@@ -707,28 +686,23 @@
                             </table>
                         </div>
 
-                        <!-- Catatan Kaki Dokumen Resmi. Kosong secara bawaan:
-                             tidak ada kalimat sistem dan tidak ada stempel waktu
-                             cetak. Blok hanya muncul bila petugas menyalakan
-                             sakelar dan benar-benar menulis sesuatu. -->
-                        @if(($config['show_footer_note'] ?? false) && trim((string) ($config['footer_note'] ?? '')) !== '')
-                        <div id="sheet-footer-note-block" class="document-footer-note" style="margin: {{ \App\Support\DocumentLayout::FOOTER_NOTE_GAP_PT }}pt 0 0 0; padding-top: {{ \App\Support\DocumentLayout::FOOTER_NOTE_PAD_TOP_PT }}pt; border-top: {{ \App\Support\DocumentLayout::FOOTER_NOTE_RULE_PT }}pt solid #{{ \App\Support\DocumentLayout::FOOTER_NOTE_RULE_COLOR }}; font-size: {{ \App\Support\DocumentLayout::FOOTER_NOTE_SIZE_PT }}pt; color: #{{ \App\Support\DocumentLayout::FOOTER_NOTE_COLOR }}; text-align: center; font-family: 'Times New Roman', Times, serif; page-break-inside: avoid; break-inside: avoid;">
+                        <!-- Catatan Kaki Dokumen Resmi (Selalu ada di DOM agar live toggle berfungsi) -->
+                        <div id="sheet-footer-note-block" class="document-footer-note" style="margin: {{ \App\Support\DocumentLayout::FOOTER_NOTE_GAP_PT }}pt 0 0 0; padding-top: {{ \App\Support\DocumentLayout::FOOTER_NOTE_PAD_TOP_PT }}pt; border-top: {{ \App\Support\DocumentLayout::FOOTER_NOTE_RULE_PT }}pt solid #{{ \App\Support\DocumentLayout::FOOTER_NOTE_RULE_COLOR }}; font-size: {{ \App\Support\DocumentLayout::FOOTER_NOTE_SIZE_PT }}pt; color: #{{ \App\Support\DocumentLayout::FOOTER_NOTE_COLOR }}; text-align: center; font-family: 'Times New Roman', Times, serif; page-break-inside: avoid; break-inside: avoid; {{ (($config['show_footer_note'] ?? false) && trim((string) ($config['footer_note'] ?? '')) !== '') ? '' : 'display: none;' }}">
                             <span id="sheet-footer-note">{{ $config['footer_note'] ?? '' }}</span>
                         </div>
-                        @endif
                     </div>
 
-                    <!-- Lampiran Bersih Foto Dokumentasi pada Lembar Cetak (Hanya Tampil Jika Foto Ada & Opsi Aktif) -->
-                    @if($documentations->count() > 0)
-                        <div id="sheet-documentation-annex" class="sheet-documentation-annex" style="margin-top: 10pt; padding-top: 8pt; border-top: 1.5px solid #000; {{ ($config['show_documentation'] ?? true) ? '' : 'display: none;' }}">
-                            <div style="font-size: {{ \App\Support\DocumentLayout::SECTION_SIZE_PT }}pt; font-weight: bold; margin-bottom: {{ \App\Support\DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt; text-transform: uppercase; font-family: 'Times New Roman', Times, serif; text-align: center;">
-                                III. LAMPIRAN FOTO DOKUMENTASI KEGIATAN
-                            </div>
-                            <table width="100%" border="0" cellspacing="0" cellpadding="4" style="width: 100%; border-collapse: collapse;">
+                    <!-- Lampiran Bersih Foto Dokumentasi pada Lembar Cetak (Selalu ada di DOM agar sinkronisasi live berfungsi) -->
+                    <div id="sheet-documentation-annex" class="sheet-documentation-annex" style="margin-top: 10pt; padding-top: 8pt; border-top: 1.5px solid #000; {{ ($documentations->count() > 0 && ($config['show_documentation'] ?? true)) ? '' : 'display: none;' }}">
+                        <div style="font-size: {{ \App\Support\DocumentLayout::SECTION_SIZE_PT }}pt; font-weight: bold; margin-bottom: {{ \App\Support\DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt; text-transform: uppercase; font-family: 'Times New Roman', Times, serif; text-align: center;">
+                            III. LAMPIRAN FOTO DOKUMENTASI KEGIATAN
+                        </div>
+                        <table width="100%" border="0" cellspacing="0" cellpadding="4" style="width: 100%; border-collapse: collapse;">
+                            <tbody id="sheet-documentation-tbody">
                                 @foreach($documentations->chunk(2) as $chunk)
                                     <tr>
                                         @foreach($chunk as $doc)
-                                            <td width="50%" align="center" valign="top" style="padding: 4pt; border: none;">
+                                            <td width="50%" align="center" valign="top" style="padding: 4pt; border: none;" data-sheet-doc-id="{{ $doc->id }}">
                                                 <div 
                                                     class="cursor-pointer group/doc hover:opacity-90 transition"
                                                     data-doc-modal-trigger
@@ -741,9 +715,7 @@
                                                     title="Klik untuk pratinjau foto perbesar"
                                                 >
                                                     <img src="{{ Storage::disk('public')->url($doc->file_path) }}" alt="Foto Dokumentasi" style="width: 100%; max-height: 120px; object-fit: contain; display: block; margin: 0 auto;">
-                                                    @if($doc->caption)
-                                                        <div style="font-size: 7.5pt; color: #334155; margin-top: 2pt; font-style: italic; font-family: 'Times New Roman', Times, serif;">{{ $doc->caption }}</div>
-                                                    @endif
+                                                    <div id="sheet-doc-caption-{{ $doc->id }}" style="font-size: 7.5pt; color: #334155; margin-top: 2pt; font-style: italic; font-family: 'Times New Roman', Times, serif; {{ $doc->caption ? '' : 'display: none;' }}">{{ $doc->caption }}</div>
                                                 </div>
                                             </td>
                                         @endforeach
@@ -752,9 +724,9 @@
                                         @endif
                                     </tr>
                                 @endforeach
-                            </table>
-                        </div>
-                    @endif
+                            </tbody>
+                        </table>
+                    </div>
 
                     <!-- Running Footer Lembar 1 -->
                     <div class="doc-running-footer">
@@ -782,14 +754,19 @@
 
             <!-- 5. Word Office Bottom Status Bar -->
             <div class="office-status-bar" id="office-status-bar" aria-label="Bilah Status Dokumen">
-                <div class="flex items-center gap-3">
+                <div class="flex flex-wrap items-center gap-2 sm:gap-3">
                     <span id="office-status-page" class="font-semibold text-slate-200">Halaman 1 dari 1</span>
                     <span class="text-slate-600">&bull;</span>
-                    <span id="office-status-size">A4 (210 × 297 mm)</span>
-                    <span class="text-slate-600">&bull;</span>
-                    <span>Margin: 18mm Normal</span>
+                    <span id="office-status-words" class="text-slate-300">0 Kata</span>
+                    <span class="text-slate-600 hidden sm:inline">&bull;</span>
+                    <span id="office-status-size" class="hidden sm:inline">A4 (210 × 297 mm)</span>
                 </div>
                 <div class="flex items-center gap-3">
+                    <span id="office-status-save-state" class="inline-flex items-center gap-1.5 text-emerald-400 font-semibold">
+                        <span id="office-status-save-dot" class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                        <span id="office-status-save-label">Tersimpan</span>
+                    </span>
+                    <span class="text-slate-600">&bull;</span>
                     <span id="office-status-zoom">Zoom: 100%</span>
                 </div>
             </div>
@@ -878,15 +855,22 @@
 
                     <!-- Galeri Foto yang Sudah Tersimpan -->
                     @if($documentations->count() > 0)
-                        <div class="mt-4 pt-3 border-t border-slate-200 font-sans">
+                        <div id="modal-stored-docs-section" class="mt-4 pt-3 border-t border-slate-200 font-sans">
                             <div class="flex items-center justify-between mb-2">
                                 <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wide">
-                                    Foto Tersimpan di Database ({{ $documentations->total() }})
+                                    Foto Tersimpan di Database (<span id="modal-stored-photo-count">{{ $documentations->count() }}</span>)
                                 </h4>
                             </div>
-                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                            <div id="modal-stored-docs-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                                 @foreach($documentations as $doc)
-                                    <div class="relative group bg-slate-50 rounded-xl overflow-hidden border border-slate-300 shadow-xs flex flex-col justify-between">
+                                    <div
+                                        id="stored-doc-card-{{ $doc->id }}"
+                                        data-stored-doc-card="{{ $doc->id }}"
+                                        data-doc-url="{{ Storage::disk('public')->url($doc->file_path) }}"
+                                        data-doc-filename="{{ basename($doc->file_path) }}"
+                                        data-doc-date="{{ $doc->created_at ? $doc->created_at->format('d/m/Y H:i') . ' WIB' : '' }}"
+                                        class="relative group bg-slate-50 rounded-xl overflow-hidden border border-slate-300 shadow-xs flex flex-col justify-between"
+                                    >
                                         <button 
                                             type="button"
                                             class="w-full text-left relative block cursor-pointer group/thumb focus:outline-hidden"
@@ -898,19 +882,28 @@
                                             data-doc-date="{{ $doc->created_at ? $doc->created_at->format('d/m/Y H:i') . ' WIB' : '' }}"
                                             aria-label="Lihat foto {{ $doc->caption ?? basename($doc->file_path) }}"
                                         >
-                                            <img src="{{ Storage::disk('public')->url($doc->file_path) }}" alt="Dokumentasi Rapat" class="w-full h-24 object-cover group-hover/thumb:scale-105 transition duration-300">
+                                            <img src="{{ Storage::disk('public')->url($doc->file_path) }}" alt="Dokumentasi Rapat" class="w-full h-28 object-cover group-hover/thumb:scale-105 transition duration-300">
                                             <div class="absolute inset-0 bg-slate-950/0 group-hover/thumb:bg-slate-950/20 transition flex items-center justify-center">
                                                 <div class="w-7 h-7 rounded-full bg-slate-900/80 text-white flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition shadow-md">
                                                     <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
                                                 </div>
                                             </div>
                                         </button>
-                                        <div class="p-1.5 bg-white text-[10px] text-slate-900 font-bold border-t border-slate-200 flex items-center justify-between gap-1">
-                                            <span class="truncate flex-1" title="{{ $doc->caption ?? 'Dokumentasi' }}">{{ $doc->caption ?? 'Dokumentasi' }}</span>
-                                            <div class="flex items-center gap-1 shrink-0">
+                                        <div class="p-2 bg-white border-t border-slate-200 space-y-1.5">
+                                            <input
+                                                type="text"
+                                                name="existing_captions[{{ $doc->id }}]"
+                                                value="{{ $doc->caption }}"
+                                                data-existing-caption-input="{{ $doc->id }}"
+                                                maxlength="255"
+                                                placeholder="Ketik keterangan foto (opsional)..."
+                                                aria-label="Keterangan foto {{ $loop->iteration }}"
+                                                class="w-full text-[11px] rounded-lg border border-slate-200 focus:border-slate-900 focus:ring-slate-900 py-1.5 px-2 text-slate-800 bg-slate-50 focus:bg-white transition font-medium"
+                                            >
+                                            <div class="flex items-center justify-between gap-1 pt-0.5">
                                                 <button 
                                                     type="button" 
-                                                    class="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-[10px] font-semibold"
+                                                    class="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-[11px] font-semibold px-1 py-0.5 rounded"
                                                     data-doc-modal-trigger
                                                     data-doc-gallery="modal-stored-docs"
                                                     data-doc-url="{{ Storage::disk('public')->url($doc->file_path) }}"
@@ -918,17 +911,19 @@
                                                     data-doc-agenda="{{ $agenda->judul_rapat }}"
                                                     data-doc-date="{{ $doc->created_at ? $doc->created_at->format('d/m/Y H:i') . ' WIB' : '' }}"
                                                 >
-                                                    Lihat
+                                                    Lihat Perbesar
                                                 </button>
                                                 <button 
-                                                    type="submit" 
-                                                    form="delete-doc-form-{{ $doc->id }}"
-                                                    onclick="return confirm('Apakah Anda yakin ingin menghapus foto dokumentasi ini?')"
-                                                    class="text-rose-600 hover:text-rose-800 p-0.5 rounded hover:bg-rose-50 transition cursor-pointer" 
-                                                    title="Hapus foto dari database"
+                                                    type="button" 
+                                                    data-delete-doc-btn="{{ $doc->id }}"
+                                                    data-delete-doc-url="{{ route('admin.agendas.delete-documentation', [$agenda, $doc]) }}"
+                                                    data-delete-doc-caption="{{ $doc->caption ?: 'Dokumentasi' }}"
+                                                    class="inline-flex items-center gap-1 text-rose-600 hover:text-rose-800 px-2 py-1 rounded-lg hover:bg-rose-50 transition cursor-pointer text-[11px] font-semibold" 
+                                                    title="Hapus foto dari database tanpa mereset ketikan"
                                                     aria-label="Hapus foto {{ $doc->caption ?? 'Dokumentasi' }}"
                                                 >
-                                                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                                                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                                                    <span>Hapus</span>
                                                 </button>
                                             </div>
                                         </div>
@@ -1055,10 +1050,10 @@
                                 <div class="flex items-center gap-2.5 shrink-0">
                                     @if(!empty($config['custom_logo_path']) && Storage::disk('public')->exists($config['custom_logo_path']))
                                         <div class="w-12 h-12 rounded-lg border border-slate-300 bg-white p-1 flex items-center justify-center shrink-0">
-                                            <img src="{{ Storage::disk('public')->url($config['custom_logo_path']) }}" alt="Logo Kustom" class="max-h-10 max-w-10 object-contain">
+                                            <img id="modal-logo-preview-img" src="{{ Storage::disk('public')->url($config['custom_logo_path']) }}" alt="Logo Kustom" class="max-h-10 max-w-10 object-contain">
                                         </div>
                                         <div>
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">Logo Kustom Aktif</span>
+                                            <span id="modal-logo-badge" class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">Logo Kustom Aktif</span>
                                             <label class="flex items-center gap-1 mt-1 text-[11px] text-red-600 font-semibold cursor-pointer">
                                                 <input type="checkbox" name="reset_custom_logo" value="1" class="rounded border-slate-300 text-red-600">
                                                 <span>Kembalikan ke Tut Wuri Handayani</span>
@@ -1066,10 +1061,10 @@
                                         </div>
                                     @else
                                         <div class="w-12 h-12 rounded-lg border border-slate-300 bg-white p-1 flex items-center justify-center shrink-0">
-                                            <img src="{{ asset('images/tut-wuri-handayani.png') }}" alt="Logo Tut Wuri" class="max-h-10 max-w-10 object-contain">
+                                            <img id="modal-logo-preview-img" src="{{ asset('images/tut-wuri-handayani.png') }}" alt="Logo Tut Wuri" class="max-h-10 max-w-10 object-contain">
                                         </div>
                                         <div>
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">Logo Tut Wuri Handayani</span>
+                                            <span id="modal-logo-badge" class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">Logo Tut Wuri Handayani</span>
                                             <div class="text-[10px] text-slate-500 mt-0.5">Bawaan standar resmi kementerian</div>
                                         </div>
                                     @endif
@@ -1393,29 +1388,20 @@
             </div>
         </div>
     </form>
-
-    @if($documentations->count() > 0)
-        @foreach($documentations as $doc)
-            <form
-                id="delete-doc-form-{{ $doc->id }}"
-                action="{{ route('admin.agendas.delete-documentation', [$agenda, $doc]) }}"
-                method="POST"
-                class="hidden"
-            >
-                @csrf
-                @method('DELETE')
-            </form>
-        @endforeach
-    @endif
 </div>
 
 <script>
     let docConfigSnapshot = {};
+    let customLogoPreviewUrl = null;
+
+    function markWorkstationDirty() {
+        window.__officeDirtyState = true;
+        window.dispatchEvent(new CustomEvent('office:dirty-change', { detail: { dirty: true } }));
+    }
 
     function openDocumentConfigModal() {
         const modal = document.getElementById('modal-notulen-document-config');
         if (modal) {
-            // Snapshot current input values
             docConfigSnapshot = {};
             modal.querySelectorAll('input, select, textarea').forEach(el => {
                 if (el.type === 'checkbox') {
@@ -1432,7 +1418,6 @@
     function cancelDocumentConfigModal() {
         const modal = document.getElementById('modal-notulen-document-config');
         if (modal) {
-            // Restore snapshot values
             modal.querySelectorAll('input, select, textarea').forEach(el => {
                 if (el.name in docConfigSnapshot) {
                     if (el.type === 'checkbox') {
@@ -1442,7 +1427,14 @@
                     }
                 }
             });
-            // Re-apply original snapshot values to workstation preview
+            const fileInput = modal.querySelector('input[type="file"][name="custom_logo"]');
+            if (fileInput) {
+                fileInput.value = '';
+                if (customLogoPreviewUrl) {
+                    URL.revokeObjectURL(customLogoPreviewUrl);
+                    customLogoPreviewUrl = null;
+                }
+            }
             applyDocConfigToWorkstation();
             window.dispatchEvent(new CustomEvent('office:reflow'));
             modal.classList.add('hidden');
@@ -1453,7 +1445,6 @@
     function closeDocumentConfigModal() {
         const modal = document.getElementById('modal-notulen-document-config');
         if (modal) {
-            // Ensure workstation live preview is up to date with latest settings
             applyDocConfigToWorkstation();
             window.dispatchEvent(new CustomEvent('office:reflow'));
             modal.classList.add('hidden');
@@ -1465,7 +1456,6 @@
         const modal = document.getElementById('modal-notulen-document-config');
         if (!modal) return;
 
-        // Hide all panes
         modal.querySelectorAll('.doc-config-tab-pane').forEach(pane => pane.classList.add('hidden'));
         modal.querySelectorAll('.doc-config-tab-btn').forEach(btn => {
             btn.classList.remove('border-slate-900', 'text-slate-900');
@@ -1482,21 +1472,113 @@
         }
     }
 
+    function getTotalDocumentationCount() {
+        const storedCards = document.querySelectorAll('[data-stored-doc-card]').length;
+        const queuedFiles = Array.isArray(window.__queuedNotulenPhotos) ? window.__queuedNotulenPhotos.length : 0;
+        return storedCards + queuedFiles;
+    }
+
+    function rebuildSheetDocumentationAnnex() {
+        const tbody = document.getElementById('sheet-documentation-tbody');
+        const annex = document.getElementById('sheet-documentation-annex');
+        const modal = document.getElementById('modal-notulen-document-config');
+        if (!tbody || !annex) return;
+
+        const workstation = document.getElementById('office-workstation');
+        const agendaTitle = workstation ? (workstation.dataset.agendaTitle || '') : '';
+        const showDocCheckbox = modal ? modal.querySelector('input[type="checkbox"][name="show_documentation"]') : null;
+        const showDoc = showDocCheckbox ? showDocCheckbox.checked : true;
+
+        const items = [];
+        document.querySelectorAll('[data-stored-doc-card]').forEach(card => {
+            const docId = card.dataset.storedDocCard;
+            const url = card.dataset.docUrl || '';
+            const filename = card.dataset.docFilename || 'Dokumentasi';
+            const dateStr = card.dataset.docDate || '';
+            const captionInput = card.querySelector(`[data-existing-caption-input="${docId}"]`);
+            const captionText = captionInput ? captionInput.value.trim() : '';
+
+            items.push({
+                id: docId,
+                url: url,
+                caption: captionText,
+                displayCaption: captionText || filename,
+                date: dateStr,
+                isQueued: false,
+            });
+        });
+
+        if (Array.isArray(window.__queuedNotulenPhotos)) {
+            window.__queuedNotulenPhotos.forEach((queued, idx) => {
+                const captionText = (queued.caption || '').trim();
+                items.push({
+                    id: 'queued-' + idx,
+                    url: queued.previewUrl,
+                    caption: captionText,
+                    displayCaption: captionText || queued.name || ('Foto Baru ' + (idx + 1)),
+                    date: 'Baru dipilih (belum disimpan)',
+                    isQueued: true,
+                });
+            });
+        }
+
+        const escapeHtml = (str) => String(str ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+
+        if (items.length === 0) {
+            tbody.innerHTML = '';
+            annex.style.display = 'none';
+            return;
+        }
+
+        let html = '';
+        for (let i = 0; i < items.length; i += 2) {
+            const chunk = items.slice(i, i + 2);
+            html += '<tr>';
+            chunk.forEach(item => {
+                const captionStyle = item.caption ? '' : 'display: none;';
+                html += `<td width="50%" align="center" valign="top" style="padding: 4pt; border: none;" data-sheet-doc-id="${escapeHtml(item.id)}">
+                    <div
+                        class="cursor-pointer group/doc hover:opacity-90 transition"
+                        data-doc-modal-trigger
+                        data-doc-gallery="notulen-sheet-docs"
+                        data-doc-url="${escapeHtml(item.url)}"
+                        data-doc-caption="${escapeHtml(item.displayCaption)}"
+                        data-doc-agenda="${escapeHtml(agendaTitle)}"
+                        data-doc-date="${escapeHtml(item.date)}"
+                        style="border: 1px solid #94a3b8; padding: 3pt; background: #ffffff; text-align: center;"
+                        title="Klik untuk pratinjau foto perbesar"
+                    >
+                        <img src="${escapeHtml(item.url)}" alt="Foto Dokumentasi" style="width: 100%; max-height: 120px; object-fit: contain; display: block; margin: 0 auto;">
+                        <div id="sheet-doc-caption-${escapeHtml(item.id)}" style="font-size: 7.5pt; color: #334155; margin-top: 2pt; font-style: italic; font-family: 'Times New Roman', Times, serif; ${captionStyle}">${escapeHtml(item.caption)}</div>
+                    </div>
+                </td>`;
+            });
+            if (chunk.length === 1) {
+                html += '<td width="50%" style="border: none;">&nbsp;</td>';
+            }
+            html += '</tr>';
+        }
+
+        tbody.innerHTML = html;
+        annex.style.display = showDoc ? '' : 'none';
+    }
+    window.rebuildSheetDocumentationAnnex = rebuildSheetDocumentationAnnex;
+
     function applyDocConfigToWorkstation() {
         const modal = document.getElementById('modal-notulen-document-config');
         if (!modal) return;
 
+        const workstation = document.getElementById('office-workstation');
         const val = (name) => {
             const input = modal.querySelector(`[name="${name}"]`);
             return input ? input.value : '';
         };
 
-        // Pratinjau harus mengikuti centang seketika, bukan hanya setelah
-        // disimpan. Sebagian besar toggle dulu hanya ada di formulir, jadi
-        // petugas mencentang sesuatu, melihat lembar tidak berubah, dan
-        // menyimpulkan toggle itu rusak. Yang ditoggle di bawah memakai id
-        // yang sama dengan blok di server, sehingga keduanya tidak mungkin
-        // merujuk elemen yang berbeda.
         const setVisible = (id, visible) => {
             const el = document.getElementById(id);
             if (el) el.style.display = visible ? '' : 'none';
@@ -1514,23 +1596,57 @@
         setVisible('sheet-seksi-2-wrapper', isChecked('show_attendees'));
         setVisible('sheet-seksi-2-container', isChecked('show_attendees'));
         setVisible('sheet-meeting-info', isChecked('show_meeting_info'));
-        setVisible('sheet-documentation-annex', isChecked('show_documentation'));
-        setVisible('sheet-footer-note-block', isChecked('show_footer_note'));
+        setVisible('sheet-documentation-annex', isChecked('show_documentation') && getTotalDocumentationCount() > 0);
 
-        // Header Kop
+        const footerNoteVal = val('footer_note').trim();
+        setVisible('sheet-footer-note-block', isChecked('show_footer_note') && footerNoteVal !== '');
+
+        // Header Kop & Logo
         const kopEl = document.getElementById('sheet-header-kop');
-        if (kopEl) kopEl.style.display = isChecked('show_kop') ? '' : 'none';
+        if (kopEl) kopEl.style.display = isChecked('show_kop') ? 'block' : 'none';
 
         const showLogo = isChecked('show_logo');
-        const logoEl = document.getElementById('sheet-logo-img');
-        if (logoEl) logoEl.style.display = showLogo ? 'block' : 'none';
+        const logoCell = document.getElementById('sheet-logo-cell');
+        let logoEl = document.getElementById('sheet-logo-img');
 
-        // Saat logo disembunyikan, sel sisi di template ekspor disempitkan ke nol
-        // lebar agar blok teks tetap di sumbu halaman. Terapkan hal yang sama di
-        // sini, kalau tidak pratinjau layar tidak akan sama dengan dokumen cetak.
-        for (const cellId of ['sheet-logo-cell', 'sheet-logo-cell-right']) {
-            const cell = document.getElementById(cellId);
-            if (cell) cell.style.width = showLogo ? '76pt' : '0pt';
+        if (showLogo && logoCell && !logoEl) {
+            logoEl = document.createElement('img');
+            logoEl.id = 'sheet-logo-img';
+            logoEl.alt = 'Logo Instansi';
+            logoEl.width = 86;
+            logoEl.height = 86;
+            logoEl.style.cssText = 'width: 65pt; height: 65pt; object-fit: contain; display: block; margin: 0 auto; border: none;';
+            logoEl.src = workstation ? (workstation.dataset.currentLogoSrc || workstation.dataset.defaultLogoSrc || '') : '';
+            logoCell.appendChild(logoEl);
+        }
+
+        if (logoEl && workstation) {
+            const resetCustomLogo = modal.querySelector('input[type="checkbox"][name="reset_custom_logo"]')?.checked ?? false;
+            let activeLogoSrc = workstation.dataset.currentLogoSrc || workstation.dataset.defaultLogoSrc || '';
+            if (customLogoPreviewUrl) {
+                activeLogoSrc = customLogoPreviewUrl;
+            } else if (resetCustomLogo) {
+                activeLogoSrc = workstation.dataset.defaultLogoSrc || '';
+            }
+            if (activeLogoSrc && logoEl.src !== activeLogoSrc) {
+                logoEl.src = activeLogoSrc;
+            }
+            const modalLogoPreview = document.getElementById('modal-logo-preview-img');
+            if (modalLogoPreview && activeLogoSrc) {
+                modalLogoPreview.src = activeLogoSrc;
+            }
+            logoEl.style.display = showLogo ? 'block' : 'none';
+        }
+
+        if (logoCell) {
+            const logoWidth = showLogo ? '17%' : '0%';
+            const textWidth = showLogo ? '83%' : '100%';
+            logoCell.style.width = logoWidth;
+            logoCell.setAttribute('width', logoWidth);
+            if (logoCell.nextElementSibling) {
+                logoCell.nextElementSibling.style.width = textWidth;
+                logoCell.nextElementSibling.setAttribute('width', textWidth);
+            }
         }
 
         const indukEl = document.getElementById('sheet-instansi-induk');
@@ -1552,19 +1668,95 @@
         const numEl = document.getElementById('sheet-document-number');
         if (numEl && val('document_number')) numEl.textContent = val('document_number');
 
-        // Tanda tangan blok. Kolom ketiga tidak bisa hanya disembunyikan lewat
-        // style, karena jumlah kolomnya menentukan lebar kolom lainnya, jadi
-        // penampilannya memang perlu halaman dimuat ulang.
+        // Override Perihal & Tempat pada Tabel Informasi Rapat
+        const infoTitleEl = document.getElementById('sheet-info-title');
+        if (infoTitleEl) {
+            const customTitle = val('custom_agenda_title').trim();
+            infoTitleEl.textContent = customTitle || infoTitleEl.dataset.defaultTitle || '';
+        }
+
+        const infoLocationEl = document.getElementById('sheet-info-location');
+        if (infoLocationEl) {
+            const customLoc = val('custom_location').trim();
+            infoLocationEl.textContent = customLoc || infoLocationEl.dataset.defaultLocation || '';
+        }
+
+        // Toggle Kolom Tabel Kehadiran Peserta
+        const attendanceTable = document.getElementById('sheet-attendance-table');
+        if (attendanceTable) {
+            const colVisibility = {
+                nip: isChecked('show_nip'),
+                unit: isChecked('show_unit'),
+                time: isChecked('show_attendance_time'),
+                photo: isChecked('show_selfie_photos'),
+            };
+
+            Object.entries(colVisibility).forEach(([colKey, visible]) => {
+                attendanceTable.querySelectorAll(`[data-col="${colKey}"]`).forEach(el => {
+                    el.style.display = visible ? '' : 'none';
+                });
+            });
+
+            // Hitung ulang persentase lebar kolom Nama Lengkap agar tabel selalu 100%
+            const noCol = attendanceTable.querySelector('col[data-col="no"]');
+            const signCol = attendanceTable.querySelector('col[data-col="sign"]');
+            const nameCol = attendanceTable.querySelector('col[data-col="name"]');
+            if (nameCol) {
+                let usedPct = (parseFloat(noCol?.dataset.colWidth) || 5) + (parseFloat(signCol?.dataset.colWidth) || 16);
+                Object.entries(colVisibility).forEach(([colKey, visible]) => {
+                    if (visible) {
+                        const c = attendanceTable.querySelector(`col[data-col="${colKey}"]`);
+                        usedPct += parseFloat(c?.dataset.colWidth) || 0;
+                    }
+                });
+                nameCol.style.width = Math.max(15, 100 - usedPct) + '%';
+            }
+
+            const emptyCell = document.getElementById('sheet-attendance-empty-cell');
+            if (emptyCell) {
+                const visibleOptionalCount = Object.values(colVisibility).filter(Boolean).length;
+                emptyCell.setAttribute('colspan', String(2 + visibleOptionalCount));
+            }
+
+            const showAttendeeSig = isChecked('show_attendee_signatures');
+            attendanceTable.querySelectorAll('.attendee-sig-img').forEach(img => {
+                img.style.display = showAttendeeSig ? 'block' : 'none';
+            });
+            attendanceTable.querySelectorAll('.attendee-sig-fallback').forEach(span => {
+                span.style.display = showAttendeeSig ? 'none' : 'inline';
+            });
+        }
+
+        // Blok Tanda Tangan & Penandatangan 3
         for (const markId of ['sheet-signer1-mark', 'sheet-signer2-mark']) {
             const mark = document.getElementById(markId);
             if (mark) {
                 mark.style.display = markId === 'sheet-signer1-mark'
-                    ? (isChecked('show_signer1_signature') ? '' : 'none')
-                    : (isChecked('show_signer2_signature') ? '' : 'none');
+                    ? (isChecked('show_signer1_signature') ? 'inline-block' : 'none')
+                    : (isChecked('show_signer2_signature') ? 'inline-block' : 'none');
             }
         }
 
-        // Signers & Footer
+        const showSigner3 = isChecked('show_signer3');
+        const sigTable = document.getElementById('sheet-signature-table');
+        if (sigTable) {
+            const colWidth = showSigner3 ? '33.4%' : '50%';
+            const innerWidth = showSigner3
+                ? (sigTable.dataset.innerThree || '88%')
+                : (sigTable.dataset.innerTwo || '78%');
+
+            sigTable.querySelectorAll('[data-signer3-col]').forEach(el => {
+                el.style.display = showSigner3 ? '' : 'none';
+            });
+            sigTable.querySelectorAll('[data-signer-col]').forEach(el => {
+                el.style.width = colWidth;
+            });
+            sigTable.querySelectorAll('[data-signer-inner]').forEach(el => {
+                el.style.width = innerWidth;
+            });
+        }
+
+        // Signers & Footer Text
         const cityEl = document.getElementById('sheet-signing-city');
         if (cityEl && val('signing_city')) cityEl.textContent = val('signing_city');
 
@@ -1590,16 +1782,16 @@
         if (nip2El && val('signer2_nip')) nip2El.textContent = val('signer2_nip');
 
         const role3El = document.getElementById('sheet-signer3-role');
-        if (role3El && val('signer3_role')) role3El.textContent = val('signer3_role');
+        if (role3El) role3El.textContent = val('signer3_role') || 'Kepala LLDIKTI Wilayah X';
 
         const name3El = document.getElementById('sheet-signer3-name');
-        if (name3El && val('signer3_name')) name3El.textContent = val('signer3_name');
+        if (name3El) name3El.textContent = val('signer3_name') || '-';
 
         const nip3El = document.getElementById('sheet-signer3-nip');
-        if (nip3El && val('signer3_nip')) nip3El.textContent = val('signer3_nip');
+        if (nip3El) nip3El.textContent = val('signer3_nip') || '-';
 
         const footerNoteEl = document.getElementById('sheet-footer-note');
-        if (footerNoteEl && val('footer_note')) footerNoteEl.textContent = val('footer_note');
+        if (footerNoteEl) footerNoteEl.textContent = footerNoteVal;
     }
 
     function openDokumentasiModal() {
@@ -1627,10 +1819,149 @@
 
     document.addEventListener('DOMContentLoaded', function() {
         const modal = document.getElementById('modal-notulen-document-config');
-        if (!modal) return;
-        modal.querySelectorAll('input, select').forEach(input => {
-            input.addEventListener('input', applyDocConfigToWorkstation);
-            input.addEventListener('change', applyDocConfigToWorkstation);
+        if (modal) {
+            modal.querySelectorAll('input, select, textarea').forEach(input => {
+                input.addEventListener('input', () => {
+                    markWorkstationDirty();
+                    applyDocConfigToWorkstation();
+                });
+                input.addEventListener('change', () => {
+                    if (input.type === 'file' && input.name === 'custom_logo') {
+                        if (customLogoPreviewUrl) {
+                            URL.revokeObjectURL(customLogoPreviewUrl);
+                            customLogoPreviewUrl = null;
+                        }
+                        const file = input.files && input.files[0];
+                        if (file) {
+                            customLogoPreviewUrl = URL.createObjectURL(file);
+                            const resetCheckbox = modal.querySelector('input[type="checkbox"][name="reset_custom_logo"]');
+                            if (resetCheckbox) resetCheckbox.checked = false;
+                        }
+                    }
+                    markWorkstationDirty();
+                    applyDocConfigToWorkstation();
+                });
+            });
+        }
+
+        // Live sync untuk edit caption pada foto yang sudah tersimpan
+        document.querySelectorAll('[data-existing-caption-input]').forEach(input => {
+            input.addEventListener('input', () => {
+                const docId = input.dataset.existingCaptionInput;
+                const card = document.getElementById('stored-doc-card-' + docId);
+                if (card) {
+                    const fallbackName = card.dataset.docFilename || 'Dokumentasi';
+                    const newCaption = input.value.trim();
+                    card.querySelectorAll('[data-doc-modal-trigger]').forEach(btn => {
+                        btn.dataset.docCaption = newCaption || fallbackName;
+                    });
+                }
+                markWorkstationDirty();
+                rebuildSheetDocumentationAnnex();
+                window.dispatchEvent(new CustomEvent('office:reflow'));
+            });
+        });
+
+        // AJAX Delete untuk foto dokumentasi tersimpan (tanpa reload halaman / kehilangan ketikan)
+        document.querySelectorAll('[data-delete-doc-btn]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const docId = btn.dataset.deleteDocBtn;
+                const deleteUrl = btn.dataset.deleteDocUrl;
+                const caption = btn.dataset.deleteDocCaption || 'Dokumentasi';
+
+                const executeDelete = async () => {
+                    btn.disabled = true;
+                    const originalHtml = btn.innerHTML;
+                    btn.innerHTML = '<span>Menghapus...</span>';
+
+                    try {
+                        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
+                            || document.querySelector('input[name="_token"]')?.value
+                            || '';
+                        const res = await fetch(deleteUrl, {
+                            method: 'DELETE',
+                            headers: {
+                                'X-CSRF-TOKEN': csrfToken,
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                        });
+
+                        if (!res.ok) {
+                            throw new Error('Gagal menghapus foto dokumentasi.');
+                        }
+
+                        const card = document.getElementById('stored-doc-card-' + docId);
+                        if (card) card.remove();
+
+                        const remainingStored = document.querySelectorAll('[data-stored-doc-card]').length;
+                        const storedCountEl = document.getElementById('modal-stored-photo-count');
+                        if (storedCountEl) storedCountEl.textContent = String(remainingStored);
+
+                        const storedSection = document.getElementById('modal-stored-docs-section');
+                        if (storedSection && remainingStored === 0) {
+                            storedSection.style.display = 'none';
+                        }
+
+                        const navPhotoCount = document.getElementById('nav-photo-count');
+                        if (navPhotoCount) {
+                            navPhotoCount.dataset.storedCount = String(remainingStored);
+                            const queuedCount = Array.isArray(window.__queuedNotulenPhotos) ? window.__queuedNotulenPhotos.length : 0;
+                            navPhotoCount.textContent = String(remainingStored + queuedCount);
+                        }
+
+                        rebuildSheetDocumentationAnnex();
+                        window.dispatchEvent(new CustomEvent('office:reflow'));
+                    } catch (err) {
+                        btn.disabled = false;
+                        btn.innerHTML = originalHtml;
+                        if (typeof window.showModal === 'function') {
+                            window.showModal({
+                                title: 'Gagal Menghapus Foto',
+                                message: 'Terjadi kendala saat menghapus foto dokumentasi. Silakan coba kembali.',
+                                type: 'danger',
+                                confirmText: 'Tutup',
+                            });
+                        }
+                    }
+                };
+
+                if (typeof window.showModal === 'function') {
+                    window.showModal({
+                        title: 'Hapus Foto Dokumentasi?',
+                        message: `Apakah Anda yakin ingin menghapus foto "${caption}" secara permanen? Ketikan notulensi Anda di lembar kerja tidak akan hilang.`,
+                        type: 'danger',
+                        confirmText: 'Ya, Hapus Foto',
+                        cancelText: 'Batal',
+                        onConfirm: executeDelete,
+                    });
+                } else if (confirm('Apakah Anda yakin ingin menghapus foto dokumentasi ini?')) {
+                    executeDelete();
+                }
+            });
+        });
+
+        // Guard saat klik tombol Ekspor Cepat (PDF / Word) jika ada perubahan yang belum disimpan
+        document.querySelectorAll('[data-export-link]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                if (!window.__officeDirtyState) return;
+                e.preventDefault();
+                const exportUrl = link.getAttribute('href');
+                const formatName = link.dataset.exportLink === 'pdf' ? 'PDF Resmi (.pdf)' : 'Dokumen Word (.doc)';
+
+                if (typeof window.showModal === 'function') {
+                    window.showModal({
+                        title: 'Perubahan Belum Disimpan',
+                        message: `Terdapat ketikan notulensi atau pengaturan dokumen yang belum disimpan ke server. Jika Anda mengunduh ${formatName} sekarang, berkas hanya akan memuat data terakhir yang tersimpan. Lanjutkan mengunduh versi tersimpan?`,
+                        type: 'warning',
+                        confirmText: 'Tetap Unduh Versi Tersimpan',
+                        cancelText: 'Batal (Simpan Dulu)',
+                        onConfirm: () => {
+                            window.location.href = exportUrl;
+                        },
+                    });
+                }
+            });
         });
     });
 </script>

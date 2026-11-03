@@ -439,6 +439,17 @@ class AgendaService
                 $this->reportConfigService->syncFromRequest($request, $agenda, persist: true);
             }
 
+            if (!empty($data['existing_captions']) && is_array($data['existing_captions'])) {
+                foreach ($data['existing_captions'] as $docId => $captionText) {
+                    $normalizedCaption = is_string($captionText) ? trim($captionText) : null;
+                    $agenda->documentations()
+                        ->whereKey((int) $docId)
+                        ->update([
+                            'caption' => $normalizedCaption !== '' ? $normalizedCaption : null,
+                        ]);
+                }
+            }
+
             if (!empty($data['photos']) && is_array($data['photos'])) {
                 $captions = $data['captions'] ?? [];
                 $baseSortOrder = (int) $agenda->documentations()->max('sort_order');
@@ -446,11 +457,14 @@ class AgendaService
                 foreach ($data['photos'] as $index => $photo) {
                     if ($photo instanceof UploadedFile) {
                         $path = $photo->store('documentations/' . $agenda->id, 'public');
+                        $captionVal = isset($captions[$index]) && is_string($captions[$index])
+                            ? trim($captions[$index])
+                            : null;
 
                         AgendaDocumentation::create([
                             'agenda_id' => $agenda->id,
                             'file_path' => $path,
-                            'caption' => $captions[$index] ?? null,
+                            'caption' => $captionVal !== '' ? $captionVal : null,
                             'sort_order' => $baseSortOrder + $index + 1,
                         ]);
                     }
