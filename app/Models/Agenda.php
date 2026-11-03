@@ -43,6 +43,9 @@ class Agenda extends Model
         'is_all_units',
         'target_type',
         'surat_edaran_path',
+        'surat_edaran_type',
+        'surat_edaran_content',
+        'surat_edaran_config',
         'notulensi',
         'kesimpulan',
         'report_config',
@@ -56,6 +59,7 @@ class Agenda extends Model
             'waktu_selesai' => 'datetime',
             'is_all_units' => 'boolean',
             'target_type' => 'string',
+            'surat_edaran_config' => 'array',
             'report_config' => 'array',
         ];
     }
@@ -790,6 +794,74 @@ class Agenda extends Model
     public function getIsSuratEdaranImageAttribute(): bool
     {
         return in_array($this->surat_edaran_extension, ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'], true);
+    }
+
+    /**
+     * Determine whether this agenda uses an in-app digital circular letter / invitation.
+     */
+    public function getIsSuratEdaranDigitalAttribute(): bool
+    {
+        return $this->surat_edaran_type === 'digital' || ! empty($this->surat_edaran_config) || ! empty($this->surat_edaran_content);
+    }
+
+    /**
+     * Get system default configuration for digital surat edaran / undangan.
+     *
+     * @return array<string, mixed>
+     */
+    public function getDefaultSuratEdaranConfig(): array
+    {
+        $year = $this->waktu_mulai ? $this->waktu_mulai->format('Y') : date('Y');
+        $defaultNumber = str_pad((string) ($this->id ?? 1), 4, '0', STR_PAD_LEFT) . '/LL10/KP/' . $year;
+        $defaultDate = $this->waktu_mulai ? $this->waktu_mulai->translatedFormat('d F Y') : now()->translatedFormat('d F Y');
+
+        // Sasaran peserta default
+        $defaultTujuan = 'Pimpinan Unit Kerja dan Seluruh Pegawai ASN di Lingkungan LLDIKTI Wilayah X';
+        if ($this->target_type === 'selected_units') {
+            $unitNames = $this->relationLoaded('units') ? $this->units->pluck('nama_unit')->join(', ') : '';
+            $defaultTujuan = $unitNames ? "Pimpinan dan Pegawai pada Unit Kerja: {$unitNames}" : 'Pimpinan dan Pegawai Unit Kerja Terpilih';
+        } elseif ($this->target_type === 'selected_users') {
+            $userNames = $this->relationLoaded('invitedUsers') ? $this->invitedUsers->pluck('name')->join(', ') : '';
+            $defaultTujuan = $userNames ? "Pegawai ASN Terundang: {$userNames}" : 'Pegawai ASN Terdaftar pada Lampiran';
+        }
+
+        return [
+            'template_type' => 'undangan', // 'undangan' or 'edaran'
+            'show_kop' => true,
+            'show_logo' => true,
+            'custom_logo_path' => null,
+            'instansi_induk' => 'KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI',
+            'instansi_pelaksana' => 'LEMBAGA LAYANAN PENDIDIKAN TINGGI (LLDIKTI) WILAYAH X',
+            'alamat_kontak' => 'Jalan Khatib Sulaiman, Padang, Sumatera Barat • Laman: lldikti10.kemdikbud.go.id',
+            'nomor_surat' => $defaultNumber,
+            'sifat' => 'Biasa',
+            'lampiran' => '-',
+            'perihal' => 'Undangan Rapat ' . ($this->judul_rapat ?? 'Koordinasi Kedinasan'),
+            'tempat_surat' => 'Padang',
+            'tanggal_surat' => $defaultDate,
+            'tujuan_surat' => $defaultTujuan,
+            'pembuka' => 'Dalam rangka pelaksanaan program kerja dan koordinasi pelaksanaan tugas kedinasan, dengan hormat kami mengharapkan kehadiran Bapak/Ibu pada rapat yang akan diselenggarakan pada:',
+            'catatan' => 'Catatan: Mohon hadir tepat waktu dan membawa kelengkapan dokumen pendukung yang diperlukan.',
+            'penutup' => 'Mengingat pentingnya agenda rapat ini, dimohon kehadiran Bapak/Ibu tepat pada waktunya. Atas perhatian dan kerja sama yang baik, kami ucapkan terima kasih.',
+            'signer_role' => 'Kepala Lembaga Layanan Pendidikan Tinggi Wilayah X',
+            'signer_name' => 'Afdalisma, S.H., M.Pd.',
+            'signer_nip' => '196909281994032001',
+            'show_signature' => true,
+            'tembusan' => "1. Sekretaris Direktorat Jenderal Pendidikan Tinggi, Sains, dan Teknologi\n2. Pertinggal",
+        ];
+    }
+
+    /**
+     * Get resolved digital circular configuration, merging stored config with defaults.
+     *
+     * @return array<string, mixed>
+     */
+    public function getResolvedSuratEdaranConfigAttribute(): array
+    {
+        $defaults = $this->getDefaultSuratEdaranConfig();
+        $stored = is_array($this->surat_edaran_config) ? $this->surat_edaran_config : [];
+
+        return array_replace($defaults, $stored);
     }
 
     /**

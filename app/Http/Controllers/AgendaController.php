@@ -7,6 +7,7 @@ use App\Http\Requests\Agenda\UpdateAgendaRequest;
 use App\Http\Requests\Agenda\UpdateAgendaStatusRequest;
 use App\Http\Requests\Agenda\UpdateMinutesRequest;
 use App\Http\Requests\Agenda\UpdateRolesRequest;
+use App\Http\Requests\Agenda\UpdateSuratEdaranRequest;
 use App\Models\Agenda;
 use App\Models\AgendaDocumentation;
 use App\Models\Unit;
@@ -15,9 +16,11 @@ use App\Services\ActivityLogger;
 use App\Services\AgendaConflictService;
 use App\Services\AgendaService;
 use App\Services\ReportConfigService;
+use App\Services\SuratEdaranService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -111,17 +114,30 @@ class AgendaController extends Controller
     /**
      * Store a newly created agenda in storage.
      */
-    public function store(StoreAgendaRequest $request, AgendaService $agendaService): RedirectResponse
+    public function store(StoreAgendaRequest $request, AgendaService $agendaService, SuratEdaranService $suratEdaranService): RedirectResponse
     {
         $validated = $request->validated();
         $user = Auth::user();
+
+        $suratEdaranType = $request->input('surat_edaran_type', 'upload');
+        $suratEdaranFile = ($suratEdaranType === 'upload') ? $request->file('surat_edaran') : null;
 
         $agenda = $agendaService->createAgenda(
             creator: $user,
             validated: $validated,
             isAllUnits: $request->boolean('is_all_units', true),
-            suratEdaran: $request->file('surat_edaran'),
+            suratEdaran: $suratEdaranFile,
         );
+
+        if ($suratEdaranType === 'digital') {
+            $agenda->update(['surat_edaran_type' => 'digital']);
+            $suratEdaranService->saveDigitalSurat($agenda, $agenda->getDefaultSuratEdaranConfig());
+
+            if ($request->boolean('open_surat_edaran_after_save', true)) {
+                return redirect()->route('admin.agendas.surat-edaran', $agenda)
+                    ->with('success', "Agenda rapat '{$agenda->judul_rapat}' berhasil dibuat. Silakan sesuaikan isi naskah surat undangan resmi.");
+            }
+        }
 
         return redirect()->route('admin.agendas.show', $agenda)
             ->with('success', "Agenda rapat '{$agenda->judul_rapat}' berhasil dibuat.");
@@ -239,6 +255,15 @@ class AgendaController extends Controller
                 isAllUnits: $request->boolean('is_all_units', true),
                 suratEdaran: $request->file('surat_edaran'),
             );
+
+            if ($request->input('surat_edaran_type') === 'digital') {
+                $agenda->update(['surat_edaran_type' => 'digital']);
+                if (empty($agenda->surat_edaran_config)) {
+                    app(SuratEdaranService::class)->saveDigitalSurat($agenda, $agenda->getDefaultSuratEdaranConfig());
+                }
+            } elseif ($request->hasFile('surat_edaran')) {
+                $agenda->update(['surat_edaran_type' => 'upload']);
+            }
         } catch (\DomainException $e) {
             return back()->withInput()->with('error', $e->getMessage());
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -386,5 +411,54 @@ class AgendaController extends Controller
         }
 
         return back()->with('success', "Foto dokumentasi berhasil dihapus.");
+    }
+
+    /**
+     * Show digital circular letter / meeting invitation workstation.
+     */
+    public function suratEdaran(Agenda $agenda): View
+    {
+        Gate::authorize('manageCircular', $agenda);
+
+        $agenda->load([
+            'creator.unit',
+            'pimpinan.unit',
+            'notulis.unit',
+            'units',
+            'invitedUsers.unit',
+        ]);
+
+        $config = $agenda->resolved_surat_edaran_config;
+
+        return view('agendas.surat_edaran', compact('agenda', 'config'));
+    }
+
+    /**
+     * Update digital circular letter / meeting invitation.
+     */
+    public function updateSuratEdaran(UpdateSuratEdaranRequest $request, Agenda $agenda, SuratEdaranService $suratEdaranService): RedirectResponse
+    {
+        $suratEdaranService->saveDigitalSurat($agenda, $request->validated(), $request);
+
+        $redirectRoute = Auth::user()?->isStaff()
+            ? route('agendas.show', $agenda)
+            : route('admin.agendas.show', $agenda);
+
+        return redirect($redirectRoute)
+            ->with('success', "Naskah surat dinas resmi berhasil disimpan dan siap didistribusikan.");
+    }
+
+    /**
+     * Export digital circular letter / meeting invitation as PDF.
+     */
+    public function exportSuratEdaranPdf(Request $request, Agenda $agenda, SuratEdaranService $suratEdaranService): Response
+    {
+        if (Auth::user()?->isStaff()) {
+            Gate::authorize('viewStaff', $agenda);
+        } else {
+            Gate::authorize('view', $agenda);
+        }
+
+        return $suratEdaranService->downloadPdfResponse($agenda);
     }
 }

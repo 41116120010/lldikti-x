@@ -359,90 +359,189 @@
 
             <!-- 4. Berkas Surat Edaran Section -->
             <div class="space-y-4 pt-4 border-t border-slate-200">
-                <h3 class="text-sm font-extrabold uppercase tracking-wider text-slate-900">4. Berkas Surat Edaran / Undangan Rapat</h3>
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <h3 class="text-sm font-extrabold uppercase tracking-wider text-slate-900">4. Surat Undangan / Edaran Resmi</h3>
 
-                @if($agenda->surat_edaran_path)
+                    <!-- Segmented Mode Control -->
+                    <div class="inline-flex p-1 bg-slate-100 border border-slate-300 rounded-xl" role="group" aria-label="Metode Surat Undangan">
+                        <label class="cursor-pointer">
+                            <input 
+                                type="radio" 
+                                name="surat_edaran_type" 
+                                value="upload" 
+                                class="sr-only peer"
+                                onchange="switchEditSuratEdaranMode('upload')"
+                                {{ old('surat_edaran_type', $agenda->surat_edaran_type ?? 'upload') === 'upload' ? 'checked' : '' }}
+                            >
+                            <span class="px-3 py-1.5 text-xs font-bold rounded-lg flex items-center gap-1.5 transition text-slate-700 peer-checked:bg-slate-900 peer-checked:text-white peer-checked:shadow-xs">
+                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                <span>Unggah Berkas Fisik</span>
+                            </span>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input 
+                                type="radio" 
+                                name="surat_edaran_type" 
+                                value="digital" 
+                                class="sr-only peer"
+                                onchange="switchEditSuratEdaranMode('digital')"
+                                {{ old('surat_edaran_type', $agenda->surat_edaran_type ?? 'upload') === 'digital' ? 'checked' : '' }}
+                            >
+                            <span class="px-3 py-1.5 text-xs font-bold rounded-lg flex items-center gap-1.5 transition text-slate-700 peer-checked:bg-slate-900 peer-checked:text-white peer-checked:shadow-xs">
+                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                <span>Surat Digital Langsung</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Mode Digital Container -->
+                <div id="edit-surat-edaran-digital-container" class="space-y-3 {{ old('surat_edaran_type', $agenda->surat_edaran_type ?? 'upload') === 'digital' ? '' : 'hidden' }}">
                     <div class="p-4 bg-slate-50 border border-slate-300 rounded-2xl space-y-3">
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                             <div class="flex items-center gap-3 min-w-0">
                                 <div class="w-11 h-11 rounded-xl bg-slate-900 text-white flex items-center justify-center shrink-0 shadow-xs">
-                                    @if($agenda->is_surat_edaran_pdf)
-                                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y1="13"/><line x1="16" y1="17" x2="8" y1="17"/></svg>
-                                    @elseif($agenda->is_surat_edaran_image)
-                                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                                    @else
-                                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                                    @endif
+                                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y1="13"/><line x1="16" y1="17" x2="8" y1="17"/></svg>
                                 </div>
                                 <div class="min-w-0">
                                     <div class="flex items-center gap-2">
-                                        <span class="text-xs font-bold text-slate-950">Berkas Undangan Aktif Terlampir</span>
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase {{ $agenda->is_surat_edaran_pdf ? 'bg-rose-100 text-rose-800' : ($agenda->is_surat_edaran_image ? 'bg-blue-100 text-blue-800' : 'bg-slate-200 text-slate-800') }}">
-                                            {{ $agenda->surat_edaran_extension ?? 'BERKAS' }}
+                                        <span class="text-xs font-bold text-slate-950">Naskah Surat Undangan Resmi Digital</span>
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-blue-100 text-blue-800 border border-blue-200">
+                                            DIGITAL
                                         </span>
                                     </div>
-                                    <p class="text-[11px] text-slate-500 font-medium mt-0.5 truncate">
-                                        Tersedia untuk dilihat langsung oleh seluruh peserta rapat.
+                                    <p class="text-[11px] text-slate-600 font-medium mt-0.5 truncate">
+                                        Dikelola langsung melalui Lembar Kerja Digital dengan format standar Tata Naskah Dinas resmi.
                                     </p>
                                 </div>
                             </div>
 
                             <div class="flex items-center gap-2 shrink-0">
-                                <button 
-                                    type="button" 
-                                    onclick="openSuratEdaranModal('modal-surat-preview-{{ $agenda->id }}')" 
-                                    class="button small bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs min-h-[36px] cursor-pointer"
-                                    title="Buka pratinjau surat edaran aktif"
-                                >
-                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
-                                    <span>Pratinjau Berkas</span>
-                                </button>
                                 <a 
-                                    href="{{ $agenda->surat_edaran_url }}" 
-                                    download 
-                                    class="button small secondary font-bold text-xs flex items-center gap-1.5 min-h-[36px]"
-                                    title="Unduh berkas aktif"
+                                    href="{{ route('admin.agendas.surat-edaran', $agenda) }}" 
+                                    class="button small bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs min-h-[36px]"
+                                    title="Buka pengolah kata naskah surat undangan resmi"
                                 >
-                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                    <span>Unduh</span>
+                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                    <span>Buka Lembar Kerja Surat</span>
                                 </a>
+                                @if($agenda->surat_edaran_path)
+                                    <a 
+                                        href="{{ route('admin.agendas.export-surat-edaran-pdf', $agenda) }}" 
+                                        class="button small secondary font-bold text-xs flex items-center gap-1.5 min-h-[36px]"
+                                        title="Unduh PDF naskah resmi"
+                                    >
+                                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                        <span>Unduh PDF</span>
+                                    </a>
+                                @endif
                             </div>
                         </div>
                     </div>
-                @endif
-
-                <div class="field">
-                    <label for="surat_edaran" class="text-xs font-bold text-slate-900 block mb-1">
-                        {{ $agenda->surat_edaran_path ? 'Unggah Surat Undangan Pengganti (Kosongkan jika tidak diganti)' : 'Unggah Surat Undangan / Edaran Resmi (PDF / Gambar)' }}
-                    </label>
-                    <input 
-                        type="file" 
-                        id="surat_edaran" 
-                        name="surat_edaran" 
-                        accept=".pdf,image/jpeg,image/png,image/webp" 
-                        class="block w-full text-xs text-slate-700 font-medium file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-slate-950 file:text-white hover:file:bg-slate-800 cursor-pointer"
-                    >
-                    <p class="text-[11px] text-slate-600 font-medium mt-1">Format didukung: PDF, JPG, PNG, WebP (Maksimal 5 MB).</p>
-                    @error('surat_edaran')
-                        <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>
-                    @enderror
                 </div>
 
-                <!-- Live Client-side Preview Container for Newly Selected File -->
-                <div id="surat-edaran-client-preview" class="hidden p-3.5 bg-slate-50 border border-slate-300 rounded-xl space-y-3">
-                    <div class="flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-3 min-w-0">
-                            <div id="preview-icon-box" class="w-12 h-12 rounded-lg bg-slate-200 border border-slate-300 flex items-center justify-center shrink-0 overflow-hidden"></div>
-                            <div class="min-w-0">
-                                <div id="preview-filename" class="text-xs font-bold text-slate-900 truncate">nama_dokumen.pdf</div>
-                                <div class="flex items-center gap-2 text-[11px] text-slate-600 font-medium mt-0.5">
-                                    <span id="preview-filesize">0 KB</span>
-                                    <span>&bull;</span>
-                                    <span id="preview-filetype" class="uppercase font-mono font-bold text-slate-700">PDF</span>
-                                    <span class="text-amber-700 font-semibold">(Berkas Baru Terpilih)</span>
+                <!-- Mode Upload Container -->
+                <div id="edit-surat-edaran-upload-container" class="space-y-4 {{ old('surat_edaran_type', $agenda->surat_edaran_type ?? 'upload') === 'upload' ? '' : 'hidden' }}">
+                    @if($agenda->surat_edaran_path && $agenda->surat_edaran_type === 'upload')
+                        <div class="p-4 bg-slate-50 border border-slate-300 rounded-2xl space-y-3">
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <div class="w-11 h-11 rounded-xl bg-slate-900 text-white flex items-center justify-center shrink-0 shadow-xs">
+                                        @if($agenda->is_surat_edaran_pdf)
+                                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y1="13"/><line x1="16" y1="17" x2="8" y1="17"/></svg>
+                                        @elseif($agenda->is_surat_edaran_image)
+                                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                                        @else
+                                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                        @endif
+                                    </div>
+                                    <div class="min-w-0">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-xs font-bold text-slate-950">Berkas Undangan Aktif Terlampir</span>
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase {{ $agenda->is_surat_edaran_pdf ? 'bg-rose-100 text-rose-800' : ($agenda->is_surat_edaran_image ? 'bg-blue-100 text-blue-800' : 'bg-slate-200 text-slate-800') }}">
+                                                {{ $agenda->surat_edaran_extension ?? 'BERKAS' }}
+                                            </span>
+                                        </div>
+                                        <p class="text-[11px] text-slate-500 font-medium mt-0.5 truncate">
+                                            Tersedia untuk dilihat langsung oleh seluruh peserta rapat.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center gap-2 shrink-0">
+                                    <button 
+                                        type="button" 
+                                        onclick="openSuratEdaranModal('modal-surat-preview-{{ $agenda->id }}')" 
+                                        class="button small bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs min-h-[36px] cursor-pointer"
+                                        title="Buka pratinjau surat edaran aktif"
+                                    >
+                                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+                                        <span>Pratinjau Berkas</span>
+                                    </button>
+                                    <a 
+                                        href="{{ $agenda->surat_edaran_url }}" 
+                                        download 
+                                        class="button small secondary font-bold text-xs flex items-center gap-1.5 min-h-[36px]"
+                                        title="Unduh berkas aktif"
+                                    >
+                                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                        <span>Unduh</span>
+                                    </a>
                                 </div>
                             </div>
                         </div>
+                    @endif
+
+                    <div class="field">
+                        <label for="surat_edaran" class="text-xs font-bold text-slate-900 block mb-1">
+                            {{ ($agenda->surat_edaran_path && $agenda->surat_edaran_type === 'upload') ? 'Unggah Surat Undangan Pengganti (Kosongkan jika tidak diganti)' : 'Unggah Surat Undangan / Edaran Resmi (PDF / Gambar)' }}
+                        </label>
+                        <input 
+                            type="file" 
+                            id="surat_edaran" 
+                            name="surat_edaran" 
+                            accept=".pdf,image/jpeg,image/png,image/webp" 
+                            class="block w-full text-xs text-slate-700 font-medium file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-slate-950 file:text-white hover:file:bg-slate-800 cursor-pointer"
+                        >
+                        <p class="text-[11px] text-slate-600 font-medium mt-1">Format didukung: PDF, JPG, PNG, WebP (Maksimal 5 MB).</p>
+                        @error('surat_edaran')
+                            <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <!-- Live Client-side Preview Container for Newly Selected File -->
+                    <div id="surat-edaran-client-preview" class="hidden p-3.5 bg-slate-50 border border-slate-300 rounded-xl space-y-3">
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <div id="preview-icon-box" class="w-12 h-12 rounded-lg bg-slate-200 border border-slate-300 flex items-center justify-center shrink-0 overflow-hidden"></div>
+                                <div class="min-w-0">
+                                    <div id="preview-filename" class="text-xs font-bold text-slate-900 truncate">nama_dokumen.pdf</div>
+                                    <div class="flex items-center gap-2 text-[11px] text-slate-600 font-medium mt-0.5">
+                                        <span id="preview-filesize">0 KB</span>
+                                        <span>&bull;</span>
+                                        <span id="preview-filetype" class="uppercase font-mono font-bold text-slate-700">PDF</span>
+                                        <span class="text-amber-700 font-semibold">(Berkas Baru Terpilih)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button 
+                                type="button" 
+                                onclick="clearSuratEdaranInput()" 
+                                class="button small secondary text-xs font-bold text-rose-700 border-rose-200 hover:bg-rose-50 flex items-center gap-1.5 shrink-0 min-h-[36px] cursor-pointer"
+                                title="Batalkan pilihan berkas baru ini"
+                            >
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                <span>Batal</span>
+                            </button>
+                        </div>
+
+                        <!-- Image Preview Viewport (visible only for image uploads) -->
+                        <div id="preview-image-viewport" class="hidden rounded-lg border border-slate-200 bg-white p-2 flex items-center justify-center max-h-56 overflow-hidden">
+                            <img id="preview-image-img" src="" alt="Pratinjau Gambar Berkas Baru" class="max-h-52 w-auto object-contain rounded">
+                        </div>
+                    </div>
+                </div>
+            </div>
                         <button 
                             type="button" 
                             onclick="clearSuratEdaranInput()" 
@@ -775,6 +874,20 @@ function handleSuratEdaranChange(event) {
     }
 
     previewContainer.classList.remove('hidden');
+}
+
+function switchEditSuratEdaranMode(mode) {
+    const uploadContainer = document.getElementById('edit-surat-edaran-upload-container');
+    const digitalContainer = document.getElementById('edit-surat-edaran-digital-container');
+    if (!uploadContainer || !digitalContainer) return;
+
+    if (mode === 'digital') {
+        uploadContainer.classList.add('hidden');
+        digitalContainer.classList.remove('hidden');
+    } else {
+        digitalContainer.classList.add('hidden');
+        uploadContainer.classList.remove('hidden');
+    }
 }
 
 function clearSuratEdaranInput() {

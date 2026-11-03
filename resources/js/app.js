@@ -564,6 +564,9 @@ function initGlobalListeners() {
 
     // Initialize Office Document WYSIWYG Workstation
     OfficeWorkstation.init();
+
+    // Initialize Surat Edaran / Undangan Document WYSIWYG Workstation
+    SuratEdaranWorkstation.init();
 }
 
 // --- 2.5. MICROSOFT WORD RIBBON RICH TEXT EDITOR CONTROLLER ---
@@ -2494,6 +2497,380 @@ const SeamlessNavigation = {
         }
     }
 };
+
+// --- 2.8. SURAT EDARAN & UNDANGAN RESMI WYSIWYG WORKSTATION CONTROLLER ---
+const SuratEdaranWorkstation = {
+    init() {
+        const workstation = document.querySelector('#surat-edaran-workstation');
+        if (!workstation || workstation.dataset.initialized === 'true') return;
+        workstation.dataset.initialized = 'true';
+
+        const ribbon = workstation.querySelector('.word-editor-ribbon');
+        const zoomContainer = workstation.querySelector('#office-zoom-container');
+        const deskCanvas = workstation.querySelector('.office-desk-canvas');
+        const rulerEl = workstation.querySelector('#office-document-ruler');
+        const sheet = workstation.querySelector('#surat-sheet-page-1');
+        const form = workstation.querySelector('#surat-edaran-form');
+
+        const editableBoxes = workstation.querySelectorAll('.office-editable-box');
+        const pembukaBox = workstation.querySelector('#surat-pembuka-content');
+        const bodyBox = workstation.querySelector('#surat-body-content');
+        const catatanBox = workstation.querySelector('#surat-catatan-content');
+        const penutupBox = workstation.querySelector('#surat-penutup-content');
+        const altEdaranBox = workstation.querySelector('#surat-edaran-alt-content');
+
+        const formPembuka = workstation.querySelector('#form-pembuka');
+        const formContent = workstation.querySelector('#form-surat-content');
+        const formCatatan = workstation.querySelector('#form-catatan');
+        const formPenutup = workstation.querySelector('#form-penutup');
+
+        const statusWordsEl = workstation.querySelector('#office-status-words');
+        const statusSaveStateEl = workstation.querySelector('#office-status-save-state');
+        const statusSaveDotEl = workstation.querySelector('#office-status-save-dot');
+        const statusSaveLabelEl = workstation.querySelector('#office-status-save-label');
+
+        let activeBox = bodyBox || pembukaBox || editableBoxes[0];
+        let savedRange = null;
+        let isSubmittingForm = false;
+        window.__suratDirtyState = false;
+
+        const updateSaveStateUI = (dirty) => {
+            window.__suratDirtyState = Boolean(dirty);
+            if (!statusSaveStateEl || !statusSaveDotEl || !statusSaveLabelEl) return;
+            if (window.__suratDirtyState) {
+                statusSaveStateEl.className = 'inline-flex items-center gap-1.5 text-amber-400 font-semibold';
+                statusSaveDotEl.className = 'w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse';
+                statusSaveLabelEl.textContent = 'Perubahan Belum Disimpan';
+            } else {
+                statusSaveStateEl.className = 'inline-flex items-center gap-1.5 text-emerald-400 font-semibold';
+                statusSaveDotEl.className = 'w-1.5 h-1.5 rounded-full bg-emerald-400';
+                statusSaveLabelEl.textContent = 'Tersimpan';
+            }
+        };
+
+        window.__suratEdaranMarkDirty = () => {
+            updateSaveStateUI(true);
+        };
+
+        window.addEventListener('beforeunload', (e) => {
+            if (window.__suratDirtyState && !isSubmittingForm) {
+                e.preventDefault();
+                e.returnValue = 'Perubahan naskah surat belum disimpan.';
+                return e.returnValue;
+            }
+        });
+
+        const updateWordCounter = () => {
+            if (!statusWordsEl) return;
+            let fullText = '';
+            editableBoxes.forEach(box => {
+                fullText += ' ' + (box.innerText || '');
+            });
+            const words = fullText.trim().split(/\s+/).filter(Boolean);
+            statusWordsEl.textContent = `${words.length} kata`;
+        };
+        updateWordCounter();
+
+        const syncToHiddenInputs = () => {
+            const templateType = document.querySelector('#form-template-type')?.value || 'undangan';
+
+            if (formPembuka && pembukaBox) {
+                formPembuka.value = pembukaBox.innerHTML.trim();
+            }
+            if (formCatatan && catatanBox) {
+                formCatatan.value = catatanBox.innerHTML.trim();
+            }
+            if (formPenutup && penutupBox) {
+                formPenutup.value = penutupBox.innerHTML.trim();
+            }
+
+            if (formContent) {
+                if (templateType === 'edaran' && altEdaranBox) {
+                    formContent.value = altEdaranBox.innerHTML.trim();
+                } else if (bodyBox) {
+                    formContent.value = bodyBox.innerHTML.trim();
+                }
+            }
+        };
+
+        editableBoxes.forEach(box => {
+            box.addEventListener('focus', () => {
+                activeBox = box;
+            });
+            box.addEventListener('click', () => {
+                activeBox = box;
+            });
+            box.addEventListener('input', () => {
+                syncToHiddenInputs();
+                updateWordCounter();
+                updateSaveStateUI(true);
+            });
+
+            // Clean Paste Sanitizer
+            box.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+                if (text) {
+                    document.execCommand('insertText', false, text);
+                    syncToHiddenInputs();
+                    updateWordCounter();
+                    updateSaveStateUI(true);
+                }
+            });
+        });
+
+        // Ribbon Commands
+        if (ribbon) {
+            const formatSelect = ribbon.querySelector('select[data-command="formatBlock"]');
+            const fontSizeSelect = ribbon.querySelector('select[data-action="fontSize"]');
+
+            const saveSelection = () => {
+                const sel = window.getSelection();
+                if (sel.rangeCount > 0) {
+                    savedRange = sel.getRangeAt(0).cloneRange();
+                }
+            };
+
+            const restoreSelection = () => {
+                if (!savedRange) return;
+                const sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(savedRange);
+            };
+
+            const exec = (cmd, val = null) => {
+                if (activeBox) activeBox.focus();
+                restoreSelection();
+                document.execCommand(cmd, false, val);
+                syncToHiddenInputs();
+                updateWordCounter();
+                updateSaveStateUI(true);
+                updateActiveStates();
+            };
+
+            const updateActiveStates = () => {
+                ribbon.querySelectorAll('.word-btn[data-command]').forEach(btn => {
+                    const cmd = btn.dataset.command;
+                    if (['bold', 'italic', 'underline', 'strikeThrough', 'justifyLeft', 'justifyCenter', 'justifyRight', 'justifyFull', 'insertUnorderedList', 'insertOrderedList'].includes(cmd)) {
+                        try {
+                            if (document.queryCommandState(cmd)) {
+                                btn.classList.add('is-active');
+                            } else {
+                                btn.classList.remove('is-active');
+                            }
+                        } catch (err) {
+                            btn.classList.remove('is-active');
+                        }
+                    }
+                });
+            };
+
+            document.addEventListener('selectionchange', () => {
+                if (workstation.contains(document.activeElement)) {
+                    updateActiveStates();
+                }
+            });
+
+            ribbon.addEventListener('click', (e) => {
+                const btn = e.target.closest('.word-btn');
+                if (!btn) return;
+                e.preventDefault();
+
+                if (btn.dataset.command) {
+                    exec(btn.dataset.command);
+                } else if (btn.dataset.action === 'textColor' || btn.dataset.action === 'highlight') {
+                    const input = ribbon.querySelector(`input[data-color-for="${btn.dataset.action}"]`);
+                    if (input) input.click();
+                } else if (btn.dataset.action === 'openTablePicker') {
+                    const picker = workstation.querySelector('#surat-table-picker');
+                    if (picker) picker.classList.toggle('open');
+                }
+            });
+
+            // Color inputs
+            ribbon.querySelectorAll('.word-color-input').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const action = input.dataset.colorFor;
+                    const val = e.target.value;
+                    const indicator = ribbon.querySelector(`.color-indicator[data-indicator="${action}"]`);
+                    if (indicator) indicator.style.background = val;
+
+                    if (action === 'textColor') {
+                        exec('foreColor', val);
+                    } else if (action === 'highlight') {
+                        exec('hiliteColor', val);
+                    }
+                });
+            });
+
+            if (formatSelect) {
+                formatSelect.addEventListener('change', () => {
+                    if (formatSelect.value) {
+                        exec('formatBlock', formatSelect.value);
+                    }
+                });
+            }
+
+            if (fontSizeSelect) {
+                fontSizeSelect.addEventListener('change', () => {
+                    if (fontSizeSelect.value) {
+                        exec('fontSize', fontSizeSelect.value);
+                    }
+                });
+            }
+
+            // Table Picker Grid (6x6)
+            const tableGrid = workstation.querySelector('#surat-table-grid');
+            const tableLabel = workstation.querySelector('#surat-table-label');
+            const tablePicker = workstation.querySelector('#surat-table-picker');
+            if (tableGrid) {
+                tableGrid.innerHTML = '';
+                for (let r = 1; r <= 6; r++) {
+                    for (let c = 1; c <= 6; c++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'word-table-cell';
+                        cell.dataset.row = r;
+                        cell.dataset.col = c;
+                        tableGrid.appendChild(cell);
+                    }
+                }
+
+                tableGrid.addEventListener('mouseover', (e) => {
+                    const cell = e.target.closest('.word-table-cell');
+                    if (!cell) return;
+                    const targetRow = parseInt(cell.dataset.row, 10);
+                    const targetCol = parseInt(cell.dataset.col, 10);
+                    if (tableLabel) tableLabel.textContent = `${targetRow} × ${targetCol} Tabel`;
+
+                    tableGrid.querySelectorAll('.word-table-cell').forEach(c => {
+                        const row = parseInt(c.dataset.row, 10);
+                        const col = parseInt(c.dataset.col, 10);
+                        if (row <= targetRow && col <= targetCol) {
+                            c.classList.add('selected');
+                        } else {
+                            c.classList.remove('selected');
+                        }
+                    });
+                });
+
+                tableGrid.addEventListener('click', (e) => {
+                    const cell = e.target.closest('.word-table-cell');
+                    if (!cell) return;
+                    const rows = parseInt(cell.dataset.row, 10);
+                    const cols = parseInt(cell.dataset.col, 10);
+
+                    let tableHtml = '<table border="1" cellpadding="6" cellspacing="0" style="width:100%; border-collapse:collapse; margin:10px 0;"><tbody>';
+                    for (let r = 0; r < rows; r++) {
+                        tableHtml += '<tr>';
+                        for (let c = 0; c < cols; c++) {
+                            tableHtml += '<td style="border:1px solid #cbd5e1; padding:6px 10px;">&nbsp;</td>';
+                        }
+                        tableHtml += '</tr>';
+                    }
+                    tableHtml += '</tbody></table><p>&nbsp;</p>';
+
+                    exec('insertHTML', tableHtml);
+                    if (tablePicker) tablePicker.classList.remove('open');
+                });
+
+                document.addEventListener('click', (e) => {
+                    if (tablePicker && !tablePicker.contains(e.target) && !e.target.closest('[data-action="openTablePicker"]')) {
+                        tablePicker.classList.remove('open');
+                    }
+                });
+            }
+        }
+
+        // Paper Switcher (A4 vs F4)
+        workstation.querySelectorAll('[data-paper-size]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const format = btn.dataset.paperSize;
+                workstation.querySelectorAll('[data-paper-size]').forEach(b => {
+                    b.className = 'px-3 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1.5 text-slate-700 hover:bg-slate-200';
+                });
+                btn.className = 'px-3 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1.5 bg-slate-900 text-white shadow-xs';
+
+                if (sheet) {
+                    sheet.dataset.paperFormat = format;
+                    if (format === 'f4') {
+                        sheet.style.minHeight = '1247px';
+                    } else {
+                        sheet.style.minHeight = '1122px';
+                    }
+                }
+            });
+        });
+
+        // Zoom Controls & Scaling
+        const updateZoomCompensation = (zoomVal) => {
+            if (!zoomContainer || !sheet) return;
+            const naturalHeight = sheet.offsetHeight || 1122;
+            const scale = zoomVal / 100;
+            const scaledHeight = naturalHeight * scale;
+            const difference = scaledHeight - naturalHeight;
+            zoomContainer.style.marginBottom = `${difference}px`;
+
+            if (rulerEl) {
+                rulerEl.style.transform = `scaleX(${scale})`;
+                rulerEl.style.transformOrigin = 'center top';
+            }
+        };
+
+        const applyZoom = (val) => {
+            if (!zoomContainer) return;
+            let numericVal = 100;
+            if (val === 'fit') {
+                const availableWidth = (deskCanvas ? deskCanvas.clientWidth : window.innerWidth) - 48;
+                const sheetWidth = 794;
+                numericVal = Math.max(50, Math.min(125, Math.floor((availableWidth / sheetWidth) * 100)));
+            } else {
+                numericVal = parseInt(val, 10) || 100;
+            }
+
+            zoomContainer.dataset.zoom = numericVal;
+            zoomContainer.style.transform = `scale(${numericVal / 100})`;
+            zoomContainer.style.transformOrigin = 'center top';
+            updateZoomCompensation(numericVal);
+
+            workstation.querySelectorAll('[data-zoom]').forEach(b => {
+                if (b.dataset.zoom === String(val)) {
+                    b.className = 'px-2 py-1 text-[11px] font-bold rounded-md active-zoom bg-slate-900 text-white transition cursor-pointer';
+                } else {
+                    b.className = 'px-2 py-1 text-[11px] font-bold rounded-md text-slate-700 hover:bg-slate-200 transition cursor-pointer';
+                }
+            });
+        };
+
+        workstation.querySelectorAll('[data-zoom]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                applyZoom(btn.dataset.zoom);
+            });
+        });
+
+        // Keyboard Shortcut: Ctrl+S / Cmd+S
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+                if (workstation.contains(document.activeElement) || document.activeElement === document.body) {
+                    e.preventDefault();
+                    if (form) {
+                        isSubmittingForm = true;
+                        syncToHiddenInputs();
+                        form.submit();
+                    }
+                }
+            }
+        });
+
+        if (form) {
+            form.addEventListener('submit', () => {
+                isSubmittingForm = true;
+                syncToHiddenInputs();
+            });
+        }
+    }
+};
+
+window.SuratEdaranWorkstation = SuratEdaranWorkstation;
 
 // Initialize on DOM Ready
 document.addEventListener('DOMContentLoaded', () => {

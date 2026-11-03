@@ -60,6 +60,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/presensi', [AttendanceController::class, 'portal'])->name('attendances.portal');
     Route::get('/presensi/riwayat', [AttendanceController::class, 'history'])->name('attendances.history');
     Route::get('/agendas/{agenda}', [AgendaController::class, 'staffShow'])->name('agendas.show');
+    Route::get('/agendas/{agenda}/surat-edaran/pdf', [AgendaController::class, 'exportSuratEdaranPdf'])->name('agendas.surat-edaran.pdf');
     Route::get('/agendas/{agenda}/presensi', [AttendanceController::class, 'create'])->name('attendances.create');
     Route::post('/agendas/{agenda}/presensi', [AttendanceController::class, 'store'])->middleware('throttle:30,1')->name('attendances.store');
     Route::get('/agendas/{agenda}/presensi/{attendance}/sukses', [AttendanceController::class, 'success'])->name('attendances.success');
@@ -80,6 +81,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/{agenda}/notulen', [AgendaController::class, 'notulen'])->name('notulen');
         Route::put('/{agenda}/notulen', [AgendaController::class, 'updateNotulen'])->name('update-notulen');
         Route::delete('/{agenda}/documentations/{documentation}', [AgendaController::class, 'deleteDocumentation'])->name('delete-documentation');
+        Route::get('/{agenda}/surat-edaran', [AgendaController::class, 'suratEdaran'])->name('surat-edaran');
+        Route::put('/{agenda}/surat-edaran', [AgendaController::class, 'updateSuratEdaran'])->name('update-surat-edaran');
+        Route::get('/{agenda}/surat-edaran/export/pdf', [AgendaController::class, 'exportSuratEdaranPdf'])->name('export-surat-edaran-pdf');
     });
 
     // Reports, Recap & Official Exports (PDF/Word/CSV)

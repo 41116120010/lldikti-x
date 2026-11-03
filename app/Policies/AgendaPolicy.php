@@ -217,6 +217,32 @@ class AgendaPolicy
     }
 
     /**
+     * Determine whether the user can manage official circular letter / meeting invitation.
+     */
+    public function manageCircular(User $user, Agenda $agenda): bool
+    {
+        // Cancelled meetings cannot have their circular letter modified
+        if ($agenda->status === 'cancelled') {
+            return false;
+        }
+
+        if ($user->isAdministrator()) {
+            return true;
+        }
+
+        // Pembuat agenda atau rekan admin dari unit penyelenggara yang sama selalu berhak mengelola surat
+        if ($agenda->created_by === $user->id) {
+            return true;
+        }
+
+        if ($user->isAdmin() && $user->unit_id !== null && $agenda->creatorUnitId() === $user->unit_id) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Determine whether the user was appointed as leader or notulis for this agenda.
      */
     private function isAppointed(User $user, Agenda $agenda): bool

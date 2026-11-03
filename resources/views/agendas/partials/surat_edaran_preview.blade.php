@@ -10,7 +10,12 @@
             <svg class="text-slate-900" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y1="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
             <h3 class="font-bold text-slate-900 text-sm">Surat Edaran / Undangan</h3>
         </div>
-        @if($agenda->surat_edaran_path)
+        @if($agenda->is_surat_edaran_digital)
+            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y1="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
+                SURAT DIGITAL
+            </span>
+        @elseif($agenda->surat_edaran_path)
             @if($agenda->is_surat_edaran_pdf)
                 <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
                     <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -30,7 +35,63 @@
     </div>
 
     <div class="p-4 sm:p-5 space-y-4">
-        @if($agenda->surat_edaran_path)
+        @if($agenda->is_surat_edaran_digital)
+            @php
+                $seConfig = $agenda->resolved_surat_edaran_config;
+                $downloadPdfUrl = auth()->user()?->isStaff() ? route('agendas.surat-edaran.pdf', $agenda) : route('admin.agendas.export-surat-edaran-pdf', $agenda);
+            @endphp
+            <div class="p-4 bg-slate-50 border border-slate-300 rounded-xl space-y-3">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Tata Naskah Dinas Resmi (Format {{ ucfirst($seConfig['template_type'] ?? 'undangan') }})</span>
+                        <h4 class="text-xs font-extrabold text-slate-900 mt-0.5 truncate">{{ $seConfig['perihal'] ?? $agenda->judul_rapat }}</h4>
+                        <div class="text-[11px] text-slate-600 mt-1 space-y-0.5">
+                            <div><strong class="text-slate-800">Nomor:</strong> {{ $seConfig['nomor_surat'] ?? '-' }}</div>
+                            <div><strong class="text-slate-800">Tanggal:</strong> {{ $seConfig['tempat_surat'] ?? 'Padang' }}, {{ $seConfig['tanggal_surat'] ?? '-' }}</div>
+                            <div><strong class="text-slate-800">Tujuan:</strong> {{ \Illuminate\Support\Str::limit($seConfig['tujuan_surat'] ?? '-', 75) }}</div>
+                        </div>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shrink-0 shadow-xs">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y1="13"/><line x1="16" y1="17" x2="8" y1="17"/></svg>
+                    </div>
+                </div>
+            </div>
+
+            {{-- 2-Tier Proportional Action Buttons for Digital Letter --}}
+            <div class="space-y-2 pt-1">
+                <button 
+                    type="button" 
+                    onclick="openSuratEdaranModal('modal-surat-preview-{{ $agenda->id }}')" 
+                    class="w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition cursor-pointer"
+                    title="Buka naskah dinas dalam ukuran layar penuh"
+                >
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+                    <span>Pratinjau Layar Penuh</span>
+                </button>
+
+                <div class="grid {{ (auth()->check() && auth()->user()->can('manageCircular', $agenda)) ? 'grid-cols-2' : 'grid-cols-1' }} gap-2">
+                    <a 
+                        href="{{ $downloadPdfUrl }}" 
+                        class="w-full min-h-[44px] py-2 px-3 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-bold text-xs flex items-center justify-center gap-1.5 transition text-center shadow-2xs"
+                        title="Unduh berkas PDF resmi surat"
+                    >
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" class="text-rose-600"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        <span>Unduh PDF</span>
+                    </a>
+
+                    @if(auth()->check() && auth()->user()->can('manageCircular', $agenda))
+                        <a 
+                            href="{{ route('admin.agendas.surat-edaran', $agenda) }}" 
+                            class="w-full min-h-[44px] py-2 px-3 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-bold text-xs flex items-center justify-center gap-1.5 transition text-center shadow-2xs"
+                            title="Buka pengolah kata naskah surat"
+                        >
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            <span>Edit Naskah</span>
+                        </a>
+                    @endif
+                </div>
+            </div>
+        @elseif($agenda->surat_edaran_path)
             {{-- Direct Inline Preview --}}
             @if($agenda->is_surat_edaran_pdf)
                 <div class="relative rounded-xl border border-slate-300 bg-slate-900 overflow-hidden shadow-2xs group">
@@ -157,7 +218,7 @@
 </div>
 @endif
 
-@if($agenda->surat_edaran_path)
+@if($agenda->surat_edaran_path || $agenda->is_surat_edaran_digital)
     <!-- Fullscreen Modal Lightbox Dialog -->
     <div 
         id="modal-surat-preview-{{ $agenda->id }}" 
@@ -179,8 +240,8 @@
                             <h3 id="modal-surat-title-{{ $agenda->id }}" class="text-sm font-bold text-slate-900 truncate">
                                 Surat Edaran / Undangan Rapat
                             </h3>
-                            <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider {{ $agenda->is_surat_edaran_pdf ? 'bg-rose-100 text-rose-800' : ($agenda->is_surat_edaran_image ? 'bg-blue-100 text-blue-800' : 'bg-slate-200 text-slate-800') }}">
-                                {{ $agenda->surat_edaran_extension ?? 'BERKAS' }}
+                            <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider {{ $agenda->is_surat_edaran_digital ? 'bg-emerald-100 text-emerald-800' : ($agenda->is_surat_edaran_pdf ? 'bg-rose-100 text-rose-800' : ($agenda->is_surat_edaran_image ? 'bg-blue-100 text-blue-800' : 'bg-slate-200 text-slate-800')) }}">
+                                {{ $agenda->is_surat_edaran_digital ? 'NASKAH DIGITAL' : ($agenda->surat_edaran_extension ?? 'BERKAS') }}
                             </span>
                         </div>
                         <p class="text-[11px] text-slate-500 font-medium truncate">
@@ -190,8 +251,19 @@
                 </div>
 
                 <div class="flex items-center gap-2 shrink-0">
+                    @if(auth()->check() && auth()->user()->can('manageCircular', $agenda))
+                        <a 
+                            href="{{ route('admin.agendas.surat-edaran', $agenda) }}" 
+                            class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-800 text-xs font-semibold hover:bg-emerald-100 transition min-h-[44px]"
+                            title="Buka Lembar Kerja Naskah Dinas"
+                        >
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                            <span>Edit Naskah</span>
+                        </a>
+                    @endif
+
                     <a 
-                        href="{{ $agenda->surat_edaran_url }}" 
+                        href="{{ $agenda->is_surat_edaran_digital ? route('agendas.surat-edaran.pdf', $agenda) : $agenda->surat_edaran_url }}" 
                         target="_blank" 
                         rel="noopener noreferrer" 
                         class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-100 transition min-h-[44px]"
@@ -202,7 +274,7 @@
                     </a>
 
                     <a 
-                        href="{{ $agenda->surat_edaran_url }}" 
+                        href="{{ $agenda->is_surat_edaran_digital ? route('agendas.surat-edaran.pdf', ['agenda' => $agenda, 'download' => 1]) : $agenda->surat_edaran_url }}" 
                         download 
                         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-100 transition min-h-[44px]"
                         title="Unduh berkas surat"
@@ -224,7 +296,17 @@
 
             <!-- Modal Content / Document Viewer Frame (Interactive Reader) -->
             <div class="relative bg-slate-950 flex-1 overflow-hidden flex items-center justify-center w-full h-full min-h-0" style="flex: 1 1 0%; min-height: 0; height: 100%;">
-                @if($agenda->is_surat_edaran_pdf)
+                @if($agenda->is_surat_edaran_digital)
+                    <div class="w-full h-full bg-slate-100 flex flex-col items-center justify-center p-2 sm:p-4 overflow-y-auto">
+                        <div class="w-full max-w-4xl h-full bg-white shadow-lg rounded-xl overflow-hidden border border-slate-200 flex flex-col">
+                            <iframe 
+                                srcdoc="{{ e(app(\App\Services\SuratEdaranService::class)->renderHtml($agenda)) }}" 
+                                class="w-full h-full bg-white border-0" 
+                                title="Pratinjau Surat Dinas Digital - {{ $agenda->judul_rapat }}"
+                            ></iframe>
+                        </div>
+                    </div>
+                @elseif($agenda->is_surat_edaran_pdf)
                     <div class="w-full h-full flex flex-col items-center justify-center">
                         <object 
                             data="{{ $agenda->surat_edaran_url }}#toolbar=1&navpanes=0&view=FitH" 
@@ -335,10 +417,13 @@
             <!-- Modal Footer -->
             <div class="px-4 sm:px-5 py-2.5 border-t border-slate-200 bg-white flex items-center justify-between shrink-0">
                 <div class="flex items-center gap-3 text-[11px] text-slate-500 font-medium">
-                    <span>Format: <strong class="uppercase text-slate-700">{{ $agenda->surat_edaran_extension ?? 'PDF' }}</strong></span>
+                    <span>Format: <strong class="uppercase text-slate-700">{{ $agenda->is_surat_edaran_digital ? 'Naskah Digital (A4 PDF)' : ($agenda->surat_edaran_extension ?? 'PDF') }}</strong></span>
                     @if($agenda->is_surat_edaran_image)
                         <span class="hidden md:inline-block text-slate-400">&bull;</span>
                         <span class="hidden md:inline-block text-slate-500">Tip: Gunakan scroll mouse atau seret gambar saat diperbesar</span>
+                    @elseif($agenda->is_surat_edaran_digital)
+                        <span class="hidden md:inline-block text-slate-400">&bull;</span>
+                        <span class="hidden md:inline-block text-emerald-700 font-semibold">Format Resmi Tata Naskah Dinas Kemendikbudristek / LLDIKTI</span>
                     @endif
                 </div>
                 <button 
