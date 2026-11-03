@@ -8,62 +8,54 @@
 <div class="space-y-6">
     <!-- Top Hero Banner -->
     <div class="bg-slate-950 text-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-800 space-y-4">
-        <!-- Top Row: Single Calm Status Badge & Meeting Classification -->
-        <div class="flex flex-wrap items-center gap-2">
-            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs border {{ $agenda->status_meta_soft['class'] }}">
-                @if($agenda->status === 'ongoing')
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" aria-hidden="true"></span>
-                @endif
-                {{ $agenda->status_meta_soft['label'] }}
-            </span>
-
-            <span class="text-xs font-semibold px-2.5 py-1 bg-slate-900 border border-slate-700/80 rounded-md text-slate-300">
-                {{ $agenda->jenis_rapat }}
-            </span>
-        </div>
-
-        <!-- Full Width Meeting Title: Never squeezed by buttons! -->
+        <!-- Full Width Meeting Title -->
         <h1 class="text-xl sm:text-2xl font-extrabold text-white tracking-tight leading-snug">
             {{ $agenda->judul_rapat }}
         </h1>
 
-        <!-- Metadata Row: Date, Location, Organizer -->
+        <!-- Metadata Row: Jenis Rapat, Waktu Rapat, Lokasi, Penyelenggara -->
         <div class="flex flex-wrap items-center gap-y-2 gap-x-5 text-xs text-slate-300 font-medium">
-            <div class="flex items-center gap-1.5">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 shrink-0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                <span>{{ $agenda->waktu_mulai->translatedFormat('l, d F Y') }} &bull; {{ $agenda->waktu_mulai->format('H:i') }} {{ $agenda->waktu_selesai ? '- ' . $agenda->waktu_selesai->format('H:i') . ' WIB' : 'WIB s.d. Selesai' }}</span>
+            <!-- [1] Jenis Rapat -->
+            <div class="flex items-center gap-1.5 text-slate-300">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 shrink-0" aria-hidden="true"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg>
+                <span class="font-medium text-slate-200">{{ $agenda->jenis_rapat }}</span>
             </div>
 
-            <div class="flex items-center gap-2">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 shrink-0"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-                <div class="flex items-center gap-1.5 min-w-0">
-                    @php
-                        $tipeMetaHero = match(strtolower($agenda->tipe_rapat ?? 'offline')) {
-                            'online' => ['label' => 'Daring', 'class' => 'bg-sky-500/20 text-sky-300 border-sky-500/30'],
-                            'hybrid' => ['label' => 'Hybrid', 'class' => 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'],
-                            default => ['label' => 'Luring', 'class' => 'bg-slate-800 text-slate-300 border-slate-700'],
-                        };
-                    @endphp
-                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold tracking-wide border shrink-0 {{ $tipeMetaHero['class'] }}">
-                        {{ $tipeMetaHero['label'] }}
-                    </span>
-                    <span class="truncate">{{ $agenda->lokasi_ruang ?? ($agenda->tipe_rapat === 'online' ? 'Ruang Virtual / Tautan Rapat' : 'Tempat Pelaksanaan Belum Ditentukan') }}</span>
-                </div>
+            <!-- [2] Waktu Rapat (Icon jam, status rapat teks murni, tanggal & rentang waktu) -->
+            <div class="flex items-center gap-1.5 text-slate-300">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 shrink-0" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span><strong class="text-white font-semibold">{{ $agenda->status_meta_soft['label'] }}</strong> &bull; {{ $agenda->waktu_mulai->translatedFormat('l, d F Y') }} &bull; {{ $agenda->waktu_mulai->format('H:i') }} {{ $agenda->waktu_selesai ? '- ' . $agenda->waktu_selesai->format('H:i') . ' WIB' : 'WIB s.d. Selesai' }}</span>
             </div>
 
-            <div class="flex items-center gap-1.5">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            <!-- [3] Lokasi Rapat (Icon pin, modalitas netral teks, lokasi/ruang) -->
+            <div class="flex items-center gap-1.5 min-w-0 text-slate-300">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 shrink-0" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                @php
+                    $labelTipeHero = match(strtolower($agenda->tipe_rapat ?? 'offline')) {
+                        'online' => 'Daring',
+                        'hybrid' => 'Hybrid',
+                        default => 'Luring',
+                    };
+                @endphp
+                <span class="truncate">[{{ $labelTipeHero }}] {{ $agenda->lokasi_ruang ?? ($agenda->tipe_rapat === 'online' ? 'Ruang Virtual / Tautan Rapat' : 'Tempat Pelaksanaan Belum Ditentukan') }}</span>
+            </div>
+
+            <!-- [4] Penyelenggara -->
+            <div class="flex items-center gap-1.5 text-slate-300">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 shrink-0" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                 <span>Penyelenggara: {{ $agenda->creator?->name ?? 'Penyelenggara Rapat' }} ({{ $agenda->creator?->unit?->kode_unit ?? 'Pusat' }})</span>
             </div>
 
-            <div class="flex items-center gap-1.5">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                <span>Pimpinan: <strong class="text-white">{{ $agenda->nama_pimpinan }}</strong></span>
+            <!-- [5] Pimpinan Rapat -->
+            <div class="flex items-center gap-1.5 text-slate-300">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 shrink-0" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <span>Pimpinan: <strong class="text-white font-semibold">{{ $agenda->nama_pimpinan }}</strong></span>
             </div>
 
-            <div class="flex items-center gap-1.5">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-                <span>Notulis: <strong class="text-white">{{ $agenda->nama_notulis }}</strong></span>
+            <!-- [6] Notulis Rapat -->
+            <div class="flex items-center gap-1.5 text-slate-300">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 shrink-0" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                <span>Notulis: <strong class="text-white font-semibold">{{ $agenda->nama_notulis }}</strong></span>
             </div>
         </div>
 
