@@ -232,17 +232,16 @@ class Agenda extends Model
      */
     public function scopeUpcoming(Builder $query): Builder
     {
+        $graceMinutes = (int) (function_exists('config') && function_exists('app') && app()->bound('config') ? config('agenda.close_grace_minutes', 15) : 15);
+
         return $query->where('status', 'scheduled')
-            ->where(function (Builder $q) {
-                $q->where(function (Builder $sub) {
+            ->where(function (Builder $q) use ($graceMinutes) {
+                $q->where(function (Builder $sub) use ($graceMinutes) {
                     $sub->whereNotNull('waktu_selesai')
-                        ->where(function (Builder $timeQ) {
-                            $timeQ->where('waktu_selesai', '>=', now())
-                                ->orWhere('waktu_mulai', '>=', now()->startOfDay());
-                        });
-                })->orWhere(function (Builder $sub) {
+                        ->where('waktu_selesai', '>=', now()->subMinutes($graceMinutes));
+                })->orWhere(function (Builder $sub) use ($graceMinutes) {
                     $sub->whereNull('waktu_selesai')
-                        ->where('waktu_mulai', '>=', now()->startOfDay());
+                        ->where('waktu_mulai', '>=', now()->startOfDay()->subMinutes($graceMinutes));
                 });
             });
     }
@@ -255,10 +254,15 @@ class Agenda extends Model
     public function scopeRelevantForDashboard(Builder $query): Builder
     {
         return $query->where(function (Builder $q) {
-            $q->where('status', 'ongoing')
-                ->orWhere(function (Builder $sub) {
-                    $sub->upcoming();
-                });
+            $q->where(function (Builder $ongoingQ) {
+                $ongoingQ->where('status', 'ongoing')
+                    ->where(function (Builder $timeLimit) {
+                        $timeLimit->where('waktu_mulai', '>=', now()->subDays(2))
+                            ->orWhereNull('waktu_mulai');
+                    });
+            })->orWhere(function (Builder $sub) {
+                $sub->upcoming();
+            });
         });
     }
 
@@ -522,26 +526,33 @@ class Agenda extends Model
      */
     public function getStatusMetaSoftAttribute(): array
     {
+        if ($this->is_overdue) {
+            return [
+                'label' => 'Terlewat',
+                'class' => 'bg-amber-50 text-amber-800 border-amber-300 font-semibold',
+            ];
+        }
+
         return match ($this->status) {
             'ongoing' => [
                 'label' => 'Sedang Berlangsung',
-                'class' => 'bg-amber-100 text-amber-900 border-amber-300 font-bold',
+                'class' => 'bg-emerald-50 text-emerald-800 border-emerald-300 font-semibold',
             ],
             'completed' => [
                 'label' => 'Selesai',
-                'class' => 'bg-emerald-100 text-emerald-900 border-emerald-300 font-bold',
+                'class' => 'bg-slate-100 text-slate-700 border-slate-300 font-medium',
             ],
             'draft' => [
                 'label' => 'Konsep',
-                'class' => 'bg-slate-100 text-slate-800 border-slate-300 font-semibold',
+                'class' => 'bg-slate-100 text-slate-600 border-slate-300 font-medium',
             ],
             'cancelled' => [
                 'label' => 'Dibatalkan',
-                'class' => 'bg-rose-100 text-rose-900 border-rose-300 font-bold',
+                'class' => 'bg-rose-50 text-rose-800 border-rose-300 font-medium',
             ],
             default => [
                 'label' => 'Terjadwal',
-                'class' => 'bg-slate-100 text-slate-900 border-slate-300 font-bold',
+                'class' => 'bg-blue-50 text-blue-800 border-blue-200 font-medium',
             ],
         };
     }
@@ -957,6 +968,14 @@ class Agenda extends Model
     }
 
     /**
+     * Get the format for database stored dates, with a resilient fallback if connection resolver is unset.
+     */
+    public function getDateFormat()
+    {
+        return $this->dateFormat ?: ($this->getConnectionResolver() ? parent::getDateFormat() : 'Y-m-d H:i:s');
+    }
+
+    /**
      * Convert a DateTime to a storable string, ensuring conversion to application timezone (Asia/Jakarta / WIB).
      *
      * Prevents UTC ISO-8601 strings (e.g. from mobile or REST API clients) from losing their offset
@@ -970,7 +989,9 @@ class Agenda extends Model
 
         $date = $this->asDateTime($value);
 
-        $appTimezone = config('app.timezone', 'Asia/Jakarta');
+        $appTimezone = (function_exists('config') && function_exists('app') && app()->bound('config'))
+            ? config('app.timezone', 'Asia/Jakarta')
+            : 'Asia/Jakarta';
         if ($date instanceof CarbonInterface) {
             $date = $date->copy()->setTimezone($appTimezone);
         }
@@ -1006,7 +1027,7 @@ class Agenda extends Model
      */
     public function getEffectiveEndAtAttribute(): Carbon
     {
-        $graceMinutes = (int) config('agenda.close_grace_minutes', 15);
+        $graceMinutes = (int) (function_exists('config') && function_exists('app') && app()->bound('config') ? config('agenda.close_grace_minutes', 15) : 15);
         $baseEnd = $this->waktu_selesai ?? ($this->waktu_mulai ? $this->waktu_mulai->copy()->endOfDay() : now()->endOfDay());
 
         return $baseEnd->copy()->addMinutes($graceMinutes);
@@ -1021,7 +1042,7 @@ class Agenda extends Model
             return null;
         }
 
-        $startWindowMinutes = (int) config('agenda.start_window_minutes', 15);
+        $startWindowMinutes = (int) (function_exists('config') && function_exists('app') && app()->bound('config') ? config('agenda.start_window_minutes', 15) : 15);
 
         return $this->waktu_mulai->copy()->subMinutes($startWindowMinutes);
     }

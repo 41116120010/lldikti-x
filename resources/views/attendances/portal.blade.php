@@ -34,12 +34,11 @@
                     :show-attendance="$user->isAdministrator() || $user->isAdmin()"
                 >
                     <x-slot:badges>
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] border {{ $hasAttended ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-bold' : 'bg-amber-100 text-amber-900 border-amber-300 font-bold' }}">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs border {{ $hasAttended ? 'bg-emerald-50 text-emerald-800 border-emerald-300 font-semibold' : 'bg-amber-50 text-amber-800 border-amber-300 font-semibold' }}">
+                            @if(!$hasAttended)
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse" aria-hidden="true"></span>
+                            @endif
                             {{ $hasAttended ? 'Sudah Hadir' : 'Sedang Berlangsung' }}
-                        </span>
-
-                        <span class="text-[11px] font-mono font-bold uppercase px-2 py-0.5 bg-slate-100 text-slate-800 rounded border border-slate-200">
-                            {{ $agenda->tipe_rapat }}
                         </span>
                     </x-slot:badges>
 
