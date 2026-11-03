@@ -44,13 +44,13 @@
         flex-direction: column; 
         position: sticky; 
         top: 0; 
+        align-self: start;
         height: 100vh;
         height: 100dvh; 
         overflow-y: auto; 
         z-index: 30;
         scrollbar-width: thin;
         scrollbar-color: #cbd5e1 transparent;
-        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .sidebar::-webkit-scrollbar { width: 4px }
     .sidebar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px }
@@ -70,7 +70,7 @@
         opacity: 1;
     }
 
-    .brand { display: flex; gap: 11px; align-items: center; padding: 1px 5px 22px; border-bottom: 1px solid #e2e8f0 }
+    .brand { display: flex; gap: 11px; align-items: center; padding: 1px 5px 22px; border-bottom: 1px solid #e2e8f0; flex-shrink: 0; }
 
     .brand-mark, .avatar { background: #0f172a; color: #fff; display: grid; place-items: center; font-weight: 700 }
     .brand-mark { height: 36px; width: 36px; border-radius: 8px; font-size: 19px }
@@ -410,6 +410,7 @@
         height: 100dvh;
         z-index: 50;
         transform: translateX(-100%);
+        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35);
     }
     .sidebar.open {

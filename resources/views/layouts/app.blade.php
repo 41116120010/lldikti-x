@@ -98,9 +98,9 @@
         <!-- Sidebar Navigation -->
         <aside class="sidebar" id="app-sidebar" role="navigation" aria-label="Navigasi Utama">
             <!-- Brand Logo & Mobile Close Button -->
-            <div class="brand justify-between">
+            <div class="brand justify-between shrink-0">
                 <div class="flex items-center gap-3">
-                    <img src="{{ asset('images/tut-wuri-handayani.png') }}" alt="Logo Tut Wuri Handayani" class="w-9 h-9 object-contain shrink-0">
+                    <img src="{{ asset('images/tut-wuri-handayani.png') }}" alt="Logo Tut Wuri Handayani" width="36" height="36" class="w-9 h-9 object-contain shrink-0">
                     <div>
                         <div class="brand-name tracking-tight font-extrabold text-slate-950">SIPERAPAT</div>
                         <small class="text-[11px] text-slate-600 font-bold">LLDIKTI Wilayah X</small>
