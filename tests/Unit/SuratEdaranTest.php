@@ -164,4 +164,29 @@ class SuratEdaranTest extends TestCase
 
         $this->assertFalse($this->policy->manageCircular($staff, $agenda));
     }
+
+    public function test_digital_surat_edaran_resolved_config_integrity(): void
+    {
+        $agenda = new Agenda([
+            'id' => 42,
+            'judul_rapat' => 'Rapat Penjaminan Mutu Perguruan Tinggi',
+            'surat_edaran_type' => 'digital',
+            'surat_edaran_config' => [
+                'nomor_surat' => '123/LL10/TU/2026',
+                'tempat_surat' => 'Padang',
+                'tanggal_surat' => '04 November 2026',
+                'tujuan_surat' => 'Yth. Pimpinan Perguruan Tinggi Swasta',
+                'template_type' => 'undangan',
+            ],
+        ]);
+
+        $this->assertTrue($agenda->is_surat_edaran_digital);
+        $config = $agenda->resolved_surat_edaran_config;
+
+        $this->assertSame('123/LL10/TU/2026', $config['nomor_surat']);
+        $this->assertSame('Padang', $config['tempat_surat']);
+        $this->assertSame('04 November 2026', $config['tanggal_surat']);
+        $this->assertSame('undangan', $config['template_type']);
+        $this->assertSame('Yth. Pimpinan Perguruan Tinggi Swasta', $config['tujuan_surat']);
+    }
 }

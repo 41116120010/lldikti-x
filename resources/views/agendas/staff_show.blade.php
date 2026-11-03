@@ -8,19 +8,16 @@
 <div class="space-y-6">
     <!-- Top Hero Banner -->
     <div class="bg-slate-950 text-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-800 space-y-4">
-        <!-- Top Row: Meeting Type & Status Badges -->
+        <!-- Top Row: Single Calm Status Badge & Meeting Classification -->
         <div class="flex flex-wrap items-center gap-2">
-            {{-- Single source of truth on the model: this view previously had no
-                 'cancelled' case, so a cancelled meeting looked like a normal one. --}}
-            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs {{ $agenda->status_meta['class'] }}">
-                {{ $agenda->status_meta['label'] }}
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs border {{ $agenda->status_meta_soft['class'] }}">
+                @if($agenda->status === 'ongoing')
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" aria-hidden="true"></span>
+                @endif
+                {{ $agenda->status_meta_soft['label'] }}
             </span>
 
-            <span class="text-xs uppercase font-mono font-bold px-2.5 py-1 bg-slate-900 border border-slate-700 rounded-md text-slate-200">
-                {{ $agenda->tipe_rapat }}
-            </span>
-
-            <span class="text-xs uppercase font-bold px-2.5 py-1 bg-slate-900 border border-slate-700 rounded-md text-slate-200">
+            <span class="text-xs font-semibold px-2.5 py-1 bg-slate-900 border border-slate-700/80 rounded-md text-slate-300">
                 {{ $agenda->jenis_rapat }}
             </span>
         </div>
@@ -33,13 +30,25 @@
         <!-- Metadata Row: Date, Location, Organizer -->
         <div class="flex flex-wrap items-center gap-y-2 gap-x-5 text-xs text-slate-300 font-medium">
             <div class="flex items-center gap-1.5">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 shrink-0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 <span>{{ $agenda->waktu_mulai->translatedFormat('l, d F Y') }} &bull; {{ $agenda->waktu_mulai->format('H:i') }} {{ $agenda->waktu_selesai ? '- ' . $agenda->waktu_selesai->format('H:i') . ' WIB' : 'WIB s.d. Selesai' }}</span>
             </div>
 
-            <div class="flex items-center gap-1.5">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-                <span>{{ $agenda->lokasi_ruang ?? 'Daring / Ruang Virtual' }}</span>
+            <div class="flex items-center gap-2">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 shrink-0"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                <div class="flex items-center gap-1.5 min-w-0">
+                    @php
+                        $tipeMetaHero = match(strtolower($agenda->tipe_rapat ?? 'offline')) {
+                            'online' => ['label' => 'Daring', 'class' => 'bg-sky-500/20 text-sky-300 border-sky-500/30'],
+                            'hybrid' => ['label' => 'Hybrid', 'class' => 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'],
+                            default => ['label' => 'Luring', 'class' => 'bg-slate-800 text-slate-300 border-slate-700'],
+                        };
+                    @endphp
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold tracking-wide border shrink-0 {{ $tipeMetaHero['class'] }}">
+                        {{ $tipeMetaHero['label'] }}
+                    </span>
+                    <span class="truncate">{{ $agenda->lokasi_ruang ?? ($agenda->tipe_rapat === 'online' ? 'Ruang Virtual / Tautan Rapat' : 'Tempat Pelaksanaan Belum Ditentukan') }}</span>
+                </div>
             </div>
 
             <div class="flex items-center gap-1.5">

@@ -38,7 +38,8 @@
         @if($agenda->is_surat_edaran_digital)
             @php
                 $seConfig = $agenda->resolved_surat_edaran_config;
-                $downloadPdfUrl = auth()->user()?->isStaff() ? route('agendas.surat-edaran.pdf', $agenda) : route('admin.agendas.export-surat-edaran-pdf', $agenda);
+                $digitalPdfUrl = route('agendas.surat-edaran.pdf', $agenda);
+                $downloadPdfUrl = $digitalPdfUrl . '?download=1';
             @endphp
             <div class="p-4 bg-slate-50 border border-slate-300 rounded-xl space-y-3">
                 <div class="flex items-start justify-between gap-3">
@@ -54,6 +55,52 @@
                     <div class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shrink-0 shadow-xs">
                         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y1="13"/><line x1="16" y1="17" x2="8" y1="17"/></svg>
                     </div>
+                </div>
+            </div>
+
+            {{-- Direct Inline PDF Preview for Digital Circular --}}
+            <div class="relative rounded-xl border border-slate-300 bg-slate-900 overflow-hidden shadow-2xs group">
+                <object 
+                    data="{{ $digitalPdfUrl }}#toolbar=0&navpanes=0&view=Fit" 
+                    type="application/pdf"
+                    class="w-full h-72 sm:h-80 bg-white" 
+                    title="Pratinjau Surat Dinas Digital - {{ $agenda->judul_rapat }}"
+                >
+                    <iframe 
+                        src="{{ $digitalPdfUrl }}#toolbar=0&navpanes=0&view=Fit" 
+                        class="w-full h-72 sm:h-80 bg-white border-0" 
+                        title="Pratinjau Surat Dinas Digital - {{ $agenda->judul_rapat }}"
+                        loading="lazy"
+                    >
+                        <div class="w-full h-72 sm:h-80 flex flex-col items-center justify-center p-6 text-center bg-slate-50">
+                            <div class="w-12 h-12 rounded-xl bg-blue-700 text-white flex items-center justify-center mx-auto mb-2 shadow-xs">
+                                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            </div>
+                            <div class="font-bold text-slate-900 text-xs mb-1">Dokumen Naskah Dinas Digital (PDF)</div>
+                            <p class="text-[11px] text-slate-500 max-w-xs mx-auto mb-3">Klik tombol di bawah untuk membaca pratinjau penuh atau mengunduh berkas.</p>
+                        </div>
+                    </iframe>
+                </object>
+
+                <!-- Quick Hover Overlay on desktop -->
+                <div class="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 pointer-events-none p-4">
+                    <button 
+                        type="button" 
+                        onclick="openSuratEdaranModal('modal-surat-preview-{{ $agenda->id }}')" 
+                        class="pointer-events-auto px-4 py-2 rounded-xl bg-white text-slate-900 font-bold text-xs shadow-lg hover:bg-slate-100 transition flex items-center gap-1.5 cursor-pointer"
+                    >
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+                        <span>Perbesar Layar Penuh</span>
+                    </button>
+                    <a 
+                        href="{{ $digitalPdfUrl }}" 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        class="pointer-events-auto px-3 py-2 rounded-xl bg-slate-900/90 text-white font-bold text-xs shadow-lg hover:bg-slate-900 transition flex items-center gap-1.5"
+                    >
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                        <span>Tab Baru</span>
+                    </a>
                 </div>
             </div>
 
@@ -297,14 +344,34 @@
             <!-- Modal Content / Document Viewer Frame (Interactive Reader) -->
             <div class="relative bg-slate-950 flex-1 overflow-hidden flex items-center justify-center w-full h-full min-h-0" style="flex: 1 1 0%; min-height: 0; height: 100%;">
                 @if($agenda->is_surat_edaran_digital)
-                    <div class="w-full h-full bg-slate-100 flex flex-col items-center justify-center p-2 sm:p-4 overflow-y-auto">
-                        <div class="w-full max-w-4xl h-full bg-white shadow-lg rounded-xl overflow-hidden border border-slate-200 flex flex-col">
+                    @php
+                        $modalDigitalPdfUrl = route('agendas.surat-edaran.pdf', $agenda);
+                    @endphp
+                    <div class="w-full h-full flex flex-col items-center justify-center bg-slate-900">
+                        <object 
+                            data="{{ $modalDigitalPdfUrl }}#toolbar=1&navpanes=0&view=FitH" 
+                            type="application/pdf"
+                            class="w-full h-full bg-white"
+                            title="Pratinjau Layar Penuh Surat Dinas Digital - {{ $agenda->judul_rapat }}"
+                        >
                             <iframe 
-                                srcdoc="{{ e(app(\App\Services\SuratEdaranService::class)->renderHtml($agenda)) }}" 
+                                src="{{ $modalDigitalPdfUrl }}#toolbar=1&navpanes=0&view=FitH" 
                                 class="w-full h-full bg-white border-0" 
-                                title="Pratinjau Surat Dinas Digital - {{ $agenda->judul_rapat }}"
-                            ></iframe>
-                        </div>
+                                title="Pratinjau Layar Penuh Surat Dinas Digital - {{ $agenda->judul_rapat }}"
+                            >
+                                <div class="w-full h-full flex flex-col items-center justify-center p-6 text-center bg-slate-100">
+                                    <div class="w-14 h-14 rounded-2xl bg-blue-700 text-white flex items-center justify-center mx-auto mb-3 shadow-sm">
+                                        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                    </div>
+                                    <div class="font-bold text-slate-900 text-sm mb-1">Pratinjau Naskah Dinas Digital</div>
+                                    <p class="text-xs text-slate-600 max-w-sm mx-auto mb-4">Gunakan tombol di bawah untuk membuka naskah dinas dalam tab baru atau mengunduhnya dalam format PDF resmi.</p>
+                                    <div class="flex items-center gap-2">
+                                        <a href="{{ $modalDigitalPdfUrl }}" target="_blank" rel="noopener noreferrer" class="button small text-xs font-bold px-4 py-2 bg-slate-900 text-white rounded-xl">Buka di Tab Baru</a>
+                                        <a href="{{ $modalDigitalPdfUrl }}?download=1" download class="button small secondary text-xs font-bold px-4 py-2 rounded-xl">Unduh PDF</a>
+                                    </div>
+                                </div>
+                            </iframe>
+                        </object>
                     </div>
                 @elseif($agenda->is_surat_edaran_pdf)
                     <div class="w-full h-full flex flex-col items-center justify-center">
