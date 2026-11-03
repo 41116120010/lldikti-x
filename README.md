@@ -37,6 +37,14 @@ Pengembangan sistem SIPERAPAT berpedoman pada standar rekayasa perangkat lunak e
    * Seluruh mutasi berantai (presensi, pembuatan agenda, manipulasi berkas, dan pencatatan audit log) dibungkus secara mutlak dalam `DB::transaction()` untuk mencegah anomali data inkonsisten (*partial state*).
    * Pengecekan bentrok ruang rapat dilindungi oleh *advisory lock* native PostgreSQL (`pg_advisory_lock`) dan kolom ternormalisasi terindeks (`lokasi_ruang_normalized`).
 
+6. **Dual-Engine Document Delivery & In-App Workstation:**
+   * **Berita Acara Rapat & Rekapitulasi:** Didukung oleh `PdfExportService` berbasis LibreOffice Headless dengan *slot concurrency pool* untuk ekspor multi-halaman siap cetak berstandar kementerian, disertai alternatif dokumen Microsoft Word (`.docx`).
+   * **Naskah Surat Dinas / Edaran Digital:** Didukung oleh `SuratEdaranService` via native `DompdfRenderer` untuk pembuatan, pratinjau live kanvas A4/F4, dan kompilasi instan PDF surat undangan rapat sesuai Tata Naskah Dinas Kemendikbudristek/LLDIKTI tanpa ketergantungan dokumen fisik eksternal.
+
+7. **Tata Kelola Sasaran Partisipan & Kerahasiaan Rapat Kedinasan:**
+   * Fleksibilitas 3-mode target sasaran rapat: **Pleno Seluruh Unit (`all_units`)**, **Unit Kerja Tertentu (`selected_units`)**, dan **Khusus Pegawai ASN Tertentu (`selected_users`)**.
+   * **Aturan Kerahasiaan Rapat (*Meeting Confidentiality Governance*):** Begitu status rapat beralih ke `completed` (Selesai), pegawai staf yang tidak tercatat hadir/melakukan presensi diblokir secara otomatis dari melihat rincian agenda, notulensi, dan berkas rapat demi menjamin kerahasiaan materi kedinasan.
+
 ---
 
 ## 3. Matriks Peran & Hak Akses (Role-Based Access Control)
@@ -45,20 +53,20 @@ Sistem menerapkan pembagian hak akses granular berbasis 3 tingkatan peran utama 
 
 | Fitur / Modul | Administrator (Superadmin) | Admin Unit (Kepala Pokja/Unit) | Staff (Pegawai ASN) |
 |---|:---:|:---:|:---:|
-| Login & Lupa Kata Sandi Mandiri | Ya (Multi-ID) | Ya (Multi-ID) | Ya (Multi-ID) |
+| Login & Lupa Kata Sandi Mandiri | Ya (Multi-ID: NIP/Username/Email) | Ya (Multi-ID: NIP/Username/Email) | Ya (Multi-ID: NIP/Username/Email) |
 | Kelola Master Data Unit Kerja | Akses Penuh (CRUD) | Tidak Diizinkan | Tidak Diizinkan |
 | Kelola Pengguna Sistem | Seluruh Unit (CRUD) | Hanya Unit Sendiri (CRUD) | Tidak Diizinkan |
-| Buat & Kelola Agenda Rapat | Seluruh Unit | Terbuka / Unit Sendiri | Tidak Diizinkan |
-| Unggah Surat Edaran / Undangan | Ya (PDF/Gambar max 5MB) | Ya (PDF/Gambar max 5MB) | Hanya Unduh/Lihat |
-| Manajemen Status Rapat (Mulai/Tutup) | Ya | Unit Penyelenggara / Pimpinan & Notulis Sesi Aktif | Tidak Diizinkan |
-| Input Notulensi & Kesimpulan RTL | Ya | Unit Penyelenggara / Pimpinan & Notulis Sesi Aktif | Ya (Jika Ditunjuk Notulis/Pimpinan Saat Ongoing) |
-| Unggah Dokumentasi Foto Rapat | Ya (Multi-Upload) | Unit Penyelenggara / Pimpinan & Notulis Sesi Aktif | Ya (Jika Ditunjuk Notulis/Pimpinan Saat Ongoing) |
+| Buat & Kelola Agenda Rapat | Seluruh Unit & Seluruh Mode Target | Unit Sendiri / Khusus ASN Tertentu | Tidak Diizinkan |
+| Kelola Surat Edaran / Undangan | Berkas Fisik & Naskah Digital In-App | Berkas Fisik & Naskah Digital In-App | Hanya Unduh/Lihat (Jika Berhak) |
+| Manajemen Status Rapat (Mulai/Tutup) | Ya | Unit Penyelenggara / Pejabat Bertugas | Tidak Diizinkan |
+| Input Notulensi, Kesimpulan & Takarir Foto | Ya (Kapan Saja) | Unit Penyelenggara (Kapan Saja) | Ya (Jika Ditunjuk Pimpinan/Notulis Saat Ongoing) |
 | Pengisian Presensi (Selfie + TTD) | Ya | Ya | Ya (Sesuai Undangan / Penugasan) |
-| Tanda Terima Digital Resmi | Ya | Ya | Ya |
+| Akses Detail Rapat Selesai (Completed) | Akses Penuh (Universal) | Unit Penyelenggara / Terkait | Hanya Jika Terverifikasi Hadir Presensi |
+| Tanda Terima Digital Sah | Ya | Ya | Ya |
 | Riwayat Presensi Pribadi | Ya | Ya | Ya |
 | Dashboard Rekapitulasi & Analitik | Global (Semua Pokja) | Scoped (Pokja Sendiri & Terkait) | Tidak Diizinkan |
 | Ekspor Berita Acara (PDF & Word) | Ya | Ya (Agenda Terkait) | Tidak Diizinkan |
-| Ekspor Tabulasi CSV / Excel (13 Kolom) | Ya | Ya (Agenda Terkait) | Tidak Diizinkan |
+| Ekspor Tabulasi CSV (13 Kolom) | Ya | Ya (Agenda Terkait) | Tidak Diizinkan |
 | Pemantauan Audit Trail Log | Akses Penuh (Instansi) | Aktivitas Pribadi | Aktivitas Pribadi |
 
 ---
@@ -66,15 +74,17 @@ Sistem menerapkan pembagian hak akses granular berbasis 3 tingkatan peran utama 
 ## 4. Tech Stack & Environment Reference
 
 * **Backend Framework:** PHP 8.3+ / Laravel 13.x / LTS Framework
-* **Frontend Layer:** Laravel Blade Component + Tailwind CSS v4 + Vite + Vanilla JS
-* **Iconography:** Pure Vector SVG Icons (Phosphor / Heroicons Standard)
+* **Frontend Layer:** Laravel Blade Component + Tailwind CSS v4 + Vite + Vanilla JS / Alpine.js
+* **Iconography:** Pure Vector SVG Icons (Phosphor / Heroicons Standard, tanpa emoji)
 * **Database Engine:** PostgreSQL 15+ (Primary Production Engine) / MariaDB 10.11+ & MySQL 8.0+ (Backward Compatible) / SQLite 3.35+ (Local Testing)
-* **Transactional Email Delivery:** Brevo (Sendinblue) SMTP Relay Port 465 Implicit TLS (`smtps`) / Port 587 STARTTLS & Brevo HTTP API v3 (`symfony/brevo-mailer`)
+* **REST API Layer:** Laravel Sanctum (57 endpoint API v1 terproteksi, masa aktif Bearer Token 30 hari, format envelope seragam, streaming biometrik aman)
+* **Transactional Email Delivery:** Brevo (Sendinblue) SMTP Relay Port 465 Implicit TLS (`smtps`) / Port 587 STARTTLS & Brevo HTTP API v3 HTTPS Port 443 (`BrevoApiTransport`)
 * **Penyimpanan Berkas:** Local Filesystem Storage via Symlink (`storage/app/public/`) & Controller Streaming Terproteksi untuk Data Biometrik ASN
-* **Format Ekspor:**
-  * PDF: Binary PDF via LibreOffice Headless (dengan *slot concurrency pool*) & Fallback Print-ready Gov-Tech Standard View (`@media print`)
-  * Microsoft Word: Native OpenXML Document (`.docx` via `DocxExportService`) & Word XML Document (`.doc`)
-  * Data Tabular: CSV Format (13 kolom ringkasan agenda & tabulasi daftar hadir) dengan UTF-8 Byte Order Mark (BOM) dan proteksi CSV Formula Injection (CWE-1236)
+* **Format & Mesin Ekspor Dokumen:**
+  * **PDF Berita Acara Rapat:** Binary PDF via LibreOffice Headless (dengan *slot concurrency pool*) & Fallback Print-ready Gov-Tech Standard View (`@media print`)
+  * **PDF Naskah Surat Dinas / Edaran:** Binary PDF Instan via `SuratEdaranService` & native `DompdfRenderer` (`barryvdh/laravel-dompdf`)
+  * **Microsoft Word:** Native OpenXML Document (`.docx` via `DocxExportService`) & Word XML Document (`.doc`)
+  * **Data Tabular:** CSV Format (13 kolom ringkasan agenda & tabulasi daftar hadir) dengan UTF-8 Byte Order Mark (BOM) dan proteksi CSV Formula Injection (CWE-1236)
 * **Dokumentasi Terkait:**
   * Pedoman Arsitektur & Standar Kode: [`AGENTS.md`](file:///home/daffiq/Documents/Semester-5/lldikti-x/lldikti-x/AGENTS.md)
   * Panduan Migrasi Database: [`MIGRATION_POSTGRES.md`](file:///home/daffiq/Documents/Semester-5/lldikti-x/lldikti-x/MIGRATION_POSTGRES.md)
@@ -88,24 +98,24 @@ Sistem menerapkan pembagian hak akses granular berbasis 3 tingkatan peran utama 
 
 ## 5. Struktur Database & Hubungan Entitas
 
-Sistem mengelola 7 tabel domain relasional utama beserta tabel infrastruktur keamanan dan sesi:
+Sistem mengelola 8 tabel domain relasional utama beserta tabel infrastruktur keamanan dan sesi token:
 
 ```
 +----------------+       1:N       +----------------+       1:N       +---------------------+
 |     units      | <-------------> |     users      | <-------------> |     attendances     |
 +----------------+                 +----------------+                 +---------------------+
-        |                                  |                                     |
-        | 1:N        created_by /          | 1:N                                 |
-        v        pimpinan_id / notulis_id  v                                     |
-+----------------+       N:M       +----------------+                            |
-|  agenda_units  | <-------------> |    agendas     | <--------------------------+
-+----------------+                 +----------------+
-                                           |
-                                           | 1:N
-                                           v
-                                   +---------------------+
-                                   |agenda_documentations|
-                                   +---------------------+
+        |                              |        |                                  |
+        | 1:N                          |        | 1:N                              |
+        v         created_by /         |        v                                  |
++----------------+ pimpinan_id / notulis_id    +----------------+                  |
+|  agenda_units  | <-------------------------> |    agendas     | <----------------+
++----------------+ (N:M Unit)                  +----------------+
+                                               |        |
+                             (N:M Pegawai) N:M |        | 1:N
+                                               v        v
+                                       +--------------+ +---------------------+
+                                       | agenda_users | |agenda_documentations|
+                                       +--------------+ +---------------------+
 
 +------------------------+   +-------------------------+   +---------------------+
 |    activity_logs       |   |  password_reset_tokens  |   |personal_access_token|
@@ -115,10 +125,11 @@ Sistem mengelola 7 tabel domain relasional utama beserta tabel infrastruktur kea
 
 * **`units`**: Menyimpan data 11 subbagian resmi dan kelompok kerja penjaminan mutu di lingkungan LLDIKTI Wilayah X.
 * **`users`**: Menyimpan 79 data aparatur/pegawai resmi instansi (1 Administrator dan 78 Staff/Admin), NIP (18 digit), username, email kedinasan, password hash (Bcrypt), role, dan status keaktifan.
-* **`agendas`**: Menyimpan data induk rapat, pembuat (`created_by`), pemimpin rapat (`pimpinan_id`), notulis rapat (`notulis_id`), format (`offline`/`online`/`hybrid`), tautan daring, ruangan (`lokasi_ruang` & `lokasi_ruang_normalized`), surat edaran, notulensi, kesimpulan RTL, dan konfigurasi berita acara (`report_config`).
-* **`agenda_units`**: Tabel pivot pemetaan undangan rapat lintas unit kerja.
+* **`agendas`**: Menyimpan data induk rapat, pembuat (`created_by`), pemimpin rapat (`pimpinan_id`), notulis rapat (`notulis_id`), sasaran peserta (`target_type`: `all_units`, `selected_units`, `selected_users`), format (`offline`/`online`/`hybrid`), tautan daring, ruangan (`lokasi_ruang` & `lokasi_ruang_normalized`), tipe surat edaran (`surat_edaran_type`: `upload`/`digital`), isi naskah digital (`surat_edaran_content`), konfigurasi tata naskah dinas kedinasan (`surat_edaran_config`), notulensi, kesimpulan RTL, dan konfigurasi berita acara (`report_config`).
+* **`agenda_units`**: Tabel pivot pemetaan undangan rapat lintas unit kerja (`target_type = selected_units`).
+* **`agenda_users`**: Tabel pivot pemetaan undangan rapat khusus perorangan pegawai ASN (`target_type = selected_users`) untuk rapat dinas berbasis surat tugas personal.
 * **`attendances`**: Menyimpan rekaman presensi sah, waktu presensi, relative path selfie, relative path tanda tangan, alamat IP, dan User-Agent.
-* **`agenda_documentations`**: Galeri foto dokumentasi rapat beserta takarir (*caption*).
+* **`agenda_documentations`**: Galeri foto dokumentasi rapat beserta takarir (*caption*) yang dapat disunting ulang secara fleksibel.
 * **`activity_logs`**: Rekam jejak seluruh mutasi sistem untuk kepatuhan audit tata kelola pemerintahan.
 * **`password_reset_tokens` & `personal_access_tokens`**: Tabel manajemen token pemulihan kata sandi mandiri dan autentikasi Bearer Token Sanctum untuk aplikasi mobile.
 
@@ -127,27 +138,47 @@ Sistem mengelola 7 tabel domain relasional utama beserta tabel infrastruktur kea
 ## 6. Fitur Unggulan Sistem
 
 ### 6.1. Alur Siklus Rapat Kedinasan & Otomatisasi Status (Meeting Lifecycle Workflow)
-* Siklus rapat dikontrol melalui transisi status ketat:
-  `Draft` -> `Scheduled (Terjadwal)` -> `Ongoing (Presensi Dibuka)` -> `Completed (Selesai/Presensi Ditutup)` -> `Cancelled (Dibatalkan)`.
-* **Jendela Buka Presensi:** Sesi rapat dapat dimulai mulai 15 menit sebelum jadwal `waktu_mulai`.
-* **Penutupan Otomatis (*Auto-Close Scheduler*):** Command terjadwal `php artisan agendas:sync-status` berjalan setiap menit untuk menutup secara otomatis sesi rapat `ongoing` yang telah melewati batas waktu selesai efektif.
+* **Transisi Status Berintegritas:** Siklus rapat dikontrol melalui state machine ketat:
+  `Draft (Konsep)` -> `Scheduled (Terjadwal)` -> `Ongoing (Presensi Dibuka)` -> `Completed (Selesai/Presensi Ditutup)` -> `Cancelled (Dibatalkan)`.
+* **Jendela Pembukaan Presensi:** Sesi rapat hanya dapat dibuka oleh penyelenggara paling cepat 15 menit sebelum jadwal `waktu_mulai`.
+* **Penutupan Otomatis (*Auto-Close Scheduler*):** Command terjadwal `php artisan agendas:sync-status` dieksekusi setiap menit oleh cron untuk menutup secara otomatis sesi rapat `ongoing` yang telah melewati batas akhir pelaksanaan efektif.
+* **Tata Kelola Kerahasiaan Rapat (*Meeting Confidentiality Governance*):** Demi menjaga integritas data kedinasan dan kerahasiaan materi rapat, begitu agenda berstatus `completed` (Selesai), pegawai staf yang diundang tetapi **tidak hadir / tidak melakukan presensi secara sah otomatis diblokir dari melihat detail rapat, notulensi, dan berkas lampiran**. Akses penuh tetap dipegang oleh Administrator, Pembuat Agenda, Pimpinan Rapat, Notulis, dan peserta yang terbukti hadir.
 
-### 6.2. Presensi Terverifikasi (WebRTC Live Selfie + Signature Pad)
-* **Oval Face Guide:** Panduan visual bingkai wajah pada video stream kamera pengguna.
-* **Fallback Camera:** Opsi otomatis unggah berkas kamera native jika izin WebRTC diblokir peramban pengguna.
-* **Digital Signature Pad:** Kanvas responsif dengan deteksi sentuhan jari (*touch events*) pada layar smartphone dan kursor mouse pada desktop.
-* **Anti Double Check-in:** Perlindungan database ganda untuk mencegah presensi berulang oleh pegawai yang sama pada satu sesi rapat.
+### 6.2. Fleksibilitas Sasaran Peserta Rapat (3-Mode Audience Scope)
+Sistem mendukung 3 pilihan sasaran peserta yang adaptif terhadap berbagai skenario administrasi pemerintahan:
+1. **Seluruh Unit LLDIKTI (Pleno / Universal):** Terbuka untuk seluruh aparatur sipil negara di lingkungan instansi.
+2. **Unit Kerja Tertentu (`selected_units`):** Terbatas pada satu atau beberapa subbagian/pokja yang dipilih secara spesifik.
+3. **Khusus Pegawai ASN Tertentu (`selected_users`):** Mengundang pegawai ASN terpilih secara perorangan (misal: rapat koordinasi tim kerja khusus, panitia pengadaan, atau rapat pimpinan terbatas).
+* **Penugasan Pimpinan & Notulis Fleksibel:** Penyelenggara rapat dapat menugaskan Pimpinan Rapat (`pimpinan_id`) dan Notulis Rapat (`notulis_id`) dari pegawai aktif lintas unit kerja, dilengkapi sistem filtrasi cerdas yang hanya menampilkan ASN relevan/terpilih untuk menghemat waktu penugasan.
 
-### 6.3. Workstation Notulensi, Layanan Dokumen Kedinasan & Analitik Laporan
-* **Editor Notulensi & Kesimpulan Terstruktur:** Dilengkapi pratinjau dokumen langsung (*live sheet preview*), *sticky action bar*, dukungan penyuntingan berulang untuk agenda aktif maupun selesai, serta tata letak cetak multi-halaman yang bebas dari duplikasi sub-judul.
-* **Kop Surat Resmi & Berita Acara Otomatis:** Dilengkapi Kop Surat Kementerian Pendidikan Tinggi, Sains, dan Teknologi — LLDIKTI Wilayah X dengan penomoran otomatis `BA-RAPAT/YYYY/000X`, daftar hadir tersemat, dan blok pengesahan pimpinan serta notulis.
-* **Dashboard Laporan & Rekapitulasi Simetris:** Menampilkan kartu analitik *Distribusi Format Pertemuan* berdampingan secara proporsional dengan *Partisipasi per Unit Kerja*, diikuti tabel daftar rekapitulasi rapat berlebar penuh (*full-width*).
-* **Ekspor Ringkasan CSV 13 Kolom:** Mencakup *No, Judul Rapat, Jenis Pertemuan, Format, Lokasi / Ruang, Waktu Mulai, Waktu Selesai, Status Rapat (Bahasa Indonesia baku), Status Notulensi (Lengkap/Belum Diisi/Sedang Berlangsung/Belum Dimulai), Pemimpin Rapat, Notulis Rapat, Penyelenggara, dan Jumlah Peserta Hadir*.
+### 6.3. In-App Digital Circular Workstation (Penyusunan Surat Undangan / Edaran Kedinasan Digital)
+* **Solusi Administrasi Cepat (*As Soon As Possible*):** Mengatasi hambatan birokrasi permohonan naskah fisik eksternal dengan menyediakan workstation penyusunan surat undangan dan edaran dinas langsung di dalam peramban web.
+* **Format Resmi Tata Naskah Dinas:** Mengadopsi struktur baku Tata Naskah Dinas Kementerian Pendidikan Tinggi, Sains, dan Teknologi — LLDIKTI Wilayah X: Kop Garuda/Kemendikbudristek, garis ganda resmi, nomor naskah dinas, sifat, lampiran, perihal, alinea pembuka, rincian agenda (hari/tanggal, waktu, tempat/ruangan, tautan virtual), pejabat penandatangan, barcode verifikasi integritas, dan tembusan.
+* **Kanvas Virtual A4/F4 Presisi (*True-to-Print*):** Kanvas berskala cetak presisi dilengkapi kontrol pembesaran layar (*zoom scaler* 75%–125% & pas layar), pemilih format kertas (A4 & F4 Folio), formatting ribbon interaktif, pembersih tempel (*clean paste sanitizer* dari Word/web luar), penghitung kata & karakter real-time, dirty state tracker, dan pintasan simpan `Ctrl + S`.
+* **Kompilasi PDF Dompdf Sinkron:** Setiap kali naskah disimpan, `SuratEdaranService` otomatis mengompilasi naskah digital menjadi berkas PDF siap unduh (`storage/app/public/surat_edaran/surat_digital_{id}.pdf`), sehingga tautan unduh, pratinjau modal lightbox interaktif, dan endpoint mobile langsung tersinkronisasi tanpa beban kompilasi berulang.
 
-### 6.4. Lupa Kata Sandi Mandiri (Self-Service Password Reset via Brevo)
+### 6.4. Presensi Terverifikasi (WebRTC Live Selfie + Signature Pad)
+* **Oval Face Guide:** Panduan visual bingkai oval wajah pada video stream kamera WebRTC pengguna untuk standardisasi pose biometrik.
+* **Fallback Camera:** Opsi otomatis pengalihan ke berkas kamera perangkat native jika izin WebRTC diblokir oleh peramban pengguna.
+* **Digital Signature Pad:** Kanvas interaktif responsif dengan dukungan sentuhan jari (*touch events*) pada layar smartphone/tablet serta kursor mouse pada desktop.
+* **Anti Double Check-in:** Proteksi transaksi database dan advisory lock untuk mencegah presensi ganda oleh pegawai yang sama pada satu sesi rapat (`UNIQUE(agenda_id, user_id)`).
+
+### 6.5. Workstation Notulensi, Layanan Dokumen Kedinasan & Analitik Laporan
+* **Editor Notulensi & Kesimpulan Terstruktur:** Dilengkapi pratinjau dokumen langsung (*live sheet preview*), *sticky formatting ribbon*, dukungan penyuntingan berulang untuk agenda aktif maupun selesai, serta tata letak cetak multi-halaman yang bebas dari duplikasi sub-judul.
+* **Galeri Dokumentasi Foto & Penyuntingan Takarir:** Mendukung multi-upload foto dokumentasi kegiatan dengan kemampuan memperbarui takarir/caption foto yang telah tersimpan sebelumnya (`existing_captions`).
+* **Kop Surat Resmi & Berita Acara Otomatis:** Dilengkapi Kop Surat Kementerian Pendidikan Tinggi, Sains, dan Teknologi — LLDIKTI Wilayah X dengan penomoran otomatis `BA-RAPAT/YYYY/000X`, daftar hadir tersemat, dan blok pengesahan pejabat bertugas.
+* **Dashboard Laporan & Rekapitulasi Simetris:** Menampilkan kartu analitik *Distribusi Format Pertemuan* berdampingan secara proporsional dengan *Partisipasi per Unit Kerja*, diikuti tabel rekapitulasi rapat berlebar penuh (*full-width*).
+* **Ekspor Ringkasan CSV 13 Kolom:** Mencakup *No, Judul Rapat, Jenis Pertemuan, Format, Lokasi / Ruang, Waktu Mulai, Waktu Selesai, Status Rapat (Bahasa Indonesia baku), Status Notulensi, Pemimpin Rapat, Notulis Rapat, Penyelenggara, dan Jumlah Peserta Hadir*.
+
+### 6.6. Lupa Kata Sandi Mandiri (Self-Service Password Reset via Brevo)
 * Pengguna dapat mereset kata sandi secara mandiri melalui halaman `/forgot-password` cukup dengan memasukkan **NIP (18 digit)**, **Username**, atau **Email Kedinasan**.
-* Pengiriman email menggunakan **Brevo Transactional Email** dengan dukungan penuh terhadap **Port 465 Implicit TLS (`smtps`)** (solusi andal saat Port 587 diblokir oleh penyedia VPS/hosting) maupun **Brevo HTTP API v3 (Port 443)**.
+* Pengiriman email menggunakan **Brevo Transactional Email** dengan dukungan penuh terhadap **Port 465 Implicit TLS (`smtps`)** (solusi andal saat Port 587 diblokir oleh penyedia VPS/hosting) maupun **Brevo HTTP API v3 (Port 443 HTTPS)**.
 * Alamat email tujuan disamarkan (*masked email*, misal `a***a@lldiktiwilayahx.kemdiktisaintek.go.id`) pada notifikasi antarmuka demi privasi ASN, dan seluruh sesi/token lama otomatis dicabut begitu kata sandi baru disimpan.
+
+### 6.7. Ekosistem REST API Mobile v1 Terpadu (Android / React Native Integration)
+* **Kontrak API Terstandarisasi:** 57 endpoint API v1 terproteksi Bearer Token Sanctum dengan masa aktif 30 hari, amplop respons JSON konsisten (`{ success, message, data, meta }`), dan offset zona waktu ISO-8601 (`+07:00`).
+* **Proteksi Streaming Media Biometrik:** Berkas selfie wajah dan tanda tangan ASN tidak diekspos melalui URL publik terbuka, melainkan disajikan melalui streaming endpoint terproteksi (`/api/v1/attendances/{id}/selfie` dan `/signature`) yang mewajibkan otorisasi token.
+* **Dukungan Penuh Naskah Digital & Workstation:** Klien mobile dapat mengambil konfigurasi naskah dinas digital, memperbarui naskah digital, serta mengalirkan PDF resmi secara otomatis (*on-the-fly streaming*) via API.
 
 ---
 
@@ -272,11 +303,12 @@ Proses seeding aplikasi menginisialisasi struktur organisasi dan kepegawaian res
 | **Staff** | Reri Anton, ST, MM | `197003081991031001` | `reri_anton` | Pokja Pendidik dan Tenaga Kependidikan | Presensi selfie WebRTC + TTD digital, riwayat presensi pribadi, unduh surat edaran & materi |
 | *(Total 78 Staff)* | *(78 Pegawai ASN)* | *(18 digit NIP valid)* | *(Username unik)* | *(11 Subbagian resmi)* | *(Presensi rapat sesuai undangan unit kerja)* |
 
-### 8.2. Standar Kredensial & Autentikasi
+### 8.2. Standar Kredensial, Autentikasi & Seleksi Kandidat Pejabat Rapat
 * **Password Default Seluruh Akun:** `Password123!` *(Wajib diperbarui saat implementasi produksi).*
 * **Domain Email Resmi Instansi:** `@lldiktiwilayahx.kemdiktisaintek.go.id`.
 * **Multi-Identifier Single Input:** Pegawai dapat login secara fleksibel menggunakan **NIP (18 Digit)** ataupun **Username** alfanumerik pada satu field formulir masuk yang responsif, serta memulihkan kata sandi mandiri menggunakan **NIP (18 Digit)**, **Username**, atau **Email Kedinasan**.
-* **Pemisahan Data Operasional & Generator Simulasi (*Pristine State*):** `DatabaseSeeder` menjaga tabel `agendas`, `attendances`, dan `agenda_documentations` tetap bersih (0 record) agar instansi dapat langsung memulai administrasi rapat dinas tanpa perlu membersihkan data dummy. Untuk kebutuhan demonstrasi atau pengujian beban, tersedia `AgendaSeeder` dan perintah `php artisan agenda:generate` yang dapat dieksekusi kapan saja secara mandiri.
+* **Pencarian Cerdas Pejabat Rapat (Pimpinan & Notulis Lintas Unit):** Sistem menyediakan katalog kandidat ASN aktif lintas unit kerja (`/api/v1/users/candidates`) yang diintegrasikan secara instan pada antarmuka web dan mobile tanpa membebani memori, mempermudah penugasan pejabat rapat secara presisi.
+* **Pemisahan Data Operasional & Generator Simulasi (*Pristine State*):** `DatabaseSeeder` menjaga tabel `agendas`, `attendances`, `agenda_users`, dan `agenda_documentations` tetap bersih (0 record) agar instansi dapat langsung memulai administrasi rapat dinas tanpa perlu membersihkan data dummy. Untuk kebutuhan demonstrasi atau pengujian beban, tersedia `AgendaSeeder` dan perintah `php artisan agenda:generate` yang dapat dieksekusi kapan saja secara mandiri.
 
 ---
 
@@ -286,29 +318,34 @@ Aplikasi dilengkapi test suite komprehensif menggunakan PHPUnit yang mencakup Un
 
 ### 9.1. Menjalankan Seluruh Test Suite
 ```bash
+# Menjalankan seluruh pengujian:
 php artisan test
+
+# Menjalankan pengujian Unit terisolasi (sangat cepat, bebas socket DB):
+php artisan test --testsuite=Unit
 ```
 
 ### 9.2. Cakupan Pengujian
+* **SuratEdaranTest & ApiFeasibilityTest:** Validasi integritas atribut naskah digital (`surat_edaran_type`, `is_surat_edaran_digital`), resolusi konfigurasi dinas (`resolved_surat_edaran_config`), form request naskah dinas, sanitasi XSS HTML, otorisasi policy `manageCircular`, penyuntingan takarir foto lama (`existing_captions`), dan kesiapan REST API v1.
+* **AgendaTargetTypeUnitTest & AgendaConfidentialityUnitTest:** Validasi 3 mode sasaran partisipan rapat (`all_units`, `selected_units`, `selected_users`), evaluasi hak hadir perorangan (*user eligibility*), serta penegakan tata kelola kerahasiaan rapat kedinasan (pemblokiran otomatis akses baca staf yang tidak presensi pada agenda selesai).
 * **MultiIdentifierAuthenticationTest & ForgotPasswordTest:** Validasi login cerdas NIP vs Username, pemulihan kata sandi multi-ID (NIP/Username/Email), proteksi brute-force, pencabutan token Sanctum saat reset kata sandi, dan penolakan akun nonaktif.
 * **BrevoMailConfigurationTest:** Validasi integrasi pengiriman email transaksional Brevo via SMTP Relay Port 465 (`smtps` / SSL Implicit TLS), Port 587 (`tls` / STARTTLS), HTTP API v3 (`brevo`), dan perintah diagnostik `php artisan mail:test`.
 * **SubbagianAndEmployeeSeederTest & AgendaFactoryTest:** Validasi integritas 11 subbagian resmi, akun Administrator resmi Afdalisma, 78 pegawai staff, serta keandalan `AgendaFactory`, `AttendanceFactory`, `AgendaSeeder`, dan CLI `php artisan agenda:generate` tanpa dependensi helper development.
 * **UnitManagementTest & UserManagementTest:** Validasi isolasi wewenang master unit kerja dan modifikasi data pengguna lintas unit.
-* **AgendaManagementTest & AgendaStatusAutomationTest:** Validasi alur siklus rapat, jendela pembukaan rapat (15 menit sebelum mulai), penutupan otomatis rapat kedaluwarsa (`agendas:sync-status`), unggah surat edaran, notulensi (termasuk re-edit notulensi tersimpan), dan dokumentasi foto.
+* **AgendaManagementTest & AgendaStatusAutomationTest:** Validasi alur siklus rapat, jendela pembukaan rapat (15 menit sebelum mulai), penutupan otomatis rapat kedaluwarsa (`agendas:sync-status`), unggah berkas fisik surat edaran, naskah digital, notulensi (termasuk re-edit notulensi tersimpan), dan dokumentasi foto.
 * **AttendanceCheckInTest & CrossUnitNotulisAttendanceTest:** Validasi selfie WebRTC, tanda tangan canvas, hak akses presensi & notulensi bagi Pimpinan/Notulis lintas unit kerja saat rapat `ongoing`, pencegahan presensi ganda, dan penerbitan tanda terima sah.
 * **ReportAndExportTest, ExportIntegrityTest & ReportSummaryCsvExportTest:** Validasi agregasi analitik (Distribusi Format & Partisipasi Unit Kerja), ekspor Berita Acara PDF, ekspor Word (`.docx`), dan ekspor CSV Ringkasan 13 kolom berbahasa Indonesia.
 * **NotulenPreviewParityTest & KopSuratStandardTest:** Validasi paritas visual notulensi, ketiadaan duplikasi sub-judul pada cetak multi-halaman, standarisasi Kop Surat kementerian, dan penomoran resmi.
-* **MobileClientWorkflowE2ETest & Api\V1\*Test:** Validasi menyeluruh kontrak REST API v1 (`/api/v1/*`), autentikasi Sanctum Bearer Token, streaming media biometrik terproteksi, dan keseragaman respons JSON.
+* **MobileClientWorkflowE2ETest & Api\V1\*Test:** Validasi menyeluruh kontrak REST API v1 (57 endpoints pada `/api/v1/*`), autentikasi Sanctum Bearer Token, streaming media biometrik terproteksi, dan keseragaman respons JSON.
 * **ActivityLogTest & EndToEndUserAcceptanceTest:** Validasi pencatatan audit trail otomatis pada setiap mutasi, pemangkasan log tua (`activity-logs:prune`), dan simulasi menyeluruh siklus operasional rapat dari hulu ke hilir.
 
 Hasil eksekusi pengujian standar:
 ```
-Tests: 464 passed (3663 assertions)
-Duration: ~20-25s
+Tests: 468+ passed (3700+ assertions)
 Status: 100% PASS
 ```
 
-> **Kemandirian Test Suite (*Zero-Bloatware Test Fixture*):** `Tests\TestCase` mengimplementasikan fixture pengujian dinamis yang berjalan di dalam `DatabaseTransactions`. Setiap pengujian yang membutuhkan agenda akan memperoleh data uji terisolasi yang otomatis di-*rollback* di akhir pengujian, sehingga database operasional instansi tetap murni berstatus 0 agenda.
+> **Kemandirian Test Suite (*Zero-Bloatware Test Fixture*):** `Tests\TestCase` mengimplementasikan fixture pengujian dinamis yang berjalan di dalam `DatabaseTransactions`. Setiap pengujian yang membutuhkan agenda akan memperoleh data uji terisolasi yang otomatis di-*rollback* di akhir pengujian, sehingga database operasional instansi tetap murni berstatus 0 agenda. Suite Unit (`tests/Unit/`) bahkan berjalan secara mandiri murni pada level logic tanpa memerlukan socket database hidup.
 
 ### 9.3. Database Uji Terpisah (Disarankan)
 
