@@ -454,6 +454,9 @@ function initGlobalListeners() {
                 cancelText: 'Batal',
                 onConfirm: () => {
                     form.dataset.confirmed = 'true';
+                    if (typeof window.__onSuratEdaranPreSubmit === 'function') {
+                        window.__onSuratEdaranPreSubmit();
+                    }
                     form.submit();
                 }
             });
@@ -2552,6 +2555,12 @@ const SuratEdaranWorkstation = {
             updateSaveStateUI(true);
         };
 
+        window.__onSuratEdaranPreSubmit = () => {
+            isSubmittingForm = true;
+            window.__suratDirtyState = false;
+            syncToHiddenInputs();
+        };
+
         window.addEventListener('beforeunload', (e) => {
             if (window.__suratDirtyState && !isSubmittingForm) {
                 e.preventDefault();
@@ -2923,15 +2932,26 @@ const SuratEdaranWorkstation = {
             });
         });
 
+        // Save button pre-sync click handler
+        const saveBtn = workstation.querySelector('button[form="surat-edaran-form"]');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => {
+                syncToHiddenInputs();
+            });
+        }
+
         // Keyboard Shortcut: Ctrl+S / Cmd+S
         document.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
                 if (workstation.contains(document.activeElement) || document.activeElement === document.body) {
                     e.preventDefault();
                     if (form) {
-                        isSubmittingForm = true;
                         syncToHiddenInputs();
-                        form.submit();
+                        if (typeof form.requestSubmit === 'function') {
+                            form.requestSubmit();
+                        } else {
+                            form.dispatchEvent(new Event('submit', { cancelable: true }));
+                        }
                     }
                 }
             }
@@ -2939,8 +2959,11 @@ const SuratEdaranWorkstation = {
 
         if (form) {
             form.addEventListener('submit', () => {
-                isSubmittingForm = true;
                 syncToHiddenInputs();
+                if (form.dataset.confirmed === 'true') {
+                    isSubmittingForm = true;
+                    window.__suratDirtyState = false;
+                }
             });
         }
     }

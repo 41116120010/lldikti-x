@@ -484,13 +484,12 @@
             <!-- Modal Footer -->
             <div class="px-4 sm:px-5 py-2.5 border-t border-slate-200 bg-white flex items-center justify-between shrink-0">
                 <div class="flex items-center gap-3 text-[11px] text-slate-500 font-medium">
-                    <span>Format: <strong class="uppercase text-slate-700">{{ $agenda->is_surat_edaran_digital ? 'Naskah Digital (A4 PDF)' : ($agenda->surat_edaran_extension ?? 'PDF') }}</strong></span>
-                    @if($agenda->is_surat_edaran_image)
-                        <span class="hidden md:inline-block text-slate-400">&bull;</span>
-                        <span class="hidden md:inline-block text-slate-500">Tip: Gunakan scroll mouse atau seret gambar saat diperbesar</span>
-                    @elseif($agenda->is_surat_edaran_digital)
-                        <span class="hidden md:inline-block text-slate-400">&bull;</span>
-                        <span class="hidden md:inline-block text-emerald-700 font-semibold">Format Resmi Tata Naskah Dinas Kemendikbudristek / LLDIKTI</span>
+                    @if(!$agenda->is_surat_edaran_digital)
+                        <span>Format: <strong class="uppercase text-slate-700">{{ $agenda->surat_edaran_extension ?? 'PDF' }}</strong></span>
+                        @if($agenda->is_surat_edaran_image)
+                            <span class="hidden md:inline-block text-slate-400">&bull;</span>
+                            <span class="hidden md:inline-block text-slate-500">Tip: Gunakan scroll mouse atau seret gambar saat diperbesar</span>
+                        @endif
                     @endif
                 </div>
                 <button 

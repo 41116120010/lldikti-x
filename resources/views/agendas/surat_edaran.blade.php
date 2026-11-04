@@ -232,6 +232,10 @@
         method="POST" 
         enctype="multipart/form-data"
         class="hidden"
+        data-confirm="Simpan seluruh naskah surat dan pengaturan dokumen dinas resmi?"
+        data-confirm-title="Simpan Naskah Surat Dinas"
+        data-confirm-type="confirm"
+        data-confirm-btn="Ya, Simpan Naskah"
     >
         @csrf
         @method('PUT')
@@ -492,8 +496,7 @@
     <div id="office-status-bar" class="bg-slate-900 text-slate-300 text-xs py-2 px-4 rounded-xl flex items-center justify-between shadow-xs">
         <div class="flex items-center gap-3">
             <span id="office-status-words" class="font-semibold text-white">0 kata</span>
-            <span class="text-slate-500">&bull;</span>
-            <span class="text-slate-400">Tata Naskah Dinas Resmi (Format <span id="status-format-label" class="uppercase font-bold text-white">{{ $config['template_type'] ?? 'undangan' }}</span>)</span>
+            <span id="status-format-label" class="hidden">{{ $config['template_type'] ?? 'undangan' }}</span>
         </div>
         <div class="flex items-center gap-2">
             <span id="office-status-save-state" class="inline-flex items-center gap-1.5 text-emerald-400 font-semibold">
