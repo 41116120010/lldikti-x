@@ -73,7 +73,7 @@ Sistem menerapkan pembagian hak akses granular berbasis 3 tingkatan peran utama 
 
 ## 4. Tech Stack & Environment Reference
 
-* **Backend Framework:** PHP 8.3+ / Laravel 13.x / LTS Framework
+* **Backend Framework:** PHP 8.4 (Minimum PHP 8.3+) / Laravel 13.x / LTS Framework
 * **Frontend Layer:** Laravel Blade Component + Tailwind CSS v4 + Vite + Vanilla JS / Alpine.js
 * **Iconography:** Pure Vector SVG Icons (Phosphor / Heroicons Standard, tanpa emoji)
 * **Database Engine:** PostgreSQL 15+ (Primary Production Engine) / MariaDB 10.11+ & MySQL 8.0+ (Backward Compatible) / SQLite 3.35+ (Local Testing)
@@ -81,11 +81,12 @@ Sistem menerapkan pembagian hak akses granular berbasis 3 tingkatan peran utama 
 * **Transactional Email Delivery:** Brevo (Sendinblue) SMTP Relay Port 465 Implicit TLS (`smtps`) / Port 587 STARTTLS & Brevo HTTP API v3 HTTPS Port 443 (`BrevoApiTransport`)
 * **Penyimpanan Berkas:** Local Filesystem Storage via Symlink (`storage/app/public/`) & Controller Streaming Terproteksi untuk Data Biometrik ASN
 * **Format & Mesin Ekspor Dokumen:**
-  * **PDF Berita Acara Rapat:** Binary PDF via LibreOffice Headless (dengan *slot concurrency pool*) & Fallback Print-ready Gov-Tech Standard View (`@media print`)
-  * **PDF Naskah Surat Dinas / Edaran:** Binary PDF Instan via `SuratEdaranService` & native `DompdfRenderer` (`barryvdh/laravel-dompdf`)
+  * **PDF Berita Acara Rapat:** Binary PDF via `PdfExportService` & native `DompdfRenderer` (`dompdf/dompdf`) + Fallback Print-ready Gov-Tech Standard View (`@media print`)
+  * **PDF Naskah Surat Dinas / Edaran:** Binary PDF Instan via `SuratEdaranService` & native `DompdfRenderer` (`dompdf/dompdf`)
   * **Microsoft Word:** Native OpenXML Document (`.docx` via `DocxExportService`) & Word XML Document (`.doc`)
   * **Data Tabular:** CSV Format (13 kolom ringkasan agenda & tabulasi daftar hadir) dengan UTF-8 Byte Order Mark (BOM) dan proteksi CSV Formula Injection (CWE-1236)
 * **Dokumentasi Terkait:**
+  * Panduan Instalasi & Deployment Server Baru (*Fresh Creation*): [`DEPLOYMENT.md`](file:///home/daffiq/Documents/Semester-5/lldikti-x/lldikti-x/DEPLOYMENT.md)
   * Pedoman Arsitektur & Standar Kode: [`AGENTS.md`](file:///home/daffiq/Documents/Semester-5/lldikti-x/lldikti-x/AGENTS.md)
   * Panduan Migrasi Database: [`MIGRATION_POSTGRES.md`](file:///home/daffiq/Documents/Semester-5/lldikti-x/lldikti-x/MIGRATION_POSTGRES.md)
   * Kebijakan Backup & DR: [`BACKUP.md`](file:///home/daffiq/Documents/Semester-5/lldikti-x/lldikti-x/BACKUP.md)
@@ -401,6 +402,9 @@ SIPERAPAT_STRICT_TEST_DB=true
 ---
 
 ## 10. Deployment Produksi
+
+> **Panduan Langkah-demi-Langkah untuk Server/Cloud Baru (*Fresh Creation*):**
+> Apabila Anda baru saja membuat VPS / Cloud VM baru (Ubuntu 22.04/24.04 LTS atau Debian 12) dari nol, silakan ikuti panduan instalasi lengkap & mudah dipahami di **[`DEPLOYMENT.md`](file:///home/daffiq/Documents/Semester-5/lldikti-x/lldikti-x/DEPLOYMENT.md)** (mencakup instalasi PHP 8.4, PostgreSQL 16, Nginx, SSL Let's Encrypt, Cron, Supervisor, hingga Troubleshooting).
 
 ### 10.1. Prasyarat (WAJIB)
 
