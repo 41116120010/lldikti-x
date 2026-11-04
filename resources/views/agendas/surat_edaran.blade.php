@@ -117,7 +117,7 @@
 
     <!-- 2. Sticky Universal Word Formatting Ribbon Toolbar -->
     <div class="word-editor-ribbon sticky top-[63px] z-20 bg-white border border-slate-300 rounded-2xl shadow-sm" role="toolbar" aria-label="Toolbar Format Pengolah Kata">
-        <!-- Style & Font Size Dropdowns -->
+        <!-- Style, Font Family & Font Size Dropdowns -->
         <div class="flex items-center gap-1.5 flex-shrink-0">
             <select class="word-select" data-command="formatBlock" title="Gaya Paragraf">
                 <option value="p">Normal</option>
@@ -125,6 +125,12 @@
                 <option value="h3">Heading 3</option>
                 <option value="h4">Heading 4</option>
                 <option value="blockquote">Kutipan</option>
+            </select>
+            <select class="word-select" data-action="fontName" title="Jenis Font">
+                <option value="Times New Roman">Times New Roman</option>
+                <option value="Arial">Arial</option>
+                <option value="Georgia">Georgia</option>
+                <option value="Courier New">Courier New</option>
             </select>
             <select class="word-select" data-action="fontSize" title="Ukuran Font">
                 <option value="">Ukuran</option>
@@ -222,6 +228,12 @@
             <button type="button" class="word-btn" data-command="removeFormat" title="Hapus Format">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="6" y1="6" y2="18"/><path d="m4 6 7 7"/><path d="m13 15 3 3"/></svg>
             </button>
+            <button type="button" class="word-btn" data-command="undo" title="Urungkan (Ctrl+Z)">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+            </button>
+            <button type="button" class="word-btn" data-command="redo" title="Ulangi (Ctrl+Y)">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/></svg>
+            </button>
         </div>
     </div>
 
@@ -272,7 +284,15 @@
 
     <!-- 4. Lembar Kerja A4 Canvas (Desk Canvas) -->
     <div class="office-desk-canvas">
-        <div id="office-document-ruler" class="office-ruler-bar" aria-hidden="true"></div>
+        <div class="office-document-ruler paper-a4" id="office-document-ruler" aria-hidden="true">
+            <div class="ruler-margin-zone ruler-margin-left"></div>
+            <div class="ruler-scale">
+                @for($cm = 0; $cm <= 21; $cm++)
+                    <div class="ruler-cm"><span>{{ $cm > 0 ? $cm : '' }}</span></div>
+                @endfor
+            </div>
+            <div class="ruler-margin-zone ruler-margin-right"></div>
+        </div>
 
         <div id="office-zoom-container" class="office-zoom-container" data-zoom="100">
             <div id="surat-sheet-page-1" class="office-paper-sheet paper-a4" data-paper-format="a4" data-page-number="1">
@@ -659,9 +679,7 @@
         </div>
     </div>
 </div>
-@endsection
 
-@push('scripts')
 <script>
 function openSuratConfigModal() {
     const modal = document.getElementById('modal-surat-config');
@@ -676,7 +694,8 @@ function closeSuratConfigModal() {
 function applySuratConfigToSheet() {
     // 1. Template Type
     const selectedTemplate = document.querySelector('input[name="modal_template_type"]:checked')?.value || 'undangan';
-    document.getElementById('form-template-type').value = selectedTemplate;
+    const formTemplateType = document.getElementById('form-template-type');
+    if (formTemplateType) formTemplateType.value = selectedTemplate;
     
     const blockUndangan = document.getElementById('sheet-undangan-block');
     const blockEdaran = document.getElementById('sheet-edaran-block');
@@ -691,31 +710,64 @@ function applySuratConfigToSheet() {
         if (blockUndangan) blockUndangan.style.display = 'block';
     }
 
-    // 2. Kop Settings
-    const showKop = document.getElementById('modal_show_kop').checked;
-    const showLogo = document.getElementById('modal_show_logo').checked;
-    document.getElementById('form-show-kop').value = showKop ? '1' : '0';
-    document.getElementById('form-show-logo').value = showLogo ? '1' : '0';
+    // 2. Kop Settings & Teks Instansi
+    const showKop = document.getElementById('modal_show_kop')?.checked ?? true;
+    const showLogo = document.getElementById('modal_show_logo')?.checked ?? true;
+    const instansiInduk = document.getElementById('modal_instansi_induk')?.value || '';
+    const instansiPelaksana = document.getElementById('modal_instansi_pelaksana')?.value || '';
+    const alamatKontak = document.getElementById('modal_alamat_kontak')?.value || '';
+
+    const formShowKop = document.getElementById('form-show-kop');
+    const formShowLogo = document.getElementById('form-show-logo');
+    const formInstansiInduk = document.getElementById('form-instansi-induk');
+    const formInstansiPelaksana = document.getElementById('form-instansi-pelaksana');
+    const formAlamatKontak = document.getElementById('form-alamat-kontak');
+
+    if (formShowKop) formShowKop.value = showKop ? '1' : '0';
+    if (formShowLogo) formShowLogo.value = showLogo ? '1' : '0';
+    if (formInstansiInduk) formInstansiInduk.value = instansiInduk;
+    if (formInstansiPelaksana) formInstansiPelaksana.value = instansiPelaksana;
+    if (formAlamatKontak) formAlamatKontak.value = alamatKontak;
     
     const kopContainer = document.getElementById('sheet-kop-container');
     if (kopContainer) kopContainer.style.display = showKop ? 'block' : 'none';
 
-    // 3. Metadata fields
-    const nomor = document.getElementById('modal_nomor_surat').value;
-    const sifat = document.getElementById('modal_sifat').value;
-    const lampiran = document.getElementById('modal_lampiran').value;
-    const perihal = document.getElementById('modal_perihal').value;
-    const tempat = document.getElementById('modal_tempat_surat').value;
-    const tanggal = document.getElementById('modal_tanggal_surat').value;
-    const tujuan = document.getElementById('modal_tujuan_surat').value;
+    const sheetLogoCell = document.getElementById('sheet-logo-cell');
+    const sheetLogoImg = document.getElementById('sheet-logo-img');
+    if (sheetLogoCell) sheetLogoCell.style.display = showLogo ? 'table-cell' : 'none';
+    if (sheetLogoImg) sheetLogoImg.style.display = showLogo ? 'inline-block' : 'none';
 
-    document.getElementById('form-nomor-surat').value = nomor;
-    document.getElementById('form-sifat').value = sifat;
-    document.getElementById('form-lampiran').value = lampiran;
-    document.getElementById('form-perihal').value = perihal;
-    document.getElementById('form-tempat-surat').value = tempat;
-    document.getElementById('form-tanggal-surat').value = tanggal;
-    document.getElementById('form-tujuan-surat').value = tujuan;
+    const sheetInstansiInduk = document.getElementById('sheet-instansi-induk');
+    const sheetInstansiPelaksana = document.getElementById('sheet-instansi-pelaksana');
+    const sheetAlamatKontak = document.getElementById('sheet-alamat-kontak');
+    if (sheetInstansiInduk) sheetInstansiInduk.textContent = instansiInduk;
+    if (sheetInstansiPelaksana) sheetInstansiPelaksana.textContent = instansiPelaksana;
+    if (sheetAlamatKontak) sheetAlamatKontak.textContent = alamatKontak;
+
+    // 3. Metadata fields
+    const nomor = document.getElementById('modal_nomor_surat')?.value || '';
+    const sifat = document.getElementById('modal_sifat')?.value || 'Biasa';
+    const lampiran = document.getElementById('modal_lampiran')?.value || '-';
+    const perihal = document.getElementById('modal_perihal')?.value || '';
+    const tempat = document.getElementById('modal_tempat_surat')?.value || '';
+    const tanggal = document.getElementById('modal_tanggal_surat')?.value || '';
+    const tujuan = document.getElementById('modal_tujuan_surat')?.value || '';
+
+    const formNomor = document.getElementById('form-nomor-surat');
+    const formSifat = document.getElementById('form-sifat');
+    const formLampiran = document.getElementById('form-lampiran');
+    const formPerihal = document.getElementById('form-perihal');
+    const formTempat = document.getElementById('form-tempat-surat');
+    const formTanggal = document.getElementById('form-tanggal-surat');
+    const formTujuan = document.getElementById('form-tujuan-surat');
+
+    if (formNomor) formNomor.value = nomor;
+    if (formSifat) formSifat.value = sifat;
+    if (formLampiran) formLampiran.value = lampiran;
+    if (formPerihal) formPerihal.value = perihal;
+    if (formTempat) formTempat.value = tempat;
+    if (formTanggal) formTanggal.value = tanggal;
+    if (formTujuan) formTujuan.value = tujuan;
 
     // Sync to sheet DOM
     const sheetNomor = document.getElementById('sheet-nomor-surat');
@@ -743,17 +795,23 @@ function applySuratConfigToSheet() {
     if (sheetEdaranTujuan) sheetEdaranTujuan.innerHTML = tujuan.replace(/\n/g, '<br>');
 
     // 4. Penandatangan & Tembusan
-    const role = document.getElementById('modal_signer_role').value;
-    const name = document.getElementById('modal_signer_name').value;
-    const nip = document.getElementById('modal_signer_nip').value;
-    const showSig = document.getElementById('modal_show_signature').checked;
-    const tembusan = document.getElementById('modal_tembusan').value;
+    const role = document.getElementById('modal_signer_role')?.value || '';
+    const name = document.getElementById('modal_signer_name')?.value || '';
+    const nip = document.getElementById('modal_signer_nip')?.value || '';
+    const showSig = document.getElementById('modal_show_signature')?.checked ?? true;
+    const tembusan = document.getElementById('modal_tembusan')?.value || '';
 
-    document.getElementById('form-signer-role').value = role;
-    document.getElementById('form-signer-name').value = name;
-    document.getElementById('form-signer-nip').value = nip;
-    document.getElementById('form-show-signature').value = showSig ? '1' : '0';
-    document.getElementById('form-tembusan').value = tembusan;
+    const formRole = document.getElementById('form-signer-role');
+    const formName = document.getElementById('form-signer-name');
+    const formNip = document.getElementById('form-signer-nip');
+    const formShowSig = document.getElementById('form-show-signature');
+    const formTembusan = document.getElementById('form-tembusan');
+
+    if (formRole) formRole.value = role;
+    if (formName) formName.value = name;
+    if (formNip) formNip.value = nip;
+    if (formShowSig) formShowSig.value = showSig ? '1' : '0';
+    if (formTembusan) formTembusan.value = tembusan;
 
     const sheetRole = document.getElementById('sheet-signer-role');
     const sheetName = document.getElementById('sheet-signer-name');
@@ -776,4 +834,4 @@ function applySuratConfigToSheet() {
     }
 }
 </script>
-@endpush
+@endsection

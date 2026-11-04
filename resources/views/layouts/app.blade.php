@@ -383,5 +383,7 @@
 
     <!-- Toast Notification Container -->
     <div class="toast" id="app-toast" role="status" aria-live="polite"></div>
+
+    @stack('scripts')
 </body>
 </html>

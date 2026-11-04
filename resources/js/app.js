@@ -2535,6 +2535,8 @@ const SuratEdaranWorkstation = {
         let activeBox = bodyBox || pembukaBox || editableBoxes[0];
         let savedRange = null;
         let isSubmittingForm = false;
+        let currentZoomVal = 100;
+        let updateActiveStates = () => {};
         window.__suratDirtyState = false;
 
         const updateSaveStateUI = (dirty) => {
@@ -2700,17 +2702,43 @@ const SuratEdaranWorkstation = {
         setActiveEditor(activeBox);
 
         // Ribbon Commands
-        let updateActiveStates = () => {};
         if (ribbon) {
+            const fontNameSelect = ribbon.querySelector('select[data-action="fontName"]');
             const formatSelect = ribbon.querySelector('select[data-command="formatBlock"]');
             const fontSizeSelect = ribbon.querySelector('select[data-action="fontSize"]');
 
+            const ensureVisibleActiveBox = () => {
+                const templateType = document.querySelector('#form-template-type')?.value || 'undangan';
+                if (templateType === 'edaran' && altEdaranBox) {
+                    activeBox = altEdaranBox;
+                } else if (!activeBox || activeBox === altEdaranBox) {
+                    activeBox = bodyBox || pembukaBox || editableBoxes[0];
+                }
+                return activeBox;
+            };
+
             const exec = (cmd, val = null) => {
+                const targetBox = ensureVisibleActiveBox();
                 restoreSelection();
-                if (activeBox && document.activeElement !== activeBox) {
-                    activeBox.focus();
+
+                if (targetBox && document.activeElement !== targetBox) {
+                    targetBox.focus();
                     restoreSelection();
                 }
+
+                // When changing font family or font size without highlighted text, apply to activeBox contents
+                if ((cmd === 'fontSize' || cmd === 'fontName') && targetBox) {
+                    const sel = window.getSelection();
+                    if (!sel || sel.rangeCount === 0 || sel.isCollapsed || !targetBox.contains(sel.anchorNode)) {
+                        const fullRange = document.createRange();
+                        fullRange.selectNodeContents(targetBox);
+                        if (sel) {
+                            sel.removeAllRanges();
+                            sel.addRange(fullRange);
+                        }
+                    }
+                }
+
                 document.execCommand(cmd, false, val);
                 saveSelection();
                 syncToHiddenInputs();
@@ -2763,6 +2791,7 @@ const SuratEdaranWorkstation = {
                     const input = ribbon.querySelector(`input[data-color-for="${btn.dataset.action}"]`);
                     if (input) input.click();
                 } else if (btn.dataset.action === 'openTablePicker') {
+                    saveSelection();
                     const picker = workstation.querySelector('#surat-table-picker');
                     if (picker) picker.classList.toggle('open');
                 }
@@ -2779,12 +2808,34 @@ const SuratEdaranWorkstation = {
                     if (action === 'textColor') {
                         exec('foreColor', val);
                     } else if (action === 'highlight') {
-                        exec('hiliteColor', val);
+                        try {
+                            if (!document.execCommand('hiliteColor', false, val)) {
+                                exec('backColor', val);
+                            } else {
+                                saveSelection();
+                                syncToHiddenInputs();
+                                updateWordCounter();
+                                updateSaveStateUI(true);
+                            }
+                        } catch (err) {
+                            exec('backColor', val);
+                        }
                     }
                 });
             });
 
+            if (fontNameSelect) {
+                fontNameSelect.addEventListener('mousedown', saveSelection);
+                fontNameSelect.addEventListener('focus', saveSelection);
+                fontNameSelect.addEventListener('change', () => {
+                    if (fontNameSelect.value) {
+                        exec('fontName', fontNameSelect.value);
+                    }
+                });
+            }
+
             if (formatSelect) {
+                formatSelect.addEventListener('mousedown', saveSelection);
                 formatSelect.addEventListener('focus', saveSelection);
                 formatSelect.addEventListener('change', () => {
                     if (formatSelect.value) {
@@ -2794,6 +2845,7 @@ const SuratEdaranWorkstation = {
             }
 
             if (fontSizeSelect) {
+                fontSizeSelect.addEventListener('mousedown', saveSelection);
                 fontSizeSelect.addEventListener('focus', saveSelection);
                 fontSizeSelect.addEventListener('change', () => {
                     if (fontSizeSelect.value) {
@@ -2864,39 +2916,19 @@ const SuratEdaranWorkstation = {
             }
         }
 
-        // Paper Switcher (A4 vs F4)
-        workstation.querySelectorAll('[data-paper-size]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const format = btn.dataset.paperSize;
-                workstation.querySelectorAll('[data-paper-size]').forEach(b => {
-                    b.className = 'px-3 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1.5 text-slate-700 hover:bg-slate-200';
-                });
-                btn.className = 'px-3 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1.5 bg-slate-900 text-white shadow-xs';
-
-                if (sheet) {
-                    sheet.dataset.paperFormat = format;
-                    sheet.classList.remove('paper-a4', 'paper-f4');
-                    sheet.classList.add(`paper-${format}`);
-                    if (format === 'f4') {
-                        sheet.style.minHeight = '1247px';
-                    } else {
-                        sheet.style.minHeight = '1122px';
-                    }
-                }
-            });
-        });
-
         // Zoom Controls & Scaling
-        const updateZoomCompensation = (zoomVal) => {
+        const updateZoomCompensation = (zoomVal = currentZoomVal) => {
             if (!zoomContainer || !sheet) return;
-            const naturalHeight = sheet.offsetHeight || 1122;
+            zoomContainer.style.marginBottom = '0px';
+            const naturalHeight = zoomContainer.offsetHeight || sheet.offsetHeight || 1122;
             const scale = zoomVal / 100;
-            const scaledHeight = naturalHeight * scale;
-            const difference = scaledHeight - naturalHeight;
-            zoomContainer.style.marginBottom = `${difference}px`;
+            if (scale !== 1) {
+                const difference = Math.round(naturalHeight * (scale - 1));
+                zoomContainer.style.marginBottom = `${difference}px`;
+            }
 
             if (rulerEl) {
-                rulerEl.style.transform = `scaleX(${scale})`;
+                rulerEl.style.transform = scale === 1 ? 'none' : `scaleX(${scale})`;
                 rulerEl.style.transformOrigin = 'center top';
             }
         };
@@ -2906,14 +2938,15 @@ const SuratEdaranWorkstation = {
             let numericVal = 100;
             if (val === 'fit') {
                 const availableWidth = (deskCanvas ? deskCanvas.clientWidth : window.innerWidth) - 48;
-                const sheetWidth = 794;
+                const sheetWidth = sheet ? (sheet.offsetWidth || 794) : 794;
                 numericVal = Math.max(50, Math.min(125, Math.floor((availableWidth / sheetWidth) * 100)));
             } else {
                 numericVal = parseInt(val, 10) || 100;
             }
 
+            currentZoomVal = numericVal;
             zoomContainer.dataset.zoom = numericVal;
-            zoomContainer.style.transform = `scale(${numericVal / 100})`;
+            zoomContainer.style.transform = numericVal === 100 ? 'none' : `scale(${numericVal / 100})`;
             zoomContainer.style.transformOrigin = 'center top';
             updateZoomCompensation(numericVal);
 
@@ -2926,10 +2959,234 @@ const SuratEdaranWorkstation = {
             });
         };
 
+        // Paper Switcher (A4 vs F4)
+        const applyPaperSize = (format) => {
+            workstation.querySelectorAll('[data-paper-size]').forEach(b => {
+                if (b.dataset.paperSize === format) {
+                    b.className = 'px-3 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1.5 bg-slate-900 text-white shadow-xs';
+                } else {
+                    b.className = 'px-3 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1.5 text-slate-700 hover:bg-slate-200';
+                }
+            });
+
+            if (sheet) {
+                sheet.dataset.paperFormat = format;
+                sheet.classList.remove('paper-a4', 'paper-f4');
+                sheet.classList.add(`paper-${format}`);
+                sheet.style.width = format === 'f4' ? '215mm' : '210mm';
+                sheet.style.minHeight = format === 'f4' ? '330mm' : '297mm';
+            }
+
+            if (rulerEl) {
+                rulerEl.classList.remove('paper-a4', 'paper-f4', 'ruler-f4');
+                if (format === 'f4') {
+                    rulerEl.classList.add('paper-f4', 'ruler-f4');
+                } else {
+                    rulerEl.classList.add('paper-a4');
+                }
+            }
+
+            updateZoomCompensation(currentZoomVal);
+        };
+
+        workstation.querySelectorAll('[data-paper-size]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                applyPaperSize(btn.dataset.paperSize);
+            });
+        });
+
         workstation.querySelectorAll('[data-zoom]').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
                 applyZoom(btn.dataset.zoom);
             });
+        });
+
+        // Modal Penyesuaian Naskah Surat Dinas Controllers
+        const configModal = document.getElementById('modal-surat-config');
+        window.openSuratConfigModal = () => {
+            const modal = document.getElementById('modal-surat-config');
+            if (modal) {
+                modal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            }
+        };
+
+        window.closeSuratConfigModal = () => {
+            const modal = document.getElementById('modal-surat-config');
+            if (modal) {
+                modal.classList.add('hidden');
+                document.body.style.overflow = '';
+            }
+        };
+
+        window.applySuratConfigToSheet = () => {
+            // 1. Template Type
+            const selectedTemplate = document.querySelector('input[name="modal_template_type"]:checked')?.value || 'undangan';
+            const formTemplateInput = document.getElementById('form-template-type');
+            if (formTemplateInput) formTemplateInput.value = selectedTemplate;
+
+            const blockUndangan = document.getElementById('sheet-undangan-block');
+            const blockEdaran = document.getElementById('sheet-edaran-block');
+            const statusLabel = document.getElementById('status-format-label');
+            if (statusLabel) statusLabel.textContent = selectedTemplate;
+
+            if (selectedTemplate === 'edaran') {
+                if (blockUndangan) blockUndangan.style.display = 'none';
+                if (blockEdaran) blockEdaran.style.display = 'block';
+                if (altEdaranBox) setActiveEditor(altEdaranBox);
+            } else {
+                if (blockEdaran) blockEdaran.style.display = 'none';
+                if (blockUndangan) blockUndangan.style.display = 'block';
+                if (bodyBox) setActiveEditor(bodyBox);
+            }
+
+            // 2. Kop Settings
+            const showKop = document.getElementById('modal_show_kop')?.checked ?? true;
+            const showLogo = document.getElementById('modal_show_logo')?.checked ?? true;
+            const instansiInduk = document.getElementById('modal_instansi_induk')?.value || '';
+            const instansiPelaksana = document.getElementById('modal_instansi_pelaksana')?.value || '';
+            const alamatKontak = document.getElementById('modal_alamat_kontak')?.value || '';
+
+            const formShowKop = document.getElementById('form-show-kop');
+            const formShowLogo = document.getElementById('form-show-logo');
+            const formInstansiInduk = document.getElementById('form-instansi-induk');
+            const formInstansiPelaksana = document.getElementById('form-instansi-pelaksana');
+            const formAlamatKontak = document.getElementById('form-alamat-kontak');
+
+            if (formShowKop) formShowKop.value = showKop ? '1' : '0';
+            if (formShowLogo) formShowLogo.value = showLogo ? '1' : '0';
+            if (formInstansiInduk) formInstansiInduk.value = instansiInduk;
+            if (formInstansiPelaksana) formInstansiPelaksana.value = instansiPelaksana;
+            if (formAlamatKontak) formAlamatKontak.value = alamatKontak;
+
+            const kopContainer = document.getElementById('sheet-kop-container');
+            const headerKop = document.getElementById('sheet-header-kop');
+            if (kopContainer) kopContainer.style.display = showKop ? 'block' : 'none';
+            if (headerKop) headerKop.style.display = showKop ? 'block' : 'none';
+
+            const logoCell = document.getElementById('sheet-logo-cell');
+            const logoImg = document.getElementById('sheet-logo-img');
+            if (logoCell) {
+                logoCell.style.width = showLogo ? '18%' : '0%';
+                const textCell = logoCell.nextElementSibling;
+                if (textCell) textCell.style.width = showLogo ? '82%' : '100%';
+            }
+            if (logoImg) {
+                logoImg.style.display = showLogo ? 'block' : 'none';
+            }
+
+            const sheetInstansiInduk = document.getElementById('sheet-instansi-induk');
+            const sheetInstansiPelaksana = document.getElementById('sheet-instansi-pelaksana');
+            const sheetAlamatKontak = document.getElementById('sheet-alamat-kontak');
+            if (sheetInstansiInduk) sheetInstansiInduk.textContent = instansiInduk;
+            if (sheetInstansiPelaksana) sheetInstansiPelaksana.textContent = instansiPelaksana;
+            if (sheetAlamatKontak) sheetAlamatKontak.textContent = alamatKontak;
+
+            // 3. Metadata fields
+            const nomor = document.getElementById('modal_nomor_surat')?.value || '';
+            const sifat = document.getElementById('modal_sifat')?.value || '';
+            const lampiran = document.getElementById('modal_lampiran')?.value || '';
+            const perihal = document.getElementById('modal_perihal')?.value || '';
+            const tempat = document.getElementById('modal_tempat_surat')?.value || '';
+            const tanggal = document.getElementById('modal_tanggal_surat')?.value || '';
+            const tujuan = document.getElementById('modal_tujuan_surat')?.value || '';
+
+            const fNomor = document.getElementById('form-nomor-surat');
+            const fSifat = document.getElementById('form-sifat');
+            const fLampiran = document.getElementById('form-lampiran');
+            const fPerihal = document.getElementById('form-perihal');
+            const fTempat = document.getElementById('form-tempat-surat');
+            const fTanggal = document.getElementById('form-tanggal-surat');
+            const fTujuan = document.getElementById('form-tujuan-surat');
+
+            if (fNomor) fNomor.value = nomor;
+            if (fSifat) fSifat.value = sifat;
+            if (fLampiran) fLampiran.value = lampiran;
+            if (fPerihal) fPerihal.value = perihal;
+            if (fTempat) fTempat.value = tempat;
+            if (fTanggal) fTanggal.value = tanggal;
+            if (fTujuan) fTujuan.value = tujuan;
+
+            const sheetNomor = document.getElementById('sheet-nomor-surat');
+            const sheetSifat = document.getElementById('sheet-sifat');
+            const sheetLampiran = document.getElementById('sheet-lampiran');
+            const sheetPerihal = document.getElementById('sheet-perihal');
+            const sheetTempat = document.getElementById('sheet-tempat-surat');
+            const sheetTanggal = document.getElementById('sheet-tanggal-surat');
+            const sheetTujuan = document.getElementById('sheet-tujuan-surat');
+
+            if (sheetNomor) sheetNomor.textContent = nomor || '-';
+            if (sheetSifat) sheetSifat.textContent = sifat || 'Biasa';
+            if (sheetLampiran) sheetLampiran.textContent = lampiran || '-';
+            if (sheetPerihal) sheetPerihal.textContent = perihal;
+            if (sheetTempat) sheetTempat.textContent = tempat;
+            if (sheetTanggal) sheetTanggal.textContent = tanggal;
+            if (sheetTujuan) sheetTujuan.innerHTML = escapeHtml(tujuan).replace(/\n/g, '<br>');
+
+            const sheetEdaranNomor = document.getElementById('sheet-edaran-nomor');
+            const sheetEdaranPerihal = document.getElementById('sheet-edaran-perihal');
+            const sheetEdaranTujuan = document.getElementById('sheet-edaran-tujuan');
+            if (sheetEdaranNomor) sheetEdaranNomor.textContent = nomor || '-';
+            if (sheetEdaranPerihal) sheetEdaranPerihal.textContent = perihal;
+            if (sheetEdaranTujuan) sheetEdaranTujuan.innerHTML = escapeHtml(tujuan).replace(/\n/g, '<br>');
+
+            // 4. Penandatangan & Tembusan
+            const role = document.getElementById('modal_signer_role')?.value || '';
+            const name = document.getElementById('modal_signer_name')?.value || '';
+            const nip = document.getElementById('modal_signer_nip')?.value || '';
+            const showSig = document.getElementById('modal_show_signature')?.checked ?? true;
+            const tembusan = document.getElementById('modal_tembusan')?.value || '';
+
+            const fRole = document.getElementById('form-signer-role');
+            const fName = document.getElementById('form-signer-name');
+            const fNip = document.getElementById('form-signer-nip');
+            const fShowSig = document.getElementById('form-show-signature');
+            const fTembusan = document.getElementById('form-tembusan');
+
+            if (fRole) fRole.value = role;
+            if (fName) fName.value = name;
+            if (fNip) fNip.value = nip;
+            if (fShowSig) fShowSig.value = showSig ? '1' : '0';
+            if (fTembusan) fTembusan.value = tembusan;
+
+            const sheetRole = document.getElementById('sheet-signer-role');
+            const sheetName = document.getElementById('sheet-signer-name');
+            const sheetNip = document.getElementById('sheet-signer-nip');
+            const sheetBadge = document.getElementById('sheet-signature-badge');
+            const sheetTembusanBlock = document.getElementById('sheet-tembusan-block');
+            const sheetTembusanText = document.getElementById('sheet-tembusan-text');
+
+            if (sheetRole) sheetRole.textContent = role;
+            if (sheetName) sheetName.textContent = name;
+            if (sheetNip) sheetNip.textContent = nip || '-';
+            if (sheetBadge) sheetBadge.style.display = showSig ? 'inline-block' : 'none';
+            if (sheetTembusanBlock) sheetTembusanBlock.style.display = tembusan.trim() ? 'block' : 'none';
+            if (sheetTembusanText) sheetTembusanText.innerHTML = escapeHtml(tembusan).replace(/\n/g, '<br>');
+
+            syncToHiddenInputs();
+            updateWordCounter();
+            updateSaveStateUI(true);
+            updateZoomCompensation(currentZoomVal);
+            window.closeSuratConfigModal();
+        };
+
+        if (configModal) {
+            configModal.addEventListener('click', (e) => {
+                if (e.target === configModal) {
+                    window.closeSuratConfigModal();
+                }
+            });
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('modal-surat-config');
+                if (modal && !modal.classList.contains('hidden')) {
+                    window.closeSuratConfigModal();
+                }
+            }
         });
 
         // Save button pre-sync click handler

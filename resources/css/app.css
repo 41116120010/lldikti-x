@@ -595,6 +595,13 @@
         vertical-align: sub;
         line-height: 0;
     }
+    .prose-gov font[size="1"] { font-size: 10px; }
+    .prose-gov font[size="2"] { font-size: 12px; }
+    .prose-gov font[size="3"] { font-size: 14px; }
+    .prose-gov font[size="4"] { font-size: 16px; }
+    .prose-gov font[size="5"] { font-size: 20px; }
+    .prose-gov font[size="6"],
+    .prose-gov font[size="7"] { font-size: 24px; }
     .prose-gov table {
         width: 100%;
         border-collapse: collapse;
