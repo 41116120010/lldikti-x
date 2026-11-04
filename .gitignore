@@ -30,6 +30,7 @@ Thumbs.db
 /database/mariadb.pid
 *.zip
 AGENTS.md
+DEPLOYMENT.md
 ERD.md
 PRD.md
 AUDIT_CODEBASE.md
