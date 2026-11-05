@@ -143,8 +143,8 @@
         outline-offset: 2px;
     }
 
-    /* Keep a visible focus ring on dark surfaces where a black outline vanishes. */
-    .office-desk-canvas :focus-visible:not(.office-editable-box):not(.office-editable-box *),
+    /* Keep a visible focus ring on dark surfaces where a black outline vanishes,
+       excluding the document paper sheet and editable regions. */
     .modal :focus-visible {
         outline-color: #ffffff;
         box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.55);
@@ -797,6 +797,10 @@
         overflow-x: auto;
         border-radius: 0.75rem;
         box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
     }
 
     .office-zoom-container {
@@ -807,6 +811,8 @@
         width: 100%;
         transform-origin: top center;
         transition: transform 0.2s ease-out;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
     }
 
     /* Strict Table Isolation inside Office Workstation */
@@ -898,6 +904,13 @@
         display: flex;
         flex-direction: column;
         justify-content: flex-start;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
+        backface-visibility: hidden;
+        transform: translateZ(0);
     }
 
     .office-paper-sheet.paper-a4 {
@@ -1053,7 +1066,28 @@
         font-weight: 400;
         line-height: 1.35;
         color: #000000;
+        user-select: text;
+        -webkit-user-select: text;
+        cursor: text;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
+        backface-visibility: hidden;
+        transform: translateZ(0);
         transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .office-editable-box *,
+    .office-editable-box::selection,
+    .office-editable-box *::selection {
+        user-select: text;
+        -webkit-user-select: text;
+    }
+
+    .office-editable-box::selection,
+    .office-editable-box *::selection {
+        background-color: #dbeafe;
+        color: #0f172a;
     }
 
     .office-editable-box strong,

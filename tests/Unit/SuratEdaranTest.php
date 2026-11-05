@@ -257,4 +257,40 @@ class SuratEdaranTest extends TestCase
         $this->assertTrue(method_exists(SuratEdaranService::class, 'downloadPdfResponse'));
         $this->assertTrue(method_exists(DompdfRenderer::class, 'render'));
     }
+
+    public function test_surat_edaran_workstation_view_and_js_parity_with_notulen(): void
+    {
+        $bladePath = dirname(__DIR__, 2) . '/resources/views/agendas/surat_edaran.blade.php';
+        $jsPath = dirname(__DIR__, 2) . '/resources/js/app.js';
+        $cssPath = dirname(__DIR__, 2) . '/resources/css/app.css';
+
+        $blade = (string) file_get_contents($bladePath);
+        $js = (string) file_get_contents($jsPath);
+        $css = (string) file_get_contents($cssPath);
+
+        // Verify ribbon commands parity with notulen editor
+        $this->assertStringContainsString('data-command="superscript"', $blade);
+        $this->assertStringContainsString('data-command="subscript"', $blade);
+        $this->assertStringContainsString('data-command="blockquote"', $blade);
+        $this->assertStringContainsString('data-action="clearAll"', $blade);
+        $this->assertStringContainsString('<option value="3" selected>12pt (Standar)</option>', $blade);
+        $this->assertStringNotContainsString('<option value="">12pt (Standar)</option>', $blade);
+
+        // Verify status bar parity
+        $this->assertStringContainsString('id="office-status-page"', $blade);
+        $this->assertStringContainsString('id="office-status-size"', $blade);
+        $this->assertStringContainsString('id="office-status-zoom"', $blade);
+
+        // Verify JS selection isolation and keyboard shortcuts
+        $this->assertStringContainsString('isNodeInsideEditableBox', $js);
+        $this->assertStringContainsString('sel.collapseToEnd()', $js);
+        $this->assertStringContainsString("l: 'justifyLeft'", $js);
+        $this->assertStringContainsString("e: 'justifyCenter'", $js);
+        $this->assertStringContainsString("r: 'justifyRight'", $js);
+        $this->assertStringContainsString("j: 'justifyFull'", $js);
+
+        // Verify CSS font-smoothing stabilization and canvas focus-ring protection
+        $this->assertStringNotContainsString('.office-desk-canvas :focus-visible:not(.office-editable-box)', $css);
+        $this->assertStringContainsString('-webkit-font-smoothing: antialiased;', $css);
+    }
 }

@@ -174,10 +174,9 @@
                 <option value="Courier New">Courier New</option>
             </select>
             <select class="word-select" data-action="fontSize" title="Ukuran Font (Default Batang Tubuh: 12pt)">
-                <option value="">12pt (Standar)</option>
+                <option value="3" selected>12pt (Standar)</option>
                 <option value="1">8pt (10px)</option>
                 <option value="2">10pt (12px)</option>
-                <option value="3">12pt (16px)</option>
                 <option value="4">14pt (18px)</option>
                 <option value="5">18pt (24px)</option>
                 <option value="6">24pt (32px)</option>
@@ -220,16 +219,16 @@
 
         <!-- Alignment -->
         <div class="word-btn-group">
-            <button type="button" class="word-btn" data-command="justifyLeft" title="Rata Kiri">
+            <button type="button" class="word-btn" data-command="justifyLeft" title="Rata Kiri (Ctrl+L)">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="21" x2="3" y1="6" y2="6"/><line x1="15" x2="3" y1="12" y2="12"/><line x1="17" x2="3" y1="18" y2="18"/></svg>
             </button>
-            <button type="button" class="word-btn" data-command="justifyCenter" title="Rata Tengah">
+            <button type="button" class="word-btn" data-command="justifyCenter" title="Rata Tengah (Ctrl+E)">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="21" x2="3" y1="6" y2="6"/><line x1="17" x2="7" y1="12" y2="12"/><line x1="19" x2="5" y1="18" y2="18"/></svg>
             </button>
-            <button type="button" class="word-btn" data-command="justifyRight" title="Rata Kanan">
+            <button type="button" class="word-btn" data-command="justifyRight" title="Rata Kanan (Ctrl+R)">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="21" x2="3" y1="6" y2="6"/><line x1="21" x2="9" y1="12" y2="12"/><line x1="21" x2="7" y1="18" y2="18"/></svg>
             </button>
-            <button type="button" class="word-btn is-active" data-command="justifyFull" title="Rata Kiri Kanan (Justify)">
+            <button type="button" class="word-btn" data-command="justifyFull" title="Rata Kiri-Kanan / Justify (Ctrl+J)">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="21" x2="3" y1="6" y2="6"/><line x1="21" x2="3" y1="12" y2="12"/><line x1="21" x2="3" y1="18" y2="18"/></svg>
             </button>
         </div>
@@ -244,36 +243,56 @@
             <button type="button" class="word-btn" data-command="insertOrderedList" title="Daftar Nomor">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="10" x2="21" y1="6" y2="6"/><line x1="10" x2="21" y1="12" y2="12"/><line x1="10" x2="21" y1="18" y2="18"/><path d="M4 6h1v4"/><path d="M4 10h2"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/></svg>
             </button>
-            <button type="button" class="word-btn" data-command="outdent" title="Kurangi Indent">
+            <button type="button" class="word-btn" data-command="outdent" title="Kurangi Indentasi (Shift+Tab)">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 8 3 12 7 16"/><line x1="21" x2="11" y1="6" y2="6"/><line x1="21" x2="11" y1="12" y2="12"/><line x1="21" x2="11" y1="18" y2="18"/></svg>
             </button>
-            <button type="button" class="word-btn" data-command="indent" title="Tambah Indent">
+            <button type="button" class="word-btn" data-command="indent" title="Tambah Indentasi (Tab)">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 8 7 12 3 16"/><line x1="21" x2="11" y1="6" y2="6"/><line x1="21" x2="11" y1="12" y2="12"/><line x1="21" x2="11" y1="18" y2="18"/></svg>
             </button>
         </div>
 
-        <div class="h-5 w-px bg-slate-300 mx-0.5 hidden sm:block"></div>
+        <!-- Subscript / Superscript -->
+        <div class="word-btn-group">
+            <button type="button" class="word-btn" data-command="superscript" title="Superscript (X²)">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" stroke="none"><text x="2" y="18" font-size="14" font-weight="700">X</text><text x="15" y="10" font-size="10" font-weight="700">2</text></svg>
+            </button>
+            <button type="button" class="word-btn" data-command="subscript" title="Subscript (X₂)">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" stroke="none"><text x="2" y="16" font-size="14" font-weight="700">X</text><text x="15" y="22" font-size="10" font-weight="700">2</text></svg>
+            </button>
+        </div>
 
-        <!-- Insert & Tools -->
+        <!-- Insert Table & Utilities -->
         <div class="word-btn-group relative">
+            <button type="button" class="word-btn" data-command="blockquote" title="Kutipan">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/></svg>
+            </button>
+            <button type="button" class="word-btn" data-command="insertHorizontalRule" title="Garis Batas Horizontal">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" x2="21" y1="12" y2="12"/></svg>
+            </button>
             <button type="button" class="word-btn" data-action="openTablePicker" title="Sisipkan Tabel">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><line x1="3" x2="21" y1="9" y2="9"/><line x1="3" x2="21" y1="15" y2="15"/><line x1="9" x2="9" y1="3" y2="21"/><line x1="15" x2="15" y1="3" y2="21"/></svg>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><line x1="3" x2="21" y1="9" y2="9"/><line x1="3" x2="21" y1="15" y2="15"/><line x1="9" x2="9" y1="3" y2="21"/><line x1="15" x2="15" y1="3" y2="21"/></svg>
             </button>
             <div class="word-table-picker" id="surat-table-picker">
                 <div class="word-table-grid" id="surat-table-grid"></div>
                 <div class="word-table-picker-label" id="surat-table-label">0 × 0 Tabel</div>
             </div>
-            <button type="button" class="word-btn" data-command="insertHorizontalRule" title="Garis Batas Horizontal">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" x2="21" y1="12" y2="12"/></svg>
-            </button>
-            <button type="button" class="word-btn" data-command="removeFormat" title="Hapus Format">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="6" y1="6" y2="18"/><path d="m4 6 7 7"/><path d="m13 15 3 3"/></svg>
-            </button>
+        </div>
+
+        <div class="h-5 w-px bg-slate-300 mx-0.5 hidden sm:block"></div>
+
+        <!-- History & Utilities -->
+        <div class="word-btn-group">
             <button type="button" class="word-btn" data-command="undo" title="Urungkan (Ctrl+Z)">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
             </button>
             <button type="button" class="word-btn" data-command="redo" title="Ulangi (Ctrl+Y)">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/></svg>
+            </button>
+            <button type="button" class="word-btn text-rose-600 hover:text-rose-700 hover:bg-rose-50" data-command="removeFormat" title="Hapus Format">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="6" y1="6" y2="18"/><path d="M4 6h16"/><path d="M10 6v2a4 4 0 0 0 4 4"/></svg>
+            </button>
+            <button type="button" class="word-btn text-rose-600 hover:text-rose-700 hover:bg-rose-50" data-action="clearAll" title="Kosongkan Teks Bagian Aktif">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
             </button>
         </div>
     </div>
@@ -592,21 +611,25 @@
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- 5. Status Bar Bawah -->
-    <div id="office-status-bar" class="bg-slate-900 text-slate-300 text-xs py-2 px-4 rounded-xl flex items-center justify-between shadow-xs">
-        <div class="flex items-center gap-3">
-            <span id="office-status-words" class="font-semibold text-white">0 kata</span>
-            <span class="text-slate-500">&bull;</span>
-            <span class="text-slate-300">Kertas A4 (Margin Kiri 3cm, Kanan 2cm, Bawah 2.5cm) &bull; Kop: Times New Roman &bull; Isi: Arial 12pt</span>
-            <span id="status-format-label" class="hidden">{{ $activeTemplateType }}</span>
-        </div>
-        <div class="flex items-center gap-2">
-            <span id="office-status-save-state" class="inline-flex items-center gap-1.5 text-emerald-400 font-semibold">
-                <span id="office-status-save-dot" class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                <span id="office-status-save-label">Tersimpan</span>
-            </span>
+        <!-- 5. Word Office Bottom Status Bar -->
+        <div class="office-status-bar" id="office-status-bar" aria-label="Bilah Status Dokumen">
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                <span id="office-status-page" class="font-semibold text-slate-200">Halaman 1 dari {{ $showLampiranSheet ? '2' : '1' }}</span>
+                <span class="text-slate-600">&bull;</span>
+                <span id="office-status-words" class="font-semibold text-white">0 kata</span>
+                <span class="text-slate-600 hidden sm:inline">&bull;</span>
+                <span id="office-status-size" class="hidden sm:inline text-slate-300">Kertas A4 (Margin Kiri 3cm, Kanan 2cm, Bawah 2.5cm) &bull; Kop: Times New Roman &bull; Isi: Arial 12pt</span>
+                <span id="status-format-label" class="hidden">{{ $activeTemplateType }}</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <span id="office-status-save-state" class="inline-flex items-center gap-1.5 text-emerald-400 font-semibold">
+                    <span id="office-status-save-dot" class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    <span id="office-status-save-label">Tersimpan</span>
+                </span>
+                <span class="text-slate-600">&bull;</span>
+                <span id="office-status-zoom">Zoom: 100%</span>
+            </div>
         </div>
     </div>
 

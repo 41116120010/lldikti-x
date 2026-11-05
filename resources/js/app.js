@@ -1634,14 +1634,37 @@ const OfficeWorkstation = {
             box.addEventListener('mouseup', updateActiveStates);
 
             box.addEventListener('keydown', (e) => {
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    document.execCommand(e.shiftKey ? 'outdent' : 'indent', false, null);
+                    syncContent(true);
+                    updateActiveStates();
+                    debouncedReflow(250);
+                    return;
+                }
                 if (e.ctrlKey || e.metaKey) {
                     const key = e.key.toLowerCase();
-                    if (key === 'b' || key === 'i' || key === 'u') {
+                    const shortcutMap = {
+                        b: 'bold',
+                        i: 'italic',
+                        u: 'underline',
+                        l: 'justifyLeft',
+                        e: 'justifyCenter',
+                        r: 'justifyRight',
+                        j: 'justifyFull',
+                    };
+                    if (shortcutMap[key]) {
                         e.preventDefault();
-                        const cmd = key === 'b' ? 'bold' : (key === 'i' ? 'italic' : 'underline');
-                        document.execCommand(cmd, false, null);
+                        document.execCommand(shortcutMap[key], false, null);
                         syncContent(true);
                         updateActiveStates();
+                        debouncedReflow(250);
+                    } else if (key === 'z' || key === 'y') {
+                        setTimeout(() => {
+                            syncContent(true);
+                            updateActiveStates();
+                            debouncedReflow(250);
+                        }, 10);
                     }
                 }
             });
@@ -2512,6 +2535,10 @@ const SuratEdaranWorkstation = {
         const zoomContainer = workstation.querySelector('#office-zoom-container');
         const deskCanvas = workstation.querySelector('.office-desk-canvas');
         const rulerEl = workstation.querySelector('#office-document-ruler');
+        const statusBarEl = workstation.querySelector('#office-status-bar');
+        const statusSizeEl = workstation.querySelector('#office-status-size');
+        const statusPageEl = workstation.querySelector('#office-status-page');
+        const statusZoomEl = workstation.querySelector('#office-status-zoom');
         const sheet = workstation.querySelector('#surat-sheet-page-1');
         const form = workstation.querySelector('#surat-edaran-form');
 
@@ -2534,7 +2561,10 @@ const SuratEdaranWorkstation = {
         const statusSaveDotEl = workstation.querySelector('#office-status-save-dot');
         const statusSaveLabelEl = workstation.querySelector('#office-status-save-label');
 
-        let activeBox = bodyBox || pembukaBox || editableBoxes[0];
+        const initialTemplate = document.querySelector('#form-template-type')?.value || 'undangan';
+        let activeBox = initialTemplate === 'edaran'
+            ? (altEdaranBox || bodyBox || pembukaBox || editableBoxes[0])
+            : (bodyBox || pembukaBox || editableBoxes[0]);
         let savedRange = null;
         let isSubmittingForm = false;
         let currentZoomVal = 100;
@@ -2547,7 +2577,7 @@ const SuratEdaranWorkstation = {
             if (!statusSaveStateEl || !statusSaveDotEl || !statusSaveLabelEl) return;
             if (window.__suratDirtyState) {
                 statusSaveStateEl.className = 'inline-flex items-center gap-1.5 text-amber-400 font-semibold';
-                statusSaveDotEl.className = 'w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse';
+                statusSaveDotEl.className = 'w-1.5 h-1.5 rounded-full bg-amber-400';
                 statusSaveLabelEl.textContent = 'Perubahan Belum Disimpan';
             } else {
                 statusSaveStateEl.className = 'inline-flex items-center gap-1.5 text-emerald-400 font-semibold';
@@ -2613,33 +2643,50 @@ const SuratEdaranWorkstation = {
             }
         };
 
+        const isNodeInsideEditableBox = (node) => {
+            if (!node) return null;
+            const el = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
+            if (!el) return null;
+            const box = el.closest('.office-editable-box');
+            return (box && workstation.contains(box)) ? box : null;
+        };
+
         const saveSelection = () => {
             const sel = window.getSelection();
             if (sel && sel.rangeCount > 0) {
                 const range = sel.getRangeAt(0);
-                if (workstation.contains(range.commonAncestorContainer)) {
+                const ownerBox = isNodeInsideEditableBox(range.commonAncestorContainer);
+                if (ownerBox) {
+                    activeBox = ownerBox;
                     savedRange = range.cloneRange();
                 }
             }
         };
 
         const restoreSelection = () => {
+            const targetBox = activeBox;
+            if (targetBox && document.activeElement !== targetBox) {
+                targetBox.focus({ preventScroll: true });
+            }
             if (!savedRange) return;
+            const ownerBox = isNodeInsideEditableBox(savedRange.commonAncestorContainer);
+            if (!ownerBox) return;
             const sel = window.getSelection();
             if (sel) {
-                sel.removeAllRanges();
-                sel.addRange(savedRange);
+                try {
+                    sel.removeAllRanges();
+                    sel.addRange(savedRange);
+                } catch (e) {}
             }
         };
 
         const setActiveEditor = (box) => {
+            if (!box) return;
             activeBox = box;
             editableBoxes.forEach(b => {
                 b.classList.remove('is-active-editor');
             });
-            if (box) {
-                box.classList.add('is-active-editor');
-            }
+            box.classList.add('is-active-editor');
             if (typeof updateActiveStates === 'function') {
                 updateActiveStates();
             }
@@ -2648,7 +2695,6 @@ const SuratEdaranWorkstation = {
         editableBoxes.forEach(box => {
             box.addEventListener('focus', () => {
                 setActiveEditor(box);
-                saveSelection();
             });
             box.addEventListener('click', () => {
                 setActiveEditor(box);
@@ -2672,16 +2718,40 @@ const SuratEdaranWorkstation = {
                 updateWordCounter();
                 updateSaveStateUI(true);
             });
+            box.addEventListener('blur', () => {
+                syncToHiddenInputs();
+            });
 
-            // Local formatting keyboard shortcuts: Ctrl+B, Ctrl+I, Ctrl+U
+            // Local formatting & alignment keyboard shortcuts
             box.addEventListener('keydown', (e) => {
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    document.execCommand(e.shiftKey ? 'outdent' : 'indent', false, null);
+                    saveSelection();
+                    syncToHiddenInputs();
+                    updateWordCounter();
+                    updateSaveStateUI(true);
+                    if (typeof updateActiveStates === 'function') {
+                        updateActiveStates();
+                    }
+                    return;
+                }
+
                 if (e.ctrlKey || e.metaKey) {
                     const key = e.key.toLowerCase();
-                    if (key === 'b' || key === 'i' || key === 'u') {
+                    const shortcutMap = {
+                        b: 'bold',
+                        i: 'italic',
+                        u: 'underline',
+                        l: 'justifyLeft',
+                        e: 'justifyCenter',
+                        r: 'justifyRight',
+                        j: 'justifyFull',
+                    };
+
+                    if (shortcutMap[key]) {
                         e.preventDefault();
-                        saveSelection();
-                        const cmd = key === 'b' ? 'bold' : (key === 'i' ? 'italic' : 'underline');
-                        document.execCommand(cmd, false, null);
+                        document.execCommand(shortcutMap[key], false, null);
                         saveSelection();
                         syncToHiddenInputs();
                         updateWordCounter();
@@ -2689,25 +2759,89 @@ const SuratEdaranWorkstation = {
                         if (typeof updateActiveStates === 'function') {
                             updateActiveStates();
                         }
+                    } else if (key === 'z' || key === 'y') {
+                        setTimeout(() => {
+                            saveSelection();
+                            syncToHiddenInputs();
+                            updateWordCounter();
+                            updateSaveStateUI(true);
+                            if (typeof updateActiveStates === 'function') {
+                                updateActiveStates();
+                            }
+                        }, 10);
                     }
                 }
             });
 
-            // Clean Paste Sanitizer
+            // Clean Smart HTML Paste Sanitizer (Consistent with Notulensi OfficeWorkstation)
             box.addEventListener('paste', (e) => {
                 e.preventDefault();
-                const text = (e.clipboardData || window.clipboardData).getData('text/plain');
-                if (text) {
-                    document.execCommand('insertText', false, text);
+                const clipboardData = e.clipboardData || window.clipboardData;
+                const htmlData = clipboardData ? clipboardData.getData('text/html') : '';
+                const textData = clipboardData ? clipboardData.getData('text/plain') : '';
+
+                if (htmlData) {
+                    try {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(htmlData, 'text/html');
+
+                        doc.querySelectorAll('script, style, meta, link, object, embed, iframe').forEach(el => el.remove());
+
+                        const allowedTags = [
+                            'p', 'br', 'b', 'strong', 'i', 'em', 'u', 's', 'strike',
+                            'h2', 'h3', 'h4', 'ul', 'ol', 'li', 'blockquote', 'hr',
+                            'table', 'thead', 'tbody', 'tr', 'th', 'td', 'sup', 'sub'
+                        ];
+
+                        Array.from(doc.body.querySelectorAll('*')).forEach(el => {
+                            const tag = el.tagName.toLowerCase();
+                            if (!allowedTags.includes(tag)) {
+                                el.replaceWith(...el.childNodes);
+                            } else {
+                                Array.from(el.attributes).forEach(attr => {
+                                    if (['colspan', 'rowspan'].includes(attr.name)) return;
+                                    el.removeAttribute(attr.name);
+                                });
+                            }
+                        });
+
+                        const cleanHtml = doc.body.innerHTML.trim();
+                        if (cleanHtml) {
+                            document.execCommand('insertHTML', false, cleanHtml);
+                        } else if (textData) {
+                            document.execCommand('insertText', false, textData);
+                        }
+                    } catch (err) {
+                        if (textData) document.execCommand('insertText', false, textData);
+                    }
+                } else if (textData) {
+                    const paragraphs = textData
+                        .split(/\r?\n\r?\n/)
+                        .map(p => p.trim())
+                        .filter(Boolean)
+                        .map(p => `<p>${escapeHtml(p).replace(/\r?\n/g, '<br>')}</p>`)
+                        .join('');
+
+                    if (paragraphs && textData.includes('\n\n')) {
+                        document.execCommand('insertHTML', false, paragraphs);
+                    } else {
+                        document.execCommand('insertText', false, textData);
+                    }
+                }
+
+                setTimeout(() => {
                     saveSelection();
                     syncToHiddenInputs();
                     updateWordCounter();
                     updateSaveStateUI(true);
-                }
+                    if (typeof updateActiveStates === 'function') {
+                        updateActiveStates();
+                    }
+                }, 20);
             });
         });
 
-        // Initialize active editor class
+        // Initialize active editor class without forcing focus or selection highlight
         setActiveEditor(activeBox);
 
         // Ribbon Commands
@@ -2718,9 +2852,14 @@ const SuratEdaranWorkstation = {
 
             const ensureVisibleActiveBox = () => {
                 const templateType = document.querySelector('#form-template-type')?.value || 'undangan';
+                const showLampiran = document.querySelector('#form-show-lampiran')?.value === '1';
+
+                if (activeBox === lampiranBox && showLampiran) {
+                    return lampiranBox;
+                }
                 if (templateType === 'edaran' && altEdaranBox) {
                     activeBox = altEdaranBox;
-                } else if (!activeBox || activeBox === altEdaranBox) {
+                } else if (!activeBox || activeBox === altEdaranBox || (activeBox === lampiranBox && !showLampiran)) {
                     activeBox = bodyBox || pembukaBox || editableBoxes[0];
                 }
                 return activeBox;
@@ -2731,11 +2870,11 @@ const SuratEdaranWorkstation = {
                 restoreSelection();
 
                 if (targetBox && document.activeElement !== targetBox) {
-                    targetBox.focus();
+                    targetBox.focus({ preventScroll: true });
                     restoreSelection();
                 }
 
-                // When changing font family or font size without highlighted text, apply to activeBox contents
+                let autoSelectedAll = false;
                 if ((cmd === 'fontSize' || cmd === 'fontName') && targetBox) {
                     const sel = window.getSelection();
                     if (!sel || sel.rangeCount === 0 || sel.isCollapsed || !targetBox.contains(sel.anchorNode)) {
@@ -2744,11 +2883,24 @@ const SuratEdaranWorkstation = {
                         if (sel) {
                             sel.removeAllRanges();
                             sel.addRange(fullRange);
+                            autoSelectedAll = true;
                         }
                     }
                 }
 
-                document.execCommand(cmd, false, val);
+                if (cmd === 'blockquote') {
+                    document.execCommand('formatBlock', false, 'blockquote');
+                } else {
+                    document.execCommand(cmd, false, val);
+                }
+
+                if (autoSelectedAll) {
+                    const sel = window.getSelection();
+                    if (sel && sel.rangeCount > 0) {
+                        sel.collapseToEnd();
+                    }
+                }
+
                 saveSelection();
                 syncToHiddenInputs();
                 updateWordCounter();
@@ -2757,9 +2909,15 @@ const SuratEdaranWorkstation = {
             };
 
             updateActiveStates = () => {
-                ribbon.querySelectorAll('.word-btn[data-command]').forEach(btn => {
-                    const cmd = btn.dataset.command;
-                    if (['bold', 'italic', 'underline', 'strikeThrough', 'justifyLeft', 'justifyCenter', 'justifyRight', 'justifyFull', 'insertUnorderedList', 'insertOrderedList'].includes(cmd)) {
+                const commands = [
+                    'bold', 'italic', 'underline', 'strikeThrough',
+                    'justifyLeft', 'justifyCenter', 'justifyRight', 'justifyFull',
+                    'insertUnorderedList', 'insertOrderedList',
+                    'superscript', 'subscript'
+                ];
+                commands.forEach(cmd => {
+                    const btn = ribbon.querySelector(`.word-btn[data-command="${cmd}"]`);
+                    if (btn) {
                         try {
                             if (document.queryCommandState(cmd)) {
                                 btn.classList.add('is-active');
@@ -2771,14 +2929,52 @@ const SuratEdaranWorkstation = {
                         }
                     }
                 });
-            };
 
-            document.addEventListener('selectionchange', () => {
-                if (workstation.contains(document.activeElement)) {
-                    saveSelection();
-                    updateActiveStates();
+                if (formatSelect) {
+                    try {
+                        const block = (document.queryCommandValue('formatBlock') || '').toLowerCase().replace(/[<>]/g, '');
+                        const quoteBtn = ribbon.querySelector('.word-btn[data-command="blockquote"]');
+                        if (['h2', 'h3', 'h4', 'p', 'blockquote'].includes(block)) {
+                            formatSelect.value = block;
+                        } else {
+                            formatSelect.value = 'p';
+                        }
+                        if (quoteBtn) {
+                            if (block === 'blockquote') {
+                                quoteBtn.classList.add('is-active');
+                            } else {
+                                quoteBtn.classList.remove('is-active');
+                            }
+                        }
+                    } catch (e) {}
                 }
-            });
+
+                if (fontSizeSelect) {
+                    try {
+                        const sizeVal = String(document.queryCommandValue('fontSize') || '').trim();
+                        if (['1', '2', '3', '4', '5', '6'].includes(sizeVal)) {
+                            fontSizeSelect.value = sizeVal;
+                        } else {
+                            fontSizeSelect.value = '3';
+                        }
+                    } catch (e) {}
+                }
+
+                if (fontNameSelect) {
+                    try {
+                        const rawFont = String(document.queryCommandValue('fontName') || '').replace(/['"]/g, '').toLowerCase();
+                        if (rawFont.includes('times')) {
+                            fontNameSelect.value = 'Times New Roman';
+                        } else if (rawFont.includes('georgia')) {
+                            fontNameSelect.value = 'Georgia';
+                        } else if (rawFont.includes('courier')) {
+                            fontNameSelect.value = 'Courier New';
+                        } else if (rawFont.includes('arial') || rawFont.includes('helvetica')) {
+                            fontNameSelect.value = 'Arial';
+                        }
+                    } catch (e) {}
+                }
+            };
 
             // Prevent focus loss and collapse of selection on ribbon button click
             ribbon.querySelectorAll('.word-btn').forEach(btn => {
@@ -2787,6 +2983,15 @@ const SuratEdaranWorkstation = {
                     saveSelection();
                 });
             });
+
+            const editorSectionNames = {
+                pembuka: 'Alinea Pembuka Surat Undangan',
+                body: 'Rincian Batang Tubuh Surat Undangan',
+                catatan: 'Catatan Tambahan',
+                penutup: 'Alinea Penutup Surat Undangan',
+                'edaran-body': 'Batang Tubuh Surat Edaran',
+                lampiran: 'Lampiran Daftar Undangan (Halaman 2)',
+            };
 
             ribbon.addEventListener('click', (e) => {
                 const btn = e.target.closest('.word-btn');
@@ -2799,10 +3004,36 @@ const SuratEdaranWorkstation = {
                     saveSelection();
                     const input = ribbon.querySelector(`input[data-color-for="${btn.dataset.action}"]`);
                     if (input) input.click();
-                } else if (btn.dataset.action === 'openTablePicker') {
+                } else if (btn.dataset.action === 'openTablePicker' || btn.dataset.action === 'insertTable') {
                     saveSelection();
                     const picker = workstation.querySelector('#surat-table-picker');
                     if (picker) picker.classList.toggle('open');
+                } else if (btn.dataset.action === 'clearAll') {
+                    const targetBox = ensureVisibleActiveBox();
+                    if (!targetBox || !targetBox.innerText.trim()) return;
+                    const sectionLabel = editorSectionNames[targetBox.dataset.editor] || 'Bagian Naskah Aktif';
+
+                    const executeClear = () => {
+                        targetBox.innerHTML = '';
+                        syncToHiddenInputs();
+                        updateWordCounter();
+                        updateSaveStateUI(true);
+                        updateActiveStates();
+                        targetBox.focus({ preventScroll: true });
+                    };
+
+                    if (typeof window.showModal === 'function') {
+                        window.showModal({
+                            title: 'Kosongkan Isi Bagian Ini?',
+                            message: `Seluruh teks pada bagian "${sectionLabel}" akan dihapus dari editor. Anda masih dapat membatalkannya sebelum menyimpan ke server.`,
+                            type: 'danger',
+                            confirmText: 'Ya, Kosongkan',
+                            cancelText: 'Batal',
+                            onConfirm: executeClear,
+                        });
+                    } else if (confirm(`Kosongkan teks pada bagian "${sectionLabel}"?`)) {
+                        executeClear();
+                    }
                 }
             });
 
@@ -2818,6 +3049,7 @@ const SuratEdaranWorkstation = {
                         exec('foreColor', val);
                     } else if (action === 'highlight') {
                         try {
+                            restoreSelection();
                             if (!document.execCommand('hiliteColor', false, val)) {
                                 exec('backColor', val);
                             } else {
@@ -2918,7 +3150,7 @@ const SuratEdaranWorkstation = {
                 });
 
                 document.addEventListener('click', (e) => {
-                    if (tablePicker && !tablePicker.contains(e.target) && !e.target.closest('[data-action="openTablePicker"]')) {
+                    if (tablePicker && !tablePicker.contains(e.target) && !e.target.closest('[data-action="openTablePicker"], [data-action="insertTable"]')) {
                         tablePicker.classList.remove('open');
                     }
                 });
@@ -2945,18 +3177,24 @@ const SuratEdaranWorkstation = {
         const applyZoom = (val) => {
             if (!zoomContainer) return;
             let numericVal = 100;
+            let zoomLabel = 'Zoom: 100%';
             if (val === 'fit') {
                 const availableWidth = (deskCanvas ? deskCanvas.clientWidth : window.innerWidth) - 48;
                 const sheetWidth = sheet ? (sheet.offsetWidth || 794) : 794;
                 numericVal = Math.max(50, Math.min(125, Math.floor((availableWidth / sheetWidth) * 100)));
+                zoomLabel = `Zoom: Sesuaikan (${numericVal}%)`;
             } else {
                 numericVal = parseInt(val, 10) || 100;
+                zoomLabel = `Zoom: ${numericVal}%`;
             }
 
             currentZoomVal = numericVal;
             zoomContainer.dataset.zoom = numericVal;
             zoomContainer.style.transform = numericVal === 100 ? 'none' : `scale(${numericVal / 100})`;
             zoomContainer.style.transformOrigin = 'center top';
+            if (statusZoomEl) {
+                statusZoomEl.textContent = zoomLabel;
+            }
             updateZoomCompensation(numericVal);
 
             workstation.querySelectorAll('[data-zoom]').forEach(b => {
@@ -2968,7 +3206,7 @@ const SuratEdaranWorkstation = {
             });
         };
 
-        // Paper Switcher (A4 vs F4)
+        // Paper Switcher (A4 vs F4) with Status Bar & localStorage Sync
         const applyPaperSize = (format) => {
             workstation.querySelectorAll('[data-paper-size]').forEach(b => {
                 if (b.dataset.paperSize === format) {
@@ -2998,8 +3236,51 @@ const SuratEdaranWorkstation = {
                 }
             }
 
+            if (statusBarEl) {
+                statusBarEl.classList.remove('paper-a4', 'paper-f4', 'status-f4');
+                if (format === 'f4') {
+                    statusBarEl.classList.add('paper-f4', 'status-f4');
+                } else {
+                    statusBarEl.classList.add('paper-a4');
+                }
+            }
+
+            if (statusSizeEl) {
+                statusSizeEl.textContent = format === 'f4'
+                    ? 'F4 / Folio (215 × 330 mm) • Kop: Times New Roman • Isi: Arial 12pt'
+                    : 'Kertas A4 (Margin Kiri 3cm, Kanan 2cm, Bawah 2.5cm) • Kop: Times New Roman • Isi: Arial 12pt';
+            }
+
+            try {
+                localStorage.setItem('siperapat_paper_format', format);
+            } catch (e) {}
+
             updateZoomCompensation(currentZoomVal);
         };
+
+        const updateActivePageStatus = () => {
+            if (!statusPageEl) return;
+            const lampiranWrapper = document.getElementById('surat-lampiran-page-wrapper');
+            const isLampiranVisible = lampiranWrapper && lampiranWrapper.style.display !== 'none';
+            const totalPages = isLampiranVisible ? 2 : 1;
+            let activePage = 1;
+            if (isLampiranVisible) {
+                const sheet2 = workstation.querySelector('#surat-sheet-page-2');
+                if (sheet2) {
+                    const rect = sheet2.getBoundingClientRect();
+                    const midY = window.innerHeight / 2;
+                    if (rect.top <= midY && rect.bottom >= midY) {
+                        activePage = 2;
+                    }
+                }
+            }
+            statusPageEl.textContent = `Halaman ${activePage} dari ${totalPages}`;
+        };
+
+        window.addEventListener('scroll', updateActivePageStatus, { passive: true });
+        if (deskCanvas) {
+            deskCanvas.addEventListener('scroll', updateActivePageStatus, { passive: true });
+        }
 
         workstation.querySelectorAll('[data-paper-size]').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -3014,6 +3295,14 @@ const SuratEdaranWorkstation = {
                 applyZoom(btn.dataset.zoom);
             });
         });
+
+        const savedFormat = (() => {
+            try { return localStorage.getItem('siperapat_paper_format') || 'a4'; } catch (e) { return 'a4'; }
+        })();
+        applyPaperSize(savedFormat);
+        if (window.innerWidth < 768) {
+            applyZoom('fit');
+        }
 
         // Modal Penyesuaian Naskah Surat Dinas Controllers
         const configModal = document.getElementById('modal-surat-config');
@@ -3292,6 +3581,7 @@ const SuratEdaranWorkstation = {
             syncToHiddenInputs();
             updateWordCounter();
             updateSaveStateUI(true);
+            updateActivePageStatus();
             updateZoomCompensation(currentZoomVal);
             window.closeSuratConfigModal();
         };
@@ -3321,18 +3611,21 @@ const SuratEdaranWorkstation = {
             });
         }
 
-        // Keyboard Shortcut: Ctrl+S / Cmd+S
+        // Keyboard Shortcut: Ctrl+S / Cmd+S (Works anywhere on the Surat Edaran Workstation page)
         document.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
-                if (workstation.contains(document.activeElement) || document.activeElement === document.body) {
-                    e.preventDefault();
-                    if (form) {
-                        syncToHiddenInputs(true);
-                        if (typeof form.requestSubmit === 'function') {
-                            form.requestSubmit();
-                        } else {
-                            form.dispatchEvent(new Event('submit', { cancelable: true }));
-                        }
+                if (!document.body.contains(workstation)) return;
+                e.preventDefault();
+                const modal = document.getElementById('modal-surat-config');
+                if (modal && !modal.classList.contains('hidden')) {
+                    window.closeSuratConfigModal();
+                }
+                if (form) {
+                    syncToHiddenInputs(true);
+                    if (typeof form.requestSubmit === 'function') {
+                        form.requestSubmit();
+                    } else {
+                        form.dispatchEvent(new Event('submit', { cancelable: true }));
                     }
                 }
             }
