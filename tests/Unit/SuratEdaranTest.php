@@ -293,4 +293,33 @@ class SuratEdaranTest extends TestCase
         $this->assertStringNotContainsString('.office-desk-canvas :focus-visible:not(.office-editable-box)', $css);
         $this->assertStringContainsString('-webkit-font-smoothing: antialiased;', $css);
     }
+
+    public function test_agenda_edit_view_has_balanced_form_dom_and_submit_button(): void
+    {
+        $editBladePath = dirname(__DIR__, 2) . '/resources/views/agendas/edit.blade.php';
+        $editBlade = (string) file_get_contents($editBladePath);
+
+        // 1. Ensure no duplicate IDs or orphaned clearSuratEdaranInput() buttons exist
+        $this->assertSame(1, substr_count($editBlade, 'id="preview-image-viewport"'));
+        $this->assertSame(1, substr_count($editBlade, 'id="preview-image-img"'));
+        $this->assertSame(1, substr_count($editBlade, 'onclick="clearSuratEdaranInput()"'));
+
+        // 2. Extract the main update <form> block and verify balanced <div> tags inside it
+        $formStart = strpos($editBlade, '<form method="POST" action="{{ route(\'admin.agendas.update\', $agenda) }}"');
+        $this->assertNotFalse($formStart);
+        $formEnd = strpos($editBlade, '</form>', $formStart);
+        $this->assertNotFalse($formEnd);
+
+        $formContent = substr($editBlade, $formStart, $formEnd - $formStart + 7);
+
+        $openDivCount = preg_match_all('/<div\b/i', $formContent);
+        $closeDivCount = preg_match_all('/<\/div>/i', $formContent);
+        $this->assertSame($openDivCount, $closeDivCount, 'Semua tag <div> di dalam <form> edit agenda harus seimbang agar tombol Simpan Perubahan tidak terlempar keluar dari form.');
+
+        // 3. Verify both Batal and Simpan Perubahan buttons are inside the main update <form>
+        $this->assertStringContainsString('<span>Simpan Perubahan</span>', $formContent);
+        $this->assertStringContainsString('type="submit"', $formContent);
+        $this->assertStringContainsString("route('admin.agendas.show', \$agenda)", $formContent);
+        $this->assertStringContainsString('name="open_surat_edaran_after_save"', $formContent);
+    }
 }

@@ -437,6 +437,20 @@
                                 @endif
                             </div>
                         </div>
+
+                        <div class="pt-2 border-t border-slate-200 flex items-center gap-2">
+                            <input 
+                                type="checkbox" 
+                                id="open_surat_edaran_after_save" 
+                                name="open_surat_edaran_after_save" 
+                                value="1" 
+                                class="rounded border-slate-300 text-slate-900 focus:ring-slate-900"
+                                {{ old('open_surat_edaran_after_save', ($agenda->surat_edaran_type ?? 'upload') === 'digital' ? '0' : '1') === '1' ? 'checked' : '' }}
+                            >
+                            <label for="open_surat_edaran_after_save" class="text-xs font-semibold text-slate-800 cursor-pointer">
+                                Langsung buka Lembar Kerja Digital untuk menyesuaikan isi naskah setelah perubahan disimpan
+                            </label>
+                        </div>
                     </div>
                 </div>
 
@@ -542,22 +556,6 @@
                     </div>
                 </div>
             </div>
-                        <button 
-                            type="button" 
-                            onclick="clearSuratEdaranInput()" 
-                            class="button small secondary text-xs font-bold text-rose-700 border-rose-200 hover:bg-rose-50 flex items-center gap-1.5 shrink-0 min-h-[36px] cursor-pointer"
-                            title="Batalkan pilihan berkas ini"
-                        >
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                            <span>Batal</span>
-                        </button>
-                    </div>
-
-                    <div id="preview-image-viewport" class="hidden rounded-lg border border-slate-200 bg-white p-2 flex items-center justify-center max-h-56 overflow-hidden">
-                        <img id="preview-image-img" src="" alt="Pratinjau Gambar Berkas Baru" class="max-h-52 w-auto object-contain rounded">
-                    </div>
-                </div>
-            </div>
 
             <!-- Status Rapat & Action Buttons -->
             <div class="pt-4 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -589,9 +587,9 @@
                     @enderror
                 </div>
 
-                <div class="flex items-center gap-3">
-                    <a href="{{ route('admin.agendas.show', $agenda) }}" class="button secondary text-xs font-bold">Batal</a>
-                    <button type="submit" class="button flex items-center gap-2 text-xs font-bold">
+                <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+                    <a href="{{ route('admin.agendas.show', $agenda) }}" class="button secondary text-xs font-bold min-h-[44px] flex items-center justify-center">Batal</a>
+                    <button type="submit" class="button flex items-center justify-center gap-2 text-xs font-bold min-h-[44px] cursor-pointer">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                         <span>Simpan Perubahan</span>
                     </button>
