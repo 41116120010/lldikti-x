@@ -836,14 +836,24 @@ class Agenda extends Model
             $defaultTujuan = $userNames ? "Pegawai ASN Terundang: {$userNames}" : 'Pegawai ASN Terdaftar pada Lampiran';
         }
 
+        // Default Daftar Undangan untuk Lampiran Halaman 2
+        $defaultLampiranList = '<ol style="margin: 0; padding-left: 18pt;"><li>Seluruh Ketua Tim Kerja di Lingkungan LLDIKTI Wilayah X</li><li>Seluruh Pegawai ASN di Lingkungan LLDIKTI Wilayah X</li></ol>';
+        if ($this->target_type === 'selected_units' && $this->relationLoaded('units') && $this->units->isNotEmpty()) {
+            $items = $this->units->map(fn ($u) => '<li>' . e($u->nama_unit) . '</li>')->join('');
+            $defaultLampiranList = '<ol style="margin: 0; padding-left: 18pt;">' . $items . '</ol>';
+        } elseif ($this->target_type === 'selected_users' && $this->relationLoaded('invitedUsers') && $this->invitedUsers->isNotEmpty()) {
+            $items = $this->invitedUsers->map(fn ($u) => '<li>' . e($u->name) . ($u->nip ? ' (NIP ' . e($u->nip) . ')' : '') . '</li>')->join('');
+            $defaultLampiranList = '<ol style="margin: 0; padding-left: 18pt;">' . $items . '</ol>';
+        }
+
         return [
             'template_type' => 'undangan', // 'undangan' or 'edaran'
             'show_kop' => true,
             'show_logo' => true,
             'custom_logo_path' => null,
-            'instansi_induk' => 'KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI',
-            'instansi_pelaksana' => 'LEMBAGA LAYANAN PENDIDIKAN TINGGI (LLDIKTI) WILAYAH X',
-            'alamat_kontak' => 'Jalan Khatib Sulaiman, Padang, Sumatera Barat • Laman: lldikti10.kemdikbud.go.id',
+            'instansi_induk' => "KEMENTERIAN PENDIDIKAN TINGGI,\nSAINS, DAN TEKNOLOGI",
+            'instansi_pelaksana' => 'LEMBAGA LAYANAN PENDIDIKAN TINGGI WILAYAH X',
+            'alamat_kontak' => "Jalan Khatib Sulaiman Padang 25137\nTelepon (0751) 70567376\nLaman lldikti10.kemdiktisaintek.go.id  Pos-el info.lldikti10@kemdiktisaintek.go.id",
             'nomor_surat' => $defaultNumber,
             'sifat' => 'Biasa',
             'lampiran' => '-',
@@ -851,14 +861,16 @@ class Agenda extends Model
             'tempat_surat' => 'Padang',
             'tanggal_surat' => $defaultDate,
             'tujuan_surat' => $defaultTujuan,
-            'pembuka' => 'Dalam rangka pelaksanaan program kerja dan koordinasi pelaksanaan tugas kedinasan, dengan hormat kami mengharapkan kehadiran Bapak/Ibu pada rapat yang akan diselenggarakan pada:',
-            'catatan' => 'Catatan: Mohon hadir tepat waktu dan membawa kelengkapan dokumen pendukung yang diperlukan.',
-            'penutup' => 'Mengingat pentingnya agenda rapat ini, dimohon kehadiran Bapak/Ibu tepat pada waktunya. Atas perhatian dan kerja sama yang baik, kami ucapkan terima kasih.',
-            'signer_role' => 'Kepala Lembaga Layanan Pendidikan Tinggi Wilayah X',
-            'signer_name' => 'Afdalisma, S.H., M.Pd.',
-            'signer_nip' => '196909281994032001',
+            'pembuka' => 'Dalam rangka pelaksanaan program kerja dan koordinasi pelaksanaan tugas kedinasan, dengan hormat kami mengharapkan kehadiran Bapak/Ibu pada',
+            'catatan' => '',
+            'penutup' => 'Atas perhatian dan kerja sama yang baik, kami ucapkan terima kasih.',
+            'signer_role' => 'Kepala',
+            'signer_name' => 'Afdalisma',
+            'signer_nip' => '197012051992032002',
             'show_signature' => true,
             'tembusan' => "1. Sekretaris Direktorat Jenderal Pendidikan Tinggi, Sains, dan Teknologi\n2. Pertinggal",
+            'show_lampiran' => false,
+            'lampiran_content' => $defaultLampiranList,
         ];
     }
 
@@ -872,7 +884,29 @@ class Agenda extends Model
         $defaults = $this->getDefaultSuratEdaranConfig();
         $stored = is_array($this->surat_edaran_config) ? $this->surat_edaran_config : [];
 
-        return array_replace($defaults, $stored);
+        $resolved = array_replace($defaults, $stored);
+
+        // Normalisasi nilai legacy lama agar otomatis mengikuti standar Template_Surat_Undangan.docx
+        if (($resolved['instansi_induk'] ?? '') === 'KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI') {
+            $resolved['instansi_induk'] = $defaults['instansi_induk'];
+        }
+        if (($resolved['instansi_pelaksana'] ?? '') === 'LEMBAGA LAYANAN PENDIDIKAN TINGGI (LLDIKTI) WILAYAH X') {
+            $resolved['instansi_pelaksana'] = $defaults['instansi_pelaksana'];
+        }
+        if (str_contains((string) ($resolved['alamat_kontak'] ?? ''), 'lldikti10.kemdikbud.go.id')) {
+            $resolved['alamat_kontak'] = $defaults['alamat_kontak'];
+        }
+        if (($resolved['signer_role'] ?? '') === 'Kepala Lembaga Layanan Pendidikan Tinggi Wilayah X') {
+            $resolved['signer_role'] = 'Kepala';
+        }
+        if (($resolved['signer_name'] ?? '') === 'Afdalisma, S.H., M.Pd.') {
+            $resolved['signer_name'] = 'Afdalisma';
+        }
+        if (($resolved['signer_nip'] ?? '') === '196909281994032001' || ($resolved['signer_nip'] ?? '') === '-') {
+            $resolved['signer_nip'] = '197012051992032002';
+        }
+
+        return $resolved;
     }
 
     /**

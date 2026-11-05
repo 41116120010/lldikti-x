@@ -50,9 +50,15 @@ class SuratEdaranTest extends TestCase
         $this->assertArrayHasKey('perihal', $defaultConfig);
         $this->assertArrayHasKey('tujuan_surat', $defaultConfig);
         $this->assertArrayHasKey('signer_role', $defaultConfig);
+        $this->assertSame('Kepala', $defaultConfig['signer_role']);
         $this->assertArrayHasKey('signer_name', $defaultConfig);
+        $this->assertSame('Afdalisma', $defaultConfig['signer_name']);
         $this->assertArrayHasKey('signer_nip', $defaultConfig);
+        $this->assertSame('197012051992032002', $defaultConfig['signer_nip']);
         $this->assertArrayHasKey('tembusan', $defaultConfig);
+        $this->assertArrayHasKey('show_lampiran', $defaultConfig);
+        $this->assertArrayHasKey('lampiran_content', $defaultConfig);
+        $this->assertStringContainsString('lldikti10.kemdiktisaintek.go.id', $defaultConfig['alamat_kontak']);
     }
 
     public function test_resolved_surat_edaran_config_merges_custom_values(): void
@@ -188,5 +194,35 @@ class SuratEdaranTest extends TestCase
         $this->assertSame('04 November 2026', $config['tanggal_surat']);
         $this->assertSame('undangan', $config['template_type']);
         $this->assertSame('Yth. Pimpinan Perguruan Tinggi Swasta', $config['tujuan_surat']);
+        $this->assertSame('Kepala', $config['signer_role']);
+        $this->assertSame('Afdalisma', $config['signer_name']);
+        $this->assertSame('197012051992032002', $config['signer_nip']);
+    }
+
+    public function test_legacy_surat_edaran_config_normalizes_to_official_template_standard(): void
+    {
+        $agenda = new Agenda([
+            'id' => 99,
+            'judul_rapat' => 'Rapat Koordinasi Lama',
+            'surat_edaran_type' => 'digital',
+            'surat_edaran_config' => [
+                'instansi_induk' => 'KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI',
+                'instansi_pelaksana' => 'LEMBAGA LAYANAN PENDIDIKAN TINGGI (LLDIKTI) WILAYAH X',
+                'alamat_kontak' => 'Jalan Khatib Sulaiman, Padang, Sumatera Barat • Laman: lldikti10.kemdikbud.go.id',
+                'signer_role' => 'Kepala Lembaga Layanan Pendidikan Tinggi Wilayah X',
+                'signer_name' => 'Afdalisma, S.H., M.Pd.',
+                'signer_nip' => '196909281994032001',
+            ],
+        ]);
+
+        $resolved = $agenda->resolved_surat_edaran_config;
+
+        $this->assertSame("KEMENTERIAN PENDIDIKAN TINGGI,\nSAINS, DAN TEKNOLOGI", $resolved['instansi_induk']);
+        $this->assertSame('LEMBAGA LAYANAN PENDIDIKAN TINGGI WILAYAH X', $resolved['instansi_pelaksana']);
+        $this->assertStringContainsString('lldikti10.kemdiktisaintek.go.id', $resolved['alamat_kontak']);
+        $this->assertStringContainsString('info.lldikti10@kemdiktisaintek.go.id', $resolved['alamat_kontak']);
+        $this->assertSame('Kepala', $resolved['signer_role']);
+        $this->assertSame('Afdalisma', $resolved['signer_name']);
+        $this->assertSame('197012051992032002', $resolved['signer_nip']);
     }
 }

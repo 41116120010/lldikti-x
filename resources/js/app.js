@@ -2521,11 +2521,13 @@ const SuratEdaranWorkstation = {
         const catatanBox = workstation.querySelector('#surat-catatan-content');
         const penutupBox = workstation.querySelector('#surat-penutup-content');
         const altEdaranBox = workstation.querySelector('#surat-edaran-alt-content');
+        const lampiranBox = workstation.querySelector('#surat-lampiran-content');
 
         const formPembuka = workstation.querySelector('#form-pembuka');
         const formContent = workstation.querySelector('#form-surat-content');
         const formCatatan = workstation.querySelector('#form-catatan');
         const formPenutup = workstation.querySelector('#form-penutup');
+        const formLampiranContent = workstation.querySelector('#form-lampiran-content');
 
         const statusWordsEl = workstation.querySelector('#office-status-words');
         const statusSaveStateEl = workstation.querySelector('#office-status-save-state');
@@ -2593,6 +2595,9 @@ const SuratEdaranWorkstation = {
             }
             if (formPenutup && penutupBox) {
                 formPenutup.value = penutupBox.innerHTML.trim();
+            }
+            if (formLampiranContent && lampiranBox) {
+                formLampiranContent.value = lampiranBox.innerHTML.trim();
             }
 
             if (formContent) {
@@ -2969,13 +2974,16 @@ const SuratEdaranWorkstation = {
                 }
             });
 
-            if (sheet) {
-                sheet.dataset.paperFormat = format;
-                sheet.classList.remove('paper-a4', 'paper-f4');
-                sheet.classList.add(`paper-${format}`);
-                sheet.style.width = format === 'f4' ? '215mm' : '210mm';
-                sheet.style.minHeight = format === 'f4' ? '330mm' : '297mm';
-            }
+            const sheet2 = workstation.querySelector('#surat-sheet-page-2');
+            [sheet, sheet2].forEach(s => {
+                if (s) {
+                    s.dataset.paperFormat = format;
+                    s.classList.remove('paper-a4', 'paper-f4');
+                    s.classList.add(`paper-${format}`);
+                    s.style.width = format === 'f4' ? '215mm' : '210mm';
+                    s.style.minHeight = format === 'f4' ? '330mm' : '297mm';
+                }
+            });
 
             if (rulerEl) {
                 rulerEl.classList.remove('paper-a4', 'paper-f4', 'ruler-f4');
@@ -3068,10 +3076,13 @@ const SuratEdaranWorkstation = {
 
             const logoCell = document.getElementById('sheet-logo-cell');
             const logoImg = document.getElementById('sheet-logo-img');
+            const textCell = document.getElementById('sheet-kop-text-cell') || (logoCell ? logoCell.nextElementSibling : null);
             if (logoCell) {
-                logoCell.style.width = showLogo ? '18%' : '0%';
-                const textCell = logoCell.nextElementSibling;
-                if (textCell) textCell.style.width = showLogo ? '82%' : '100%';
+                logoCell.style.width = showLogo ? '19.7%' : '0%';
+                logoCell.style.display = showLogo ? 'table-cell' : 'none';
+            }
+            if (textCell) {
+                textCell.style.width = showLogo ? '80.3%' : '100%';
             }
             if (logoImg) {
                 logoImg.style.display = showLogo ? 'block' : 'none';
@@ -3080,18 +3091,21 @@ const SuratEdaranWorkstation = {
             const sheetInstansiInduk = document.getElementById('sheet-instansi-induk');
             const sheetInstansiPelaksana = document.getElementById('sheet-instansi-pelaksana');
             const sheetAlamatKontak = document.getElementById('sheet-alamat-kontak');
-            if (sheetInstansiInduk) sheetInstansiInduk.textContent = instansiInduk;
+            if (sheetInstansiInduk) sheetInstansiInduk.innerHTML = escapeHtml(instansiInduk).replace(/\n/g, '<br>');
             if (sheetInstansiPelaksana) sheetInstansiPelaksana.textContent = instansiPelaksana;
-            if (sheetAlamatKontak) sheetAlamatKontak.textContent = alamatKontak;
+            if (sheetAlamatKontak) sheetAlamatKontak.innerHTML = escapeHtml(alamatKontak).replace(/\n/g, '<br>');
 
             // 3. Metadata fields
             const nomor = document.getElementById('modal_nomor_surat')?.value || '';
-            const sifat = document.getElementById('modal_sifat')?.value || '';
-            const lampiran = document.getElementById('modal_lampiran')?.value || '';
+            const sifat = document.getElementById('modal_sifat')?.value || 'Biasa';
+            const lampiran = document.getElementById('modal_lampiran')?.value || '-';
             const perihal = document.getElementById('modal_perihal')?.value || '';
-            const tempat = document.getElementById('modal_tempat_surat')?.value || '';
+            const tempat = document.getElementById('modal_tempat_surat')?.value || 'Padang';
             const tanggal = document.getElementById('modal_tanggal_surat')?.value || '';
-            const tujuan = document.getElementById('modal_tujuan_surat')?.value || '';
+            const tujuanRaw = document.getElementById('modal_tujuan_surat')?.value || '';
+            const tujuanClean = tujuanRaw.replace(/^Yth\.?\s*/i, '');
+            const showLampiranModal = document.getElementById('modal_show_lampiran')?.checked ?? false;
+            const effectiveShowLampiran = showLampiranModal || (lampiran.trim() !== '' && lampiran.trim() !== '-');
 
             const fNomor = document.getElementById('form-nomor-surat');
             const fSifat = document.getElementById('form-sifat');
@@ -3100,6 +3114,7 @@ const SuratEdaranWorkstation = {
             const fTempat = document.getElementById('form-tempat-surat');
             const fTanggal = document.getElementById('form-tanggal-surat');
             const fTujuan = document.getElementById('form-tujuan-surat');
+            const fShowLampiran = document.getElementById('form-show-lampiran');
 
             if (fNomor) fNomor.value = nomor;
             if (fSifat) fSifat.value = sifat;
@@ -3107,7 +3122,8 @@ const SuratEdaranWorkstation = {
             if (fPerihal) fPerihal.value = perihal;
             if (fTempat) fTempat.value = tempat;
             if (fTanggal) fTanggal.value = tanggal;
-            if (fTujuan) fTujuan.value = tujuan;
+            if (fTujuan) fTujuan.value = tujuanClean;
+            if (fShowLampiran) fShowLampiran.value = effectiveShowLampiran ? '1' : '0';
 
             const sheetNomor = document.getElementById('sheet-nomor-surat');
             const sheetSifat = document.getElementById('sheet-sifat');
@@ -3123,19 +3139,28 @@ const SuratEdaranWorkstation = {
             if (sheetPerihal) sheetPerihal.textContent = perihal;
             if (sheetTempat) sheetTempat.textContent = tempat;
             if (sheetTanggal) sheetTanggal.textContent = tanggal;
-            if (sheetTujuan) sheetTujuan.innerHTML = escapeHtml(tujuan).replace(/\n/g, '<br>');
+            if (sheetTujuan) sheetTujuan.innerHTML = escapeHtml(tujuanClean).replace(/\n/g, '<br>');
 
             const sheetEdaranNomor = document.getElementById('sheet-edaran-nomor');
             const sheetEdaranPerihal = document.getElementById('sheet-edaran-perihal');
             const sheetEdaranTujuan = document.getElementById('sheet-edaran-tujuan');
             if (sheetEdaranNomor) sheetEdaranNomor.textContent = nomor || '-';
             if (sheetEdaranPerihal) sheetEdaranPerihal.textContent = perihal;
-            if (sheetEdaranTujuan) sheetEdaranTujuan.innerHTML = escapeHtml(tujuan).replace(/\n/g, '<br>');
+            if (sheetEdaranTujuan) sheetEdaranTujuan.innerHTML = escapeHtml(tujuanClean).replace(/\n/g, '<br>');
+
+            // Sync Halaman 2 Lampiran Daftar Undangan
+            const lampiranPageWrapper = document.getElementById('surat-lampiran-page-wrapper');
+            const sheetLampiranNomor = document.getElementById('sheet-lampiran-nomor');
+            const sheetLampiranTanggal = document.getElementById('sheet-lampiran-tanggal');
+            if (lampiranPageWrapper) lampiranPageWrapper.style.display = effectiveShowLampiran ? 'flex' : 'none';
+            if (sheetLampiranNomor) sheetLampiranNomor.textContent = nomor || '-';
+            if (sheetLampiranTanggal) sheetLampiranTanggal.textContent = tanggal;
 
             // 4. Penandatangan & Tembusan
-            const role = document.getElementById('modal_signer_role')?.value || '';
-            const name = document.getElementById('modal_signer_name')?.value || '';
-            const nip = document.getElementById('modal_signer_nip')?.value || '';
+            const roleRaw = document.getElementById('modal_signer_role')?.value || 'Kepala';
+            const roleClean = roleRaw.replace(/,+\s*$/, '');
+            const name = document.getElementById('modal_signer_name')?.value || 'Afdalisma';
+            const nip = document.getElementById('modal_signer_nip')?.value || '197012051992032002';
             const showSig = document.getElementById('modal_show_signature')?.checked ?? true;
             const tembusan = document.getElementById('modal_tembusan')?.value || '';
 
@@ -3145,7 +3170,7 @@ const SuratEdaranWorkstation = {
             const fShowSig = document.getElementById('form-show-signature');
             const fTembusan = document.getElementById('form-tembusan');
 
-            if (fRole) fRole.value = role;
+            if (fRole) fRole.value = roleClean;
             if (fName) fName.value = name;
             if (fNip) fNip.value = nip;
             if (fShowSig) fShowSig.value = showSig ? '1' : '0';
@@ -3155,14 +3180,16 @@ const SuratEdaranWorkstation = {
             const sheetName = document.getElementById('sheet-signer-name');
             const sheetNip = document.getElementById('sheet-signer-nip');
             const sheetBadge = document.getElementById('sheet-signature-badge');
+            const sheetTembusanLabel = document.getElementById('sheet-tembusan-label');
             const sheetTembusanBlock = document.getElementById('sheet-tembusan-block');
             const sheetTembusanText = document.getElementById('sheet-tembusan-text');
 
-            if (sheetRole) sheetRole.textContent = role;
+            if (sheetRole) sheetRole.textContent = roleClean;
             if (sheetName) sheetName.textContent = name;
             if (sheetNip) sheetNip.textContent = nip || '-';
             if (sheetBadge) sheetBadge.style.display = showSig ? 'inline-block' : 'none';
-            if (sheetTembusanBlock) sheetTembusanBlock.style.display = tembusan.trim() ? 'block' : 'none';
+            if (sheetTembusanLabel) sheetTembusanLabel.style.display = tembusan.trim() ? 'block' : 'none';
+            if (sheetTembusanBlock) sheetTembusanBlock.style.display = tembusan.trim() ? 'table-row' : 'none';
             if (sheetTembusanText) sheetTembusanText.innerHTML = escapeHtml(tembusan).replace(/\n/g, '<br>');
 
             syncToHiddenInputs();

@@ -24,10 +24,10 @@ class UpdateSuratEdaranRequest extends FormRequest
         return [
             'template_type' => ['required', 'string', 'in:undangan,edaran'],
             'nomor_surat' => ['required', 'string', 'max:255'],
-            'sifat' => ['required', 'string', 'max:100'],
+            'sifat' => ['nullable', 'string', 'max:100'],
             'lampiran' => ['nullable', 'string', 'max:150'],
             'perihal' => ['required', 'string', 'max:255'],
-            'tempat_surat' => ['required', 'string', 'max:100'],
+            'tempat_surat' => ['nullable', 'string', 'max:100'],
             'tanggal_surat' => ['required', 'string', 'max:100'],
             'tujuan_surat' => ['required', 'string'],
             'pembuka' => ['nullable', 'string'],
@@ -39,6 +39,8 @@ class UpdateSuratEdaranRequest extends FormRequest
             'signer_nip' => ['nullable', 'string', 'max:50'],
             'show_signature' => ['nullable', 'boolean'],
             'tembusan' => ['nullable', 'string'],
+            'show_lampiran' => ['nullable', 'boolean'],
+            'lampiran_content' => ['nullable', 'string'],
 
             // Kop Surat Settings
             'show_kop' => ['nullable', 'boolean'],
@@ -47,7 +49,7 @@ class UpdateSuratEdaranRequest extends FormRequest
             'custom_logo' => ['nullable', 'file', 'image', 'mimes:jpeg,png,jpg,webp', 'max:512'],
             'instansi_induk' => ['nullable', 'string', 'max:255'],
             'instansi_pelaksana' => ['nullable', 'string', 'max:255'],
-            'alamat_kontak' => ['nullable', 'string', 'max:255'],
+            'alamat_kontak' => ['nullable', 'string', 'max:500'],
         ];
     }
 
@@ -95,6 +97,10 @@ class UpdateSuratEdaranRequest extends FormRequest
 
         if ($this->has('penutup')) {
             $sanitized['penutup'] = Html::sanitize((string) $this->input('penutup'));
+        }
+
+        if ($this->has('lampiran_content')) {
+            $sanitized['lampiran_content'] = Html::sanitize((string) $this->input('lampiran_content'));
         }
 
         if (! empty($sanitized)) {

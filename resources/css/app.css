@@ -1090,6 +1090,31 @@
         pointer-events: none;
         display: block;
     }
+
+    /*
+     * Scoped Overrides for Surat Edaran / Surat Undangan Workstation
+     * Follows Template_Surat_Undangan.docx:
+     * - Margins: Left 3.0 cm (30mm), Right 2.0 cm (20mm), Bottom 2.5 cm (25mm), Top ~1.0 cm (10mm)
+     * - Body Typography: Arial 12pt, line-height 1.15
+     * - Letterhead Typography: Times New Roman (16pt Regular, 14pt Bold, 12pt Regular)
+     */
+    #surat-edaran-workstation .office-document-ruler .ruler-margin-left {
+        width: 30mm;
+    }
+    #surat-edaran-workstation .office-document-ruler .ruler-margin-right {
+        width: 20mm;
+    }
+    #surat-edaran-workstation .office-paper-sheet {
+        padding: 10mm 20mm 25mm 30mm;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 12pt;
+        line-height: 1.15;
+    }
+    #surat-edaran-workstation .office-editable-box {
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 12pt;
+        line-height: 1.15;
+    }
 }
 
 /* Modern Native View Transitions */
