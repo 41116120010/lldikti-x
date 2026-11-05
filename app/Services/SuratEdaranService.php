@@ -133,6 +133,14 @@ class SuratEdaranService
     }
 
     /**
+     * Alias for renderPdf() to maintain backward compatibility with mobile API endpoints.
+     */
+    public function generatePdf(Agenda $agenda): string
+    {
+        return $this->renderPdf($agenda);
+    }
+
+    /**
      * Generate PDF file and store it in storage/app/public/surat_edaran/
      */
     public function generateAndStorePdf(Agenda $agenda): ?string
@@ -155,16 +163,44 @@ class SuratEdaranService
     }
 
     /**
-     * Return a binary PDF download response.
+     * Return a binary PDF download or inline preview response.
      */
-    public function downloadPdfResponse(Agenda $agenda): Response
+    public function downloadPdfResponse(Agenda $agenda, bool $forceDownload = false): Response
     {
-        $pdfBytes = $this->renderPdf($agenda);
-        $filename = 'Surat_Undangan_' . Str::slug($agenda->judul_rapat) . '.pdf';
+        $pdfBytes = null;
+
+        // Serve cached digital PDF from storage if present and valid, otherwise render & cache
+        if ($agenda->is_surat_edaran_digital && $agenda->surat_edaran_path && Storage::disk('public')->exists($agenda->surat_edaran_path)) {
+            $cached = Storage::disk('public')->get($agenda->surat_edaran_path);
+            if (is_string($cached) && str_starts_with($cached, '%PDF')) {
+                $pdfBytes = $cached;
+            }
+        }
+
+        if ($pdfBytes === null) {
+            $pdfBytes = $this->renderPdf($agenda);
+
+            if ($agenda->is_surat_edaran_digital && $agenda->exists) {
+                try {
+                    $relativePath = "surat_edaran/surat_digital_{$agenda->id}.pdf";
+                    Storage::disk('public')->put($relativePath, $pdfBytes);
+                    if ($agenda->surat_edaran_path !== $relativePath) {
+                        $agenda->update(['surat_edaran_path' => $relativePath]);
+                    }
+                } catch (\Throwable) {
+                    // Ignore storage write failure during read-only preview
+                }
+            }
+        }
+
+        $filename = 'Surat_Undangan_' . (Str::slug((string) $agenda->judul_rapat) ?: 'Rapat_' . ($agenda->id ?? 'Resmi')) . '.pdf';
+        $disposition = $forceDownload ? 'attachment' : 'inline';
 
         return response($pdfBytes, 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="' . $filename . '"',
+            'Content-Disposition' => $disposition . '; filename="' . $filename . '"',
+            'Cache-Control' => 'private, no-cache, no-store, must-revalidate',
+            'X-Content-Type-Options' => 'nosniff',
         ]);
     }
 

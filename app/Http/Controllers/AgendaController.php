@@ -258,11 +258,34 @@ class AgendaController extends Controller
 
             if ($request->input('surat_edaran_type') === 'digital') {
                 $agenda->update(['surat_edaran_type' => 'digital']);
+                $agenda->load([
+                    'creator.unit',
+                    'pimpinan.unit',
+                    'notulis.unit',
+                    'units',
+                    'invitedUsers.unit',
+                ]);
                 if (empty($agenda->surat_edaran_config)) {
                     app(SuratEdaranService::class)->saveDigitalSurat($agenda, $agenda->getDefaultSuratEdaranConfig());
+                } else {
+                    app(SuratEdaranService::class)->generateAndStorePdf($agenda);
+                }
+
+                if ($request->boolean('open_surat_edaran_after_save')) {
+                    return redirect()->route('admin.agendas.surat-edaran', $agenda)
+                        ->with('success', "Agenda rapat '{$agenda->judul_rapat}' berhasil diperbarui. Silakan sesuaikan isi naskah surat undangan resmi.");
                 }
             } elseif ($request->hasFile('surat_edaran')) {
                 $agenda->update(['surat_edaran_type' => 'upload']);
+            } elseif ($agenda->is_surat_edaran_digital) {
+                $agenda->load([
+                    'creator.unit',
+                    'pimpinan.unit',
+                    'notulis.unit',
+                    'units',
+                    'invitedUsers.unit',
+                ]);
+                app(SuratEdaranService::class)->generateAndStorePdf($agenda);
             }
         } catch (\DomainException $e) {
             return back()->withInput()->with('error', $e->getMessage());
@@ -438,7 +461,25 @@ class AgendaController extends Controller
      */
     public function updateSuratEdaran(UpdateSuratEdaranRequest $request, Agenda $agenda, SuratEdaranService $suratEdaranService): RedirectResponse
     {
-        $suratEdaranService->saveDigitalSurat($agenda, $request->validated(), $request);
+        try {
+            $agenda->load([
+                'creator.unit',
+                'pimpinan.unit',
+                'notulis.unit',
+                'units',
+                'invitedUsers.unit',
+            ]);
+
+            $suratEdaranService->saveDigitalSurat($agenda, $request->validated(), $request);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Gagal menyimpan naskah surat dinas rapat', [
+                'agenda_id' => $agenda->id,
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->withInput()->with('error', 'Terjadi kendala saat menyimpan naskah surat dinas: ' . $e->getMessage());
+        }
 
         $redirectRoute = Auth::user()?->isStaff()
             ? route('agendas.show', $agenda)
@@ -459,6 +500,14 @@ class AgendaController extends Controller
             Gate::authorize('view', $agenda);
         }
 
-        return $suratEdaranService->downloadPdfResponse($agenda);
+        $agenda->load([
+            'creator.unit',
+            'pimpinan.unit',
+            'notulis.unit',
+            'units',
+            'invitedUsers.unit',
+        ]);
+
+        return $suratEdaranService->downloadPdfResponse($agenda, $request->boolean('download'));
     }
 }

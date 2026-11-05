@@ -32,8 +32,6 @@ class DompdfRenderer
      */
     public function render(string $html): string
     {
-        $startedAt = microtime(true);
-
         try {
             $dompdf = new Dompdf($this->options());
             $dompdf->loadHtml($html);
@@ -48,13 +46,6 @@ class DompdfRenderer
         if ($pdf === '' || ! str_starts_with($pdf, '%PDF')) {
             throw new RuntimeException('Mesin Dompdf menghasilkan berkas yang bukan PDF.');
         }
-
-        report(sprintf(
-            'PDF dirender oleh Dompdf dalam %.0f ms, %d byte, %d halaman.',
-            (microtime(true) - $startedAt) * 1000,
-            strlen($pdf),
-            $dompdf->getCanvas()->get_page_count(),
-        ));
 
         return $pdf;
     }

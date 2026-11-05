@@ -58,6 +58,14 @@ final class Html
     ];
 
     /**
+     * Presentational attributes kept on <table>, <td>, and <th> emitted by the
+     * WYSIWYG table picker.
+     */
+    private const TABLE_ATTRIBUTES = [
+        'border', 'cellpadding', 'cellspacing', 'width', 'align', 'valign',
+    ];
+
+    /**
      * Attributes kept only on <a>. `href` is scheme-checked before it survives.
      */
     private const ANCHOR_ATTRIBUTES = [
@@ -81,13 +89,17 @@ final class Html
     ];
 
     /**
-     * CSS properties kept in a style attribute. The editor needs these three for
-     * text colour, highlighting and paragraph alignment; everything else —
-     * position, z-index, background-image, content — is a spoofing or
-     * data-exfiltration vector and is dropped.
+     * CSS properties kept in a style attribute. The editor needs these for
+     * text colour, highlighting, paragraph alignment, table borders/padding,
+     * list indentation, and typography; everything else — position, z-index,
+     * background-image, content — is a spoofing or data-exfiltration vector
+     * and is dropped.
      */
     private const ALLOWED_STYLE_PROPERTIES = [
         'color', 'background-color', 'text-align',
+        'font-family', 'font-size', 'font-weight', 'font-style', 'text-decoration',
+        'line-height', 'width', 'border', 'border-collapse',
+        'padding', 'padding-left', 'margin',
     ];
 
     /**
@@ -267,6 +279,7 @@ final class Html
             $elementSpecific = match ($tag) {
                 'a' => in_array($name, self::ANCHOR_ATTRIBUTES, true),
                 'font' => in_array($name, self::FONT_ATTRIBUTES, true),
+                'table', 'td', 'th', 'tr' => in_array($name, self::TABLE_ATTRIBUTES, true),
                 default => false,
             };
 
@@ -362,6 +375,23 @@ final class Html
                 ? strtolower($value)
                 : null,
             'color', 'background-color' => self::isSafeColor($value) ? $value : null,
+            'border-collapse' => in_array(strtolower($value), ['collapse', 'separate'], true)
+                ? strtolower($value)
+                : null,
+            'font-weight' => in_array(strtolower($value), ['normal', 'bold', 'bolder', 'lighter', '400', '500', '600', '700', '800'], true)
+                ? strtolower($value)
+                : null,
+            'font-style' => in_array(strtolower($value), ['normal', 'italic', 'oblique'], true)
+                ? strtolower($value)
+                : null,
+            'text-decoration' => in_array(strtolower($value), ['none', 'underline', 'line-through'], true)
+                ? strtolower($value)
+                : null,
+            'font-family' => preg_match('/^[a-zA-Z0-9\s,\'"\-]{1,120}$/', $value) ? $value : null,
+            'font-size', 'line-height', 'width', 'padding', 'padding-left', 'margin' => preg_match('/^[0-9a-zA-Z\s\.%\-]{1,40}$/', $value)
+                ? $value
+                : null,
+            'border' => preg_match('/^[0-9a-zA-Z\s\.#%(),\-]{1,60}$/', $value) ? $value : null,
             default => null,
         };
     }

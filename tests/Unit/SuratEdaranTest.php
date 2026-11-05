@@ -6,6 +6,8 @@ use App\Http\Requests\Agenda\UpdateSuratEdaranRequest;
 use App\Models\Agenda;
 use App\Models\User;
 use App\Policies\AgendaPolicy;
+use App\Services\DompdfRenderer;
+use App\Services\SuratEdaranService;
 use App\Support\Html;
 use PHPUnit\Framework\TestCase;
 
@@ -224,5 +226,35 @@ class SuratEdaranTest extends TestCase
         $this->assertSame('Kepala', $resolved['signer_role']);
         $this->assertSame('Afdalisma', $resolved['signer_name']);
         $this->assertSame('197012051992032002', $resolved['signer_nip']);
+    }
+
+    public function test_html_sanitize_preserves_editor_table_and_font_attributes(): void
+    {
+        $html = '<table border="1" cellpadding="6" cellspacing="0" style="width:100%; border-collapse:collapse; margin:10px 0;"><tbody><tr><td style="border:1px solid #cbd5e1; padding:6px 10px;"><font face="Times New Roman" size="4" color="#1e3a8a">Agenda Pembahasan</font></td></tr></tbody></table>';
+        $sanitized = Html::sanitize($html);
+
+        $this->assertStringContainsString('<table border="1" cellpadding="6" cellspacing="0"', $sanitized);
+        $this->assertStringContainsString('border-collapse: collapse', $sanitized);
+        $this->assertStringContainsString('border: 1px solid #cbd5e1', $sanitized);
+        $this->assertStringContainsString('<font face="Times New Roman" size="4" color="#1e3a8a">Agenda Pembahasan</font>', $sanitized);
+    }
+
+    public function test_update_surat_edaran_request_messages_and_defaults(): void
+    {
+        $request = new UpdateSuratEdaranRequest();
+        $messages = $request->messages();
+
+        $this->assertArrayHasKey('custom_logo.image', $messages);
+        $this->assertArrayHasKey('custom_logo.mimes', $messages);
+        $this->assertArrayHasKey('custom_logo.max', $messages);
+        $this->assertArrayHasKey('reset_custom_logo', $request->rules());
+    }
+
+    public function test_surat_edaran_service_has_generate_pdf_alias(): void
+    {
+        $this->assertTrue(method_exists(SuratEdaranService::class, 'generatePdf'));
+        $this->assertTrue(method_exists(SuratEdaranService::class, 'renderPdf'));
+        $this->assertTrue(method_exists(SuratEdaranService::class, 'downloadPdfResponse'));
+        $this->assertTrue(method_exists(DompdfRenderer::class, 'render'));
     }
 }

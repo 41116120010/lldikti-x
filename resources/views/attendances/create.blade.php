@@ -154,7 +154,7 @@
                 </div>
             </div>
 
-            @if($agenda->surat_edaran_path)
+            @if($agenda->surat_edaran_path || $agenda->is_surat_edaran_digital)
                 <div class="pt-3 border-t border-slate-200">
                     <button 
                         type="button" 
@@ -166,8 +166,8 @@
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y1="13"/><line x1="16" y1="17" x2="8" y1="17"/>
                         </svg>
                         <span>Lihat Surat Undangan Resmi</span>
-                        <span class="px-1.5 py-0.2 rounded text-[10px] font-bold uppercase {{ $agenda->is_surat_edaran_pdf ? 'bg-rose-100 text-rose-800' : 'bg-blue-100 text-blue-800' }}">
-                            {{ $agenda->surat_edaran_extension }}
+                        <span class="px-1.5 py-0.2 rounded text-[10px] font-bold uppercase {{ ($agenda->is_surat_edaran_pdf || $agenda->is_surat_edaran_digital) ? 'bg-rose-100 text-rose-800' : 'bg-blue-100 text-blue-800' }}">
+                            {{ $agenda->is_surat_edaran_digital ? 'PDF' : $agenda->surat_edaran_extension }}
                         </span>
                     </button>
                 </div>
@@ -511,7 +511,7 @@ if (document.readyState !== 'loading') {
 window.addEventListener('page:loaded', initAttendanceCheckIn);
 </script>
 
-@if($agenda->surat_edaran_path)
+@if($agenda->surat_edaran_path || $agenda->is_surat_edaran_digital)
     @include('agendas.partials.surat_edaran_preview', ['agenda' => $agenda, 'modalOnly' => true])
 @endif
 

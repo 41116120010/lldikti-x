@@ -2539,6 +2539,7 @@ const SuratEdaranWorkstation = {
         let isSubmittingForm = false;
         let currentZoomVal = 100;
         let updateActiveStates = () => {};
+        let syncModalConfigToFormAndSheet = null;
         window.__suratDirtyState = false;
 
         const updateSaveStateUI = (dirty) => {
@@ -2562,7 +2563,7 @@ const SuratEdaranWorkstation = {
         window.__onSuratEdaranPreSubmit = () => {
             isSubmittingForm = true;
             window.__suratDirtyState = false;
-            syncToHiddenInputs();
+            syncToHiddenInputs(true);
         };
 
         window.addEventListener('beforeunload', (e) => {
@@ -2584,7 +2585,10 @@ const SuratEdaranWorkstation = {
         };
         updateWordCounter();
 
-        const syncToHiddenInputs = () => {
+        const syncToHiddenInputs = (includeModalConfig = false) => {
+            if (includeModalConfig && typeof syncModalConfigToFormAndSheet === 'function') {
+                syncModalConfigToFormAndSheet();
+            }
             const templateType = document.querySelector('#form-template-type')?.value || 'undangan';
 
             if (formPembuka && pembukaBox) {
@@ -3013,6 +3017,91 @@ const SuratEdaranWorkstation = {
 
         // Modal Penyesuaian Naskah Surat Dinas Controllers
         const configModal = document.getElementById('modal-surat-config');
+        const btnChooseCustomLogo = document.getElementById('btn-choose-custom-logo');
+        const btnResetCustomLogo = document.getElementById('btn-reset-custom-logo');
+        const formCustomLogoInput = document.getElementById('form-custom-logo');
+        const formResetCustomLogoInput = document.getElementById('form-reset-custom-logo');
+        const modalLogoPreviewImg = document.getElementById('modal-logo-preview-img');
+        const modalCustomLogoFilename = document.getElementById('modal-custom-logo-filename');
+        const defaultLogoSrc = workstation.dataset.defaultLogoSrc || '/images/tut-wuri-handayani.png';
+
+        if (btnChooseCustomLogo && formCustomLogoInput) {
+            btnChooseCustomLogo.addEventListener('click', (e) => {
+                e.preventDefault();
+                formCustomLogoInput.click();
+            });
+        }
+
+        if (formCustomLogoInput) {
+            formCustomLogoInput.addEventListener('change', () => {
+                const file = formCustomLogoInput.files && formCustomLogoInput.files[0];
+                if (!file) return;
+
+                if (file.size > 512 * 1024) {
+                    if (typeof ModalManager !== 'undefined' && typeof ModalManager.alert === 'function') {
+                        ModalManager.alert('Ukuran berkas logo kop surat maksimal 512 KB.', 'Ukuran Berkas Terlalu Besar', 'error');
+                    } else {
+                        alert('Ukuran berkas logo kop surat maksimal 512 KB.');
+                    }
+                    formCustomLogoInput.value = '';
+                    return;
+                }
+
+                if (formResetCustomLogoInput) {
+                    formResetCustomLogoInput.value = '0';
+                }
+
+                const modalShowLogoCheckbox = document.getElementById('modal_show_logo');
+                if (modalShowLogoCheckbox) {
+                    modalShowLogoCheckbox.checked = true;
+                }
+
+                if (modalCustomLogoFilename) {
+                    modalCustomLogoFilename.textContent = `Berkas dipilih: ${file.name} (${Math.round(file.size / 1024)} KB)`;
+                }
+
+                if (btnResetCustomLogo) {
+                    btnResetCustomLogo.classList.remove('hidden');
+                }
+
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const dataUrl = ev.target?.result;
+                    if (typeof dataUrl === 'string') {
+                        if (modalLogoPreviewImg) modalLogoPreviewImg.src = dataUrl;
+                        const sheetLogoImg = document.getElementById('sheet-logo-img');
+                        if (sheetLogoImg) sheetLogoImg.src = dataUrl;
+                    }
+                };
+                reader.readAsDataURL(file);
+                updateSaveStateUI(true);
+            });
+        }
+
+        if (btnResetCustomLogo) {
+            btnResetCustomLogo.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (formCustomLogoInput) {
+                    formCustomLogoInput.value = '';
+                }
+                if (formResetCustomLogoInput) {
+                    formResetCustomLogoInput.value = '1';
+                }
+                if (modalLogoPreviewImg) {
+                    modalLogoPreviewImg.src = defaultLogoSrc;
+                }
+                const sheetLogoImg = document.getElementById('sheet-logo-img');
+                if (sheetLogoImg) {
+                    sheetLogoImg.src = defaultLogoSrc;
+                }
+                if (modalCustomLogoFilename) {
+                    modalCustomLogoFilename.textContent = 'Logo standar Tut Wuri Handayani (Kemdiktisaintek)';
+                }
+                btnResetCustomLogo.classList.add('hidden');
+                updateSaveStateUI(true);
+            });
+        }
+
         window.openSuratConfigModal = () => {
             const modal = document.getElementById('modal-surat-config');
             if (modal) {
@@ -3029,7 +3118,7 @@ const SuratEdaranWorkstation = {
             }
         };
 
-        window.applySuratConfigToSheet = () => {
+        syncModalConfigToFormAndSheet = () => {
             // 1. Template Type
             const selectedTemplate = document.querySelector('input[name="modal_template_type"]:checked')?.value || 'undangan';
             const formTemplateInput = document.getElementById('form-template-type');
@@ -3043,11 +3132,9 @@ const SuratEdaranWorkstation = {
             if (selectedTemplate === 'edaran') {
                 if (blockUndangan) blockUndangan.style.display = 'none';
                 if (blockEdaran) blockEdaran.style.display = 'block';
-                if (altEdaranBox) setActiveEditor(altEdaranBox);
             } else {
                 if (blockEdaran) blockEdaran.style.display = 'none';
                 if (blockUndangan) blockUndangan.style.display = 'block';
-                if (bodyBox) setActiveEditor(bodyBox);
             }
 
             // 2. Kop Settings
@@ -3192,6 +3279,16 @@ const SuratEdaranWorkstation = {
             if (sheetTembusanBlock) sheetTembusanBlock.style.display = tembusan.trim() ? 'table-row' : 'none';
             if (sheetTembusanText) sheetTembusanText.innerHTML = escapeHtml(tembusan).replace(/\n/g, '<br>');
 
+            return selectedTemplate;
+        };
+
+        window.applySuratConfigToSheet = () => {
+            const selectedTemplate = syncModalConfigToFormAndSheet();
+            if (selectedTemplate === 'edaran') {
+                if (altEdaranBox) setActiveEditor(altEdaranBox);
+            } else {
+                if (bodyBox) setActiveEditor(bodyBox);
+            }
             syncToHiddenInputs();
             updateWordCounter();
             updateSaveStateUI(true);
@@ -3220,7 +3317,7 @@ const SuratEdaranWorkstation = {
         const saveBtn = workstation.querySelector('button[form="surat-edaran-form"]');
         if (saveBtn) {
             saveBtn.addEventListener('click', () => {
-                syncToHiddenInputs();
+                syncToHiddenInputs(true);
             });
         }
 
@@ -3230,7 +3327,7 @@ const SuratEdaranWorkstation = {
                 if (workstation.contains(document.activeElement) || document.activeElement === document.body) {
                     e.preventDefault();
                     if (form) {
-                        syncToHiddenInputs();
+                        syncToHiddenInputs(true);
                         if (typeof form.requestSubmit === 'function') {
                             form.requestSubmit();
                         } else {
@@ -3243,7 +3340,7 @@ const SuratEdaranWorkstation = {
 
         if (form) {
             form.addEventListener('submit', () => {
-                syncToHiddenInputs();
+                syncToHiddenInputs(true);
                 if (form.dataset.confirmed === 'true') {
                     isSubmittingForm = true;
                     window.__suratDirtyState = false;

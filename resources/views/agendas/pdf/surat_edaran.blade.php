@@ -170,6 +170,22 @@
         .prose-content li {
             margin-bottom: 2pt;
         }
+        .prose-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 6pt 0;
+        }
+        .prose-content th, .prose-content td {
+            border: 1px solid #000000;
+            padding: 4pt 6pt;
+            vertical-align: top;
+        }
+        .prose-content font[size="1"] { font-size: 8pt; }
+        .prose-content font[size="2"] { font-size: 10pt; }
+        .prose-content font[size="3"] { font-size: 12pt; }
+        .prose-content font[size="4"] { font-size: 14pt; }
+        .prose-content font[size="5"] { font-size: 18pt; }
+        .prose-content font[size="6"] { font-size: 24pt; }
 
         /*
          * BLOK PENANDATANGAN & TEMBUSAN (P#14–22)

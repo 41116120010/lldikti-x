@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Agenda;
 
+use App\Models\Agenda;
 use App\Support\Html;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -76,35 +77,69 @@ class UpdateSuratEdaranRequest extends FormRequest
         ];
     }
 
+    public function messages(): array
+    {
+        return [
+            'custom_logo.image' => 'Berkas logo kustom wajib berupa gambar.',
+            'custom_logo.mimes' => 'Format logo kustom harus berupa JPEG, PNG, atau WebP.',
+            'custom_logo.max' => 'Ukuran berkas logo kustom maksimal 512 KB.',
+        ];
+    }
+
     /**
-     * Sanitize rich-text content before validation.
+     * Sanitize rich-text content and supply resilient defaults for hidden metadata fields before validation.
      */
     protected function prepareForValidation(): void
     {
-        $sanitized = [];
+        $agenda = $this->route('agenda');
+        $defaults = $agenda instanceof Agenda
+            ? $agenda->resolved_surat_edaran_config
+            : (new Agenda)->getDefaultSuratEdaranConfig();
+
+        $merged = [];
+
+        $templateType = trim((string) $this->input('template_type', ''));
+        if (! in_array($templateType, ['undangan', 'edaran'], true)) {
+            $merged['template_type'] = $defaults['template_type'] ?? 'undangan';
+        }
+
+        $requiredFallbacks = [
+            'nomor_surat' => $defaults['nomor_surat'] ?? '-',
+            'perihal' => $defaults['perihal'] ?? ('Undangan Rapat ' . ($agenda instanceof Agenda ? $agenda->judul_rapat : 'Koordinasi Kedinasan')),
+            'tanggal_surat' => $defaults['tanggal_surat'] ?? now()->translatedFormat('d F Y'),
+            'tujuan_surat' => $defaults['tujuan_surat'] ?? 'Pimpinan Unit Kerja dan Seluruh Pegawai ASN di Lingkungan LLDIKTI Wilayah X',
+            'signer_role' => $defaults['signer_role'] ?? 'Kepala',
+            'signer_name' => $defaults['signer_name'] ?? 'Afdalisma',
+        ];
+
+        foreach ($requiredFallbacks as $field => $fallbackValue) {
+            if (! $this->filled($field)) {
+                $merged[$field] = $fallbackValue;
+            }
+        }
 
         if ($this->has('pembuka')) {
-            $sanitized['pembuka'] = Html::sanitize((string) $this->input('pembuka'));
+            $merged['pembuka'] = Html::sanitize((string) $this->input('pembuka'));
         }
 
         if ($this->has('surat_edaran_content')) {
-            $sanitized['surat_edaran_content'] = Html::sanitize((string) $this->input('surat_edaran_content'));
+            $merged['surat_edaran_content'] = Html::sanitize((string) $this->input('surat_edaran_content'));
         }
 
         if ($this->has('catatan')) {
-            $sanitized['catatan'] = Html::sanitize((string) $this->input('catatan'));
+            $merged['catatan'] = Html::sanitize((string) $this->input('catatan'));
         }
 
         if ($this->has('penutup')) {
-            $sanitized['penutup'] = Html::sanitize((string) $this->input('penutup'));
+            $merged['penutup'] = Html::sanitize((string) $this->input('penutup'));
         }
 
         if ($this->has('lampiran_content')) {
-            $sanitized['lampiran_content'] = Html::sanitize((string) $this->input('lampiran_content'));
+            $merged['lampiran_content'] = Html::sanitize((string) $this->input('lampiran_content'));
         }
 
-        if (! empty($sanitized)) {
-            $this->merge($sanitized);
+        if (! empty($merged)) {
+            $this->merge($merged);
         }
     }
 }
