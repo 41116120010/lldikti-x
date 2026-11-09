@@ -8,6 +8,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 use PhpOffice\PhpWord\IOFactory;
 use PhpOffice\PhpWord\PhpWord;
+use PhpOffice\PhpWord\Settings;
 use PhpOffice\PhpWord\SimpleType\LineSpacingRule;
 use PhpOffice\PhpWord\SimpleType\TblWidth;
 use RuntimeException;
@@ -78,6 +79,12 @@ class DocxExportService
      */
     private function build(array $data): string
     {
+        Settings::setZipClass(
+            extension_loaded('zip')
+                ? Settings::ZIPARCHIVE
+                : Settings::PCLZIP
+        );
+
         $document = new PhpWord;
         $section = $document->addSection();
 
@@ -331,13 +338,13 @@ class DocxExportService
             $row = $table->addRow(null, $this->rowStyle());
 
             $this->attendanceBodyCell($row, $widths, 'no', (string) ($index + 1), 'center');
-            $this->attendanceBodyCell($row, $widths, 'name', $this->plain($user->name), 'left', true);
+            $this->attendanceBodyCell($row, $widths, 'name', $this->plain($user?->name ?? 'Peserta (Anonim)'), 'left', true);
 
             if ($config['show_nip'] ?? true) {
-                $this->attendanceBodyCell($row, $widths, 'nip', $this->plain($user->nip), 'left');
+                $this->attendanceBodyCell($row, $widths, 'nip', $this->plain($user?->nip ?? '-'), 'left');
             }
             if ($config['show_unit'] ?? true) {
-                $this->attendanceBodyCell($row, $widths, 'unit', $this->plain($user->unit?->kode_unit ?? 'Pusat'), 'left');
+                $this->attendanceBodyCell($row, $widths, 'unit', $this->plain($user?->unit?->kode_unit ?? 'Pusat'), 'left');
             }
             if ($config['show_attendance_time'] ?? true) {
                 $this->attendanceBodyCell($row, $widths, 'time', $entry['model']->signed_at?->format('H:i') ?? '-', 'center');
@@ -829,10 +836,17 @@ class DocxExportService
             return;
         }
 
-        $cell->addTextRun($this->style(1, false, null, $align)[1])->addImage($path, [
-            'width' => $wPt,
-            'height' => $hPt,
-        ]);
+        try {
+            $cell->addTextRun($this->style(1, false, null, $align)[1])->addImage($path, [
+                'width' => $wPt,
+                'height' => $hPt,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Gagal menyematkan gambar ke dalam dokumen Word: '.$e->getMessage(), [
+                'path' => $path,
+                'extension' => $extension,
+            ]);
+        }
     }
 
     /**
@@ -979,8 +993,33 @@ class DocxExportService
             return null;
         }
 
-        $path = tempnam(sys_get_temp_dir(), 'siperapat_img_').'.'.$extension;
-        file_put_contents($path, $binary);
+        // WebP is not supported by PhpWord; attempt on-the-fly conversion via GD if loaded
+        if (str_starts_with($binary, 'RIFF') && substr($binary, 8, 4) === 'WEBP') {
+            if (extension_loaded('gd') && function_exists('imagecreatefromwebp')) {
+                $gdImg = @imagecreatefromstring($binary);
+                if ($gdImg) {
+                    ob_start();
+                    imagepng($gdImg);
+                    $converted = ob_get_clean();
+                    imagedestroy($gdImg);
+                    if ($converted !== false && $converted !== '') {
+                        $binary = $converted;
+                        $extension = 'png';
+                    }
+                }
+            }
+        }
+
+        $base = tempnam(sys_get_temp_dir(), 'siperapat_img_');
+        if ($base === false) {
+            return null;
+        }
+        $this->temporaryFiles[] = $base;
+
+        $path = $base.'.'.$extension;
+        if (file_put_contents($path, $binary) === false) {
+            return null;
+        }
         $this->temporaryFiles[] = $path;
 
         return $path;
@@ -989,7 +1028,7 @@ class DocxExportService
     private function cleanTemporaryFiles(): void
     {
         foreach ($this->temporaryFiles as $path) {
-            if (is_string($path) && is_file($path)) {
+            if (is_string($path) && file_exists($path)) {
                 @unlink($path);
             }
         }

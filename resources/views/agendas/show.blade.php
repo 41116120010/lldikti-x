@@ -94,12 +94,12 @@
 
 
                 <!-- Official Meeting Exports (PDF & Word) -->
-                <a href="{{ route('admin.reports.export.pdf', $agenda) }}" class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold text-white bg-white/10 hover:bg-white/20 border border-white/20 transition" title="Unduh Berita Acara &amp; Rekap Kehadiran (PDF)">
+                <a href="{{ route('admin.reports.export.pdf', $agenda) }}" class="inline-flex items-center gap-2 px-3.5 py-2.5 min-h-[44px] rounded-lg text-xs font-bold text-white bg-white/10 hover:bg-white/20 border border-white/20 transition" title="Unduh Berita Acara &amp; Rekap Kehadiran (PDF)">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
                     <span>Ekspor PDF</span>
                 </a>
 
-                <a href="{{ route('admin.reports.export.word', $agenda) }}" class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold text-white bg-white/10 hover:bg-white/20 border border-white/20 transition" title="Unduh Berita Acara Format Microsoft Word (.doc)">
+                <a href="{{ route('admin.reports.export.word', $agenda) }}" class="inline-flex items-center gap-2 px-3.5 py-2.5 min-h-[44px] rounded-lg text-xs font-bold text-white bg-white/10 hover:bg-white/20 border border-white/20 transition" title="Unduh Berita Acara Format Microsoft Word (.docx)">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="8 13 12 17 16 13"/><line x1="12" y1="9" x2="12" y2="17"/></svg>
                     <span>Ekspor Word</span>
                 </a>

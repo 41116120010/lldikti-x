@@ -115,7 +115,7 @@ class ReportAndExportTest extends TestCase
         $response->assertSee($agenda->judul_rapat);
         $response->assertSee('Daftar Rekapitulasi');
         $response->assertSee('Unduh PDF (.pdf)');
-        $response->assertSee('Unduh Format Word (.doc)');
+        $response->assertSee('Unduh Format Word (.docx)');
         $response->assertSee('Kelola Agenda');
         $response->assertSee('Notulensi Rapat');
         $response->assertSee('Dokumentasi Foto');

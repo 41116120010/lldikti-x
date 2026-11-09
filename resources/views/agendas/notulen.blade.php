@@ -152,7 +152,7 @@
                     <a 
                         href="{{ route('admin.reports.export.pdf', $agenda) }}" 
                         data-export-link="pdf"
-                        class="flex items-center gap-2 px-3.5 py-2.5 text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium"
+                        class="flex items-center gap-2 px-3.5 py-2.5 min-h-[44px] text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium"
                     >
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" class="text-rose-600"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>
                         <span>Unduh PDF Resmi (.pdf)</span>
@@ -160,10 +160,10 @@
                     <a 
                         href="{{ route('admin.reports.export.word', $agenda) }}" 
                         data-export-link="word"
-                        class="flex items-center gap-2 px-3.5 py-2.5 text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium"
+                        class="flex items-center gap-2 px-3.5 py-2.5 min-h-[44px] text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium"
                     >
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" class="text-blue-600"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
-                        <span>Unduh Dokumen Word (.doc)</span>
+                        <span>Unduh Dokumen Word (.docx)</span>
                     </a>
                 </div>
             </div>
@@ -1947,7 +1947,7 @@
                 if (!window.__officeDirtyState) return;
                 e.preventDefault();
                 const exportUrl = link.getAttribute('href');
-                const formatName = link.dataset.exportLink === 'pdf' ? 'PDF Resmi (.pdf)' : 'Dokumen Word (.doc)';
+                const formatName = link.dataset.exportLink === 'pdf' ? 'PDF Resmi (.pdf)' : 'Dokumen Word (.docx)';
 
                 if (typeof window.showModal === 'function') {
                     window.showModal({
