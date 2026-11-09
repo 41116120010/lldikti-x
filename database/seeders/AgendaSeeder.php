@@ -36,7 +36,7 @@ class AgendaSeeder extends Seeder
 
         $units = Unit::all()->keyBy('kode_unit');
         $users = User::all()->keyBy('username');
-        $admin = $users->get('afdalisma') ?? User::where('role', 'administrator')->firstOrFail();
+        $admin = $users->get('apandi') ?? User::where('role', 'administrator')->firstOrFail();
 
         $this->ensureSampleAttendanceAssets();
 
@@ -385,7 +385,7 @@ class AgendaSeeder extends Seeder
                             'selfie_path' => 'attendances/seeded/sample-selfie.jpg',
                             'signature_path' => 'attendances/seeded/sample-signature.png',
                             'signed_at' => $signedAt,
-                            'ip_address' => '10.10.1.' . (10 + $idx),
+                            'ip_address' => '10.10.1.'.(10 + $idx),
                             'user_agent' => 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
                         ]
                     );

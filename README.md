@@ -125,7 +125,7 @@ Sistem mengelola 8 tabel domain relasional utama beserta tabel infrastruktur kea
 ```
 
 * **`units`**: Menyimpan data 11 subbagian resmi dan kelompok kerja penjaminan mutu di lingkungan LLDIKTI Wilayah X.
-* **`users`**: Menyimpan 79 data aparatur/pegawai resmi instansi (1 Administrator dan 78 Staff/Admin), NIP (18 digit), username, email kedinasan, password hash (Bcrypt), role, dan status keaktifan.
+* **`users`**: Menyimpan 69 data aparatur/pegawai resmi instansi (1 Administrator dan 68 Staff/Admin), NIP (18 digit), username, email kedinasan, password hash (Bcrypt), role, dan status keaktifan.
 * **`agendas`**: Menyimpan data induk rapat, pembuat (`created_by`), pemimpin rapat (`pimpinan_id`), notulis rapat (`notulis_id`), sasaran peserta (`target_type`: `all_units`, `selected_units`, `selected_users`), format (`offline`/`online`/`hybrid`), tautan daring, ruangan (`lokasi_ruang` & `lokasi_ruang_normalized`), tipe surat edaran (`surat_edaran_type`: `upload`/`digital`), isi naskah digital (`surat_edaran_content`), konfigurasi tata naskah dinas kedinasan (`surat_edaran_config`), notulensi, kesimpulan RTL, dan konfigurasi berita acara (`report_config`).
 * **`agenda_units`**: Tabel pivot pemetaan undangan rapat lintas unit kerja (`target_type = selected_units`).
 * **`agenda_users`**: Tabel pivot pemetaan undangan rapat khusus perorangan pegawai ASN (`target_type = selected_users`) untuk rapat dinas berbasis surat tugas personal.
@@ -252,7 +252,7 @@ Sistem mendukung 3 pilihan sasaran peserta yang adaptif terhadap berbagai skenar
    ```bash
    php artisan migrate --seed
    ```
-   *Seeder utama sistem (`DatabaseSeeder`) secara otomatis menginisialisasi 11 subbagian resmi + Pokja Penjaminan Mutu (`UnitSeeder`) dan 79 akun aparatur/pegawai resmi LLDIKTI Wilayah X (`UserSeeder`). Data agenda rapat sengaja tidak dimasukkan ke `DatabaseSeeder` agar sistem memulai operasional dari kondisi bersih (*pristine zero-agenda state*).*
+   *Seeder utama sistem (`DatabaseSeeder`) secara otomatis menginisialisasi 11 subbagian resmi + Pokja Penjaminan Mutu (`UnitSeeder`) dan 69 akun aparatur/pegawai resmi LLDIKTI Wilayah X (`UserSeeder`). Data agenda rapat sengaja tidak dimasukkan ke `DatabaseSeeder` agar sistem memulai operasional dari kondisi bersih (*pristine zero-agenda state*).*
 
    *Apabila membutuhkan data simulasi untuk pengujian antarmuka atau uji beban (*load testing*), jalankan seeder atau generator agenda secara terpisah:*
    ```bash

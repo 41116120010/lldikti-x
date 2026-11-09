@@ -1,0 +1,656 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+
+/**
+ * Pembaruan Master Data Pegawai (69 Pegawai Resmi ASN LLDIKTI Wilayah X)
+ * dan Transisi Peran Administrator Utama Sistem ke Sdr. Apandi.
+ *
+ * Sesuai arahan kepegawaian resmi:
+ * 1. Administrator Utama Sistem dialihkan ke Sdr. Apandi (NIP 198804022019031016).
+ *    Administrator beroperasi lintas unit (unit_id = null).
+ * 2. Ibu Afdalisma, SH, M.Pd (NIP 197012051992032002) beralih ke role staff
+ *    pada Bagian Tata Usaha dan BMN (BAG-TU).
+ * 3. 16 Pegawai baru (PPPK & CPNS) disinkronkan ke tabel users.
+ * 4. 26 Pegawai yang purna tugas/mutasi dinonaktifkan (is_active = false)
+ *    secara aman tanpa menghapus baris (zero data loss untuk riwayat rapat lampau).
+ */
+return new class extends Migration
+{
+    /**
+     * Data 69 pegawai resmi hasil audit kepegawaian terkini.
+     *
+     * @return array<int, array{nip: string, name: string, username: string, email: string, role: string, unit_code: string|null}>
+     */
+    private function getOfficialRoster(): array
+    {
+        return [
+            [
+                'nip' => '198804022019031016',
+                'name' => 'Apandi, ST',
+                'username' => 'apandi',
+                'email' => 'apandi@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'administrator',
+                'unit_code' => null,
+            ],
+            [
+                'nip' => '197012051992032002',
+                'name' => 'Afdalisma, SH, M.Pd',
+                'username' => 'afdalisma',
+                'email' => 'afdalisma@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'BAG-TU',
+            ],
+            [
+                'nip' => '198209262008122002',
+                'name' => 'Rahmi, SE, M.Si',
+                'username' => 'rahmi',
+                'email' => 'rahmi@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-SARPRAS',
+            ],
+            [
+                'nip' => '196909021992031001',
+                'name' => 'Hendri Wandi, ST',
+                'username' => 'hendri_wandi',
+                'email' => 'hendri_wandi@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'POKJA-AKM',
+            ],
+            [
+                'nip' => '198012292010012008',
+                'name' => 'Wilda Nurhayati, S.Pd, MM',
+                'username' => 'wilda_nurhayati',
+                'email' => 'wilda_nurhayati@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'BAG-TU',
+            ],
+            [
+                'nip' => '197302021998031007',
+                'name' => 'Evrinaldi, S.Si',
+                'username' => 'evrinaldi',
+                'email' => 'evrinaldi@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'POKJA-AKM',
+            ],
+            [
+                'nip' => '197003081991031001',
+                'name' => 'Reri Anton, ST, MM',
+                'username' => 'reri_anton',
+                'email' => 'reri_anton@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'POKJA-PTK',
+            ],
+            [
+                'nip' => '196708231991032001',
+                'name' => 'Ely Susanti, SE, MM',
+                'username' => 'ely_susanti',
+                'email' => 'ely_susanti@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'BAG-AKM',
+            ],
+            [
+                'nip' => '198908142010122001',
+                'name' => 'Agnes Fitriani, S.Kom',
+                'username' => 'agnes_fitriani',
+                'email' => 'agnes_fitriani@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-KMH',
+            ],
+            [
+                'nip' => '197810172010121002',
+                'name' => 'Henri Ilham Caniago, S.Kom',
+                'username' => 'henri_ilham_caniago',
+                'email' => 'henri_ilham_caniago@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-SIKS',
+            ],
+            [
+                'nip' => '197305092008032002',
+                'name' => 'Anita, Spd, M.A',
+                'username' => 'anita',
+                'email' => 'anita@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'POKJA-KLB',
+            ],
+            [
+                'nip' => '198607162010122001',
+                'name' => 'Fauzia Husna, S. Farm',
+                'username' => 'fauzia_husna',
+                'email' => 'fauzia_husna@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-KMH',
+            ],
+            [
+                'nip' => '197606032010122001',
+                'name' => 'Irna Humairah, S.Si, M.Biomed',
+                'username' => 'irna_humairah',
+                'email' => 'irna_humairah@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-KMH',
+            ],
+            [
+                'nip' => '198309012010122003',
+                'name' => 'Resa Amelia, S.Si, M.Si',
+                'username' => 'resa_amelia',
+                'email' => 'resa_amelia@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-KMH',
+            ],
+            [
+                'nip' => '199101122015042002',
+                'name' => 'Andika Persia, S.I.Kom',
+                'username' => 'andika_persia',
+                'email' => 'andika_persia@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-HKTL',
+            ],
+            [
+                'nip' => '197805032005011003',
+                'name' => 'Eri Suryadi, S.P',
+                'username' => 'eri_suryadi',
+                'email' => 'eri_suryadi@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'POKJA-PTK',
+            ],
+            [
+                'nip' => '198802252015041002',
+                'name' => 'Jerry Citra, S.Kom',
+                'username' => 'jerry_citra',
+                'email' => 'jerry_citra@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-SIKS',
+            ],
+            [
+                'nip' => '199105072015041002',
+                'name' => 'Kasreno Ofet Mei, S.IP',
+                'username' => 'kasreno_ofet_mei',
+                'email' => 'kasreno_ofet_mei@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-KMH',
+            ],
+            [
+                'nip' => '198910312015042002',
+                'name' => 'Putri Prima Yulda, S.Hum',
+                'username' => 'putri_prima_yulda',
+                'email' => 'putri_prima_yulda@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-KMH',
+            ],
+            [
+                'nip' => '198906142015042003',
+                'name' => 'Rina Wahyuni, S.I.Kom',
+                'username' => 'rina_wahyuni',
+                'email' => 'rina_wahyuni@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'POKJA-KLB',
+            ],
+            [
+                'nip' => '198109142010121003',
+                'name' => 'Wandi, S.Kom',
+                'username' => 'wandi',
+                'email' => 'wandi@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-PP',
+            ],
+            [
+                'nip' => '199412132019032022',
+                'name' => 'Risma Testir',
+                'username' => 'risma_testir',
+                'email' => 'risma_testir@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-SIKS',
+            ],
+            [
+                'nip' => '199511022022032007',
+                'name' => 'Yolanda Noveliza, A.Md',
+                'username' => 'yolanda_noveliza',
+                'email' => 'yolanda_noveliza@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-KMH',
+            ],
+            [
+                'nip' => '198705032022031003',
+                'name' => 'Mukhlis, Spd',
+                'username' => 'mukhlis',
+                'email' => 'mukhlis@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'POKJA-AKM',
+            ],
+            [
+                'nip' => '199810202022032014',
+                'name' => 'Nurhayana Thoybah, S.Psi',
+                'username' => 'nurhayana_thoybah',
+                'email' => 'nurhayana_thoybah@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'POKJA-KLB',
+            ],
+            [
+                'nip' => '199303212022031005',
+                'name' => 'Ridwan Fadlil, S.Pd',
+                'username' => 'ridwan_fadlil',
+                'email' => 'ridwan_fadlil@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-SIKS',
+            ],
+            [
+                'nip' => '199601062022032013',
+                'name' => 'Sabila Khaira, S.Psi',
+                'username' => 'sabila_khaira',
+                'email' => 'sabila_khaira@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'POKJA-KLB',
+            ],
+            [
+                'nip' => '198704112022031001',
+                'name' => 'Urip Rahmanda, S.E',
+                'username' => 'urip_rahmanda',
+                'email' => 'urip_rahmanda@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-KMH',
+            ],
+            [
+                'nip' => '199805032022032016',
+                'name' => 'Vinny Putri Alda, S.H',
+                'username' => 'vinny_putri_alda',
+                'email' => 'vinny_putri_alda@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'POKJA-KLB',
+            ],
+            [
+                'nip' => '198706122009122005',
+                'name' => 'Wenny Aryan, S.Sos',
+                'username' => 'wenny_aryan',
+                'email' => 'wenny_aryan@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'BAG-TU',
+            ],
+            [
+                'nip' => '199502052019032020',
+                'name' => 'Maritsa Febra Gemaya, SE',
+                'username' => 'maritsa_febra_gemaya',
+                'email' => 'maritsa_febra_gemaya@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-PP',
+            ],
+            [
+                'nip' => '198110252010121002',
+                'name' => 'Putra Heriyadi, A.Md',
+                'username' => 'putra_heriyadi',
+                'email' => 'putra_heriyadi@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'POKJA-AKM',
+            ],
+            [
+                'nip' => '198803282019032015',
+                'name' => 'Setriamela Marissa, SE',
+                'username' => 'setriamela_marissa',
+                'email' => 'setriamela_marissa@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-PP',
+            ],
+            [
+                'nip' => '198605242010122008',
+                'name' => 'Suci Rahmadani, A. Md',
+                'username' => 'suci_rahmadani',
+                'email' => 'suci_rahmadani@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-KMH',
+            ],
+            [
+                'nip' => '198610142009121003',
+                'name' => 'Albert Oktavian, SE',
+                'username' => 'albert_oktavian',
+                'email' => 'albert_oktavian@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-KMH',
+            ],
+            [
+                'nip' => '198604092015041002',
+                'name' => 'Zul Ikram, S.Si',
+                'username' => 'zul_ikram',
+                'email' => 'zul_ikram@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-KMH',
+            ],
+            [
+                'nip' => '198308082010121003',
+                'name' => 'Haris Roberto, S.I.Kom, M.I.Kom',
+                'username' => 'haris_roberto',
+                'email' => 'haris_roberto@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'BAG-TU',
+            ],
+            [
+                'nip' => '198808112010122006',
+                'name' => 'Adelia Pramita Sari, SE, M.S.Ak',
+                'username' => 'adelia_pramita_sari',
+                'email' => 'adelia_pramita_sari@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'BAG-TU',
+            ],
+            [
+                'nip' => '198608082009122003',
+                'name' => 'Cory Masyithah, SE',
+                'username' => 'cory_masyithah',
+                'email' => 'cory_masyithah@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-PP',
+            ],
+            [
+                'nip' => '198504302010121002',
+                'name' => 'Hamdani, S.Kom',
+                'username' => 'hamdani',
+                'email' => 'hamdani@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-HKTL',
+            ],
+            [
+                'nip' => '198107262010121002',
+                'name' => 'Yofan Hamaska, S.Kom, M.Cio',
+                'username' => 'yofan_hamaska',
+                'email' => 'yofan_hamaska@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-PP',
+            ],
+            [
+                'nip' => '197707092009101001',
+                'name' => 'Yulmaizar, S.Pt, MP',
+                'username' => 'yulmaizar',
+                'email' => 'yulmaizar@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-SIKS',
+            ],
+            [
+                'nip' => '196908241991122001',
+                'name' => 'Adek Irma, SH',
+                'username' => 'adek_irma',
+                'email' => 'adek_irma@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'POKJA-KLB',
+            ],
+            [
+                'nip' => '198005202008121002',
+                'name' => 'Budhi NK, S.Si',
+                'username' => 'budhi_nk',
+                'email' => 'budhi_nk@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-KMH',
+            ],
+            [
+                'nip' => '196908081991031002',
+                'name' => 'Gusri, SE',
+                'username' => 'gusri',
+                'email' => 'gusri@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-PP',
+            ],
+            [
+                'nip' => '197509172002121002',
+                'name' => 'Rahman, SH',
+                'username' => 'rahman',
+                'email' => 'rahman@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-HKTL',
+            ],
+            [
+                'nip' => '197206221994031002',
+                'name' => 'Rukman Wijaya, SE',
+                'username' => 'rukman_wijaya',
+                'email' => 'rukman_wijaya@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-SIKS',
+            ],
+            [
+                'nip' => '197008131992031003',
+                'name' => 'Taufik, S.Sos',
+                'username' => 'taufik',
+                'email' => 'taufik@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'POKJA-AKM',
+            ],
+            [
+                'nip' => '198210102008122002',
+                'name' => 'Zulhidayati, ST',
+                'username' => 'zulhidayati',
+                'email' => 'zulhidayati@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-PP',
+            ],
+            [
+                'nip' => '197701202014091002',
+                'name' => 'Al Irsyad',
+                'username' => 'al_irsyad',
+                'email' => 'al_irsyad@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'BAG-TU',
+            ],
+            [
+                'nip' => '197009192014091004',
+                'name' => 'Yondri',
+                'username' => 'yondri',
+                'email' => 'yondri@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'BAG-TU',
+            ],
+            [
+                'nip' => '199501292022032012',
+                'name' => 'Kasih Citra Purnama, A.Md.Si',
+                'username' => 'kasih_citra_purnama',
+                'email' => 'kasih_citra_purnama@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-KMH',
+            ],
+            [
+                'nip' => '199907272022032014',
+                'name' => 'Orintia Juwenti, A.Md',
+                'username' => 'orintia_juwenti',
+                'email' => 'orintia_juwenti@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-KMH',
+            ],
+            [
+                'nip' => '199912082022031003',
+                'name' => 'Rezi Desfonta, A.Md',
+                'username' => 'rezi_desfonta',
+                'email' => 'rezi_desfonta@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'BAG-TU',
+            ],
+            [
+                'nip' => '198605122024211023',
+                'name' => 'Hendri Dunan',
+                'username' => 'hendri_dunan',
+                'email' => 'hendri_dunan@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-SIKS',
+            ],
+            [
+                'nip' => '198906052024211029',
+                'name' => 'Roni Kurniawan',
+                'username' => 'roni_kurniawan',
+                'email' => 'roni_kurniawan@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-SIKS',
+            ],
+            [
+                'nip' => '199202182024212048',
+                'name' => 'Ranalia',
+                'username' => 'ranalia',
+                'email' => 'ranalia@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'BAG-TU',
+            ],
+            [
+                'nip' => '199209072024211025',
+                'name' => 'Septigen Sandra',
+                'username' => 'septigen_sandra',
+                'email' => 'septigen_sandra@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-SIKS',
+            ],
+            [
+                'nip' => '199607102024212047',
+                'name' => 'Cesmi Aulia',
+                'username' => 'cesmi_aulia',
+                'email' => 'cesmi_aulia@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'BAG-TU',
+            ],
+            [
+                'nip' => '199903072024212024',
+                'name' => 'Nike Wahyuni',
+                'username' => 'nike_wahyuni',
+                'email' => 'nike_wahyuni@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-SIKS',
+            ],
+            [
+                'nip' => '200006172024212010',
+                'name' => 'Saras Dheatri',
+                'username' => 'saras_dheatri',
+                'email' => 'saras_dheatri@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-HKTL',
+            ],
+            [
+                'nip' => '197805252024212008',
+                'name' => 'Mona Elsyah',
+                'username' => 'mona_elsyah',
+                'email' => 'mona_elsyah@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'BAG-TU',
+            ],
+            [
+                'nip' => '198105312024211005',
+                'name' => 'Efriwel Dendi',
+                'username' => 'efriwel_dendi',
+                'email' => 'efriwel_dendi@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'BAG-TU',
+            ],
+            [
+                'nip' => '198602272024211014',
+                'name' => 'Syamsul Bahri',
+                'username' => 'syamsul_bahri',
+                'email' => 'syamsul_bahri@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-HKTL',
+            ],
+            [
+                'nip' => '199312092025212049',
+                'name' => 'Devani Wulandari',
+                'username' => 'devani_wulandari',
+                'email' => 'devani_wulandari@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'BAG-TU',
+            ],
+            [
+                'nip' => '200012202025062015',
+                'name' => 'Dhiya Putri Ramadeni, A.Md',
+                'username' => 'dhiya_putri_ramadeni',
+                'email' => 'dhiya_putri_ramadeni@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'BAG-TU',
+            ],
+            [
+                'nip' => '199805152025062009',
+                'name' => 'Meisye Asmaul Husna, A.Md',
+                'username' => 'meisye_asmaul_husna',
+                'email' => 'meisye_asmaul_husna@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'BAG-TU',
+            ],
+            [
+                'nip' => '200107242025062017',
+                'name' => 'Afifah Maharani, A.Md.Kom.',
+                'username' => 'afifah_maharani',
+                'email' => 'afifah_maharani@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-HKTL',
+            ],
+            [
+                'nip' => '199810192025062010',
+                'name' => 'Silvia Bunga Ananda, A.Md.',
+                'username' => 'silvia_bunga_ananda',
+                'email' => 'silvia_bunga_ananda@lldiktiwilayahx.kemdiktisaintek.go.id',
+                'role' => 'staff',
+                'unit_code' => 'SUBBAG-HKTL',
+            ],
+        ];
+    }
+
+    public function up(): void
+    {
+        $roster = $this->getOfficialRoster();
+        $units = DB::table('units')->pluck('id', 'kode_unit')->all();
+        $defaultPassword = Hash::make('Password123!');
+        $now = now();
+
+        $activeNips = [];
+
+        foreach ($roster as $emp) {
+            $activeNips[] = $emp['nip'];
+            $unitId = $emp['unit_code'] ? ($units[$emp['unit_code']] ?? null) : null;
+
+            $existing = DB::table('users')->where('nip', $emp['nip'])->first();
+
+            if ($existing) {
+                DB::table('users')->where('id', $existing->id)->update([
+                    'unit_id' => $unitId,
+                    'name' => $emp['name'],
+                    'username' => $emp['username'],
+                    'email' => $emp['email'],
+                    'role' => $emp['role'],
+                    'is_active' => true,
+                    'updated_at' => $now,
+                ]);
+            } else {
+                DB::table('users')->insert([
+                    'unit_id' => $unitId,
+                    'name' => $emp['name'],
+                    'nip' => $emp['nip'],
+                    'username' => $emp['username'],
+                    'email' => $emp['email'],
+                    'password' => $defaultPassword,
+                    'role' => $emp['role'],
+                    'phone' => null,
+                    'avatar_path' => null,
+                    'is_active' => true,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+            }
+        }
+
+        // Soft-deactivate non-continuing employees to preserve historical attendances
+        DB::table('users')
+            ->whereNotIn('nip', $activeNips)
+            ->update([
+                'is_active' => false,
+                'updated_at' => $now,
+            ]);
+    }
+
+    public function down(): void
+    {
+        $units = DB::table('units')->pluck('id', 'kode_unit')->all();
+        $hktlUnitId = $units['SUBBAG-HKTL'] ?? null;
+
+        // Revert Sdr. Apandi to staff in SUBBAG-HKTL
+        DB::table('users')->where('nip', '198804022019031016')->update([
+            'role' => 'staff',
+            'unit_id' => $hktlUnitId,
+            'updated_at' => now(),
+        ]);
+
+        // Revert Ibu Afdalisma to administrator (cross-unit)
+        DB::table('users')->where('nip', '197012051992032002')->update([
+            'role' => 'administrator',
+            'unit_id' => null,
+            'updated_at' => now(),
+        ]);
+    }
+};

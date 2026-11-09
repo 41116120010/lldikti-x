@@ -32,41 +32,57 @@ class SubbagianAndEmployeeSeederTest extends TestCase
             $unit = Unit::where('kode_unit', $kode)->first();
             $this->assertNotNull($unit, "Unit dengan kode [{$kode}] harus terdaftar di database.");
             $this->assertEquals($nama, $unit->nama_unit);
-            $this->assertTrue((bool)$unit->is_active, "Unit [{$kode}] harus berstatus aktif.");
+            $this->assertTrue((bool) $unit->is_active, "Unit [{$kode}] harus berstatus aktif.");
         }
     }
 
     /**
-     * Pastikan Ibu Afdalisma terdaftar sebagai Administrator dengan NIP, gelar, email, dan unit_id null (lintas unit).
+     * Pastikan Sdr. Apandi terdaftar sebagai Administrator Utama dengan NIP, nama, email, dan unit_id null (lintas unit).
      */
-    public function test_afdalisma_is_seeded_as_administrator_without_unit_constraint(): void
+    public function test_apandi_is_seeded_as_administrator_without_unit_constraint(): void
     {
-        $admin = User::where('nip', '197012051992032002')->first();
+        $admin = User::where('nip', '198804022019031016')->first();
 
-        $this->assertNotNull($admin, 'Akun Afdalisma dengan NIP 197012051992032002 harus terdaftar.');
-        $this->assertEquals('Afdalisma, SH, M.Pd', $admin->name);
-        $this->assertEquals('afdalisma', $admin->username);
-        $this->assertEquals('afdalisma@lldiktiwilayahx.kemdiktisaintek.go.id', $admin->email);
+        $this->assertNotNull($admin, 'Akun Apandi dengan NIP 198804022019031016 harus terdaftar.');
+        $this->assertEquals('Apandi, ST', $admin->name);
+        $this->assertEquals('apandi', $admin->username);
+        $this->assertEquals('apandi@lldiktiwilayahx.kemdiktisaintek.go.id', $admin->email);
         $this->assertEquals(UserRole::Administrator, $admin->role);
         $this->assertNull($admin->unit_id, 'Administrator utama tidak boleh terikat unit_id tertentu (lintas unit).');
-        $this->assertTrue((bool)$admin->is_active);
+        $this->assertTrue((bool) $admin->is_active);
     }
 
     /**
-     * Pastikan seluruh 78 pegawai lainnya terdaftar sebagai Staff dan terikat pada unit masing-masing.
+     * Pastikan Ibu Afdalisma terdaftar sebagai Staff pada unit Bagian Tata Usaha dan BMN (BAG-TU).
      */
-    public function test_all_78_other_employees_are_seeded_as_staff_and_assigned_to_units(): void
+    public function test_afdalisma_is_seeded_as_staff_in_bag_tu(): void
     {
-        $staffCount = User::where('role', UserRole::Staff->value)->count();
-        $this->assertEquals(78, $staffCount, 'Jumlah staff harus tepat 78 orang.');
+        $staff = User::where('nip', '197012051992032002')->first();
 
-        $staffWithoutUnit = User::where('role', UserRole::Staff->value)->whereNull('unit_id')->count();
-        $this->assertEquals(0, $staffWithoutUnit, 'Seluruh staff wajib terikat ke unit subbagian masing-masing.');
+        $this->assertNotNull($staff, 'Akun Afdalisma dengan NIP 197012051992032002 harus terdaftar.');
+        $this->assertEquals('Afdalisma, SH, M.Pd', $staff->name);
+        $this->assertEquals('afdalisma', $staff->username);
+        $this->assertEquals('afdalisma@lldiktiwilayahx.kemdiktisaintek.go.id', $staff->email);
+        $this->assertEquals(UserRole::Staff, $staff->role);
+        $this->assertEquals('BAG-TU', $staff->unit?->kode_unit, 'Ibu Afdalisma harus terikat ke unit BAG-TU.');
+        $this->assertTrue((bool) $staff->is_active);
+    }
 
-        $invalidEmails = User::where('email', 'not like', '%@lldiktiwilayahx.kemdiktisaintek.go.id')->count();
+    /**
+     * Pastikan seluruh 68 pegawai lainnya terdaftar sebagai Staff aktif dan terikat pada unit masing-masing.
+     */
+    public function test_all_68_other_employees_are_seeded_as_staff_and_assigned_to_units(): void
+    {
+        $staffCount = User::where('role', UserRole::Staff->value)->where('is_active', true)->count();
+        $this->assertEquals(68, $staffCount, 'Jumlah staff aktif harus tepat 68 orang.');
+
+        $staffWithoutUnit = User::where('role', UserRole::Staff->value)->where('is_active', true)->whereNull('unit_id')->count();
+        $this->assertEquals(0, $staffWithoutUnit, 'Seluruh staff aktif wajib terikat ke unit subbagian masing-masing.');
+
+        $invalidEmails = User::where('is_active', true)->where('email', 'not like', '%@lldiktiwilayahx.kemdiktisaintek.go.id')->count();
         $this->assertEquals(0, $invalidEmails, 'Seluruh email pegawai harus menggunakan domain @lldiktiwilayahx.kemdiktisaintek.go.id.');
 
-        $invalidNips = User::whereRaw('LENGTH(nip) != 18')->count();
+        $invalidNips = User::where('is_active', true)->whereRaw('LENGTH(nip) != 18')->count();
         $this->assertEquals(0, $invalidNips, 'Seluruh NIP pegawai wajib berupa 18 digit.');
     }
 
@@ -120,29 +136,15 @@ class SubbagianAndEmployeeSeederTest extends TestCase
     }
 
     /**
-     * Validasi keakuratan 100% data terhadap berkas CSV resmi.
+     * Validasi keakuratan 100% data terhadap berkas CSV resmi (69 Pegawai).
      */
     public function test_employee_data_accuracy_against_official_csv(): void
     {
-        $csvPath = '/home/daffiq/.gemini/antigravity/brain/07e4da5a-5c0b-4560-8279-412c06b3e783/scratch/data_karyawan_baru.csv';
+        $csvPath = '/home/daffiq/.gemini/antigravity/brain/07e4da5a-5c0b-4560-8279-412c06b3e783/scratch/data_pegawai_terbaru_69.csv';
         $this->assertFileExists($csvPath);
 
         $handle = fopen($csvPath, 'r');
         fgetcsv($handle); // skip header
-
-        $subbagianMap = [
-            'KEPALA BAGIAN AKADEMIK DAN KEMAHASISWAAN' => 'BAG-AKM',
-            'KEPALA BAGIAN SUMBER DAYA PERGURUAN TINGGI' => 'BAG-SDPT',
-            'PENDIDIK dan TENAGA KEPENDIDIKAN' => 'POKJA-PTK',
-            'KELEMBAGAAN' => 'POKJA-KLB',
-            'AKADEMIK' => 'POKJA-AKM',
-            'HUKUM, KEPEGAWAIAN dan TATA LAKSANA' => 'SUBBAG-HKTL',
-            'KEMAHASISWAAN' => 'SUBBAG-KMH',
-            'TATA USAHA dan BARANG MILIK NEGARA' => 'BAG-TU',
-            'SISTEM INFORMASI dan KERJA SAMA' => 'SUBBAG-SIKS',
-            'PERENCANAAN DAN PENGANGGARAN' => 'SUBBAG-PP',
-            'SARANA dan PRASARANA' => 'SUBBAG-SARPRAS',
-        ];
 
         $checkedCount = 0;
         while (($data = fgetcsv($handle)) !== false) {
@@ -151,30 +153,29 @@ class SubbagianAndEmployeeSeederTest extends TestCase
             }
 
             $nip = trim($data[1]);
-            $rawNama = trim($data[2]);
-            $rawGelar = isset($data[3]) ? trim($data[3]) : '';
-            $cleanGelar = rtrim(trim($rawGelar), " ,\t\n\r\0\x0B");
-            $rawSubbag = isset($data[7]) ? trim($data[7]) : '';
+            $expectedName = trim($data[2]);
+            $expectedUsername = trim($data[3]);
+            $expectedEmail = trim($data[4]);
+            $expectedRole = trim($data[5]);
+            $expectedUnitCode = trim($data[6]);
 
             $user = User::where('nip', $nip)->first();
-            $this->assertNotNull($user, "Pegawai dengan NIP {$nip} ({$rawNama}) harus ditemukan di database.");
+            $this->assertNotNull($user, "Pegawai dengan NIP {$nip} ({$expectedName}) harus ditemukan di database.");
+            $this->assertEquals($expectedName, $user->name, "Nama pegawai [{$user->name}] harus cocok dengan [{$expectedName}].");
+            $this->assertEquals($expectedUsername, $user->username, "Username pegawai [{$user->username}] harus cocok dengan [{$expectedUsername}].");
+            $this->assertEquals($expectedEmail, $user->email, "Email pegawai [{$user->email}] harus cocok dengan [{$expectedEmail}].");
+            $this->assertEquals($expectedRole, $user->role->value, "Role pegawai [{$user->role->value}] harus cocok dengan [{$expectedRole}].");
 
-            // Periksa Gelar jika ada
-            if ($cleanGelar !== '') {
-                $this->assertStringContainsString($cleanGelar, $user->name, "Nama [{$user->name}] harus memuat gelar [{$cleanGelar}].");
-            }
-
-            // Periksa Asosiasi Subbagian
-            if ($rawSubbag !== '') {
-                $expectedUnitCode = $subbagianMap[$rawSubbag] ?? null;
-                $this->assertNotNull($expectedUnitCode);
+            if ($expectedUnitCode !== '') {
                 $this->assertEquals($expectedUnitCode, $user->unit?->kode_unit, "Pegawai {$user->name} harus terhubung ke unit {$expectedUnitCode}.");
+            } else {
+                $this->assertNull($user->unit_id, "Pegawai {$user->name} tanpa unit_code harus memiliki unit_id null.");
             }
 
             $checkedCount++;
         }
         fclose($handle);
 
-        $this->assertEquals(79, $checkedCount, 'Harus memvalidasi tepat 79 pegawai.');
+        $this->assertEquals(69, $checkedCount, 'Harus memvalidasi tepat 69 pegawai resmi.');
     }
 }
