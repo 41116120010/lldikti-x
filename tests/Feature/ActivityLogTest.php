@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\ActivityLog;
 use App\Models\User;
+use App\Services\ActivityLogger;
 use Tests\TestCase;
 
 class ActivityLogTest extends TestCase
@@ -20,7 +20,7 @@ class ActivityLogTest extends TestCase
 
     public function test_admin_unit_and_staff_cannot_view_activity_logs(): void
     {
-        $adminAkm = User::whereHas('unit', fn($q) => $q->where('kode_unit', 'POKJA-AKM'))->firstOrFail();
+        $adminAkm = User::whereHas('unit', fn ($q) => $q->where('kode_unit', 'POKJA-AKM'))->firstOrFail();
         $adminAkm->update(['role' => 'admin']);
         $staff = User::where('role', 'staff')->first();
 
@@ -60,7 +60,7 @@ class ActivityLogTest extends TestCase
     {
         $superadmin = User::where('role', 'administrator')->first();
 
-        \App\Services\ActivityLogger::log(
+        ActivityLogger::log(
             type: 'TEST_MUTATION',
             description: 'Melakukan pengetesan payload properties inspection',
             targetModel: User::class,
@@ -73,5 +73,32 @@ class ActivityLogTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Lihat Payload Perubahan');
         $response->assertSee('nilai_terbaru');
+    }
+
+    public function test_activity_logs_table_paginates_ten_items_per_page(): void
+    {
+        $superadmin = User::where('role', 'administrator')->first();
+
+        // Seed 12 distinct activity logs with specific test marker
+        for ($i = 1; $i <= 12; $i++) {
+            ActivityLogger::log(
+                type: 'PAGINATION_LIMIT_TEST',
+                description: "Percobaan paginasi log #{$i}",
+                targetModel: null,
+                targetId: null,
+                properties: ['index' => $i],
+                user: $superadmin
+            );
+        }
+
+        $response = $this->actingAs($superadmin)->get('/admin/logs?type=PAGINATION_LIMIT_TEST');
+
+        $response->assertStatus(200);
+        $logs = $response->viewData('logs');
+        $this->assertEquals(10, $logs->perPage());
+        $this->assertEquals(10, $logs->count());
+        $this->assertEquals(12, $logs->total());
+        $this->assertEquals(2, $logs->lastPage());
+        $response->assertSee('Menampilkan');
     }
 }

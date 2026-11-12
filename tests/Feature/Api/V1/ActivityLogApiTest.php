@@ -226,4 +226,17 @@ class ActivityLogApiTest extends TestCase
             $this->assertStringStartsWith($today, $item['created_at']);
         }
     }
+
+    public function test_activity_logs_api_defaults_to_ten_items_per_page(): void
+    {
+        $admin = User::where('role', 'administrator')->first();
+        $this->assertNotNull($admin);
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->getJson('/api/v1/activity-logs');
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('meta.per_page', 10);
+    }
 }

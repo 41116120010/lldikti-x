@@ -1748,7 +1748,7 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
   - `start_date`: Tanggal awal aktivitas (`YYYY-MM-DD`)
   - `end_date`: Tanggal akhir aktivitas (`YYYY-MM-DD`)
   - `search`: Kata kunci pencarian dalam deskripsi kegiatan, alamat IP, atau nama/NIP pegawai
-  - `per_page`: Jumlah log per halaman (default 15, max 100)
+  - `per_page`: Jumlah log per halaman (default 10, max 100)
   - `page`: Nomor halaman
 * **Response (200 OK):**
   ```json
@@ -1761,8 +1761,8 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
         "user_id": 1,
         "user": {
           "id": 1,
-          "name": "Afdalisma, SH, M.Pd",
-          "nip": "197012051992032002",
+          "name": "Apandi, S.Sos., M.Pd.",
+          "nip": "196906041990031003",
           "role": { "value": "administrator", "label": "Administrator" }
         },
         "activity_type": "EXPORT_CSV_API",
@@ -1781,8 +1781,8 @@ Setiap tab pada daftar rapat dinas dihubungkan dengan endpoint `GET /api/v1/agen
     ],
     "meta": {
       "current_page": 1,
-      "last_page": 10,
-      "per_page": 15,
+      "last_page": 15,
+      "per_page": 10,
       "total": 150
     },
     "summary": {

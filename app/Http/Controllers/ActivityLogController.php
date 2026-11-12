@@ -13,6 +13,7 @@ use Illuminate\View\View;
 class ActivityLogController extends Controller
 {
     use FiltersByDateRange;
+
     /**
      * Display a listing of system activity logs.
      */
@@ -45,15 +46,15 @@ class ActivityLogController extends Controller
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->whereLike('description', "%{$search}%")
-                  ->orWhereLike('ip_address', "%{$search}%")
-                  ->orWhereHas('user', function ($uq) use ($search) {
-                      $uq->whereLike('name', "%{$search}%")
-                         ->orWhereLike('nip', "%{$search}%");
-                  });
+                    ->orWhereLike('ip_address', "%{$search}%")
+                    ->orWhereHas('user', function ($uq) use ($search) {
+                        $uq->whereLike('name', "%{$search}%")
+                            ->orWhereLike('nip', "%{$search}%");
+                    });
             });
         }
 
-        $logs = $query->paginate(15)->withQueryString();
+        $logs = $query->paginate(10)->withQueryString();
 
         // Both dropdowns are bounded. Loading every employee in the agency to
         // populate a <select> grows linearly with headcount and turns a routine

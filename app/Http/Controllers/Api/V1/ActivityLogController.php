@@ -59,7 +59,7 @@ class ActivityLogController extends Controller
             });
         }
 
-        $perPage = min(max((int) $request->query('per_page', 15), 1), 100);
+        $perPage = min(max((int) $request->query('per_page', 10), 1), 100);
         $logs = $query->paginate($perPage);
 
         // Base metrics query (respecting user_id, date range, and search, but independent of category pill)
