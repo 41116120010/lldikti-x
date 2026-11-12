@@ -86,7 +86,7 @@ class UserResource extends JsonResource
             'on_time_count' => $onTimeCount,
             'on_time_rate' => $onTimeRate,
             'on_time_rate_label' => "{$onTimeRate}%",
-            'period_label' => 'Tahun Anggaran ' . now('Asia/Jakarta')->year,
+            'period_label' => 'Tahun Anggaran '.now('Asia/Jakarta')->year,
         ];
     }
 

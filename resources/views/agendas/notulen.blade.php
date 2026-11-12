@@ -465,115 +465,8 @@
                         </div>
                     </div>
 
-                    <!-- Seksi II: Daftar Kehadiran Peserta (Spreadsheet / Word Table) -->
-                    <div id="sheet-seksi-2-wrapper" style="{{ ($config['show_attendees'] ?? true) ? '' : 'display: none;' }}">
-                    <div id="sheet-seksi-2-container" class="section-title" style="font-size: {{ \App\Support\DocumentLayout::SECTION_SIZE_PT }}pt; font-weight: bold; margin: {{ \App\Support\DocumentLayout::SECTION_GAP_TOP_PT }}pt 0 {{ \App\Support\DocumentLayout::SECTION_GAP_BOTTOM_PT }}pt 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif;">
-                        II. DAFTAR KEHADIRAN PESERTA ({{ $attendances->count() }} Orang)
-                    </div>
-                    @php
-                        // Lebar kolom dihitung sekali di sini, mengikuti urutan yang
-                        // sama dengan writer .docx: kolom nama mengambil sisa dari
-                        // lebar cetakan. Menyalin persentase tetap per kolom
-                        // itulah yang membuat pratinjau dan dokumen cetak tidak
-                        // pernah bisa sama begitu lebar kolom berubah.
-                        $presenceColumns = \App\Support\DocumentLayout::attendanceColumns();
-                        $presenceWidths = [
-                            'no' => $presenceColumns[0],
-                            'nip' => $presenceColumns[1],
-                            'unit' => $presenceColumns[2],
-                            'time' => $presenceColumns[3],
-                            'photo' => $presenceColumns[4],
-                            'sign' => $presenceColumns[5],
-                        ];
-                        $presenceUsed = (float) rtrim($presenceWidths['no'], '%')
-                            + (float) rtrim($presenceWidths['sign'], '%');
-                        foreach ([
-                            'nip' => 'show_nip',
-                            'unit' => 'show_unit',
-                            'time' => 'show_attendance_time',
-                            'photo' => 'show_selfie_photos',
-                        ] as $presenceKey => $presenceOption) {
-                            if ($config[$presenceOption] ?? true) {
-                                $presenceUsed += (float) rtrim($presenceWidths[$presenceKey], '%');
-                            }
-                        }
-                        $presenceWidths['name'] = max(0, 100 - $presenceUsed).'%';
-
-                        $presenceHeaderPad = fn (string $side): string => '3pt '.$side;
-                    @endphp
-                    <table id="sheet-attendance-table" class="doc-spreadsheet-table attendance-table" width="100%" border="1" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; border-collapse: collapse; border: {{ \App\Support\DocumentLayout::BORDER_PT }}px solid #{{ \App\Support\DocumentLayout::BORDER_COLOR }}; font-size: {{ \App\Support\DocumentLayout::ATTENDANCE_SIZE_PT }}pt; line-height: {{ \App\Support\DocumentLayout::ATTENDANCE_LINE_PT }}pt; font-family: 'Times New Roman', Times, serif;">
-                        <colgroup>
-                            <col data-col="no" data-col-width="{{ $presenceWidths['no'] }}" style="width: {{ $presenceWidths['no'] }};">
-                            <col data-col="name" style="width: {{ $presenceWidths['name'] }};">
-                            <col data-col="nip" data-col-width="{{ $presenceWidths['nip'] }}" style="width: {{ $presenceWidths['nip'] }}; {{ ($config['show_nip'] ?? true) ? '' : 'display: none;' }}">
-                            <col data-col="unit" data-col-width="{{ $presenceWidths['unit'] }}" style="width: {{ $presenceWidths['unit'] }}; {{ ($config['show_unit'] ?? true) ? '' : 'display: none;' }}">
-                            <col data-col="time" data-col-width="{{ $presenceWidths['time'] }}" style="width: {{ $presenceWidths['time'] }}; {{ ($config['show_attendance_time'] ?? true) ? '' : 'display: none;' }}">
-                            <col data-col="photo" data-col-width="{{ $presenceWidths['photo'] }}" style="width: {{ $presenceWidths['photo'] }}; {{ ($config['show_selfie_photos'] ?? true) ? '' : 'display: none;' }}">
-                            <col data-col="sign" data-col-width="{{ $presenceWidths['sign'] }}" style="width: {{ $presenceWidths['sign'] }};">
-                        </colgroup>
-                        <thead>
-                            <tr style="background-color: #{{ \App\Support\DocumentLayout::ATTENDANCE_HEADER_FILL }};">
-                                <th style="text-align: center;">No</th>
-                                <th style="text-align: left;">Nama Lengkap</th>
-                                <th data-col="nip" style="text-align: left; {{ ($config['show_nip'] ?? true) ? '' : 'display: none;' }}">NIP</th>
-                                <th data-col="unit" style="text-align: left; {{ ($config['show_unit'] ?? true) ? '' : 'display: none;' }}">Unit Kerja / Pokja</th>
-                                <th data-col="time" style="text-align: center; {{ ($config['show_attendance_time'] ?? true) ? '' : 'display: none;' }}">Waktu</th>
-                                <th data-col="photo" style="text-align: center; {{ ($config['show_selfie_photos'] ?? true) ? '' : 'display: none;' }}">Foto Kehadiran</th>
-                                <th style="text-align: center;">Tanda Tangan</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($attendances as $index => $att)
-                                <tr>
-                                    <td style="text-align: center; vertical-align: middle;">{{ $index + 1 }}</td>
-                                    <td style="vertical-align: middle; padding: 2pt 4pt;"><strong>{{ $att->user->name }}</strong></td>
-                                    <td data-col="nip" style="vertical-align: middle; padding: 2pt 3pt; {{ ($config['show_nip'] ?? true) ? '' : 'display: none;' }}">{{ $att->user->nip }}</td>
-                                    <td data-col="unit" style="vertical-align: middle; padding: 2pt 3pt; {{ ($config['show_unit'] ?? true) ? '' : 'display: none;' }}">{{ $att->user->unit?->kode_unit ?? 'Pusat' }}</td>
-                                    <td data-col="time" style="text-align: center; vertical-align: middle; padding: 2pt 2pt; {{ ($config['show_attendance_time'] ?? true) ? '' : 'display: none;' }}">{{ $att->signed_at?->format('H:i') ?? '-' }}</td>
-                                    <td data-col="photo" style="text-align: center; vertical-align: middle; padding: 1.5pt; {{ ($config['show_selfie_photos'] ?? true) ? '' : 'display: none;' }}">
-                                        @if($att->selfie_path)
-                                            <button
-                                                type="button"
-                                                data-selfie-modal-trigger
-                                                data-selfie-url="{{ Storage::disk('public')->url($att->selfie_path) }}"
-                                                data-user-name="{{ $att->user->name }}"
-                                                data-user-nip="{{ $att->user->nip ?? '-' }}"
-                                                data-unit-name="{{ $att->user->unit?->kode_unit ? $att->user->unit->kode_unit . ' — ' . $att->user->unit->nama_unit : 'Tingkat Lembaga' }}"
-                                                data-signed-at="{{ $att->signed_at?->format('d/m/Y H:i:s') ?? '-' }} WIB"
-                                                data-ip-address="{{ $att->ip_address ?? '127.0.0.1' }}"
-                                                class="inline-block p-0 m-0 border-0 bg-transparent cursor-pointer hover:opacity-80 transition"
-                                                style="vertical-align: middle; line-height: 0;"
-                                                title="Klik untuk memverifikasi foto selfie {{ $att->user->name }}"
-                                                aria-label="Verifikasi foto selfie {{ $att->user->name }}"
-                                            >
-                                                <img src="{{ Storage::disk('public')->url($att->selfie_path) }}" alt="Selfie" width="26" height="26" style="width: 26px; height: 26px; object-fit: cover; border-radius: 2px; border: 1px solid #cbd5e1; display: inline-block; vertical-align: middle;">
-                                            </button>
-                                        @else
-                                            <span style="font-size: 7pt; color: #94a3b8; font-style: italic;">Tanpa Foto</span>
-                                        @endif
-                                    </td>
-                                    <td style="text-align: center; vertical-align: middle; padding: 1.5pt;">
-                                        @if($att->signature_path)
-                                            <img class="attendee-sig-img" src="{{ Storage::disk('public')->url($att->signature_path) }}" alt="TTD" width="75" height="22" style="width: 75px; height: 22px; max-height: 24px; object-fit: contain; display: {{ ($config['show_attendee_signatures'] ?? true) ? 'block' : 'none' }}; margin: 0 auto; border: none;">
-                                            <span class="attendee-sig-fallback" style="font-size: 7.5pt; color: #166534; font-weight: bold; display: {{ ($config['show_attendee_signatures'] ?? true) ? 'none' : 'inline' }};">(HADIR)</span>
-                                        @else
-                                            <span style="font-size: 7.5pt; color: #166534; font-weight: bold;">(HADIR)</span>
-                                        @endif
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td id="sheet-attendance-empty-cell" colspan="{{ 2 + ($config['show_nip'] ?? true ? 1 : 0) + ($config['show_unit'] ?? true ? 1 : 0) + ($config['show_attendance_time'] ?? true ? 1 : 0) + ($config['show_selfie_photos'] ?? true ? 1 : 0) }}" style="text-align: center; padding: 8pt; font-style: italic; color: #64748b;">
-                                        Belum ada peserta yang mengisi presensi rapat.
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                    </div>
-
                     <!-- Blok Pengesahan & Tanda Tangan (Dynamic Word Signature Flow) -->
-                    <div id="sheet-pengesahan-final" class="sheet-signature-wrapper" style="margin-top: 18pt;">
+                    <div id="sheet-pengesahan-final" class="sheet-signature-wrapper" style="margin-top: {{ \App\Support\DocumentLayout::TTD_GAP_PT }}pt;">
                         <!-- Header if on standalone page -->
                         <div id="sheet-signature-standalone-header" style="display: none; text-align: center; margin-bottom: 8pt; padding-bottom: 4pt; border-bottom: 1.5pt solid #000;">
                             <h2 style="font-size: 11pt; font-weight: bold; text-transform: uppercase; margin: 0; font-family: 'Times New Roman', Times, serif;">
@@ -689,6 +582,113 @@
                         <div id="sheet-footer-note-block" class="document-footer-note" style="margin: {{ \App\Support\DocumentLayout::FOOTER_NOTE_GAP_PT }}pt 0 0 0; padding-top: {{ \App\Support\DocumentLayout::FOOTER_NOTE_PAD_TOP_PT }}pt; border-top: {{ \App\Support\DocumentLayout::FOOTER_NOTE_RULE_PT }}pt solid #{{ \App\Support\DocumentLayout::FOOTER_NOTE_RULE_COLOR }}; font-size: {{ \App\Support\DocumentLayout::FOOTER_NOTE_SIZE_PT }}pt; color: #{{ \App\Support\DocumentLayout::FOOTER_NOTE_COLOR }}; text-align: center; font-family: 'Times New Roman', Times, serif; page-break-inside: avoid; break-inside: avoid; {{ (($config['show_footer_note'] ?? false) && trim((string) ($config['footer_note'] ?? '')) !== '') ? '' : 'display: none;' }}">
                             <span id="sheet-footer-note">{{ $config['footer_note'] ?? '' }}</span>
                         </div>
+                    </div>
+
+                    <!-- Seksi II: Daftar Kehadiran Peserta (Spreadsheet / Word Table) -->
+                    <div id="sheet-seksi-2-wrapper" style="{{ ($config['show_attendees'] ?? true) ? '' : 'display: none;' }}">
+                    <div id="sheet-seksi-2-container" class="section-title" style="font-size: {{ \App\Support\DocumentLayout::SECTION_SIZE_PT }}pt; font-weight: bold; margin: {{ \App\Support\DocumentLayout::SECTION_GAP_TOP_PT + 6 }}pt 0 {{ \App\Support\DocumentLayout::SECTION_GAP_BOTTOM_PT }}pt 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif;">
+                        II. DAFTAR KEHADIRAN PESERTA ({{ $attendances->count() }} Orang)
+                    </div>
+                    @php
+                        // Lebar kolom dihitung sekali di sini, mengikuti urutan yang
+                        // sama dengan writer .docx: kolom nama mengambil sisa dari
+                        // lebar cetakan. Menyalin persentase tetap per kolom
+                        // itulah yang membuat pratinjau dan dokumen cetak tidak
+                        // pernah bisa sama begitu lebar kolom berubah.
+                        $presenceColumns = \App\Support\DocumentLayout::attendanceColumns();
+                        $presenceWidths = [
+                            'no' => $presenceColumns[0],
+                            'nip' => $presenceColumns[1],
+                            'unit' => $presenceColumns[2],
+                            'time' => $presenceColumns[3],
+                            'photo' => $presenceColumns[4],
+                            'sign' => $presenceColumns[5],
+                        ];
+                        $presenceUsed = (float) rtrim($presenceWidths['no'], '%')
+                            + (float) rtrim($presenceWidths['sign'], '%');
+                        foreach ([
+                            'nip' => 'show_nip',
+                            'unit' => 'show_unit',
+                            'time' => 'show_attendance_time',
+                            'photo' => 'show_selfie_photos',
+                        ] as $presenceKey => $presenceOption) {
+                            if ($config[$presenceOption] ?? true) {
+                                $presenceUsed += (float) rtrim($presenceWidths[$presenceKey], '%');
+                            }
+                        }
+                        $presenceWidths['name'] = max(0, 100 - $presenceUsed).'%';
+
+                        $presenceHeaderPad = fn (string $side): string => '3pt '.$side;
+                    @endphp
+                    <table id="sheet-attendance-table" class="doc-spreadsheet-table attendance-table" width="100%" border="1" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; border-collapse: collapse; border: {{ \App\Support\DocumentLayout::BORDER_PT }}px solid #{{ \App\Support\DocumentLayout::BORDER_COLOR }}; font-size: {{ \App\Support\DocumentLayout::ATTENDANCE_SIZE_PT }}pt; line-height: {{ \App\Support\DocumentLayout::ATTENDANCE_LINE_PT }}pt; font-family: 'Times New Roman', Times, serif;">
+                        <colgroup>
+                            <col data-col="no" data-col-width="{{ $presenceWidths['no'] }}" style="width: {{ $presenceWidths['no'] }};">
+                            <col data-col="name" style="width: {{ $presenceWidths['name'] }};">
+                            <col data-col="nip" data-col-width="{{ $presenceWidths['nip'] }}" style="width: {{ $presenceWidths['nip'] }}; {{ ($config['show_nip'] ?? true) ? '' : 'display: none;' }}">
+                            <col data-col="unit" data-col-width="{{ $presenceWidths['unit'] }}" style="width: {{ $presenceWidths['unit'] }}; {{ ($config['show_unit'] ?? true) ? '' : 'display: none;' }}">
+                            <col data-col="time" data-col-width="{{ $presenceWidths['time'] }}" style="width: {{ $presenceWidths['time'] }}; {{ ($config['show_attendance_time'] ?? true) ? '' : 'display: none;' }}">
+                            <col data-col="photo" data-col-width="{{ $presenceWidths['photo'] }}" style="width: {{ $presenceWidths['photo'] }}; {{ ($config['show_selfie_photos'] ?? true) ? '' : 'display: none;' }}">
+                            <col data-col="sign" data-col-width="{{ $presenceWidths['sign'] }}" style="width: {{ $presenceWidths['sign'] }};">
+                        </colgroup>
+                        <thead>
+                            <tr style="background-color: #{{ \App\Support\DocumentLayout::ATTENDANCE_HEADER_FILL }};">
+                                <th style="text-align: center;">No</th>
+                                <th style="text-align: left;">Nama Lengkap</th>
+                                <th data-col="nip" style="text-align: left; white-space: nowrap; {{ ($config['show_nip'] ?? true) ? '' : 'display: none;' }}">NIP</th>
+                                <th data-col="unit" style="text-align: left; {{ ($config['show_unit'] ?? true) ? '' : 'display: none;' }}">Unit Kerja / Pokja</th>
+                                <th data-col="time" style="text-align: center; {{ ($config['show_attendance_time'] ?? true) ? '' : 'display: none;' }}">Waktu</th>
+                                <th data-col="photo" style="text-align: center; {{ ($config['show_selfie_photos'] ?? true) ? '' : 'display: none;' }}">Foto Kehadiran</th>
+                                <th style="text-align: center;">Tanda Tangan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($attendances as $index => $att)
+                                <tr>
+                                    <td style="text-align: center; vertical-align: middle;">{{ $index + 1 }}</td>
+                                    <td style="vertical-align: middle; padding: 2pt 4pt;"><strong>{{ $att->user->name }}</strong></td>
+                                    <td data-col="nip" style="vertical-align: middle; padding: 2pt 3pt; white-space: nowrap; {{ ($config['show_nip'] ?? true) ? '' : 'display: none;' }}">{{ $att->user->nip }}</td>
+                                    <td data-col="unit" style="vertical-align: middle; padding: 2pt 3pt; {{ ($config['show_unit'] ?? true) ? '' : 'display: none;' }}">{{ $att->user->unit?->kode_unit ?? 'Pusat' }}</td>
+                                    <td data-col="time" style="text-align: center; vertical-align: middle; padding: 2pt 2pt; {{ ($config['show_attendance_time'] ?? true) ? '' : 'display: none;' }}">{{ $att->signed_at?->format('H:i') ?? '-' }}</td>
+                                    <td data-col="photo" style="text-align: center; vertical-align: middle; padding: 1.5pt; {{ ($config['show_selfie_photos'] ?? true) ? '' : 'display: none;' }}">
+                                        @if($att->selfie_path)
+                                            <button
+                                                type="button"
+                                                data-selfie-modal-trigger
+                                                data-selfie-url="{{ Storage::disk('public')->url($att->selfie_path) }}"
+                                                data-user-name="{{ $att->user->name }}"
+                                                data-user-nip="{{ $att->user->nip ?? '-' }}"
+                                                data-unit-name="{{ $att->user->unit?->kode_unit ? $att->user->unit->kode_unit . ' — ' . $att->user->unit->nama_unit : 'Tingkat Lembaga' }}"
+                                                data-signed-at="{{ $att->signed_at?->format('d/m/Y H:i:s') ?? '-' }} WIB"
+                                                data-ip-address="{{ $att->ip_address ?? '127.0.0.1' }}"
+                                                class="inline-block p-0 m-0 border-0 bg-transparent cursor-pointer hover:opacity-80 transition"
+                                                style="vertical-align: middle; line-height: 0;"
+                                                title="Klik untuk memverifikasi foto selfie {{ $att->user->name }}"
+                                                aria-label="Verifikasi foto selfie {{ $att->user->name }}"
+                                            >
+                                                <img src="{{ Storage::disk('public')->url($att->selfie_path) }}" alt="Selfie" width="26" height="26" style="width: 26px; height: 26px; object-fit: cover; border-radius: 2px; border: 1px solid #cbd5e1; display: inline-block; vertical-align: middle;">
+                                            </button>
+                                        @else
+                                            <span style="font-size: 7pt; color: #94a3b8; font-style: italic;">Tanpa Foto</span>
+                                        @endif
+                                    </td>
+                                    <td style="text-align: center; vertical-align: middle; padding: 1.5pt;">
+                                        @if($att->signature_path)
+                                            <img class="attendee-sig-img" src="{{ Storage::disk('public')->url($att->signature_path) }}" alt="TTD" width="75" height="22" style="width: 75px; height: 22px; max-height: 24px; object-fit: contain; display: {{ ($config['show_attendee_signatures'] ?? true) ? 'block' : 'none' }}; margin: 0 auto; border: none;">
+                                            <span class="attendee-sig-fallback" style="font-size: 7.5pt; color: #166534; font-weight: bold; display: {{ ($config['show_attendee_signatures'] ?? true) ? 'none' : 'inline' }};">(HADIR)</span>
+                                        @else
+                                            <span style="font-size: 7.5pt; color: #166534; font-weight: bold;">(HADIR)</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td id="sheet-attendance-empty-cell" colspan="{{ 2 + ($config['show_nip'] ?? true ? 1 : 0) + ($config['show_unit'] ?? true ? 1 : 0) + ($config['show_attendance_time'] ?? true ? 1 : 0) + ($config['show_selfie_photos'] ?? true ? 1 : 0) }}" style="text-align: center; padding: 8pt; font-style: italic; color: #64748b;">
+                                        Belum ada peserta yang mengisi presensi rapat.
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                     </div>
 
                     <!-- Lampiran Bersih Foto Dokumentasi pada Lembar Cetak (Selalu ada di DOM agar sinkronisasi live berfungsi) -->

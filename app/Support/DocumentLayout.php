@@ -207,7 +207,7 @@ final class DocumentLayout
      */
     public static function attendanceColumns(): array
     {
-        return ['4%', '15%', '12%', '9%', '15%', '15%'];
+        return ['4%', '21%', '11%', '7%', '11%', '15%'];
     }
 
     public const ATTENDANCE_SELFIE_PX = 26;

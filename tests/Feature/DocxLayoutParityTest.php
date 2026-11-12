@@ -204,11 +204,17 @@ class DocxLayoutParityTest extends TestCase
             }
         }
 
-        // The kop logo, three selfies, three attendance signatures, two block
-        // signatures and the annex photo are centred. The two signatures inside
-        // the block follow its left aligned inner box, exactly as in the PDF.
+        // The kop logo, selfies, attendance signatures, and annex photos are centred.
+        // The two signatures inside the block follow its left aligned inner box,
+        // exactly as in the PDF.
+        $agenda = Agenda::first();
+        $expectedCentred = 1
+            + $agenda->attendances()->whereNotNull('selfie_path')->count()
+            + $agenda->attendances()->whereNotNull('signature_path')->count()
+            + $agenda->documentations()->count();
+
         $this->assertSame(2, $left, 'Hanya dua tanda tangan blok yang boleh rata kiri.');
-        $this->assertGreaterThanOrEqual(8, $centred, 'Gambar sisanya harus terpusat di dalam selnya.');
+        $this->assertGreaterThanOrEqual($expectedCentred, $centred, 'Gambar sisanya harus terpusat di dalam selnya.');
     }
 
     public function test_annex_frame_colour_matches_the_pdf(): void

@@ -73,78 +73,6 @@
 </div>
 @endif
 
-<!-- Seksi II: Daftar Hadir Peserta -->
-@if($config['show_attendees'] ?? true)
-<div class="section-title" style="font-size: {{ DocumentLayout::SECTION_SIZE_PT }}pt; font-weight: bold; margin: {{ DocumentLayout::SECTION_GAP_TOP_PT }}pt 0 {{ DocumentLayout::SECTION_GAP_BOTTOM_PT }}pt 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif; page-break-after: avoid; break-after: avoid;">II. DAFTAR KEHADIRAN PESERTA (<{{ $agenda->attendances->count() }} Orang)</div>
-<table class="attendance-table" width="100%" border="1" cellspacing="0" cellpadding="0" bordercolor="#{{ DocumentLayout::BORDER_COLOR }}" style="width: 100%; table-layout: fixed; border-collapse: collapse; border: {{ DocumentLayout::BORDER_PT }}px solid #{{ DocumentLayout::BORDER_COLOR }}; margin: 0; font-size: {{ DocumentLayout::ATTENDANCE_SIZE_PT }}pt; line-height: {{ DocumentLayout::ATTENDANCE_LINE_PT }}pt; font-family: 'Times New Roman', Times, serif; word-wrap: break-word; overflow-wrap: break-word;">
-    <thead>
-        <tr style="background-color: #f2f2f2; mso-yfti-tblheader: yes; page-break-inside: avoid; break-inside: avoid;">
-            <th style="border: 1px solid #000000; padding: 3pt 2pt; text-align: center; width: 4%; font-weight: bold;">No</th>
-            <th style="border: 1px solid #000000; padding: 3pt 5pt; text-align: left; font-weight: bold;">Nama Lengkap</th>
-            @if($config['show_nip'] ?? true)
-                <th style="border: 1px solid #000000; padding: 3pt 3pt; text-align: left; width: 15%; font-weight: bold;">NIP</th>
-            @endif
-            @if($config['show_unit'] ?? true)
-                <th style="border: 1px solid #000000; padding: 3pt 3pt; text-align: left; width: 12%; font-weight: bold;">Unit Kerja / Pokja</th>
-            @endif
-            @if($config['show_attendance_time'] ?? true)
-                <th style="border: 1px solid #000000; padding: 3pt 2pt; text-align: center; width: 9%; font-weight: bold;">Waktu</th>
-            @endif
-            @if($config['show_selfie_photos'] ?? true)
-                <th style="border: 1px solid #000000; padding: 3pt 2pt; text-align: center; width: 15%; font-weight: bold;">Foto Kehadiran</th>
-            @endif
-            <th style="border: 1px solid #000000; padding: 3pt 3pt; text-align: center; width: 15%; font-weight: bold;">Tanda Tangan</th>
-        </tr>
-    </thead>
-    <tbody>
-        @forelse($attendances as $index => $item)
-            <tr style="mso-yfti-row: cantSplit; page-break-inside: avoid; break-inside: avoid;">
-                <td style="border: 1px solid #000000; text-align: center; padding: 2pt 2pt; vertical-align: middle;">{{ $index + 1 }}</td>
-                <td style="border: 1px solid #000000; padding: 2pt 4pt; vertical-align: middle;"><strong>{{ $item['model']->user->name }}</strong></td>
-                @if($config['show_nip'] ?? true)
-                    <td style="border: 1px solid #000000; padding: 2pt 3pt; font-family: 'Times New Roman', Times, serif; font-size: 9pt; vertical-align: middle;">{{ $item['model']->user->nip }}</td>
-                @endif
-                @if($config['show_unit'] ?? true)
-                    <td style="border: 1px solid #000000; padding: 2pt 3pt; vertical-align: middle; font-size: 9pt;">{{ $item['model']->user->unit?->kode_unit ?? 'Pusat' }}</td>
-                @endif
-                @if($config['show_attendance_time'] ?? true)
-                    <td style="border: 1px solid #000000; text-align: center; padding: 2pt 2pt; font-size: 9pt; vertical-align: middle;">{{ $item['model']->signed_at->format('H:i') }}</td>
-                @endif
-                @if($config['show_selfie_photos'] ?? true)
-                    <td style="border: 1px solid #000000; text-align: center; vertical-align: middle; padding: 1.5pt;">
-                        @if(!empty($item['selfie_base64']))
-                            <img src="{{ $item['selfie_base64'] }}" alt="Selfie" width="26" height="26" style="width: 26px; height: 26px; max-width: 26px; max-height: 26px; object-fit: cover; border-radius: 2px; border: 1px solid #cbd5e1; display: inline-block;">
-                        @else
-                            <span style="font-size: 7pt; color: #94a3b8; font-style: italic;">Tanpa Foto</span>
-                        @endif
-                    </td>
-                @endif
-                <td style="border: 1px solid #000000; text-align: center; vertical-align: middle; padding: 1.5pt;">
-                    @if(($config['show_attendee_signatures'] ?? true) && $item['sig_base64'])
-                        <img src="{{ $item['sig_base64'] }}" alt="TTD" width="75" height="22" style="width: 75px; height: 22px; max-height: 24px; max-width: 80px; object-fit: contain; display: block; margin: 0 auto; border: none;">
-                    @else
-                        <span style="font-size: 7.5pt; color: #166534; font-weight: bold;">(HADIR)</span>
-                    @endif
-                </td>
-            </tr>
-        @empty
-            @php
-                $colCount = 3; // No, Nama Lengkap, Tanda Tangan
-                if ($config['show_nip'] ?? true) $colCount++;
-                if ($config['show_unit'] ?? true) $colCount++;
-                if ($config['show_attendance_time'] ?? true) $colCount++;
-                if ($config['show_selfie_photos'] ?? true) $colCount++;
-            @endphp
-            <tr>
-                <td colspan="{{ $colCount }}" style="border: 1px solid #000000; text-align: center; padding: 8px; font-style: italic; color: #64748b;">
-                    Tidak ada data kehadiran peserta yang tercatat.
-                </td>
-            </tr>
-        @endforelse
-    </tbody>
-</table>
-@endif
-
 <!-- Tanda Tangan Pengesahan: kiri (Pimpinan) - tengah (Kepala LLDIKTI, hanya bila
      show_signer3 aktif) - kanan (Notulis). Urutan ini dipatok di sini. -->
 @php
@@ -160,7 +88,7 @@
     $ttdCellMid = '33.4%';
     $ttdInner = $ttdThird ? '76%' : '68%';
 @endphp
-<div class="signature-block" style="margin-top: 18pt; page-break-inside: avoid; break-inside: avoid; mso-yfti-row: cantSplit;">
+<div class="signature-block" style="margin-top: {{ DocumentLayout::TTD_GAP_PT }}pt; page-break-inside: avoid; break-inside: avoid; mso-yfti-row: cantSplit;">
     <table class="signature-table" width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; border-collapse: collapse; border: none; margin: 8pt 0 4pt 0; page-break-inside: avoid; break-inside: avoid; mso-yfti-row: cantSplit;">
         <tr style="page-break-inside: avoid; break-inside: avoid; mso-yfti-row: cantSplit;">
             <td width="{{ $ttdCell }}" style="width: {{ $ttdCell }}; text-align: center; vertical-align: top; border: none; padding: 0 4pt; font-size: 12pt; font-family: 'Times New Roman', Times, serif;">
@@ -240,6 +168,78 @@
 <div class="document-footer-note" style="margin: {{ DocumentLayout::FOOTER_NOTE_GAP_PT }}pt 0 0 0; padding-top: {{ DocumentLayout::FOOTER_NOTE_PAD_TOP_PT }}pt; border-top: {{ DocumentLayout::FOOTER_NOTE_RULE_PT }}pt solid #{{ DocumentLayout::FOOTER_NOTE_RULE_COLOR }}; font-size: {{ DocumentLayout::FOOTER_NOTE_SIZE_PT }}pt; color: #{{ DocumentLayout::FOOTER_NOTE_COLOR }}; text-align: center; font-family: 'Times New Roman', Times, serif; page-break-inside: avoid; break-inside: avoid;">
     <span id="sheet-footer-note">{{ $config['footer_note'] ?? '' }}</span>
 </div>
+@endif
+
+<!-- Seksi II: Daftar Hadir Peserta -->
+@if($config['show_attendees'] ?? true)
+<div class="section-title" style="font-size: {{ DocumentLayout::SECTION_SIZE_PT }}pt; font-weight: bold; margin: {{ DocumentLayout::SECTION_GAP_TOP_PT + 6 }}pt 0 {{ DocumentLayout::SECTION_GAP_BOTTOM_PT }}pt 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif; page-break-after: avoid; break-after: avoid;">II. DAFTAR KEHADIRAN PESERTA ({{ $agenda->attendances->count() }} Orang)</div>
+<table class="attendance-table" width="100%" border="1" cellspacing="0" cellpadding="0" bordercolor="#{{ DocumentLayout::BORDER_COLOR }}" style="width: 100%; table-layout: fixed; border-collapse: collapse; border: {{ DocumentLayout::BORDER_PT }}px solid #{{ DocumentLayout::BORDER_COLOR }}; margin: 0; font-size: {{ DocumentLayout::ATTENDANCE_SIZE_PT }}pt; line-height: {{ DocumentLayout::ATTENDANCE_LINE_PT }}pt; font-family: 'Times New Roman', Times, serif; word-wrap: break-word; overflow-wrap: break-word;">
+    <thead>
+        <tr style="background-color: #f2f2f2; mso-yfti-tblheader: yes; page-break-inside: avoid; break-inside: avoid;">
+            <th style="border: 1px solid #000000; padding: 3pt 2pt; text-align: center; width: 4%; font-weight: bold;">No</th>
+            <th style="border: 1px solid #000000; padding: 3pt 5pt; text-align: left; font-weight: bold;">Nama Lengkap</th>
+            @if($config['show_nip'] ?? true)
+                <th style="border: 1px solid #000000; padding: 3pt 3pt; text-align: left; width: 21%; font-weight: bold; white-space: nowrap;">NIP</th>
+            @endif
+            @if($config['show_unit'] ?? true)
+                <th style="border: 1px solid #000000; padding: 3pt 3pt; text-align: left; width: 11%; font-weight: bold;">Unit Kerja / Pokja</th>
+            @endif
+            @if($config['show_attendance_time'] ?? true)
+                <th style="border: 1px solid #000000; padding: 3pt 2pt; text-align: center; width: 7%; font-weight: bold;">Waktu</th>
+            @endif
+            @if($config['show_selfie_photos'] ?? true)
+                <th style="border: 1px solid #000000; padding: 3pt 2pt; text-align: center; width: 11%; font-weight: bold;">Foto Kehadiran</th>
+            @endif
+            <th style="border: 1px solid #000000; padding: 3pt 3pt; text-align: center; width: 15%; font-weight: bold;">Tanda Tangan</th>
+        </tr>
+    </thead>
+    <tbody>
+        @forelse($attendances as $index => $item)
+            <tr style="mso-yfti-row: cantSplit; page-break-inside: avoid; break-inside: avoid;">
+                <td style="border: 1px solid #000000; text-align: center; padding: 2pt 2pt; vertical-align: middle;">{{ $index + 1 }}</td>
+                <td style="border: 1px solid #000000; padding: 2pt 4pt; vertical-align: middle;"><strong>{{ $item['model']->user->name }}</strong></td>
+                @if($config['show_nip'] ?? true)
+                    <td style="border: 1px solid #000000; padding: 2pt 3pt; font-family: 'Times New Roman', Times, serif; font-size: 9pt; vertical-align: middle; white-space: nowrap;">{{ $item['model']->user->nip }}</td>
+                @endif
+                @if($config['show_unit'] ?? true)
+                    <td style="border: 1px solid #000000; padding: 2pt 3pt; vertical-align: middle; font-size: 9pt;">{{ $item['model']->user->unit?->kode_unit ?? 'Pusat' }}</td>
+                @endif
+                @if($config['show_attendance_time'] ?? true)
+                    <td style="border: 1px solid #000000; text-align: center; padding: 2pt 2pt; font-size: 9pt; vertical-align: middle;">{{ $item['model']->signed_at->format('H:i') }}</td>
+                @endif
+                @if($config['show_selfie_photos'] ?? true)
+                    <td style="border: 1px solid #000000; text-align: center; vertical-align: middle; padding: 1.5pt;">
+                        @if(!empty($item['selfie_base64']))
+                            <img src="{{ $item['selfie_base64'] }}" alt="Selfie" width="26" height="26" style="width: 26px; height: 26px; max-width: 26px; max-height: 26px; object-fit: cover; border-radius: 2px; border: 1px solid #cbd5e1; display: inline-block;">
+                        @else
+                            <span style="font-size: 7pt; color: #94a3b8; font-style: italic;">Tanpa Foto</span>
+                        @endif
+                    </td>
+                @endif
+                <td style="border: 1px solid #000000; text-align: center; vertical-align: middle; padding: 1.5pt;">
+                    @if(($config['show_attendee_signatures'] ?? true) && $item['sig_base64'])
+                        <img src="{{ $item['sig_base64'] }}" alt="TTD" width="75" height="22" style="width: 75px; height: 22px; max-height: 24px; max-width: 80px; object-fit: contain; display: block; margin: 0 auto; border: none;">
+                    @else
+                        <span style="font-size: 7.5pt; color: #166534; font-weight: bold;">(HADIR)</span>
+                    @endif
+                </td>
+            </tr>
+        @empty
+            @php
+                $colCount = 3; // No, Nama Lengkap, Tanda Tangan
+                if ($config['show_nip'] ?? true) $colCount++;
+                if ($config['show_unit'] ?? true) $colCount++;
+                if ($config['show_attendance_time'] ?? true) $colCount++;
+                if ($config['show_selfie_photos'] ?? true) $colCount++;
+            @endphp
+            <tr>
+                <td colspan="{{ $colCount }}" style="border: 1px solid #000000; text-align: center; padding: 8px; font-style: italic; color: #64748b;">
+                    Tidak ada data kehadiran peserta yang tercatat.
+                </td>
+            </tr>
+        @endforelse
+    </tbody>
+</table>
 @endif
 
 <!-- Seksi III: Lampiran Foto Dokumentasi Kegiatan (Annex Resmi) -->

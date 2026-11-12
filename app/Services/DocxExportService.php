@@ -110,9 +110,9 @@ class DocxExportService
         $this->addTitle($section, $data);
         $this->addDetailTable($section, $data);
         $this->addMinutes($section, $data);
-        $this->addAttendance($section, $data);
         $this->addSignatures($section, $data);
         $this->addFooterNote($section, $data);
+        $this->addAttendance($section, $data);
         $this->addPhotoAnnex($section, $data);
 
         $file = tempnam(sys_get_temp_dir(), 'siperapat_docx_');

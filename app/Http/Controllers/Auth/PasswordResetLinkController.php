@@ -69,7 +69,7 @@ class PasswordResetLinkController extends Controller
         try {
             $user->sendPasswordResetNotification($token);
         } catch (\Throwable $e) {
-            Log::error('Gagal mengirimkan email reset kata sandi melalui Brevo: ' . $e->getMessage(), [
+            Log::error('Gagal mengirimkan email reset kata sandi melalui Brevo: '.$e->getMessage(), [
                 'mailer' => $activeMailer,
                 'host' => config('mail.mailers.smtp.host'),
                 'port' => config('mail.mailers.smtp.port'),
@@ -102,7 +102,7 @@ class PasswordResetLinkController extends Controller
 
         return back()->with(
             'status',
-            'Tautan atur ulang kata sandi telah dikirimkan ke email kedinasan terdaftar: ' . $maskedEmail . '. Silakan periksa kotak masuk atau folder spam Anda.'
+            'Tautan atur ulang kata sandi telah dikirimkan ke email kedinasan terdaftar: '.$maskedEmail.'. Silakan periksa kotak masuk atau folder spam Anda.'
         );
     }
 }

@@ -47,7 +47,7 @@ class AgendaResource extends JsonResource
             'surat_edaran' => [
                 'type' => $this->surat_edaran_type ?? 'upload',
                 'is_digital' => (bool) $this->is_surat_edaran_digital,
-                'url' => $this->surat_edaran_path ? url('/storage/' . ltrim($this->surat_edaran_path, '/')) : ($this->is_surat_edaran_digital ? route('agendas.surat-edaran.pdf', $this->id) : null),
+                'url' => $this->surat_edaran_path ? url('/storage/'.ltrim($this->surat_edaran_path, '/')) : ($this->is_surat_edaran_digital ? route('agendas.surat-edaran.pdf', $this->id) : null),
                 'stream_url' => $this->surat_edaran_path ? url("/api/v1/agendas/{$this->id}/surat-edaran") : ($this->is_surat_edaran_digital ? route('agendas.surat-edaran.pdf', $this->id) : null),
                 'extension' => $this->is_surat_edaran_digital ? 'pdf' : $this->surat_edaran_extension,
                 'is_pdf' => (bool) ($this->is_surat_edaran_pdf || $this->is_surat_edaran_digital),
@@ -66,9 +66,11 @@ class AgendaResource extends JsonResource
             'my_attendance' => $this->when($currentUser !== null, function () use ($currentUser) {
                 if ($this->relationLoaded('attendances')) {
                     $att = $this->attendances->firstWhere('user_id', $currentUser->id);
+
                     return $att ? new AttendanceResource($att) : null;
                 }
                 $att = $this->attendances()->where('user_id', $currentUser->id)->first();
+
                 return $att ? new AttendanceResource($att) : null;
             }),
             'has_notulensi' => $hasNotulensi,
@@ -107,4 +109,3 @@ class AgendaResource extends JsonResource
         ];
     }
 }
-

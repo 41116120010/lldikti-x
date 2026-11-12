@@ -174,6 +174,19 @@ class NotulenPreviewParityTest extends TestCase
             $this->sectionOrder($sheet),
             'Urutan seksi pada lembar harus sama dengan urutan pada dokumen ekspor.'
         );
+
+        // Pastikan blok pengesahan/tanda tangan berada sebelum tabel daftar kehadiran
+        $sigPosSheet = strpos($sheet, 'class="signature-block"');
+        $attPosSheet = strpos($sheet, 'II. DAFTAR KEHADIRAN');
+        $this->assertNotFalse($sigPosSheet);
+        $this->assertNotFalse($attPosSheet);
+        $this->assertLessThan($attPosSheet, $sigPosSheet, 'Blok tanda tangan pada lembar harus mendahului daftar kehadiran.');
+
+        $sigPosExport = strpos($export, 'class="signature-block"');
+        $attPosExport = strpos($export, 'II. DAFTAR KEHADIRAN');
+        $this->assertNotFalse($sigPosExport);
+        $this->assertNotFalse($attPosExport);
+        $this->assertLessThan($attPosExport, $sigPosExport, 'Blok tanda tangan pada ekspor harus mendahului daftar kehadiran.');
     }
 
     /**
@@ -205,11 +218,13 @@ class NotulenPreviewParityTest extends TestCase
         $agenda = Agenda::first();
         $config = $agenda->report_config;
 
-        $two = $this->renderSheet($agenda, $config);
+        $two = $this->renderSheet($agenda, array_merge($config, ['show_signer3' => false]));
         $three = $this->renderSheet($agenda, ['show_signer3' => true, 'signer3_role' => 'Kepala LLDIKTI']);
 
-        $this->assertStringNotContainsString('Menyetujui,', $two);
-        $this->assertStringContainsString('Menyetujui,', $three, 'Kolom ketiga harus muncul saat show_signer3 menyala.');
+        // Pada mode 2 penanda tangan, kolom ketiga disembunyikan via CSS display: none
+        $this->assertMatchesRegularExpression('/data-signer3-col[^>]*display:\s*none/i', $two);
+        // Pada mode 3 penanda tangan, kolom ketiga aktif dan role Kepala LLDIKTI ditampilkan
+        $this->assertDoesNotMatchRegularExpression('/data-signer3-col[^>]*display:\s*none/i', $three);
         $this->assertStringContainsString('Kepala LLDIKTI', $three);
     }
 
@@ -226,8 +241,8 @@ class NotulenPreviewParityTest extends TestCase
             'show_signer2_signature' => false,
         ]));
 
-        $this->assertStringContainsString('alt="TTD"', $on);
-        $this->assertStringNotContainsString('alt="TTD"', $off, 'Tanda tangan blok harus hilang dari lembar.');
+        $this->assertDoesNotMatchRegularExpression('/id="sheet-signer1-mark"[^>]*display:\s*none/i', $on);
+        $this->assertMatchesRegularExpression('/id="sheet-signer1-mark"[^>]*display:\s*none/i', $off, 'Tanda tangan blok harus disembunyikan pada lembar.');
 
         // Nama, jabatan, dan NIP tetap ada: yang dimatikan hanya mark-nya.
         $this->assertStringContainsString('Mengetahui,', $off);
@@ -328,6 +343,6 @@ class NotulenPreviewParityTest extends TestCase
         $this->assertSame('24%', DocumentLayout::DETAIL_LABEL_COLUMN);
         $this->assertSame('2%', DocumentLayout::DETAIL_COLON_COLUMN);
         $this->assertSame('74%', DocumentLayout::DETAIL_VALUE_COLUMN);
-        $this->assertSame(['4%', '15%', '12%', '9%', '15%', '15%'], DocumentLayout::attendanceColumns());
+        $this->assertSame(['4%', '21%', '11%', '7%', '11%', '15%'], DocumentLayout::attendanceColumns());
     }
 }
