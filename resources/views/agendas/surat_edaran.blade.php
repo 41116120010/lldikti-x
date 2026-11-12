@@ -63,7 +63,7 @@
     <div class="bg-white border border-slate-300 rounded-2xl p-3 sm:p-4 shadow-xs flex flex-wrap items-center justify-between gap-3">
         <!-- Left: Back Navigation & Context -->
         <div class="flex items-center gap-3">
-            <a 
+            <a
                 href="{{ auth()->user()->isStaff() ? route('agendas.show', $agenda) : route('admin.agendas.show', $agenda) }}"
                 class="button secondary text-xs font-bold inline-flex items-center gap-1.5"
                 title="Kembali ke halaman rincian agenda rapat"
@@ -82,18 +82,18 @@
         <div class="flex items-center gap-2">
             <!-- Paper Size Selector (A4 vs F4) -->
             <div class="inline-flex p-0.5 bg-slate-100 rounded-xl border border-slate-300 shadow-2xs" role="group" aria-label="Pilih Ukuran Kertas">
-                <button 
-                    type="button" 
-                    data-paper-size="a4" 
+                <button
+                    type="button"
+                    data-paper-size="a4"
                     class="px-3 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1.5 bg-slate-900 text-white shadow-xs"
                     title="Beralih ke format lembar kertas A4 (210 × 297 mm) sesuai Template Resmi"
                 >
                     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect width="16" height="20" x="4" y="2" rx="2"/></svg>
                     <span>A4</span>
                 </button>
-                <button 
-                    type="button" 
-                    data-paper-size="f4" 
+                <button
+                    type="button"
+                    data-paper-size="f4"
                     class="px-3 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1.5 text-slate-700 hover:bg-slate-200"
                     title="Beralih ke format lembar kertas F4 / Folio (215 × 330 mm)"
                 >
@@ -115,9 +115,9 @@
         <!-- Right: Actions -->
         <div class="flex items-center gap-2">
             <!-- Penyesuaian Naskah Surat Trigger -->
-            <button 
-                type="button" 
-                onclick="openSuratConfigModal()" 
+            <button
+                type="button"
+                onclick="openSuratConfigModal()"
                 class="button secondary flex items-center gap-1.5 text-xs font-bold shadow-2xs cursor-pointer border-slate-300 hover:bg-slate-100 text-slate-800"
                 title="Sesuaikan format naskah dinas, kop surat, nomor, penandatangan, tembusan, dan lampiran daftar undangan"
             >
@@ -133,8 +133,8 @@
             </button>
 
             <!-- Ekspor PDF & Cetak -->
-            <a 
-                href="{{ route('admin.agendas.export-surat-edaran-pdf', ['agenda' => $agenda, 'download' => 1]) }}" 
+            <a
+                href="{{ route('admin.agendas.export-surat-edaran-pdf', ['agenda' => $agenda, 'download' => 1]) }}"
                 class="button secondary flex items-center gap-1.5 text-xs font-bold shadow-2xs text-slate-800 hover:bg-slate-100"
                 title="Unduh dokumen naskah resmi dalam format PDF"
             >
@@ -143,15 +143,14 @@
             </a>
 
             <!-- Primary Save Action -->
-            <button 
-                type="submit" 
-                form="surat-edaran-form" 
+            <button
+                type="submit"
+                form="surat-edaran-form"
                 class="button flex items-center gap-2 text-xs font-bold shadow-xs cursor-pointer bg-slate-900 hover:bg-slate-800 text-white"
                 title="Simpan seluruh naskah surat dan pengaturan dokumen dinas (Shortcut: Ctrl+S)"
             >
                 <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                 <span>Simpan Naskah</span>
-                <span class="hidden md:inline-block text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded font-mono font-normal">Ctrl+S</span>
             </button>
         </div>
     </div>
@@ -298,10 +297,10 @@
     </div>
 
     <!-- 3. Form Utama Penyimpanan Surat Dinas -->
-    <form 
-        id="surat-edaran-form" 
-        action="{{ route('admin.agendas.update-surat-edaran', $agenda) }}" 
-        method="POST" 
+    <form
+        id="surat-edaran-form"
+        action="{{ route('admin.agendas.update-surat-edaran', $agenda) }}"
+        method="POST"
         enctype="multipart/form-data"
         class="hidden"
         data-confirm="Simpan seluruh naskah surat dan pengaturan dokumen dinas resmi?"
@@ -320,7 +319,7 @@
         <input type="hidden" name="tempat_surat" id="form-tempat-surat" value="{{ $tempatSuratVal }}">
         <input type="hidden" name="tanggal_surat" id="form-tanggal-surat" value="{{ $tanggalSuratVal }}">
         <input type="hidden" name="tujuan_surat" id="form-tujuan-surat" value="{{ $tujuanFormatted }}">
-        
+
         <input type="hidden" name="pembuka" id="form-pembuka" value="{{ $pembukaVal }}">
         <input type="hidden" name="surat_edaran_content" id="form-surat-content" value="{{ $suratContentVal }}">
         <input type="hidden" name="catatan" id="form-catatan" value="{{ $catatanVal }}">
@@ -362,7 +361,7 @@
             {{-- ================= HALAMAN 1: NASKAH SURAT UTAMA ================= --}}
             <div id="surat-sheet-page-1" class="office-paper-sheet paper-a4" data-paper-format="a4" data-page-number="1">
                 <div class="office-paper-margin-guide">
-                    
+
                     {{-- KOP SURAT RESMI (word/header3.xml: Times New Roman 16pt Reguler / 14pt Bold / 12pt Reguler + Garis Tunggal 2.25pt) --}}
                     <div id="sheet-kop-container" style="{{ $activeShowKop ? '' : 'display: none;' }}; margin-bottom: 14pt;">
                         <div class="header-kop" id="sheet-header-kop" style="display: {{ $activeShowKop ? 'block' : 'none' }}; margin: 0; padding: 0; text-align: center; width: 100%; font-family: 'Times New Roman', Times, serif;">
@@ -634,8 +633,8 @@
     </div>
 
     <!-- 6. Modal Penyesuaian Naskah Surat Dinas -->
-    <div 
-        id="modal-surat-config" 
+    <div
+        id="modal-surat-config"
         class="fixed inset-0 z-50 hidden bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 overflow-y-auto"
         role="dialog"
         aria-modal="true"

@@ -13,12 +13,12 @@
             <div class="space-y-1 sm:col-span-2">
                 <label for="search" class="text-xs font-bold text-slate-900 block">Pencarian Kata Kunci</label>
                 <div class="relative">
-                    <input 
-                        type="text" 
-                        id="search" 
-                        name="search" 
-                        value="{{ request('search') }}" 
-                        placeholder="Cari deskripsi, IP, nama, NIP..." 
+                    <input
+                        type="text"
+                        id="search"
+                        name="search"
+                        value="{{ request('search') }}"
+                        placeholder="Cari deskripsi, IP, nama, NIP..."
                         class="input w-full pl-9 text-xs font-medium"
                     >
                     <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
@@ -88,7 +88,7 @@
                     <tr>
                         <th class="w-14 text-center">No</th>
                         <th>Waktu & Tanggal</th>
-                        <th>Aktor Pegawai</th>
+                        <th>Pegawai</th>
                         <th>Tipe Aktivitas</th>
                         <th>Deskripsi Tindakan</th>
                         <th>IP & Perangkat</th>
@@ -106,7 +106,7 @@
                                 @if($log->user)
                                     <div class="font-bold text-slate-950 text-xs">{{ $log->user->name }}</div>
                                     <div class="text-[11px] text-slate-600 font-mono font-medium">
-                                        NIP: {{ $log->user->nip }} 
+                                        NIP: {{ $log->user->nip }}
                                         @if($log->user->unit)
                                             &bull; {{ $log->user->unit->kode_unit }}
                                         @endif
@@ -134,9 +134,9 @@
                                 <div class="font-semibold text-slate-950">{{ $log->description }}</div>
                                 @if($log->properties && count($log->properties) > 0)
                                     <div class="mt-1">
-                                        <button 
-                                            type="button" 
-                                            onclick="viewLogPayload({{ $log->id }})" 
+                                        <button
+                                            type="button"
+                                            onclick="viewLogPayload({{ $log->id }})"
                                             class="inline-flex items-center gap-1 text-[11px] text-slate-900 hover:text-slate-950 font-bold underline cursor-pointer"
                                         >
                                             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>

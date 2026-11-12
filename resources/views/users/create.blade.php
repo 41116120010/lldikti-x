@@ -18,14 +18,14 @@
                 <!-- Nama Lengkap -->
                 <div class="field md:col-span-2">
                     <label for="name" class="text-xs font-bold text-slate-900 block mb-1">Nama Lengkap & Gelar <span class="text-rose-600">*</span></label>
-                    <input 
-                        type="text" 
-                        id="name" 
-                        name="name" 
-                        value="{{ old('name') }}" 
-                        class="input w-full font-medium @error('name') input-error @enderror" 
-                        placeholder="Contoh: Dr. Ir. Ahmad Syahid, M.Kom." 
-                        required 
+                    <input
+                        type="text"
+                        id="name"
+                        name="name"
+                        value="{{ old('name') }}"
+                        class="input w-full font-medium @error('name') input-error @enderror"
+                        placeholder="Contoh: Apandi, S.T."
+                        required
                         autofocus
                     >
                     @error('name')
@@ -36,13 +36,13 @@
                 <!-- NIP -->
                 <div class="field">
                     <label for="nip" class="text-xs font-bold text-slate-900 block mb-1">Nomor Induk Pegawai (NIP) <span class="text-rose-600">*</span></label>
-                    <input 
-                        type="text" 
-                        id="nip" 
-                        name="nip" 
-                        value="{{ old('nip') }}" 
-                        class="input w-full font-mono font-bold @error('nip') input-error @enderror" 
-                        placeholder="Contoh: 199402142020121004" 
+                    <input
+                        type="text"
+                        id="nip"
+                        name="nip"
+                        value="{{ old('nip') }}"
+                        class="input w-full font-mono font-bold @error('nip') input-error @enderror"
+                        placeholder="Contoh: 198804022019031016"
                         required
                     >
                     <p class="text-[11px] text-slate-600 font-medium mt-1">18 digit angka NIP resmi instansi.</p>
@@ -54,13 +54,13 @@
                 <!-- Username -->
                 <div class="field">
                     <label for="username" class="text-xs font-bold text-slate-900 block mb-1">Username <span class="text-rose-600">*</span></label>
-                    <input 
-                        type="text" 
-                        id="username" 
-                        name="username" 
-                        value="{{ old('username') }}" 
-                        class="input w-full font-mono font-bold @error('username') input-error @enderror" 
-                        placeholder="Contoh: ahmad_syahid" 
+                    <input
+                        type="text"
+                        id="username"
+                        name="username"
+                        value="{{ old('username') }}"
+                        class="input w-full font-mono font-bold @error('username') input-error @enderror"
+                        placeholder="Contoh: apandi"
                         required
                     >
                     <p class="text-[11px] text-slate-600 font-medium mt-1">Alfanumerik unik, digunakan untuk login alternatif.</p>
@@ -72,13 +72,13 @@
                 <!-- Email -->
                 <div class="field">
                     <label for="email" class="text-xs font-bold text-slate-900 block mb-1">Alamat Email Resmi <span class="text-rose-600">*</span></label>
-                    <input 
-                        type="email" 
-                        id="email" 
-                        name="email" 
-                        value="{{ old('email') }}" 
-                        class="input w-full font-medium @error('email') input-error @enderror" 
-                        placeholder="nama@lldikti.kemdikbud.go.id" 
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        value="{{ old('email') }}"
+                        class="input w-full font-medium @error('email') input-error @enderror"
+                        placeholder="nama@lldikti.kemdiktisaintek.go.id"
                         required
                     >
                     @error('email')
@@ -89,12 +89,12 @@
                 <!-- Telepon / WhatsApp -->
                 <div class="field">
                     <label for="phone" class="text-xs font-bold text-slate-900 block mb-1">Nomor Telepon / WhatsApp</label>
-                    <input 
-                        type="text" 
-                        id="phone" 
-                        name="phone" 
-                        value="{{ old('phone') }}" 
-                        class="input w-full font-mono font-medium @error('phone') input-error @enderror" 
+                    <input
+                        type="text"
+                        id="phone"
+                        name="phone"
+                        value="{{ old('phone') }}"
+                        class="input w-full font-mono font-medium @error('phone') input-error @enderror"
                         placeholder="081234567890"
                     >
                     @error('phone')
@@ -141,12 +141,12 @@
                 <!-- Password -->
                 <div class="field md:col-span-2">
                     <label for="password" class="text-xs font-bold text-slate-900 block mb-1">Kata Sandi Awal <span class="text-rose-600">*</span></label>
-                    <input 
-                        type="password" 
-                        id="password" 
-                        name="password" 
-                        class="input w-full @error('password') input-error @enderror" 
-                        placeholder="Minimal 8 karakter (kombinasi huruf & angka)" 
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        class="input w-full @error('password') input-error @enderror"
+                        placeholder="Minimal 8 karakter (kombinasi huruf & angka)"
                         required
                     >
                     <p class="text-[11px] text-slate-600 font-medium mt-1">Minimal 8 karakter, wajib menyertakan huruf dan angka.</p>

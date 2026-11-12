@@ -22,7 +22,7 @@
     <div class="bg-white border border-slate-300 rounded-2xl p-3 sm:p-4 shadow-xs flex flex-wrap items-center justify-between gap-3">
         <!-- Left: Back Navigation -->
         <div class="flex items-center gap-3">
-            <a 
+            <a
                 href="{{ auth()->user()->isStaff() ? route('agendas.show', $agenda) : route('admin.agendas.show', $agenda) }}"
                 class="button secondary text-xs font-bold inline-flex items-center gap-1.5"
                 title="Kembali ke halaman rincian agenda rapat"
@@ -41,18 +41,18 @@
         <div class="flex items-center gap-2">
             <!-- Paper Size Selector (A4 vs F4) -->
             <div class="inline-flex p-0.5 bg-slate-100 rounded-xl border border-slate-300 shadow-2xs" role="group" aria-label="Pilih Ukuran Kertas">
-                <button 
-                    type="button" 
-                    data-paper-size="a4" 
+                <button
+                    type="button"
+                    data-paper-size="a4"
                     class="px-3 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1.5 bg-slate-900 text-white shadow-xs"
                     title="Beralih ke format lembar kertas A4 (210 × 297 mm)"
                 >
                     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect width="16" height="20" x="4" y="2" rx="2"/></svg>
                     <span>A4</span>
                 </button>
-                <button 
-                    type="button" 
-                    data-paper-size="f4" 
+                <button
+                    type="button"
+                    data-paper-size="f4"
                     class="px-3 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1.5 text-slate-700 hover:bg-slate-200"
                     title="Beralih ke format lembar kertas F4 / Folio (215 × 330 mm)"
                 >
@@ -74,9 +74,9 @@
         <!-- Right: Actions (Penyesuaian Dokumen, Ekspor Cepat, & Simpan) -->
         <div class="flex items-center gap-2">
             <!-- Penyesuaian Dokumen Button -->
-            <button 
-                type="button" 
-                onclick="openDocumentConfigModal()" 
+            <button
+                type="button"
+                onclick="openDocumentConfigModal()"
                 class="button secondary flex items-center gap-1.5 text-xs font-bold shadow-2xs cursor-pointer border-slate-300 hover:bg-slate-100 text-slate-800"
                 title="Buka pengaturan kop surat, nomor surat, identitas rapat, dan pejabat penandatangan"
             >
@@ -92,9 +92,9 @@
             </button>
 
             <!-- 1.3 Foto Dokumentasi Modal Trigger -->
-            <button 
-                type="button" 
-                onclick="openDokumentasiModal()" 
+            <button
+                type="button"
+                onclick="openDokumentasiModal()"
                 class="button flex items-center gap-2 text-xs font-semibold shadow-xs cursor-pointer border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 relative"
                 title="Kelola foto dokumentasi kegiatan rapat (di luar lembar dokumen resmi)"
             >
@@ -111,9 +111,9 @@
 
             <!-- 1.4 Surat Undangan / Edaran Modal Trigger (if attached) -->
             @if($agenda->surat_edaran_path)
-            <button 
-                type="button" 
-                onclick="openSuratEdaranModal('modal-surat-preview-{{ $agenda->id }}')" 
+            <button
+                type="button"
+                onclick="openSuratEdaranModal('modal-surat-preview-{{ $agenda->id }}')"
                 class="button flex items-center gap-2 text-xs font-semibold shadow-xs cursor-pointer border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 min-h-[36px]"
                 title="Buka pratinjau surat undangan / edaran resmi rapat ini"
             >
@@ -129,9 +129,9 @@
 
             <!-- Quick Export Dropdown -->
             <div class="relative inline-block text-left" x-data="{ open: false }" @click.outside="open = false">
-                <button 
-                    type="button" 
-                    @click="open = !open" 
+                <button
+                    type="button"
+                    @click="open = !open"
                     class="button secondary flex items-center gap-1.5 text-xs font-bold shadow-2xs cursor-pointer border-slate-300 hover:bg-slate-100 text-slate-800"
                     title="Menu opsi ekspor cepat dokumen berita acara"
                 >
@@ -143,22 +143,22 @@
                     <span>Ekspor</span>
                     <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
                 </button>
-                <div 
-                    x-show="open" 
-                    x-transition 
-                    style="display: none;" 
+                <div
+                    x-show="open"
+                    x-transition
+                    style="display: none;"
                     class="absolute right-0 z-30 mt-2 w-56 origin-top-right rounded-xl bg-white border border-slate-200 shadow-xl py-1 text-xs"
                 >
-                    <a 
-                        href="{{ route('admin.reports.export.pdf', $agenda) }}" 
+                    <a
+                        href="{{ route('admin.reports.export.pdf', $agenda) }}"
                         data-export-link="pdf"
                         class="flex items-center gap-2 px-3.5 py-2.5 min-h-[44px] text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium"
                     >
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" class="text-rose-600"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>
                         <span>Unduh PDF Resmi (.pdf)</span>
                     </a>
-                    <a 
-                        href="{{ route('admin.reports.export.word', $agenda) }}" 
+                    <a
+                        href="{{ route('admin.reports.export.word', $agenda) }}"
                         data-export-link="word"
                         class="flex items-center gap-2 px-3.5 py-2.5 min-h-[44px] text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium"
                     >
@@ -169,15 +169,14 @@
             </div>
 
             <!-- Primary Save Action -->
-            <button 
-                type="submit" 
-                form="notulen-form" 
+            <button
+                type="submit"
+                form="notulen-form"
                 class="button flex items-center gap-2 text-xs font-bold shadow-xs cursor-pointer bg-slate-900 hover:bg-slate-800 text-white"
                 title="Simpan seluruh notulensi, kesimpulan, berkas foto dokumentasi, dan penyesuaian dokumen (Shortcut: Ctrl+S)"
             >
                 <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                 <span>Simpan Notulensi</span>
-                <span class="hidden md:inline-block text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded font-mono font-normal">Ctrl+S</span>
             </button>
         </div>
     </div>
@@ -314,10 +313,10 @@
     </div>
 
     <!-- 3. Form Binding: Hidden Inputs for Notulensi & Kesimpulan -->
-    <form 
-        id="notulen-form" 
-        method="POST" 
-        action="{{ route('admin.agendas.update-notulen', $agenda) }}" 
+    <form
+        id="notulen-form"
+        method="POST"
+        action="{{ route('admin.agendas.update-notulen', $agenda) }}"
         enctype="multipart/form-data"
     >
         @csrf
@@ -533,8 +532,8 @@
                                     <td data-col="time" style="text-align: center; vertical-align: middle; padding: 2pt 2pt; {{ ($config['show_attendance_time'] ?? true) ? '' : 'display: none;' }}">{{ $att->signed_at?->format('H:i') ?? '-' }}</td>
                                     <td data-col="photo" style="text-align: center; vertical-align: middle; padding: 1.5pt; {{ ($config['show_selfie_photos'] ?? true) ? '' : 'display: none;' }}">
                                         @if($att->selfie_path)
-                                            <button 
-                                                type="button" 
+                                            <button
+                                                type="button"
                                                 data-selfie-modal-trigger
                                                 data-selfie-url="{{ Storage::disk('public')->url($att->selfie_path) }}"
                                                 data-user-name="{{ $att->user->name }}"
@@ -703,7 +702,7 @@
                                     <tr>
                                         @foreach($chunk as $doc)
                                             <td width="50%" align="center" valign="top" style="padding: 4pt; border: none;" data-sheet-doc-id="{{ $doc->id }}">
-                                                <div 
+                                                <div
                                                     class="cursor-pointer group/doc hover:opacity-90 transition"
                                                     data-doc-modal-trigger
                                                     data-doc-gallery="notulen-sheet-docs"
@@ -775,8 +774,8 @@
         <!-- ========================================================================= -->
         <!-- MODAL KELOLA FOTO DOKUMENTASI RAPAT (DI LUAR LEMBAR DOKUMEN FISIK)        -->
         <!-- ========================================================================= -->
-        <div 
-            id="modal-notulen-dokumentasi" 
+        <div
+            id="modal-notulen-dokumentasi"
             class="fixed inset-0 z-50 hidden !m-0 m-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 overflow-y-auto transition-opacity"
             tabindex="-1"
             role="dialog"
@@ -816,16 +815,16 @@
 
                     <!-- Interactive Dropzone -->
                     <div id="photo-uploader-container" class="space-y-3">
-                        <div 
+                        <div
                             id="photo-dropzone"
                             class="border-2 border-dashed border-slate-300 hover:border-slate-400 bg-slate-50/75 rounded-xl p-6 text-center transition cursor-pointer relative group font-sans"
                         >
-                            <input 
-                                type="file" 
-                                id="photos" 
-                                name="photos[]" 
-                                multiple 
-                                accept="image/jpeg,image/png,image/webp" 
+                            <input
+                                type="file"
+                                id="photos"
+                                name="photos[]"
+                                multiple
+                                accept="image/jpeg,image/png,image/webp"
                                 class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                                 title="Pilih atau seret berkas foto dokumentasi"
                             >
@@ -871,7 +870,7 @@
                                         data-doc-date="{{ $doc->created_at ? $doc->created_at->format('d/m/Y H:i') . ' WIB' : '' }}"
                                         class="relative group bg-slate-50 rounded-xl overflow-hidden border border-slate-300 shadow-xs flex flex-col justify-between"
                                     >
-                                        <button 
+                                        <button
                                             type="button"
                                             class="w-full text-left relative block cursor-pointer group/thumb focus:outline-hidden"
                                             data-doc-modal-trigger
@@ -901,8 +900,8 @@
                                                 class="w-full text-[11px] rounded-lg border border-slate-200 focus:border-slate-900 focus:ring-slate-900 py-1.5 px-2 text-slate-800 bg-slate-50 focus:bg-white transition font-medium"
                                             >
                                             <div class="flex items-center justify-between gap-1 pt-0.5">
-                                                <button 
-                                                    type="button" 
+                                                <button
+                                                    type="button"
                                                     class="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-[11px] font-semibold px-1 py-0.5 rounded"
                                                     data-doc-modal-trigger
                                                     data-doc-gallery="modal-stored-docs"
@@ -913,12 +912,12 @@
                                                 >
                                                     Lihat Perbesar
                                                 </button>
-                                                <button 
-                                                    type="button" 
+                                                <button
+                                                    type="button"
                                                     data-delete-doc-btn="{{ $doc->id }}"
                                                     data-delete-doc-url="{{ route('admin.agendas.delete-documentation', [$agenda, $doc]) }}"
                                                     data-delete-doc-caption="{{ $doc->caption ?: 'Dokumentasi' }}"
-                                                    class="inline-flex items-center gap-1 text-rose-600 hover:text-rose-800 px-2 py-1 rounded-lg hover:bg-rose-50 transition cursor-pointer text-[11px] font-semibold" 
+                                                    class="inline-flex items-center gap-1 text-rose-600 hover:text-rose-800 px-2 py-1 rounded-lg hover:bg-rose-50 transition cursor-pointer text-[11px] font-semibold"
                                                     title="Hapus foto dari database tanpa mereset ketikan"
                                                     aria-label="Hapus foto {{ $doc->caption ?? 'Dokumentasi' }}"
                                                 >
@@ -940,9 +939,9 @@
                         0 Foto Terpilih
                     </span>
                     <div class="ml-auto">
-                        <button 
-                            type="button" 
-                            onclick="closeDokumentasiModal()" 
+                        <button
+                            type="button"
+                            onclick="closeDokumentasiModal()"
                             class="button text-xs font-semibold border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 cursor-pointer"
                         >
                             Tutup
@@ -955,8 +954,8 @@
         <!-- ========================================================================= -->
         <!-- MODAL PENYESUAIAN DOKUMEN BERITA ACARA (SINGLE SOURCE OF TRUTH)           -->
         <!-- ========================================================================= -->
-        <div 
-            id="modal-notulen-document-config" 
+        <div
+            id="modal-notulen-document-config"
             class="fixed inset-0 z-50 hidden !m-0 m-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 overflow-y-auto transition-opacity"
             tabindex="-1"
             role="dialog"
@@ -1366,17 +1365,17 @@
                     </div>
 
                     <div class="flex items-center justify-end gap-2 w-full sm:w-auto shrink-0">
-                        <button 
-                            type="button" 
-                            onclick="cancelDocumentConfigModal()" 
+                        <button
+                            type="button"
+                            onclick="cancelDocumentConfigModal()"
                             class="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:text-slate-900 rounded-xl hover:bg-slate-200/80 transition cursor-pointer min-h-[44px] min-w-[70px] flex items-center justify-center"
                         >
                             Batal
                         </button>
 
-                        <button 
-                            type="button" 
-                            onclick="closeDocumentConfigModal()" 
+                        <button
+                            type="button"
+                            onclick="closeDocumentConfigModal()"
                             class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 active:bg-slate-950 transition shadow-xs cursor-pointer min-h-[44px]"
                             title="Terapkan format dokumen ke lembar kerja dan lanjutkan penulisan notulensi"
                         >
@@ -1973,4 +1972,3 @@
 @include('attendances.partials.selfie_preview_modal')
 @include('agendas.partials.documentation_preview_modal')
 @endsection
-
