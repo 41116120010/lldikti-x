@@ -6,9 +6,11 @@ use App\Models\ActivityLog;
 use App\Models\User;
 use App\Notifications\ResetPasswordNotification;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class AuthApiTest extends TestCase
@@ -80,7 +82,8 @@ class AuthApiTest extends TestCase
         ]);
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrors(['identifier']);
+            ->assertJsonValidationErrors(['password'])
+            ->assertJsonPath('errors.password.0', 'Kata sandi yang Anda masukkan tidak sesuai. Silakan periksa kembali kata sandi Anda.');
     }
 
     public function test_inactive_user_cannot_login(): void
@@ -93,11 +96,36 @@ class AuthApiTest extends TestCase
 
         $response = $this->postJson('/api/v1/auth/login', [
             'identifier' => $user->username ?? $user->nip,
+            'password' => 'Password123!',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['identifier'])
+            ->assertJsonPath('errors.identifier.0', 'Akun pegawai berstatus non-aktif. Silakan hubungi Administrator atau Subbag Kepegawaian (HKTL).');
+    }
+
+    public function test_non_existent_user_cannot_login(): void
+    {
+        $response = $this->postJson('/api/v1/auth/login', [
+            'identifier' => 'unknown_user_123',
             'password' => 'password',
         ]);
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrors(['identifier']);
+            ->assertJsonValidationErrors(['identifier'])
+            ->assertJsonPath('errors.identifier.0', 'Username atau NIP tidak terdaftar dalam sistem.');
+    }
+
+    public function test_non_existent_nip_cannot_login(): void
+    {
+        $response = $this->postJson('/api/v1/auth/login', [
+            'identifier' => '199912312025011099',
+            'password' => 'password',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['identifier'])
+            ->assertJsonPath('errors.identifier.0', 'Nomor Induk Pegawai (NIP) tidak terdaftar dalam data kepegawaian sistem.');
     }
 
     public function test_authenticated_user_can_access_me_profile(): void
@@ -294,11 +322,13 @@ class AuthApiTest extends TestCase
         $user = User::where('is_active', true)->whereNotNull('email')->first();
         $this->assertNotNull($user);
 
+        $user->tokens()->delete();
         $oldToken = $user->createToken('AndroidDevice')->plainTextToken;
         $this->assertEquals(1, $user->tokens()->count());
 
-        if (\Illuminate\Support\Facades\Schema::hasTable(config('session.table', 'sessions'))) {
-            \Illuminate\Support\Facades\DB::table(config('session.table', 'sessions'))->insert([
+        if (Schema::hasTable(config('session.table', 'sessions'))) {
+            DB::table(config('session.table', 'sessions'))->where('user_id', $user->id)->delete();
+            DB::table(config('session.table', 'sessions'))->insert([
                 'id' => 'dummy_api_session_456',
                 'user_id' => $user->id,
                 'ip_address' => '127.0.0.1',
@@ -306,7 +336,7 @@ class AuthApiTest extends TestCase
                 'payload' => 'payload',
                 'last_activity' => time(),
             ]);
-            $this->assertEquals(1, \Illuminate\Support\Facades\DB::table(config('session.table', 'sessions'))->where('user_id', $user->id)->count());
+            $this->assertEquals(1, DB::table(config('session.table', 'sessions'))->where('user_id', $user->id)->count());
         }
 
         $resetToken = Password::broker()->createToken($user);
@@ -324,8 +354,8 @@ class AuthApiTest extends TestCase
         $this->assertTrue(Hash::check('ResetPass99!', $user->fresh()->password));
         $this->assertEquals(0, $user->tokens()->count());
 
-        if (\Illuminate\Support\Facades\Schema::hasTable(config('session.table', 'sessions'))) {
-            $this->assertEquals(0, \Illuminate\Support\Facades\DB::table(config('session.table', 'sessions'))->where('user_id', $user->id)->count());
+        if (Schema::hasTable(config('session.table', 'sessions'))) {
+            $this->assertEquals(0, DB::table(config('session.table', 'sessions'))->where('user_id', $user->id)->count());
         }
     }
 
@@ -347,5 +377,3 @@ class AuthApiTest extends TestCase
             ->assertJsonValidationErrors(['password']);
     }
 }
-
-

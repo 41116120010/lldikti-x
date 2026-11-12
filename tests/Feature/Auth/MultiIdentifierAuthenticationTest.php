@@ -2,8 +2,6 @@
 
 namespace Tests\Feature\Auth;
 
-use App\Models\ActivityLog;
-use App\Models\Unit;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
@@ -79,7 +77,11 @@ class MultiIdentifierAuthenticationTest extends TestCase
         ]);
 
         $this->assertGuest();
-        $response->assertSessionHasErrors('login');
+        $response->assertSessionHasErrors('password');
+        $this->assertEquals(
+            'Kata sandi yang Anda masukkan tidak sesuai. Silakan periksa kembali kata sandi Anda.',
+            session('errors')->first('password')
+        );
 
         $this->assertDatabaseHas('activity_logs', [
             'activity_type' => 'AUTH_LOGIN_FAILED',
@@ -96,6 +98,30 @@ class MultiIdentifierAuthenticationTest extends TestCase
 
         $this->assertGuest();
         $response->assertSessionHasErrors('login');
+        $this->assertEquals(
+            'Username atau NIP tidak terdaftar dalam sistem.',
+            session('errors')->first('login')
+        );
+
+        $this->assertDatabaseHas('activity_logs', [
+            'activity_type' => 'AUTH_LOGIN_FAILED',
+            'target_id' => null,
+        ]);
+    }
+
+    public function test_non_existent_nip_login_attempt_shows_specific_nip_message(): void
+    {
+        $response = $this->post('/login', [
+            'login' => '199912312025011099',
+            'password' => 'WrongPassword123!',
+        ]);
+
+        $this->assertGuest();
+        $response->assertSessionHasErrors('login');
+        $this->assertEquals(
+            'Nomor Induk Pegawai (NIP) tidak terdaftar dalam data kepegawaian sistem.',
+            session('errors')->first('login')
+        );
 
         $this->assertDatabaseHas('activity_logs', [
             'activity_type' => 'AUTH_LOGIN_FAILED',
@@ -122,6 +148,10 @@ class MultiIdentifierAuthenticationTest extends TestCase
 
         $this->assertGuest();
         $response->assertSessionHasErrors('login');
+        $this->assertEquals(
+            'Akun pegawai berstatus non-aktif. Silakan hubungi Administrator atau Subbag Kepegawaian (HKTL).',
+            session('errors')->first('login')
+        );
 
         // Cleanup
         $inactiveUser->delete();
@@ -149,7 +179,7 @@ class MultiIdentifierAuthenticationTest extends TestCase
         $user = User::where('role', 'staff')->firstOrFail();
 
         // Simulate clipboard copy paste with spaces: " 19940214 202012 1 004 "
-        $spacedNip = ' ' . substr($user->nip, 0, 8) . ' ' . substr($user->nip, 8, 6) . ' ' . substr($user->nip, 14, 1) . ' ' . substr($user->nip, 15) . ' ';
+        $spacedNip = ' '.substr($user->nip, 0, 8).' '.substr($user->nip, 8, 6).' '.substr($user->nip, 14, 1).' '.substr($user->nip, 15).' ';
         $response = $this->post('/login', [
             'login' => $spacedNip,
             'password' => 'Password123!',

@@ -93,10 +93,10 @@
         @endif
 
         @if ($errors->any())
-            <div class="auth-alert flex items-start gap-2 mb-4">
+            <div class="auth-alert flex items-start gap-2 mb-4" role="alert">
                 <svg class="mt-0.5 shrink-0" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                <div class="flex-1 text-xs">
-                    @foreach ($errors->all() as $error)
+                <div class="flex-1 text-xs space-y-1">
+                    @foreach (array_unique($errors->all()) as $error)
                         <div>{{ $error }}</div>
                     @endforeach
                 </div>
@@ -118,9 +118,15 @@
                     placeholder="Masukkan Username atau NIP"
                     required
                     autocomplete="username"
-                    @error('login') aria-invalid="true" @enderror
+                    @error('login') aria-invalid="true" aria-errormessage="login-error" @enderror
                     autofocus
                 >
+                @error('login')
+                    <p id="login-error" class="text-xs text-rose-700 font-semibold mt-1.5 flex items-center gap-1.5" role="alert">
+                        <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <span>{{ $message }}</span>
+                    </p>
+                @enderror
             </div>
 
             <!-- Password Input -->
@@ -138,12 +144,18 @@
                         placeholder="Masukkan Kata Sandi"
                         required
                         autocomplete="current-password"
-                        @error('password') aria-invalid="true" @enderror
+                        @error('password') aria-invalid="true" aria-errormessage="password-error" @enderror
                     >
                     <button type="button" class="auth-password-toggle" data-toggle-password="password-input" aria-label="Tampilkan kata sandi" aria-pressed="false" title="Tampilkan/Sembunyikan">
                         <svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                     </button>
                 </div>
+                @error('password')
+                    <p id="password-error" class="text-xs text-rose-700 font-semibold mt-1.5 flex items-center gap-1.5" role="alert">
+                        <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <span>{{ $message }}</span>
+                    </p>
+                @enderror
             </div>
 
             <!-- Remember Me -->

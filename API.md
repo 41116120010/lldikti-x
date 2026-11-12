@@ -148,10 +148,10 @@ Sesuai aturan keamanan instansi (**AGENTS.md §3.2 & §3.6**):
       "expires_in_days": 30,
       "user": {
         "id": 1,
-        "name": "Afdalisma, SH, M.Pd",
-        "nip": "197012051992032002",
-        "username": "afdalisma",
-        "email": "afdalisma@lldiktiwilayahx.kemdiktisaintek.go.id",
+        "name": "Apandi, S.Sos., M.Pd.",
+        "nip": "196906041990031003",
+        "username": "apandi",
+        "email": "apandi@lldiktiwilayahx.kemdiktisaintek.go.id",
         "phone": null,
         "avatar_url": null,
         "role": {
@@ -167,6 +167,51 @@ Sesuai aturan keamanan instansi (**AGENTS.md §3.2 & §3.6**):
     }
   }
   ```
+
+* **Error Responses (422 Unprocessable Content - Granular Berbasis Kondisi):**
+  Aplikasi Android mengikat penandaan warna merah kolom input secara presisi berdasarkan key error JSON (`password` vs `identifier`):
+
+  * **Kondisi 1: Kata Sandi Salah** (Hanya kolom kata sandi ditandai merah di Android):
+    ```json
+    {
+      "message": "Kata sandi yang Anda masukkan tidak sesuai. Silakan periksa kembali kata sandi Anda.",
+      "errors": {
+        "password": [
+          "Kata sandi yang Anda masukkan tidak sesuai. Silakan periksa kembali kata sandi Anda."
+        ]
+      }
+    }
+    ```
+
+  * **Kondisi 2: NIP/Username Tidak Terdaftar** (Kolom NIP/Username ditandai merah):
+    ```json
+    {
+      "message": "Nomor Induk Pegawai (NIP) tidak terdaftar dalam data kepegawaian sistem.",
+      "errors": {
+        "login": [
+          "Nomor Induk Pegawai (NIP) tidak terdaftar dalam data kepegawaian sistem."
+        ],
+        "identifier": [
+          "Nomor Induk Pegawai (NIP) tidak terdaftar dalam data kepegawaian sistem."
+        ]
+      }
+    }
+    ```
+
+  * **Kondisi 3: Akun Pegawai Berstatus Non-Aktif** (Kolom NIP/Username ditandai merah):
+    ```json
+    {
+      "message": "Akun pegawai berstatus non-aktif. Silakan hubungi Administrator atau Subbag Kepegawaian (HKTL).",
+      "errors": {
+        "login": [
+          "Akun pegawai berstatus non-aktif. Silakan hubungi Administrator atau Subbag Kepegawaian (HKTL)."
+        ],
+        "identifier": [
+          "Akun pegawai berstatus non-aktif. Silakan hubungi Administrator atau Subbag Kepegawaian (HKTL)."
+        ]
+      }
+    }
+    ```
 
 #### 2. Profil Pengguna Saat Ini
 * **Endpoint:** `GET /api/v1/auth/me`

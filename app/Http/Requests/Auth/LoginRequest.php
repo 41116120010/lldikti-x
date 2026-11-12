@@ -5,6 +5,7 @@ namespace App\Http\Requests\Auth;
 use App\Models\User;
 use App\Services\ActivityLogger;
 use Illuminate\Auth\Events\Lockout;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -30,6 +31,7 @@ class LoginRequest extends FormRequest
      * How long the lockout lasts, in seconds.
      */
     private const DECAY_SECONDS = 60;
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -43,7 +45,7 @@ class LoginRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        if (!$this->filled('login') && $this->filled('identifier')) {
+        if (! $this->filled('login') && $this->filled('identifier')) {
             $this->merge([
                 'login' => $this->input('identifier'),
             ]);
@@ -53,7 +55,7 @@ class LoginRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -80,60 +82,105 @@ class LoginRequest extends FormRequest
     /**
      * Resolve and verify the authenticating user without creating a web session.
      *
-     * @throws \Illuminate\Validation\ValidationException
+     * @throws ValidationException
      */
     public function resolveUser(): User
     {
         $this->ensureIsNotRateLimited();
 
-        $rawInput = trim($this->input('login'));
+        $rawInput = trim((string) $this->input('login'));
         $password = (string) $this->input('password');
 
         $user = User::findByMultiIdentifier($rawInput, includeEmail: false);
 
-        /*
-         * Always run a real hash comparison, even when no account matches.
-         *
-         * Auth::attempt() short-circuits when the identifier is unknown, so it
-         * returns in ~1ms for a bad NIP but takes ~100ms for a valid one. That gap
-         * is trivially measurable and lets an attacker enumerate which NIPs and
-         * usernames exist in the agency without ever seeing an error message.
-         * Verifying against a throwaway bcrypt hash when $user is null keeps the
-         * cost identical on both paths.
-         */
-        $hash = $user?->getAuthPassword() ?? self::DUMMY_HASH;
-        $passwordMatches = Hash::check($password, $hash);
+        // 1. Kondisi: Akun tidak ditemukan dalam data kepegawaian sistem
+        if ($user === null) {
+            // Mitigasi Timing Attack: tetap hitung hash dummy agar waktu respon identik (~100ms)
+            Hash::check($password, self::DUMMY_HASH);
 
-        $isActive = (bool) ($user?->is_active ?? false);
-
-        if ($user === null || ! $passwordMatches || ! $isActive) {
             RateLimiter::hit($this->throttleKey());
 
-            // Telemetry / Audit Trail: Log failed login attempt for security monitoring
             ActivityLogger::log(
                 type: 'AUTH_LOGIN_FAILED',
-                description: "Percobaan login gagal untuk identitas: [{$rawInput}] dari IP: {$this->ip()}.",
-                targetModel: $user ? get_class($user) : null,
-                targetId: $user?->id,
+                description: "Percobaan login gagal: Identitas [{$rawInput}] tidak terdaftar dalam sistem dari IP: {$this->ip()}.",
+                targetModel: null,
+                targetId: null,
                 properties: [
                     'ip' => $this->ip(),
                     'user_agent' => $this->userAgent(),
                     'identifier_attempted' => $rawInput,
+                    'reason' => 'USER_NOT_FOUND',
                 ],
                 user: null
             );
 
-            /*
-             * One message for every failure mode: unknown identifier, wrong
-             * password, and deactivated account. Distinguishing them would tell an
-             * attacker which NIPs are registered and which are active, and the
-             * deactivation hint is an invitation to probe for a way to re-enable
-             * an account.
-             */
-            $errors = ['login' => 'Kredensial tidak valid atau akun sedang dinonaktifkan.'];
+            $cleanedDigits = preg_replace('/\s+/', '', $rawInput);
+            $isNipFormat = ctype_digit($cleanedDigits) && strlen($cleanedDigits) >= 9;
+
+            $message = $isNipFormat
+                ? 'Nomor Induk Pegawai (NIP) tidak terdaftar dalam data kepegawaian sistem.'
+                : 'Username atau NIP tidak terdaftar dalam sistem.';
+
+            $errors = ['login' => $message];
             if ($this->has('identifier')) {
-                $errors['identifier'] = 'Kredensial tidak valid atau akun sedang dinonaktifkan.';
+                $errors['identifier'] = $message;
             }
+
+            throw ValidationException::withMessages($errors);
+        }
+
+        // 2. Kondisi: Akun terdaftar tetapi berstatus non-aktif (purna tugas/mutasi)
+        if (! (bool) $user->is_active) {
+            // Mitigasi Timing Attack: tetap hitung hash akun autentik
+            Hash::check($password, $user->getAuthPassword());
+
+            RateLimiter::hit($this->throttleKey());
+
+            ActivityLogger::log(
+                type: 'AUTH_LOGIN_FAILED',
+                description: "Percobaan login ditolak: Akun {$user->name} ([{$rawInput}]) berstatus non-aktif dari IP: {$this->ip()}.",
+                targetModel: get_class($user),
+                targetId: $user->id,
+                properties: [
+                    'ip' => $this->ip(),
+                    'user_agent' => $this->userAgent(),
+                    'identifier_attempted' => $rawInput,
+                    'reason' => 'USER_INACTIVE',
+                ],
+                user: null
+            );
+
+            $message = 'Akun pegawai berstatus non-aktif. Silakan hubungi Administrator atau Subbag Kepegawaian (HKTL).';
+
+            $errors = ['login' => $message];
+            if ($this->has('identifier')) {
+                $errors['identifier'] = $message;
+            }
+
+            throw ValidationException::withMessages($errors);
+        }
+
+        // 3. Kondisi: Kata sandi yang dimasukkan tidak sesuai
+        if (! Hash::check($password, $user->getAuthPassword())) {
+            RateLimiter::hit($this->throttleKey());
+
+            ActivityLogger::log(
+                type: 'AUTH_LOGIN_FAILED',
+                description: "Percobaan login gagal: Kata sandi tidak sesuai untuk akun {$user->name} ([{$rawInput}]) dari IP: {$this->ip()}.",
+                targetModel: get_class($user),
+                targetId: $user->id,
+                properties: [
+                    'ip' => $this->ip(),
+                    'user_agent' => $this->userAgent(),
+                    'identifier_attempted' => $rawInput,
+                    'reason' => 'WRONG_PASSWORD',
+                ],
+                user: null
+            );
+
+            $message = 'Kata sandi yang Anda masukkan tidak sesuai. Silakan periksa kembali kata sandi Anda.';
+
+            $errors = ['password' => $message];
 
             throw ValidationException::withMessages($errors);
         }
@@ -146,7 +193,7 @@ class LoginRequest extends FormRequest
     /**
      * Attempt to authenticate the request's credentials into a web session.
      *
-     * @throws \Illuminate\Validation\ValidationException
+     * @throws ValidationException
      */
     public function authenticate(): void
     {
@@ -159,7 +206,7 @@ class LoginRequest extends FormRequest
     /**
      * Ensure the login request is not rate limited.
      *
-     * @throws \Illuminate\Validation\ValidationException
+     * @throws ValidationException
      */
     public function ensureIsNotRateLimited(): void
     {
@@ -171,12 +218,17 @@ class LoginRequest extends FormRequest
 
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
-        throw ValidationException::withMessages([
-            'login' => trans('auth.throttle', [
-                'seconds' => $seconds,
-                'minutes' => ceil($seconds / 60),
-            ]),
+        $message = trans('auth.throttle', [
+            'seconds' => $seconds,
+            'minutes' => ceil($seconds / 60),
         ]);
+
+        $errors = ['login' => $message];
+        if ($this->has('identifier')) {
+            $errors['identifier'] = $message;
+        }
+
+        throw ValidationException::withMessages($errors);
     }
 
     /**
@@ -185,6 +237,7 @@ class LoginRequest extends FormRequest
     public function throttleKey(): string
     {
         $cleaned = preg_replace('/\s+/', '', $this->input('login', ''));
+
         return Str::transliterate(Str::lower($cleaned).'|'.$this->ip());
     }
 }
