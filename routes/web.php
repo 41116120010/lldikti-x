@@ -61,6 +61,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/presensi/riwayat', [AttendanceController::class, 'history'])->name('attendances.history');
     Route::get('/agendas/{agenda}', [AgendaController::class, 'staffShow'])->name('agendas.show');
     Route::get('/agendas/{agenda}/surat-edaran/pdf', [AgendaController::class, 'exportSuratEdaranPdf'])->name('agendas.surat-edaran.pdf');
+    Route::get('/agendas/{agenda}/surat-edaran/word', [AgendaController::class, 'exportSuratEdaranWord'])->name('agendas.surat-edaran.word');
     Route::get('/agendas/{agenda}/presensi', [AttendanceController::class, 'create'])->name('attendances.create');
     Route::post('/agendas/{agenda}/presensi', [AttendanceController::class, 'store'])->middleware('throttle:30,1')->name('attendances.store');
     Route::get('/agendas/{agenda}/presensi/{attendance}/sukses', [AttendanceController::class, 'success'])->name('attendances.success');
@@ -84,6 +85,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/{agenda}/surat-edaran', [AgendaController::class, 'suratEdaran'])->name('surat-edaran');
         Route::put('/{agenda}/surat-edaran', [AgendaController::class, 'updateSuratEdaran'])->name('update-surat-edaran');
         Route::get('/{agenda}/surat-edaran/export/pdf', [AgendaController::class, 'exportSuratEdaranPdf'])->name('export-surat-edaran-pdf');
+        Route::get('/{agenda}/surat-edaran/export/word', [AgendaController::class, 'exportSuratEdaranWord'])->name('export-surat-edaran-word');
     });
 
     // Reports, Recap & Official Exports (PDF/Word/CSV)

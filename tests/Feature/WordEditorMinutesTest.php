@@ -160,7 +160,7 @@ class WordEditorMinutesTest extends TestCase
         $response->assertSee('word-btn');
         $response->assertSee('Kembali ke Detail Agenda');
         $response->assertSee('Simpan Notulensi');
-        $response->assertDontSee('0 Kata');
+        $response->assertSee('id="office-status-words"', false);
         $response->assertDontSee('0 Karakter');
 
         // Verify that the title bar header and save status badge have been removed
@@ -303,10 +303,11 @@ class WordEditorMinutesTest extends TestCase
         $response->assertSee('office-desk-canvas');
         $response->assertSee('office-zoom-container');
 
-        // 2. Paper Size Switcher (A4 and F4)
+        // 2. Fixed A4 Paper Size Indicator (F4 / Folio removed)
         $response->assertSee('data-paper-size="a4"', false);
-        $response->assertSee('data-paper-size="f4"', false);
-        $response->assertSee('F4 / Folio');
+        $response->assertSee('A4 (210 × 297 mm)');
+        $response->assertDontSee('data-paper-size="f4"', false);
+        $response->assertDontSee('F4 / Folio');
 
         // 3. Zoom Controls & Active Editor Indicator
         $response->assertSee('data-zoom="75"', false);
@@ -321,13 +322,11 @@ class WordEditorMinutesTest extends TestCase
         $response->assertSee('office-paper-sheet');
         $response->assertSee('office-page-separator');
         $response->assertSee('Pemisah Halaman');
-        $response->assertSee('Menuju Lembar Pengesahan');
+        $response->assertSee('Menuju Halaman 2');
 
         // 5. Official Format Elements pre-rendered on sheets.
-        // Urutan seksi mengikuti dokumen yang diekspor: notulensi dulu, baru
-        // daftar hadir. Halaman pengisian pernah menampilkan kebalikannya,
-        // sehingga petugas menyusun dokumen dalam urutan yang tidak akan
-        // pernah keluar dari ekspornya.
+        // Urutan seksi mengikuti dokumen yang diekspor: Notulensi & Kesimpulan ->
+        // Blok Tanda Tangan -> Daftar Kehadiran Peserta -> Lampiran Foto.
         $response->assertSee('KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI');
         $response->assertSee('(LLDIKTI) WILAYAH X');
         $response->assertSee('BERITA ACARA');
@@ -336,19 +335,23 @@ class WordEditorMinutesTest extends TestCase
         $response->assertSee('LEMBAR PENGESAHAN BERITA ACARA', false);
         $response->assertSee('Lampiran Foto');
 
-        // Penanda posisi memakai id wadah, bukan judul seksi. "I. DAFTAR
-        // KEHADIRAN" adalah potongan dari "II. DAFTAR KEHADIRAN", jadi pencarian
-        // berdasarkan teks akan selalu menemukan yang kedua lebih dulu.
         $content = $response->getContent();
         $notulensiAt = strpos($content, 'id="sheet-seksi-1-container"');
+        $signatureAt = strpos($content, 'id="sheet-pengesahan-final"');
         $attendanceAt = strpos($content, 'id="sheet-seksi-2-container"');
 
         $this->assertNotFalse($notulensiAt, 'Wadah seksi notulensi tidak ditemukan pada lembar.');
+        $this->assertNotFalse($signatureAt, 'Wadah blok tanda tangan tidak ditemukan pada lembar.');
         $this->assertNotFalse($attendanceAt, 'Wadah seksi kehadiran tidak ditemukan pada lembar.');
         $this->assertLessThan(
-            $attendanceAt,
+            $signatureAt,
             $notulensiAt,
-            'Notulensi harus tampil sebelum daftar kehadiran pada lembar.'
+            'Notulensi harus tampil sebelum blok tanda tangan pada lembar.'
+        );
+        $this->assertLessThan(
+            $attendanceAt,
+            $signatureAt,
+            'Blok tanda tangan harus tampil sebelum daftar kehadiran pada lembar.'
         );
 
         // 6. Interactive Editable Sections inside document
@@ -517,14 +520,9 @@ class WordEditorMinutesTest extends TestCase
             '#notulen-form harus mempertahankan _method=PUT.'
         );
 
-        // Pastikan form hapus dokumentasi dirender secara terpisah di luar #notulen-form
-        $deleteFormPos = strpos($html, 'id="delete-doc-form-'.$doc->id.'"');
-        $this->assertNotFalse($deleteFormPos, 'Form hapus dokumentasi harus dirender dengan ID tersendiri.');
-        $this->assertGreaterThan(
-            $formEnd,
-            $deleteFormPos,
-            'Form hapus dokumentasi harus berada di luar (setelah) </form> milik #notulen-form.'
-        );
+        // Pastikan tombol hapus dokumentasi dirender menggunakan atribut data-delete-doc-btn tanpa nested <form>
+        $deleteBtnPos = strpos($html, 'data-delete-doc-btn="'.$doc->id.'"');
+        $this->assertNotFalse($deleteBtnPos, 'Tombol hapus dokumentasi harus dirender dengan data-delete-doc-btn.');
 
         // Pastikan wrapper seksi utuh tersedia untuk non-destructive pagination
         $pageResponse->assertSee('id="sheet-section-notulensi-wrapper"', false);
@@ -561,4 +559,3 @@ class WordEditorMinutesTest extends TestCase
         $this->assertStringContainsString('Kesimpulan hasil revisi ketiga (final)', $this->agenda->kesimpulan);
     }
 }
-

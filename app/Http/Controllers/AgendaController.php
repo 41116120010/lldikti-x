@@ -12,20 +12,18 @@ use App\Models\Agenda;
 use App\Models\AgendaDocumentation;
 use App\Models\Unit;
 use App\Models\User;
-use App\Services\ActivityLogger;
-use App\Services\AgendaConflictService;
 use App\Services\AgendaService;
-use App\Services\ReportConfigService;
 use App\Services\SuratEdaranService;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class AgendaController extends Controller
@@ -71,7 +69,7 @@ class AgendaController extends Controller
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->whereLike('judul_rapat', "%{$search}%")
-                  ->orWhereLike('lokasi_ruang', "%{$search}%");
+                    ->orWhereLike('lokasi_ruang', "%{$search}%");
             });
         }
 
@@ -226,10 +224,10 @@ class AgendaController extends Controller
             $users = User::query()->where('is_active', true)->with('unit')->orderBy('name')->get();
 
             return view('agendas.edit', compact('agenda', 'units', 'currentUser', 'users'));
-        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+        } catch (AuthorizationException $e) {
             throw $e;
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Gagal memuat formulir edit agenda rapat', [
+            Log::error('Gagal memuat formulir edit agenda rapat', [
                 'agenda_id' => $agenda->id,
                 'user_id' => Auth::id(),
                 'error' => $e->getMessage(),
@@ -289,16 +287,16 @@ class AgendaController extends Controller
             }
         } catch (\DomainException $e) {
             return back()->withInput()->with('error', $e->getMessage());
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             throw $e;
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Gagal memperbarui agenda rapat', [
+            Log::error('Gagal memperbarui agenda rapat', [
                 'agenda_id' => $agenda->id,
                 'user_id' => Auth::id(),
                 'error' => $e->getMessage(),
             ]);
 
-            return back()->withInput()->with('error', 'Terjadi kendala pada pemrosesan server saat memperbarui agenda: ' . $e->getMessage());
+            return back()->withInput()->with('error', 'Terjadi kendala pada pemrosesan server saat memperbarui agenda: '.$e->getMessage());
         }
 
         return redirect()->route('admin.agendas.show', $agenda)
@@ -408,7 +406,7 @@ class AgendaController extends Controller
             : route('admin.agendas.show', $agenda);
 
         return redirect($redirectRoute)
-            ->with('success', "Notulensi dan pengaturan dokumen rapat berhasil disimpan.");
+            ->with('success', 'Notulensi dan pengaturan dokumen rapat berhasil disimpan.');
     }
 
     /**
@@ -433,7 +431,7 @@ class AgendaController extends Controller
             ]);
         }
 
-        return back()->with('success', "Foto dokumentasi berhasil dihapus.");
+        return back()->with('success', 'Foto dokumentasi berhasil dihapus.');
     }
 
     /**
@@ -472,13 +470,13 @@ class AgendaController extends Controller
 
             $suratEdaranService->saveDigitalSurat($agenda, $request->validated(), $request);
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Gagal menyimpan naskah surat dinas rapat', [
+            Log::error('Gagal menyimpan naskah surat dinas rapat', [
                 'agenda_id' => $agenda->id,
                 'user_id' => Auth::id(),
                 'error' => $e->getMessage(),
             ]);
 
-            return back()->withInput()->with('error', 'Terjadi kendala saat menyimpan naskah surat dinas: ' . $e->getMessage());
+            return back()->withInput()->with('error', 'Terjadi kendala saat menyimpan naskah surat dinas: '.$e->getMessage());
         }
 
         $redirectRoute = Auth::user()?->isStaff()
@@ -486,7 +484,7 @@ class AgendaController extends Controller
             : route('admin.agendas.show', $agenda);
 
         return redirect($redirectRoute)
-            ->with('success', "Naskah surat dinas resmi berhasil disimpan dan siap didistribusikan.");
+            ->with('success', 'Naskah surat dinas resmi berhasil disimpan dan siap didistribusikan.');
     }
 
     /**
@@ -509,5 +507,27 @@ class AgendaController extends Controller
         ]);
 
         return $suratEdaranService->downloadPdfResponse($agenda, $request->boolean('download'));
+    }
+
+    /**
+     * Export digital circular letter / meeting invitation as Microsoft Word (.docx).
+     */
+    public function exportSuratEdaranWord(Agenda $agenda, SuratEdaranService $suratEdaranService): Response
+    {
+        if (Auth::user()?->isStaff()) {
+            Gate::authorize('viewStaff', $agenda);
+        } else {
+            Gate::authorize('view', $agenda);
+        }
+
+        $agenda->load([
+            'creator.unit',
+            'pimpinan.unit',
+            'notulis.unit',
+            'units',
+            'invitedUsers.unit',
+        ]);
+
+        return $suratEdaranService->downloadWordResponse($agenda);
     }
 }

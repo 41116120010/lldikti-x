@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\Agenda;
 use App\Models\Unit;
 use App\Models\User;
-use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class AgendaSuratEdaranPreviewTest extends TestCase
@@ -28,8 +27,8 @@ class AgendaSuratEdaranPreviewTest extends TestCase
         return User::create([
             'name' => 'Staf Pegawai Test',
             'nip' => '199501012020011002',
-            'username' => 'staf_preview_test_' . uniqid(),
-            'email' => 'staf_' . uniqid() . '@lldikti.test',
+            'username' => 'staf_preview_test_'.uniqid(),
+            'email' => 'staf_'.uniqid().'@lldikti.test',
             'password' => bcrypt('password'),
             'role' => 'staff',
             'unit_id' => $unit->id,
@@ -42,8 +41,8 @@ class AgendaSuratEdaranPreviewTest extends TestCase
         return User::create([
             'name' => 'Admin Unit Test',
             'nip' => '198501012015011003',
-            'username' => 'admin_preview_test_' . uniqid(),
-            'email' => 'admin_unit_' . uniqid() . '@lldikti.test',
+            'username' => 'admin_preview_test_'.uniqid(),
+            'email' => 'admin_unit_'.uniqid().'@lldikti.test',
             'password' => bcrypt('password'),
             'role' => 'admin',
             'unit_id' => $unit->id,
@@ -127,13 +126,13 @@ class AgendaSuratEdaranPreviewTest extends TestCase
         $response->assertSee('Pratinjau Layar Penuh');
         $response->assertSee('Tab Baru');
         $response->assertSee('Unduh File');
-        $response->assertSee('modal-surat-preview-' . $agenda->id);
+        $response->assertSee('modal-surat-preview-'.$agenda->id);
         $response->assertSee('h-[90vh]', false);
         $response->assertSee('view=Fit', false);
         $response->assertSee('view=FitH', false);
         $response->assertSee('iframe', false);
         $response->assertSee('undangan_resmi_pleno.pdf');
-        
+
         // Ensure CSP header includes frame-src and object-src
         $csp = $response->headers->get('Content-Security-Policy');
         $this->assertNotNull($csp);
@@ -165,7 +164,7 @@ class AgendaSuratEdaranPreviewTest extends TestCase
         $response->assertSee('Pratinjau Layar Penuh');
         $response->assertSee('Tab Baru');
         $response->assertSee('Unduh File');
-        $response->assertSee('modal-surat-preview-' . $agenda->id);
+        $response->assertSee('modal-surat-preview-'.$agenda->id);
         $response->assertSee('brosur_kegiatan.webp');
     }
 
@@ -190,7 +189,7 @@ class AgendaSuratEdaranPreviewTest extends TestCase
         $response->assertSee('Surat Edaran / Undangan');
         $response->assertSee('Tidak ada berkas surat edaran atau undangan terlampir.');
         $response->assertDontSee('Layar Penuh');
-        $response->assertDontSee('modal-surat-preview-' . $agenda->id);
+        $response->assertDontSee('modal-surat-preview-'.$agenda->id);
     }
 
     public function test_staff_agenda_detail_shows_direct_pdf_preview_and_modal_trigger(): void
@@ -218,7 +217,7 @@ class AgendaSuratEdaranPreviewTest extends TestCase
         $response->assertSee('Pratinjau Layar Penuh');
         $response->assertSee('Tab Baru');
         $response->assertSee('Unduh File');
-        $response->assertSee('modal-surat-preview-' . $agenda->id);
+        $response->assertSee('modal-surat-preview-'.$agenda->id);
         $response->assertSee('undangan_staf.pdf');
     }
 
@@ -249,7 +248,7 @@ class AgendaSuratEdaranPreviewTest extends TestCase
         $response->assertSee('Pratinjau Layar Penuh');
         $response->assertSee('Tab Baru');
         $response->assertSee('Unduh File');
-        $response->assertSee('modal-surat-preview-' . $agenda->id);
+        $response->assertSee('modal-surat-preview-'.$agenda->id);
         $response->assertSee('poster_undangan.jpg');
     }
 
@@ -275,7 +274,7 @@ class AgendaSuratEdaranPreviewTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Surat Edaran / Undangan');
         $response->assertSee('PDF');
-        $response->assertSee('modal-surat-preview-' . $agenda->id);
+        $response->assertSee('modal-surat-preview-'.$agenda->id);
         $response->assertSee('surat_tu.pdf');
     }
 
@@ -301,7 +300,7 @@ class AgendaSuratEdaranPreviewTest extends TestCase
         $response->assertSee('Pratinjau Berkas');
         $response->assertSee('Unduh');
         $response->assertSee('surat-edaran-client-preview');
-        $response->assertSee('modal-surat-preview-' . $agenda->id);
+        $response->assertSee('modal-surat-preview-'.$agenda->id);
         $response->assertSee('handleSuratEdaranChange', false);
     }
 
@@ -339,7 +338,7 @@ class AgendaSuratEdaranPreviewTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('Surat Undangan');
-        $response->assertSee('modal-surat-preview-' . $agenda->id);
+        $response->assertSee('modal-surat-preview-'.$agenda->id);
         $response->assertSee('suratEdaranImageViewer', false);
     }
 
@@ -361,7 +360,7 @@ class AgendaSuratEdaranPreviewTest extends TestCase
         $response = $this->actingAs($superadmin)->get("/admin/agendas/{$agenda->id}/notulen");
 
         $response->assertStatus(200);
-        $response->assertDontSee('modal-surat-preview-' . $agenda->id);
+        $response->assertDontSee('modal-surat-preview-'.$agenda->id);
     }
 
     public function test_attendance_checkin_shows_surat_undangan_trigger_and_modal_when_surat_exists(): void
@@ -383,7 +382,7 @@ class AgendaSuratEdaranPreviewTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('Lihat Surat Undangan Resmi');
-        $response->assertSee('modal-surat-preview-' . $agenda->id);
+        $response->assertSee('modal-surat-preview-'.$agenda->id);
         $response->assertSee('undangan_terbuka.png');
         $response->assertSee('suratEdaranImageViewer', false);
     }
@@ -407,7 +406,7 @@ class AgendaSuratEdaranPreviewTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertDontSee('Lihat Surat Undangan Resmi');
-        $response->assertDontSee('modal-surat-preview-' . $agenda->id);
+        $response->assertDontSee('modal-surat-preview-'.$agenda->id);
     }
 
     public function test_report_detail_shows_surat_edaran_preview_and_interactive_controls(): void
@@ -431,9 +430,84 @@ class AgendaSuratEdaranPreviewTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Surat Edaran / Undangan');
         $response->assertSee('GAMBAR');
-        $response->assertSee('modal-surat-preview-' . $agenda->id);
+        $response->assertSee('modal-surat-preview-'.$agenda->id);
         $response->assertSee('suratEdaranImageViewer', false);
         $response->assertSee('suratEdaranImageViewer.zoomIn', false);
         $response->assertSee('suratEdaranImageViewer.rotate', false);
+    }
+
+    public function test_surat_edaran_workstation_locks_a4_paper_and_exports_valid_pdf_and_docx(): void
+    {
+        $superadmin = $this->getOrCreateSuperadmin();
+
+        $agenda = Agenda::create([
+            'judul_rapat' => 'Rapat Koordinasi Surat Dinas A4',
+            'tanggal_rapat' => now()->toDateString(),
+            'waktu_mulai' => now()->addHour(),
+            'waktu_selesai' => now()->addHours(3),
+            'lokasi_ruang' => 'Ruang Sidang Utama',
+            'status' => 'scheduled',
+            'created_by' => $superadmin->id,
+            'is_all_units' => true,
+            'surat_edaran_type' => 'digital',
+            'surat_edaran_content' => '<p>Pembahasan evaluasi dan monitoring kinerja triwulan.</p>',
+            'surat_edaran_config' => [
+                'template_type' => 'undangan',
+                'show_kop' => true,
+                'show_logo' => true,
+                'nomor_surat' => '0123/LL10/UND/2026',
+                'lampiran' => '1 (satu) berkas',
+                'perihal' => 'Undangan Rapat Koordinasi Surat Dinas A4',
+                'tempat_surat' => 'Padang',
+                'tanggal_surat' => '12 November 2026',
+                'tujuan_surat' => 'Seluruh Ketua Tim Kerja LLDIKTI Wilayah X',
+                'signer_role' => 'Kepala',
+                'signer_name' => 'Afdalisma',
+                'signer_nip' => '197012051992032002',
+                'show_signature' => true,
+                'tembusan' => 'Arsip',
+                'show_lampiran' => true,
+                'lampiran_content' => '<ol><li>Ketua Tim Kerja Kelembagaan</li><li>Ketua Tim Kerja Sumber Daya</li></ol>',
+            ],
+        ]);
+
+        // 1. Verify workstation locks paper size to A4 and removes F4 / Folio option
+        $workstationResponse = $this->actingAs($superadmin)->get(route('admin.agendas.surat-edaran', $agenda));
+        $workstationResponse->assertStatus(200);
+        $workstationResponse->assertSee('data-paper-size="a4"', false);
+        $workstationResponse->assertSee('A4 (210 × 297 mm)');
+        $workstationResponse->assertDontSee('data-paper-size="f4"', false);
+        $workstationResponse->assertDontSee('F4 / Folio');
+        $workstationResponse->assertSee('Unduh PDF Resmi (.pdf)');
+        $workstationResponse->assertSee('Unduh Dokumen Word (.docx)');
+
+        // 2. Verify PDF export integrity
+        $pdfResponse = $this->actingAs($superadmin)->get(route('admin.agendas.export-surat-edaran-pdf', ['agenda' => $agenda, 'download' => 1]));
+        $pdfResponse->assertStatus(200);
+        $this->assertStringContainsString('application/pdf', (string) $pdfResponse->headers->get('Content-Type'));
+        $this->assertStringStartsWith('%PDF-', $pdfResponse->getContent());
+
+        // 3. Verify Word (.docx) export integrity & A4 OpenXML geometry (11906 × 16838 twips)
+        $wordResponse = $this->actingAs($superadmin)->get(route('admin.agendas.export-surat-edaran-word', $agenda));
+        $wordResponse->assertStatus(200);
+        $wordResponse->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        $docxBytes = $wordResponse->getContent();
+        $this->assertStringStartsWith('PK', $docxBytes);
+
+        $tempZip = tempnam(sys_get_temp_dir(), 'test_surat_docx_');
+        file_put_contents($tempZip, $docxBytes);
+        $zip = new \ZipArchive;
+        $this->assertTrue($zip->open($tempZip) === true);
+        $xml = $zip->getFromName('word/document.xml');
+        $zip->close();
+        @unlink($tempZip);
+
+        $this->assertIsString($xml);
+        $this->assertNotFalse(simplexml_load_string($xml), 'word/document.xml harus berupa XML yang valid.');
+        $this->assertStringContainsString('w:w="11906"', $xml, 'Lebar halaman Surat Dinas Word harus A4 (11906 twip).');
+        $this->assertStringContainsString('w:h="16838"', $xml, 'Tinggi halaman Surat Dinas Word harus A4 (16838 twip).');
+        $this->assertStringContainsString('0123/LL10/UND/2026', $xml);
+        $this->assertStringContainsString('197012051992032002', $xml);
+        $this->assertStringContainsString('Daftar Undangan', $xml);
     }
 }

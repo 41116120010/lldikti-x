@@ -847,9 +847,6 @@
         overflow: hidden;
         margin: 0 auto;
     }
-    .office-document-ruler.ruler-f4 {
-        width: 215mm;
-    }
     .office-document-ruler .ruler-scale {
         position: relative;
         width: 100%;
@@ -916,13 +913,6 @@
     .office-paper-sheet.paper-a4 {
         width: 210mm;
         min-height: 297mm;
-        height: auto;
-        max-width: 100%;
-    }
-
-    .office-paper-sheet.paper-f4 {
-        width: 215mm;
-        min-height: 330mm;
         height: auto;
         max-width: 100%;
     }
@@ -1001,9 +991,6 @@
         margin: 14px auto;
         user-select: none;
     }
-    .office-page-gap.gap-f4 {
-        max-width: 215mm;
-    }
     .office-page-gap .gap-line {
         flex: 1;
         height: 1px;
@@ -1048,10 +1035,6 @@
         border-radius: 0.5rem;
         margin: 16px auto 8px auto;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-    }
-    .office-status-bar.status-f4,
-    .office-status-bar.paper-f4 {
-        width: 215mm;
     }
 
     .office-editable-box {

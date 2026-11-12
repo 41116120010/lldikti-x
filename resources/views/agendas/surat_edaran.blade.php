@@ -78,28 +78,17 @@
             </div>
         </div>
 
-        <!-- Center: Paper Size Switcher & Zoom Controls -->
+        <!-- Center: Fixed A4 Paper Indicator & Zoom Controls -->
         <div class="flex items-center gap-2">
-            <!-- Paper Size Selector (A4 vs F4) -->
-            <div class="inline-flex p-0.5 bg-slate-100 rounded-xl border border-slate-300 shadow-2xs" role="group" aria-label="Pilih Ukuran Kertas">
-                <button
-                    type="button"
-                    data-paper-size="a4"
-                    class="px-3 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1.5 bg-slate-900 text-white shadow-xs"
-                    title="Beralih ke format lembar kertas A4 (210 × 297 mm) sesuai Template Resmi"
-                >
-                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect width="16" height="20" x="4" y="2" rx="2"/></svg>
-                    <span>A4</span>
-                </button>
-                <button
-                    type="button"
-                    data-paper-size="f4"
-                    class="px-3 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1.5 text-slate-700 hover:bg-slate-200"
-                    title="Beralih ke format lembar kertas F4 / Folio (215 × 330 mm)"
-                >
-                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect width="16" height="22" x="4" y="1" rx="2"/></svg>
-                    <span>F4 / Folio</span>
-                </button>
+            <!-- Fixed Paper Size Indicator (A4 Standard) -->
+            <div
+                data-paper-size="a4"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 select-none"
+                title="Ukuran kertas naskah dinas ditetapkan pada standar A4 (210 × 297 mm)"
+                aria-label="Ukuran Kertas Tetap A4 (210 × 297 mm)"
+            >
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-700"><rect width="16" height="20" x="4" y="2" rx="2"/></svg>
+                <span>A4 (210 × 297 mm)</span>
             </div>
 
             <!-- Zoom Controls -->
@@ -132,15 +121,46 @@
                 <span>Penyesuaian Naskah</span>
             </button>
 
-            <!-- Ekspor PDF & Cetak -->
-            <a
-                href="{{ route('admin.agendas.export-surat-edaran-pdf', ['agenda' => $agenda, 'download' => 1]) }}"
-                class="button secondary flex items-center gap-1.5 text-xs font-bold shadow-2xs text-slate-800 hover:bg-slate-100"
-                title="Unduh dokumen naskah resmi dalam format PDF"
-            >
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" class="text-rose-600"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>
-                <span>Unduh PDF</span>
-            </a>
+            <!-- Quick Export Dropdown (PDF & Word) -->
+            <div class="relative inline-block text-left" x-data="{ open: false }" @click.outside="open = false">
+                <button
+                    type="button"
+                    @click="open = !open"
+                    class="button secondary flex items-center gap-1.5 text-xs font-bold shadow-2xs cursor-pointer border-slate-300 hover:bg-slate-100 text-slate-800"
+                    title="Menu opsi ekspor naskah surat dinas (PDF & Word)"
+                >
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    <span>Ekspor</span>
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+                <div
+                    x-show="open"
+                    x-transition
+                    style="display: none;"
+                    class="absolute right-0 z-30 mt-2 w-56 origin-top-right rounded-xl bg-white border border-slate-200 shadow-xl py-1 text-xs"
+                >
+                    <a
+                        href="{{ route('admin.agendas.export-surat-edaran-pdf', ['agenda' => $agenda, 'download' => 1]) }}"
+                        data-export-link="pdf"
+                        class="flex items-center gap-2 px-3.5 py-2.5 min-h-[44px] text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium"
+                    >
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" class="text-rose-600"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>
+                        <span>Unduh PDF Resmi (.pdf)</span>
+                    </a>
+                    <a
+                        href="{{ route('admin.agendas.export-surat-edaran-word', $agenda) }}"
+                        data-export-link="word"
+                        class="flex items-center gap-2 px-3.5 py-2.5 min-h-[44px] text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium"
+                    >
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" class="text-blue-600"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
+                        <span>Unduh Dokumen Word (.docx)</span>
+                    </a>
+                </div>
+            </div>
 
             <!-- Primary Save Action -->
             <button

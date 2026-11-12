@@ -37,28 +37,17 @@
             </div>
         </div>
 
-        <!-- Center: Paper Size Switcher & Zoom Controls -->
+        <!-- Center: Fixed A4 Paper Indicator & Zoom Controls -->
         <div class="flex items-center gap-2">
-            <!-- Paper Size Selector (A4 vs F4) -->
-            <div class="inline-flex p-0.5 bg-slate-100 rounded-xl border border-slate-300 shadow-2xs" role="group" aria-label="Pilih Ukuran Kertas">
-                <button
-                    type="button"
-                    data-paper-size="a4"
-                    class="px-3 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1.5 bg-slate-900 text-white shadow-xs"
-                    title="Beralih ke format lembar kertas A4 (210 × 297 mm)"
-                >
-                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect width="16" height="20" x="4" y="2" rx="2"/></svg>
-                    <span>A4</span>
-                </button>
-                <button
-                    type="button"
-                    data-paper-size="f4"
-                    class="px-3 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1.5 text-slate-700 hover:bg-slate-200"
-                    title="Beralih ke format lembar kertas F4 / Folio (215 × 330 mm)"
-                >
-                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect width="16" height="22" x="4" y="1" rx="2"/></svg>
-                    <span>F4 / Folio</span>
-                </button>
+            <!-- Fixed Paper Size Indicator (A4 Standard) -->
+            <div
+                data-paper-size="a4"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 select-none"
+                title="Ukuran kertas dokumen resmi ditetapkan pada standar A4 (210 × 297 mm)"
+                aria-label="Ukuran Kertas Tetap A4 (210 × 297 mm)"
+            >
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-700"><rect width="16" height="20" x="4" y="2" rx="2"/></svg>
+                <span>A4 (210 × 297 mm)</span>
             </div>
 
             <!-- Zoom Controls -->
@@ -740,7 +729,7 @@
                         <div class="gap-line"></div>
                         <div class="gap-indicator">
                             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                            <span class="gap-indicator-text">Pemisah Halaman &bull; Menuju Lembar Pengesahan</span>
+                            <span class="gap-indicator-text">Pemisah Halaman &bull; Menuju Halaman 2</span>
                         </div>
                         <div class="gap-line"></div>
                     </div>

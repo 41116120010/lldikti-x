@@ -1353,62 +1353,36 @@ const OfficeWorkstation = {
         const titleEl = workstation.querySelector('.doc-running-header strong');
         const agendaTitle = workstation.dataset.agendaTitle || (titleEl ? titleEl.textContent : 'Agenda Rapat');
 
-        // 1. Paper Format Switcher (A4 vs F4)
-        const paperButtons = workstation.querySelectorAll('[data-paper-size]');
-        const setPaperSize = (size, triggerReflow = true) => {
+        // 1. Fixed A4 Paper Format Enforcement (210 × 297 mm)
+        const setPaperSize = (triggerReflow = true) => {
             const allSheets = workstation.querySelectorAll('.office-paper-sheet');
             allSheets.forEach(sheet => {
-                sheet.classList.remove('paper-a4', 'paper-f4');
-                sheet.classList.add(`paper-${size}`);
+                sheet.classList.remove('paper-f4');
+                sheet.classList.add('paper-a4');
             });
             const allGaps = workstation.querySelectorAll('.office-page-gap');
             allGaps.forEach(gap => {
                 gap.classList.remove('gap-f4');
-                if (size === 'f4') gap.classList.add('gap-f4');
             });
             if (rulerEl) {
-                rulerEl.classList.remove('paper-a4', 'paper-f4', 'ruler-f4');
-                if (size === 'f4') {
-                    rulerEl.classList.add('paper-f4', 'ruler-f4');
-                } else {
-                    rulerEl.classList.add('paper-a4');
-                }
+                rulerEl.classList.remove('paper-f4', 'ruler-f4');
+                rulerEl.classList.add('paper-a4');
             }
             if (statusBarEl) {
-                statusBarEl.classList.remove('paper-a4', 'paper-f4', 'status-f4');
-                if (size === 'f4') {
-                    statusBarEl.classList.add('paper-f4', 'status-f4');
-                } else {
-                    statusBarEl.classList.add('paper-a4');
-                }
+                statusBarEl.classList.remove('paper-f4', 'status-f4');
+                statusBarEl.classList.add('paper-a4');
             }
             if (statusSizeEl) {
-                statusSizeEl.textContent = size === 'f4' ? 'F4 / Folio (215 × 330 mm)' : 'A4 (210 × 297 mm)';
+                statusSizeEl.textContent = 'A4 (210 × 297 mm)';
             }
-            paperButtons.forEach(btn => {
-                if (btn.dataset.paperSize === size) {
-                    btn.classList.add('bg-slate-900', 'text-white', 'shadow-xs');
-                    btn.classList.remove('text-slate-700', 'hover:bg-slate-200');
-                } else {
-                    btn.classList.remove('bg-slate-900', 'text-white', 'shadow-xs');
-                    btn.classList.add('text-slate-700', 'hover:bg-slate-200');
-                }
-            });
             try {
-                localStorage.setItem('siperapat_paper_format', size);
+                localStorage.setItem('siperapat_paper_format', 'a4');
             } catch (e) {}
 
             if (triggerReflow && paginationEngine) {
                 paginationEngine.reflow();
             }
         };
-
-        paperButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                setPaperSize(btn.dataset.paperSize);
-            });
-        });
 
         // 2. Zoom & Scaling Controls (with Layout Height Compensation & Ruler Sync)
         const zoomButtons = workstation.querySelectorAll('[data-zoom]');
@@ -1594,10 +1568,9 @@ const OfficeWorkstation = {
 
         const isExceedingMargin = (sheet, element) => {
             if (!sheet || !element) return false;
-            const curFormat = sheet.classList.contains('paper-f4') ? 'f4' : 'a4';
             const pageMaxHeight = sheet.offsetWidth > 0
-                ? sheet.offsetWidth * (curFormat === 'f4' ? (330 / 215) : (297 / 210))
-                : (curFormat === 'f4' ? 1247 : 1122);
+                ? sheet.offsetWidth * (297 / 210)
+                : 1122;
             const footerReserve = sheet.offsetWidth > 0
                 ? sheet.offsetWidth * (24 / 210)
                 : 90;
@@ -1753,7 +1726,6 @@ const OfficeWorkstation = {
                     const sheet1 = workstation.querySelector('.office-paper-sheet[data-page="1"]');
                     if (!sheet1) return;
 
-                    const curFormat = sheet1.classList.contains('paper-f4') ? 'f4' : 'a4';
                     const kesimpulanIsFocused = !!(s1KWrap && s1KWrap.contains(document.activeElement));
                     const savedCaret = kesimpulanIsFocused ? saveCaretInfo() : null;
 
@@ -1799,7 +1771,7 @@ const OfficeWorkstation = {
 
                     const createContinuationSheet = (pageNum) => {
                         const sheet = document.createElement('div');
-                        sheet.className = `office-paper-sheet paper-${curFormat}`;
+                        sheet.className = 'office-paper-sheet paper-a4';
                         sheet.dataset.page = String(pageNum);
                         sheet.innerHTML = `
                             <div class="doc-running-header">
@@ -1821,7 +1793,7 @@ const OfficeWorkstation = {
                         sep.className = 'office-page-separator';
                         sep.setAttribute('aria-hidden', 'true');
                         sep.innerHTML = `
-                            <div class="office-page-gap ${curFormat === 'f4' ? 'gap-f4' : ''}">
+                            <div class="office-page-gap">
                                 <div class="gap-line"></div>
                                 <div class="gap-indicator">
                                     <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -1876,26 +1848,7 @@ const OfficeWorkstation = {
                         }
                     }
 
-                    // 4. Flow Section II (#sheet-seksi-2-wrapper: Daftar Kehadiran Peserta)
-                    if (seksi2Wrapper) {
-                        const targetSheet = getLastSheet();
-                        appendToSheet(targetSheet, seksi2Wrapper);
-
-                        if (seksi2Wrapper.style.display !== 'none' && isExceedingMargin(targetSheet, seksi2Wrapper) && sheetHasPriorContent(targetSheet) && continuationContainer) {
-                            if (seksi2Wrapper.parentNode) seksi2Wrapper.parentNode.removeChild(seksi2Wrapper);
-
-                            if (continuationContainer.querySelectorAll('.office-paper-sheet').length > 0) {
-                                continuationContainer.appendChild(createPageSeparator(`Halaman ${curPage}`));
-                            }
-
-                            const s2Sheet = createContinuationSheet(curPage);
-                            continuationContainer.appendChild(s2Sheet);
-                            appendToSheet(s2Sheet, seksi2Wrapper);
-                            curPage++;
-                        }
-                    }
-
-                    // 5. Flow Signature Block (#sheet-pengesahan-final)
+                    // 4. Flow Signature Block (#sheet-pengesahan-final) immediately after Notulensi & Kesimpulan
                     if (sigWrapper) {
                         const targetSheet = getLastSheet();
                         const standaloneHeader = sigWrapper.querySelector('#sheet-signature-standalone-header');
@@ -1914,6 +1867,25 @@ const OfficeWorkstation = {
                             continuationContainer.appendChild(sigSheet);
                             appendToSheet(sigSheet, sigWrapper);
                             if (standaloneHeader) standaloneHeader.style.display = 'block';
+                            curPage++;
+                        }
+                    }
+
+                    // 5. Flow Section II (#sheet-seksi-2-wrapper: Daftar Kehadiran Peserta) after Signature Block
+                    if (seksi2Wrapper) {
+                        const targetSheet = getLastSheet();
+                        appendToSheet(targetSheet, seksi2Wrapper);
+
+                        if (seksi2Wrapper.style.display !== 'none' && isExceedingMargin(targetSheet, seksi2Wrapper) && sheetHasPriorContent(targetSheet) && continuationContainer) {
+                            if (seksi2Wrapper.parentNode) seksi2Wrapper.parentNode.removeChild(seksi2Wrapper);
+
+                            if (continuationContainer.querySelectorAll('.office-paper-sheet').length > 0) {
+                                continuationContainer.appendChild(createPageSeparator(`Halaman ${curPage}`));
+                            }
+
+                            const s2Sheet = createContinuationSheet(curPage);
+                            continuationContainer.appendChild(s2Sheet);
+                            appendToSheet(s2Sheet, seksi2Wrapper);
                             curPage++;
                         }
                     }
@@ -1997,11 +1969,8 @@ const OfficeWorkstation = {
             attachBoxEvents(b);
         });
 
-        // Load saved paper format preference (default A4)
-        const savedFormat = (() => {
-            try { return localStorage.getItem('siperapat_paper_format') || 'a4'; } catch (e) { return 'a4'; }
-        })();
-        setPaperSize(savedFormat, false);
+        // Enforce fixed A4 paper format (210 × 297 mm)
+        setPaperSize(false);
 
         // Initial reflow
         paginationEngine.reflow();
@@ -3206,53 +3175,35 @@ const SuratEdaranWorkstation = {
             });
         };
 
-        // Paper Switcher (A4 vs F4) with Status Bar & localStorage Sync
-        const applyPaperSize = (format) => {
-            workstation.querySelectorAll('[data-paper-size]').forEach(b => {
-                if (b.dataset.paperSize === format) {
-                    b.className = 'px-3 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1.5 bg-slate-900 text-white shadow-xs';
-                } else {
-                    b.className = 'px-3 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1.5 text-slate-700 hover:bg-slate-200';
-                }
-            });
-
+        // Fixed A4 Paper Format Enforcement (210 × 297 mm)
+        const applyPaperSize = () => {
             const sheet2 = workstation.querySelector('#surat-sheet-page-2');
             [sheet, sheet2].forEach(s => {
                 if (s) {
-                    s.dataset.paperFormat = format;
-                    s.classList.remove('paper-a4', 'paper-f4');
-                    s.classList.add(`paper-${format}`);
-                    s.style.width = format === 'f4' ? '215mm' : '210mm';
-                    s.style.minHeight = format === 'f4' ? '330mm' : '297mm';
+                    s.dataset.paperFormat = 'a4';
+                    s.classList.remove('paper-f4');
+                    s.classList.add('paper-a4');
+                    s.style.width = '210mm';
+                    s.style.minHeight = '297mm';
                 }
             });
 
             if (rulerEl) {
-                rulerEl.classList.remove('paper-a4', 'paper-f4', 'ruler-f4');
-                if (format === 'f4') {
-                    rulerEl.classList.add('paper-f4', 'ruler-f4');
-                } else {
-                    rulerEl.classList.add('paper-a4');
-                }
+                rulerEl.classList.remove('paper-f4', 'ruler-f4');
+                rulerEl.classList.add('paper-a4');
             }
 
             if (statusBarEl) {
-                statusBarEl.classList.remove('paper-a4', 'paper-f4', 'status-f4');
-                if (format === 'f4') {
-                    statusBarEl.classList.add('paper-f4', 'status-f4');
-                } else {
-                    statusBarEl.classList.add('paper-a4');
-                }
+                statusBarEl.classList.remove('paper-f4', 'status-f4');
+                statusBarEl.classList.add('paper-a4');
             }
 
             if (statusSizeEl) {
-                statusSizeEl.textContent = format === 'f4'
-                    ? 'F4 / Folio (215 × 330 mm) • Kop: Times New Roman • Isi: Arial 12pt'
-                    : 'Kertas A4 (Margin Kiri 3cm, Kanan 2cm, Bawah 2.5cm) • Kop: Times New Roman • Isi: Arial 12pt';
+                statusSizeEl.textContent = 'Kertas A4 (Margin Kiri 3cm, Kanan 2cm, Bawah 2.5cm) • Kop: Times New Roman • Isi: Arial 12pt';
             }
 
             try {
-                localStorage.setItem('siperapat_paper_format', format);
+                localStorage.setItem('siperapat_paper_format', 'a4');
             } catch (e) {}
 
             updateZoomCompensation(currentZoomVal);
@@ -3282,13 +3233,6 @@ const SuratEdaranWorkstation = {
             deskCanvas.addEventListener('scroll', updateActivePageStatus, { passive: true });
         }
 
-        workstation.querySelectorAll('[data-paper-size]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                applyPaperSize(btn.dataset.paperSize);
-            });
-        });
-
         workstation.querySelectorAll('[data-zoom]').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -3296,10 +3240,7 @@ const SuratEdaranWorkstation = {
             });
         });
 
-        const savedFormat = (() => {
-            try { return localStorage.getItem('siperapat_paper_format') || 'a4'; } catch (e) { return 'a4'; }
-        })();
-        applyPaperSize(savedFormat);
+        applyPaperSize();
         if (window.innerWidth < 768) {
             applyZoom('fit');
         }
@@ -3610,6 +3551,29 @@ const SuratEdaranWorkstation = {
                 syncToHiddenInputs(true);
             });
         }
+
+        // Guard saat klik tombol Ekspor (PDF / Word) jika ada perubahan naskah yang belum disimpan
+        workstation.querySelectorAll('[data-export-link]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                if (!window.__suratDirtyState) return;
+                e.preventDefault();
+                const exportUrl = link.getAttribute('href');
+                const formatName = link.dataset.exportLink === 'pdf' ? 'PDF Resmi (.pdf)' : 'Dokumen Word (.docx)';
+
+                if (typeof window.showModal === 'function') {
+                    window.showModal({
+                        title: 'Perubahan Belum Disimpan',
+                        message: `Terdapat ketikan naskah surat atau pengaturan yang belum disimpan ke server. Jika Anda mengunduh ${formatName} sekarang, berkas hanya akan memuat versi terakhir yang tersimpan. Lanjutkan mengunduh versi tersimpan?`,
+                        type: 'warning',
+                        confirmText: 'Tetap Unduh Versi Tersimpan',
+                        cancelText: 'Batal (Simpan Dulu)',
+                        onConfirm: () => {
+                            window.location.href = exportUrl;
+                        },
+                    });
+                }
+            });
+        });
 
         // Keyboard Shortcut: Ctrl+S / Cmd+S (Works anywhere on the Surat Edaran Workstation page)
         document.addEventListener('keydown', (e) => {
