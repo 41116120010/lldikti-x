@@ -108,6 +108,7 @@ class AgendaController extends Controller
                 'pimpinan.unit',
                 'notulis.unit',
                 'units',
+                'invitedUsers.unit',
                 'attendances' => fn ($q) => $q->where('user_id', $user->id),
             ])
             ->withCount('attendances')
@@ -144,7 +145,7 @@ class AgendaController extends Controller
             suratEdaran: $request->file('surat_edaran')
         );
 
-        $agenda->load(['creator.unit', 'pimpinan.unit', 'notulis.unit', 'units']);
+        $agenda->load(['creator.unit', 'pimpinan.unit', 'notulis.unit', 'units', 'invitedUsers.unit']);
 
         return response()->json([
             'success' => true,
@@ -184,6 +185,7 @@ class AgendaController extends Controller
             'pimpinan.unit',
             'notulis.unit',
             'units',
+            'invitedUsers.unit',
             'documentations',
             'attendances' => fn ($q) => $q->where('user_id', $user->id),
         ]);
@@ -218,7 +220,7 @@ class AgendaController extends Controller
             ], 422);
         }
 
-        $agenda->load(['creator.unit', 'pimpinan.unit', 'notulis.unit', 'units', 'documentations']);
+        $agenda->load(['creator.unit', 'pimpinan.unit', 'notulis.unit', 'units', 'invitedUsers.unit', 'documentations']);
 
         return response()->json([
             'success' => true,
@@ -308,7 +310,7 @@ class AgendaController extends Controller
         $validated = $request->validated();
         $agenda = $suratEdaranService->saveDigitalSurat($agenda, $validated, $request);
 
-        $agenda->load(['creator.unit', 'pimpinan.unit', 'notulis.unit', 'units', 'documentations']);
+        $agenda->load(['creator.unit', 'pimpinan.unit', 'notulis.unit', 'units', 'invitedUsers.unit', 'documentations']);
 
         return response()->json([
             'success' => true,
@@ -338,7 +340,7 @@ class AgendaController extends Controller
             suratEdaran: $request->file('surat_edaran')
         );
 
-        $agenda->load(['creator.unit', 'pimpinan.unit', 'notulis.unit', 'units', 'documentations']);
+        $agenda->load(['creator.unit', 'pimpinan.unit', 'notulis.unit', 'units', 'invitedUsers.unit', 'documentations']);
 
         return response()->json([
             'success' => true,
@@ -387,7 +389,7 @@ class AgendaController extends Controller
             ], 422);
         }
 
-        $agenda->load(['creator.unit', 'pimpinan.unit', 'notulis.unit', 'units']);
+        $agenda->load(['creator.unit', 'pimpinan.unit', 'notulis.unit', 'units', 'invitedUsers.unit']);
 
         return response()->json([
             'success' => true,
@@ -404,7 +406,7 @@ class AgendaController extends Controller
         Gate::authorize('manageStatus', $agenda);
 
         $agendaService->updateRoles($agenda, $request->roles());
-        $agenda->refresh()->load(['creator.unit', 'pimpinan.unit', 'notulis.unit', 'units']);
+        $agenda->refresh()->load(['creator.unit', 'pimpinan.unit', 'notulis.unit', 'units', 'invitedUsers.unit']);
 
         return response()->json([
             'success' => true,
@@ -425,6 +427,7 @@ class AgendaController extends Controller
             'pimpinan.unit',
             'notulis.unit',
             'units',
+            'invitedUsers.unit',
             'documentations',
         ]);
         $agenda->loadCount('attendances');
@@ -472,6 +475,7 @@ class AgendaController extends Controller
             'pimpinan.unit',
             'notulis.unit',
             'units',
+            'invitedUsers.unit',
             'documentations',
         ]);
 
@@ -522,6 +526,7 @@ class AgendaController extends Controller
             'pimpinan.unit',
             'notulis.unit',
             'units',
+            'invitedUsers.unit',
             'documentations',
         ]);
 

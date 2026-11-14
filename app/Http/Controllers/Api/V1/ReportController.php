@@ -204,6 +204,7 @@ class ReportController extends Controller
                 'pimpinan.unit',
                 'notulis.unit',
                 'units',
+                'invitedUsers.unit',
             ])
             ->withCount('attendances');
 
@@ -245,6 +246,7 @@ class ReportController extends Controller
             'pimpinan.unit',
             'notulis.unit',
             'units',
+            'invitedUsers.unit',
             'documentations',
         ]);
         $agenda->loadCount('attendances');
@@ -507,7 +509,7 @@ class ReportController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Konfigurasi dokumen laporan berhasil direset ke standar sistem.',
-            'data' => new AgendaResource($agenda->refresh()->load(['creator.unit', 'pimpinan.unit', 'notulis.unit', 'units'])),
+            'data' => new AgendaResource($agenda->refresh()->load(['creator.unit', 'pimpinan.unit', 'notulis.unit', 'units', 'invitedUsers.unit'])),
         ]);
     }
 

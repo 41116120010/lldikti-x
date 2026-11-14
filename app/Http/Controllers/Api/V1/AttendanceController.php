@@ -150,7 +150,7 @@ class AttendanceController extends Controller
             'success' => true,
             'message' => 'Status portal presensi berhasil diperiksa.',
             'data' => [
-                'agenda' => new AgendaResource($agenda->load(['creator.unit', 'pimpinan.unit', 'notulis.unit', 'units'])),
+                'agenda' => new AgendaResource($agenda->load(['creator.unit', 'pimpinan.unit', 'notulis.unit', 'units', 'invitedUsers.unit'])),
                 'is_ongoing' => $agenda->status === 'ongoing',
                 'is_eligible' => $isEligible,
                 'has_attended' => $existingAttendance !== null,
