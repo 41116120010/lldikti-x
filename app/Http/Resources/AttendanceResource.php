@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Gate;
 
 class AttendanceResource extends JsonResource
 {
@@ -14,6 +15,13 @@ class AttendanceResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $currentUser = $request->user();
+        $canViewBiometrics = $currentUser
+            ? Gate::forUser($currentUser)->allows('view', $this->resource)
+            : false;
+        $hasSelfie = (bool) $this->selfie_path;
+        $hasSignature = (bool) $this->signature_path;
+
         return [
             'id' => $this->id,
             'agenda_id' => $this->agenda_id,
@@ -76,8 +84,11 @@ class AttendanceResource extends JsonResource
                 ],
             ],
             'signed_at' => $this->signed_at?->toIso8601String(),
-            'selfie_url' => $this->selfie_path ? url("/api/v1/attendances/{$this->id}/selfie") : null,
-            'signature_url' => $this->signature_path ? url("/api/v1/attendances/{$this->id}/signature") : null,
+            'can_view_biometrics' => $canViewBiometrics,
+            'has_selfie' => $hasSelfie,
+            'has_signature' => $hasSignature,
+            'selfie_url' => ($canViewBiometrics && $hasSelfie) ? url("/api/v1/attendances/{$this->id}/selfie") : null,
+            'signature_url' => ($canViewBiometrics && $hasSignature) ? url("/api/v1/attendances/{$this->id}/signature") : null,
             'ip_address' => $this->ip_address,
             'user_agent' => $this->user_agent,
             'device_label' => $this->device_label,

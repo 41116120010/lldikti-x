@@ -330,7 +330,11 @@
                             <div class="text-[10px] uppercase font-bold text-slate-500 tracking-wider font-mono">Pemimpin Rapat</div>
                             <div class="h-16 flex items-center justify-center">
                                 @if($pimpinanAtt && $pimpinanAtt->signature_path)
-                                    <img src="{{ route('attendances.signature', $pimpinanAtt) }}" alt="Tanda Tangan Pimpinan" class="h-14 max-w-[140px] object-contain">
+                                    @can('view', $pimpinanAtt)
+                                        <img src="{{ route('attendances.signature', $pimpinanAtt) }}" alt="Tanda Tangan Pimpinan" class="h-14 max-w-[140px] object-contain">
+                                    @else
+                                        <x-biometric-privacy-badge variant="signature" label="Dilindungi Privasi" />
+                                    @endcan
                                 @else
                                     <div class="px-3 py-2 border border-dashed border-slate-300 rounded-lg bg-slate-50 text-[11px] text-slate-400 italic">
                                         Belum Mengisi Presensi
@@ -363,7 +367,11 @@
                             <div class="text-[10px] uppercase font-bold text-slate-500 tracking-wider font-mono">Notulis Rapat</div>
                             <div class="h-16 flex items-center justify-center">
                                 @if($notulisAtt && $notulisAtt->signature_path)
-                                    <img src="{{ route('attendances.signature', $notulisAtt) }}" alt="Tanda Tangan Notulis" class="h-14 max-w-[140px] object-contain">
+                                    @can('view', $notulisAtt)
+                                        <img src="{{ route('attendances.signature', $notulisAtt) }}" alt="Tanda Tangan Notulis" class="h-14 max-w-[140px] object-contain">
+                                    @else
+                                        <x-biometric-privacy-badge variant="signature" label="Dilindungi Privasi" />
+                                    @endcan
                                 @else
                                     <div class="px-3 py-2 border border-dashed border-slate-300 rounded-lg bg-slate-50 text-[11px] text-slate-400 italic">
                                         Belum Mengisi Presensi
@@ -436,32 +444,48 @@
                                 <div class="text-[10px] text-slate-600 font-mono font-medium">IP: {{ $att->ip_address ?? '127.0.0.1' }}</div>
                             </td>
                             <td class="text-center">
-                                <button 
-                                    type="button" 
-                                    class="w-10 h-10 rounded-lg overflow-hidden border border-slate-300 hover:border-slate-800 hover:ring-2 hover:ring-slate-400 mx-auto shadow-xs block cursor-pointer transition"
-                                    data-selfie-modal-trigger
-                                    data-selfie-url="{{ route('attendances.selfie', $att) }}"
-                                    data-user-name="{{ $att->user->name }}"
-                                    data-user-nip="{{ $att->user->nip ?? '-' }}"
-                                    data-unit-name="{{ $att->user->unit?->kode_unit ? $att->user->unit->kode_unit . ' — ' . $att->user->unit->nama_unit : 'Tingkat Lembaga' }}"
-                                    data-signed-at="{{ $att->signed_at->format('d/m/Y H:i:s') }} WIB"
-                                    data-ip-address="{{ $att->ip_address ?? '127.0.0.1' }}"
-                                    title="Klik untuk memverifikasi & memperbesar Foto Selfie"
-                                    aria-label="Verifikasi Foto Selfie {{ $att->user->name }}"
-                                >
-                                    <img src="{{ route('attendances.selfie', $att) }}" alt="Foto selfie {{ $att->user->name }}" class="w-full h-full object-cover" loading="lazy" decoding="async">
-                                </button>
+                                @if($att->selfie_path)
+                                    @can('view', $att)
+                                        <button 
+                                            type="button" 
+                                            class="w-10 h-10 rounded-lg overflow-hidden border border-slate-300 hover:border-slate-800 hover:ring-2 hover:ring-slate-400 mx-auto shadow-xs block cursor-pointer transition"
+                                            data-selfie-modal-trigger
+                                            data-selfie-url="{{ route('attendances.selfie', $att) }}"
+                                            data-user-name="{{ $att->user->name }}"
+                                            data-user-nip="{{ $att->user->nip ?? '-' }}"
+                                            data-unit-name="{{ $att->user->unit?->kode_unit ? $att->user->unit->kode_unit . ' — ' . $att->user->unit->nama_unit : 'Tingkat Lembaga' }}"
+                                            data-signed-at="{{ $att->signed_at->format('d/m/Y H:i:s') }} WIB"
+                                            data-ip-address="{{ $att->ip_address ?? '127.0.0.1' }}"
+                                            title="Klik untuk memverifikasi & memperbesar Foto Selfie"
+                                            aria-label="Verifikasi Foto Selfie {{ $att->user->name }}"
+                                        >
+                                            <img src="{{ route('attendances.selfie', $att) }}" alt="Foto selfie {{ $att->user->name }}" class="w-full h-full object-cover" loading="lazy" decoding="async">
+                                        </button>
+                                    @else
+                                        <x-biometric-privacy-badge variant="avatar" />
+                                    @endcan
+                                @else
+                                    <span class="text-[11px] text-slate-400 italic">Tanpa Foto</span>
+                                @endif
                             </td>
                             <td class="text-center">
-                                <button 
-                                    type="button" 
-                                    class="w-16 h-10 rounded-lg overflow-hidden border border-slate-300 bg-white mx-auto shadow-xs flex items-center justify-center p-1 cursor-pointer hover:opacity-80 transition"
-                                    data-preview-media="{{ route('attendances.signature', $att) }}"
-                                    data-preview-title="Tanda Tangan: {{ $att->user->name }}"
-                                    title="Klik untuk memperbesar Tanda Tangan"
-                                >
-                                    <img src="{{ route('attendances.signature', $att) }}" alt="Tanda tangan {{ $att->user->name }}" class="max-w-full max-h-full object-contain" loading="lazy" decoding="async">
-                                </button>
+                                @if($att->signature_path)
+                                    @can('view', $att)
+                                        <button 
+                                            type="button" 
+                                            class="w-16 h-10 rounded-lg overflow-hidden border border-slate-300 bg-white mx-auto shadow-xs flex items-center justify-center p-1 cursor-pointer hover:opacity-80 transition"
+                                            data-preview-media="{{ route('attendances.signature', $att) }}"
+                                            data-preview-title="Tanda Tangan: {{ $att->user->name }}"
+                                            title="Klik untuk memperbesar Tanda Tangan"
+                                        >
+                                            <img src="{{ route('attendances.signature', $att) }}" alt="Tanda tangan {{ $att->user->name }}" class="max-w-full max-h-full object-contain" loading="lazy" decoding="async">
+                                        </button>
+                                    @else
+                                        <x-biometric-privacy-badge variant="pill" label="Dilindungi Privasi" />
+                                    @endcan
+                                @else
+                                    <span class="text-[11px] text-slate-400 italic">Tanpa TTD</span>
+                                @endif
                             </td>
                         </tr>
                     @empty

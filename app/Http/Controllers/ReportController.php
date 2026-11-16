@@ -213,6 +213,7 @@ class ReportController extends Controller
             $agenda->load([
                 'attendances' => fn ($q) => $q->whereIn('user_id', $roleUserIds),
             ]);
+            $agenda->attendances->each(fn ($att) => $att->setRelation('agenda', $agenda));
         } else {
             $agenda->setRelation('attendances', collect());
         }
@@ -222,6 +223,7 @@ class ReportController extends Controller
             ->orderBy('signed_at', 'asc')
             ->paginate(10, ['*'], 'page_attendees')
             ->withQueryString();
+        $attendances->getCollection()->each(fn ($att) => $att->setRelation('agenda', $agenda));
 
         $documentations = $agenda->documentations()
             ->latest('id')

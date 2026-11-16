@@ -4,6 +4,7 @@ namespace Tests\Feature\Api\V1;
 
 use App\Models\Agenda;
 use App\Models\Attendance;
+use App\Models\Unit;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
@@ -172,5 +173,212 @@ class BiometricMediaApiTest extends TestCase
             ->get("/api/v1/attendances/{$attendance->id}/signature");
         $sigRes->assertOk();
         $this->assertEquals('private-local-signature', $sigRes->streamedContent());
+    }
+
+    public function test_staff_pimpinan_can_view_and_stream_attendee_biometrics_while_staff_notulis_cannot(): void
+    {
+        Storage::fake('local');
+
+        $units = Unit::take(2)->get();
+        $this->assertCount(2, $units);
+        [$unitA, $unitB] = [$units[0], $units[1]];
+
+        $creatorAdmin = User::factory()->create([
+            'role' => 'admin',
+            'unit_id' => $unitA->id,
+            'username' => 'creator_bio_' . uniqid(),
+            'nip' => '19880101' . str_pad((string) mt_rand(1000000000, 9999999999), 10, '0', STR_PAD_LEFT),
+        ]);
+        $pimpinanStaff = User::factory()->create([
+            'role' => 'staff',
+            'unit_id' => $unitB->id,
+            'username' => 'pimp_bio_' . uniqid(),
+            'nip' => '19890101' . str_pad((string) mt_rand(1000000000, 9999999999), 10, '0', STR_PAD_LEFT),
+        ]);
+        $notulisStaff = User::factory()->create([
+            'role' => 'staff',
+            'unit_id' => $unitB->id,
+            'username' => 'notu_bio_' . uniqid(),
+            'nip' => '19900101' . str_pad((string) mt_rand(1000000000, 9999999999), 10, '0', STR_PAD_LEFT),
+        ]);
+        $attendeeStaff = User::factory()->create([
+            'role' => 'staff',
+            'unit_id' => $unitA->id,
+            'username' => 'peserta_bio_' . uniqid(),
+            'nip' => '19910101' . str_pad((string) mt_rand(1000000000, 9999999999), 10, '0', STR_PAD_LEFT),
+        ]);
+
+        $agenda = Agenda::create([
+            'created_by' => $creatorAdmin->id,
+            'pimpinan_id' => $pimpinanStaff->id,
+            'notulis_id' => $notulisStaff->id,
+            'judul_rapat' => 'Rapat Isolasi Biometrik ' . uniqid(),
+            'slug' => 'rapat-isolasi-bio-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Rapat A',
+            'waktu_mulai' => now()->subHour(),
+            'waktu_selesai' => now()->addHours(2),
+            'target_type' => 'selected_users',
+            'is_all_units' => false,
+            'status' => 'ongoing',
+        ]);
+        $agenda->invitedUsers()->sync([$pimpinanStaff->id, $notulisStaff->id, $attendeeStaff->id]);
+
+        $selfiePath = "attendances/{$agenda->id}/selfies/bio_selfie.jpg";
+        $sigPath = "attendances/{$agenda->id}/signatures/bio_sig.png";
+        Storage::disk('local')->put($selfiePath, 'attendee-selfie-bytes');
+        Storage::disk('local')->put($sigPath, 'attendee-sig-bytes');
+
+        $attendance = Attendance::create([
+            'agenda_id' => $agenda->id,
+            'user_id' => $attendeeStaff->id,
+            'selfie_path' => $selfiePath,
+            'signature_path' => $sigPath,
+            'signed_at' => now()->subMinutes(10),
+            'ip_address' => '127.0.0.1',
+            'user_agent' => 'PHPUnit',
+        ]);
+
+        // 1. Pimpinan (role: staff) receives can_view_biometrics=true + URLs and can stream 200 (API & Web)
+        $pimpinanList = $this->actingAs($pimpinanStaff, 'sanctum')
+            ->getJson("/api/v1/agendas/{$agenda->id}/attendances");
+        $pimpinanList->assertOk()
+            ->assertJsonPath('data.0.can_view_biometrics', true)
+            ->assertJsonPath('data.0.has_selfie', true)
+            ->assertJsonPath('data.0.has_signature', true);
+        $this->assertNotNull($pimpinanList->json('data.0.selfie_url'));
+        $this->assertNotNull($pimpinanList->json('data.0.signature_url'));
+
+        $this->actingAs($pimpinanStaff, 'sanctum')
+            ->get("/api/v1/attendances/{$attendance->id}/selfie")
+            ->assertOk();
+        $this->actingAs($pimpinanStaff, 'sanctum')
+            ->get("/api/v1/attendances/{$attendance->id}/signature")
+            ->assertOk();
+        $this->actingAs($pimpinanStaff)
+            ->get(route('attendances.selfie', $attendance))
+            ->assertOk();
+
+        // 2. Related Admin Unit (organizer unitA) can stream 200
+        $this->actingAs($creatorAdmin, 'sanctum')
+            ->get("/api/v1/attendances/{$attendance->id}/selfie")
+            ->assertOk();
+
+        // 3. Notulis (role: staff, not pimpinan, not owner) sees can_view_biometrics=false, null URLs, 403 stream, and privacy badge in Web Blade
+        $notulisList = $this->actingAs($notulisStaff, 'sanctum')
+            ->getJson("/api/v1/agendas/{$agenda->id}/attendances");
+        $notulisList->assertOk()
+            ->assertJsonPath('data.0.can_view_biometrics', false)
+            ->assertJsonPath('data.0.has_selfie', true)
+            ->assertJsonPath('data.0.has_signature', true)
+            ->assertJsonPath('data.0.selfie_url', null)
+            ->assertJsonPath('data.0.signature_url', null);
+
+        $this->actingAs($notulisStaff, 'sanctum')
+            ->getJson("/api/v1/attendances/{$attendance->id}/selfie")
+            ->assertStatus(403);
+        $this->actingAs($notulisStaff, 'sanctum')
+            ->getJson("/api/v1/attendances/{$attendance->id}/signature")
+            ->assertStatus(403);
+        $this->actingAs($notulisStaff)
+            ->get(route('attendances.selfie', $attendance))
+            ->assertStatus(403);
+
+        $notulenWeb = $this->actingAs($notulisStaff)
+            ->get(route('admin.agendas.notulen', $agenda));
+        $notulenWeb->assertOk();
+        $notulenWeb->assertDontSee(route('attendances.selfie', $attendance), false);
+        $notulenWeb->assertDontSee(route('attendances.signature', $attendance), false);
+
+        $showWeb = $this->actingAs($notulisStaff)
+            ->get(route('admin.agendas.show', $agenda));
+        $showWeb->assertOk();
+        $showWeb->assertDontSee(route('attendances.selfie', $attendance), false);
+    }
+
+    public function test_admin_unit_can_view_own_biometrics_in_cross_unit_selected_users_meeting_but_not_other_unit_attendee(): void
+    {
+        Storage::fake('local');
+
+        $units = Unit::take(2)->get();
+        $this->assertCount(2, $units);
+        [$unitA, $unitB] = [$units[0], $units[1]];
+
+        $creatorAdmin = User::factory()->create([
+            'role' => 'admin',
+            'unit_id' => $unitA->id,
+            'username' => 'creator_cross_' . uniqid(),
+            'nip' => '19870101' . str_pad((string) mt_rand(1000000000, 9999999999), 10, '0', STR_PAD_LEFT),
+        ]);
+        $participantAdminB = User::factory()->create([
+            'role' => 'admin',
+            'unit_id' => $unitB->id,
+            'username' => 'adminb_cross_' . uniqid(),
+            'nip' => '19860101' . str_pad((string) mt_rand(1000000000, 9999999999), 10, '0', STR_PAD_LEFT),
+        ]);
+        $attendeeA = User::factory()->create([
+            'role' => 'staff',
+            'unit_id' => $unitA->id,
+            'username' => 'staffa_cross_' . uniqid(),
+            'nip' => '19850101' . str_pad((string) mt_rand(1000000000, 9999999999), 10, '0', STR_PAD_LEFT),
+        ]);
+
+        $agenda = Agenda::create([
+            'created_by' => $creatorAdmin->id,
+            'judul_rapat' => 'Rapat Lintas Unit Selected Users ' . uniqid(),
+            'slug' => 'rapat-lintas-selected-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Sidang B',
+            'waktu_mulai' => now()->subHour(),
+            'waktu_selesai' => now()->addHours(2),
+            'target_type' => 'selected_users',
+            'is_all_units' => false,
+            'status' => 'ongoing',
+        ]);
+        $agenda->invitedUsers()->sync([$participantAdminB->id, $attendeeA->id]);
+
+        $ownSelfie = "attendances/{$agenda->id}/selfies/own_b.jpg";
+        $ownSig = "attendances/{$agenda->id}/signatures/own_b.png";
+        $otherSelfie = "attendances/{$agenda->id}/selfies/other_a.jpg";
+        $otherSig = "attendances/{$agenda->id}/signatures/other_a.png";
+        Storage::disk('local')->put($ownSelfie, 'own-b-bytes');
+        Storage::disk('local')->put($ownSig, 'own-b-sig-bytes');
+        Storage::disk('local')->put($otherSelfie, 'other-a-bytes');
+        Storage::disk('local')->put($otherSig, 'other-a-sig-bytes');
+
+        $ownAttendance = Attendance::create([
+            'agenda_id' => $agenda->id,
+            'user_id' => $participantAdminB->id,
+            'selfie_path' => $ownSelfie,
+            'signature_path' => $ownSig,
+            'signed_at' => now()->subMinutes(5),
+            'ip_address' => '127.0.0.1',
+            'user_agent' => 'PHPUnit',
+        ]);
+        $otherAttendance = Attendance::create([
+            'agenda_id' => $agenda->id,
+            'user_id' => $attendeeA->id,
+            'selfie_path' => $otherSelfie,
+            'signature_path' => $otherSig,
+            'signed_at' => now()->subMinutes(5),
+            'ip_address' => '127.0.0.1',
+            'user_agent' => 'PHPUnit',
+        ]);
+
+        // Own attendance -> 200 OK & can_view_biometrics=true
+        $this->actingAs($participantAdminB, 'sanctum')
+            ->get("/api/v1/attendances/{$ownAttendance->id}/selfie")
+            ->assertOk();
+        $this->actingAs($participantAdminB, 'sanctum')
+            ->getJson("/api/v1/attendances/{$ownAttendance->id}")
+            ->assertOk()
+            ->assertJsonPath('data.can_view_biometrics', true);
+
+        // Other unit's participant in unrelated selected_users meeting -> 403
+        $this->actingAs($participantAdminB, 'sanctum')
+            ->getJson("/api/v1/attendances/{$otherAttendance->id}/selfie")
+            ->assertStatus(403);
     }
 }

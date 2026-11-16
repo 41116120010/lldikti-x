@@ -483,6 +483,7 @@
                                     'nip' => $config['signer1_nip'] ?? $agenda->nip_pimpinan,
                                     'nipId' => 'sheet-signer1-nip',
                                     'mark' => $pimpinanAtt?->signature_path,
+                                    'att' => $pimpinanAtt,
                                     'markId' => 'sheet-signer1-mark',
                                     'showMark' => $config['show_signer1_signature'] ?? true,
                                     'isSigner3' => false,
@@ -496,6 +497,7 @@
                                     'nip' => ($config['signer3_nip'] ?? '') !== '' ? $config['signer3_nip'] : '-',
                                     'nipId' => 'sheet-signer3-nip',
                                     'mark' => null,
+                                    'att' => null,
                                     'markId' => 'sheet-signer3-mark',
                                     'showMark' => false,
                                     'isSigner3' => true,
@@ -513,6 +515,7 @@
                                     'nip' => $config['signer2_nip'] ?? $agenda->nip_notulis,
                                     'nipId' => 'sheet-signer2-nip',
                                     'mark' => $notulisAtt?->signature_path,
+                                    'att' => $notulisAtt,
                                     'markId' => 'sheet-signer2-mark',
                                     'showMark' => $config['show_signer2_signature'] ?? true,
                                     'isSigner3' => false,
@@ -547,8 +550,12 @@
                                     @foreach($signatureSigners as $signatureSigner)
                                         <td @if($signatureSigner['isSigner3']) data-signer3-col @endif data-signer-col style="width: {{ $signatureColWidth }}; text-align: center; vertical-align: middle; border: none; padding: 1pt 0; height: {{ \App\Support\DocumentLayout::TTD_ROW_HEIGHT_PT }}pt; {{ ($signatureSigner['isSigner3'] && !$showSigner3Initial) ? 'display: none;' : '' }}">
                                             <div id="{{ $signatureSigner['markId'] }}" data-signer-inner style="display: inline-block; width: {{ $signatureInner }}; text-align: left; {{ $signatureSigner['showMark'] ? '' : 'display: none;' }}">
-                                                @if($signatureSigner['mark'])
-                                                    <img src="{{ Storage::disk('public')->url($signatureSigner['mark']) }}" alt="TTD" width="95" height="32" style="width: 95px; height: 32px; max-height: 34px; max-width: 100px; object-fit: contain; display: block; border: none;">
+                                                @if($signatureSigner['mark'] && $signatureSigner['att'])
+                                                    @can('view', $signatureSigner['att'])
+                                                        <img src="{{ route('attendances.signature', $signatureSigner['att']) }}" alt="TTD" width="95" height="32" style="width: 95px; height: 32px; max-height: 34px; max-width: 100px; object-fit: contain; display: block; border: none;">
+                                                    @else
+                                                        <x-biometric-privacy-badge variant="signature" label="Dilindungi Privasi" />
+                                                    @endcan
                                                 @endif
                                             </div>
                                         </td>
@@ -640,30 +647,38 @@
                                     <td data-col="time" style="text-align: center; vertical-align: middle; padding: 2pt 2pt; {{ ($config['show_attendance_time'] ?? true) ? '' : 'display: none;' }}">{{ $att->signed_at?->format('H:i') ?? '-' }}</td>
                                     <td data-col="photo" style="text-align: center; vertical-align: middle; padding: 1.5pt; {{ ($config['show_selfie_photos'] ?? true) ? '' : 'display: none;' }}">
                                         @if($att->selfie_path)
-                                            <button
-                                                type="button"
-                                                data-selfie-modal-trigger
-                                                data-selfie-url="{{ Storage::disk('public')->url($att->selfie_path) }}"
-                                                data-user-name="{{ $att->user->name }}"
-                                                data-user-nip="{{ $att->user->nip ?? '-' }}"
-                                                data-unit-name="{{ $att->user->unit?->kode_unit ? $att->user->unit->kode_unit . ' — ' . $att->user->unit->nama_unit : 'Tingkat Lembaga' }}"
-                                                data-signed-at="{{ $att->signed_at?->format('d/m/Y H:i:s') ?? '-' }} WIB"
-                                                data-ip-address="{{ $att->ip_address ?? '127.0.0.1' }}"
-                                                class="inline-block p-0 m-0 border-0 bg-transparent cursor-pointer hover:opacity-80 transition"
-                                                style="vertical-align: middle; line-height: 0;"
-                                                title="Klik untuk memverifikasi foto selfie {{ $att->user->name }}"
-                                                aria-label="Verifikasi foto selfie {{ $att->user->name }}"
-                                            >
-                                                <img src="{{ Storage::disk('public')->url($att->selfie_path) }}" alt="Selfie" width="26" height="26" style="width: 26px; height: 26px; object-fit: cover; border-radius: 2px; border: 1px solid #cbd5e1; display: inline-block; vertical-align: middle;">
-                                            </button>
+                                            @can('view', $att)
+                                                <button
+                                                    type="button"
+                                                    data-selfie-modal-trigger
+                                                    data-selfie-url="{{ route('attendances.selfie', $att) }}"
+                                                    data-user-name="{{ $att->user->name }}"
+                                                    data-user-nip="{{ $att->user->nip ?? '-' }}"
+                                                    data-unit-name="{{ $att->user->unit?->kode_unit ? $att->user->unit->kode_unit . ' — ' . $att->user->unit->nama_unit : 'Tingkat Lembaga' }}"
+                                                    data-signed-at="{{ $att->signed_at?->format('d/m/Y H:i:s') ?? '-' }} WIB"
+                                                    data-ip-address="{{ $att->ip_address ?? '127.0.0.1' }}"
+                                                    class="inline-block p-0 m-0 border-0 bg-transparent cursor-pointer hover:opacity-80 transition"
+                                                    style="vertical-align: middle; line-height: 0;"
+                                                    title="Klik untuk memverifikasi foto selfie {{ $att->user->name }}"
+                                                    aria-label="Verifikasi foto selfie {{ $att->user->name }}"
+                                                >
+                                                    <img src="{{ route('attendances.selfie', $att) }}" alt="Selfie" width="26" height="26" style="width: 26px; height: 26px; object-fit: cover; border-radius: 2px; border: 1px solid #cbd5e1; display: inline-block; vertical-align: middle;">
+                                                </button>
+                                            @else
+                                                <x-biometric-privacy-badge variant="avatar" size="sm" />
+                                            @endcan
                                         @else
                                             <span style="font-size: 7pt; color: #94a3b8; font-style: italic;">Tanpa Foto</span>
                                         @endif
                                     </td>
                                     <td style="text-align: center; vertical-align: middle; padding: 1.5pt;">
                                         @if($att->signature_path)
-                                            <img class="attendee-sig-img" src="{{ Storage::disk('public')->url($att->signature_path) }}" alt="TTD" width="75" height="22" style="width: 75px; height: 22px; max-height: 24px; object-fit: contain; display: {{ ($config['show_attendee_signatures'] ?? true) ? 'block' : 'none' }}; margin: 0 auto; border: none;">
-                                            <span class="attendee-sig-fallback" style="font-size: 7.5pt; color: #166534; font-weight: bold; display: {{ ($config['show_attendee_signatures'] ?? true) ? 'none' : 'inline' }};">(HADIR)</span>
+                                            @can('view', $att)
+                                                <img class="attendee-sig-img" src="{{ route('attendances.signature', $att) }}" alt="TTD" width="75" height="22" style="width: 75px; height: 22px; max-height: 24px; object-fit: contain; display: {{ ($config['show_attendee_signatures'] ?? true) ? 'block' : 'none' }}; margin: 0 auto; border: none;">
+                                                <span class="attendee-sig-fallback" style="font-size: 7.5pt; color: #166534; font-weight: bold; display: {{ ($config['show_attendee_signatures'] ?? true) ? 'none' : 'inline' }};">(HADIR)</span>
+                                            @else
+                                                <x-biometric-privacy-badge variant="pill" label="Dilindungi Privasi" />
+                                            @endcan
                                         @else
                                             <span style="font-size: 7.5pt; color: #166534; font-weight: bold;">(HADIR)</span>
                                         @endif

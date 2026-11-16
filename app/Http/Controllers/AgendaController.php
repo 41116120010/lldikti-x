@@ -240,6 +240,7 @@ class AgendaController extends Controller
             ->orderBy('signed_at', 'desc')
             ->paginate(8, ['*'], 'page_attendees')
             ->withQueryString();
+        $attendances->getCollection()->each(fn ($att) => $att->setRelation('agenda', $agenda));
 
         // Preload pimpinan & notulis attendance without firing extra queries if missing from current page
         $roleUserIds = array_values(array_unique(array_filter([
@@ -252,7 +253,9 @@ class AgendaController extends Controller
             $extraRecords = $missingIds !== []
                 ? $agenda->attendances()->whereIn('user_id', $missingIds)->get()->keyBy('user_id')
                 : collect();
-            $agenda->setRelation('attendances', $loadedFromPage->merge($extraRecords)->values());
+            $roleAttendances = $loadedFromPage->merge($extraRecords)->values();
+            $roleAttendances->each(fn ($att) => $att->setRelation('agenda', $agenda));
+            $agenda->setRelation('attendances', $roleAttendances);
         } else {
             $agenda->setRelation('attendances', collect());
         }
@@ -264,6 +267,8 @@ class AgendaController extends Controller
 
         $currentUser = Auth::user();
         $myAttendance = $agenda->attendances()->where('user_id', $currentUser->id)->first();
+        $myAttendance?->setRelation('agenda', $agenda);
+        $myAttendance?->setRelation('agenda', $agenda);
 
         $canUpdateAgenda = Gate::allows('update', $agenda);
         $totalActiveUsers = $canUpdateAgenda ? User::query()->where('is_active', true)->count() : 0;
@@ -316,6 +321,7 @@ class AgendaController extends Controller
 
         $currentUser = Auth::user();
         $myAttendance = $agenda->attendances()->where('user_id', $currentUser->id)->first();
+        $myAttendance?->setRelation('agenda', $agenda);
 
         return view('agendas.staff_show', compact('agenda', 'documentations', 'currentUser', 'myAttendance'));
     }
@@ -546,6 +552,8 @@ class AgendaController extends Controller
             ->with('user.unit')
             ->orderBy('signed_at', 'asc')
             ->get();
+        $attendances->each(fn ($att) => $att->setRelation('agenda', $agenda));
+        $agenda->setRelation('attendances', $attendances);
 
         $config = $agenda->resolved_report_config;
 

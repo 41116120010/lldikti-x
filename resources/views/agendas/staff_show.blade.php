@@ -279,7 +279,7 @@
                                     <button 
                                         type="button" 
                                         data-selfie-modal-trigger
-                                        data-selfie-url="{{ Storage::disk('public')->url($myAttendance->selfie_path) }}"
+                                        data-selfie-url="{{ route('attendances.selfie', $myAttendance) }}"
                                         data-user-name="{{ Auth::user()->name }}"
                                         data-user-nip="{{ Auth::user()->nip ?? '-' }}"
                                         data-unit-name="{{ Auth::user()->unit?->kode_unit ? Auth::user()->unit->kode_unit . ' — ' . Auth::user()->unit->nama_unit : 'Tingkat Lembaga' }}"
@@ -289,7 +289,7 @@
                                         title="Klik untuk memperbesar Foto Selfie Anda"
                                         aria-label="Perbesar Foto Selfie Anda"
                                     >
-                                        <img src="{{ Storage::disk('public')->url($myAttendance->selfie_path) }}" alt="Foto Selfie Saya" class="w-full h-full object-cover">
+                                        <img src="{{ route('attendances.selfie', $myAttendance) }}" alt="Foto Selfie Saya" class="w-full h-full object-cover">
                                         <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
                                             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="white" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                                         </div>

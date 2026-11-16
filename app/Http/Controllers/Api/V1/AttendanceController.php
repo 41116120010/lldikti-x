@@ -146,11 +146,14 @@ class AttendanceController extends Controller
             ],
         ];
 
+        $agenda->load(['creator.unit', 'pimpinan.unit', 'notulis.unit', 'units', 'invitedUsers.unit']);
+        $existingAttendance?->setRelation('agenda', $agenda);
+
         return response()->json([
             'success' => true,
             'message' => 'Status portal presensi berhasil diperiksa.',
             'data' => [
-                'agenda' => new AgendaResource($agenda->load(['creator.unit', 'pimpinan.unit', 'notulis.unit', 'units', 'invitedUsers.unit'])),
+                'agenda' => new AgendaResource($agenda),
                 'is_ongoing' => $agenda->status === 'ongoing',
                 'is_eligible' => $isEligible,
                 'has_attended' => $existingAttendance !== null,
@@ -179,7 +182,9 @@ class AttendanceController extends Controller
             ])
         );
 
-        $attendance = $result['attendance']->load(['user.unit', 'agenda']);
+        $attendance = $result['attendance']->load(['user.unit']);
+        $agenda->loadMissing(['creator', 'units']);
+        $attendance->setRelation('agenda', $agenda);
 
         if ($result['is_duplicate']) {
             return response()->json([
@@ -205,7 +210,7 @@ class AttendanceController extends Controller
         $perPage = min(max((int) $request->query('per_page', 15), 1), 50);
 
         $query = Attendance::where('user_id', $user->id)
-            ->with(['agenda.creator.unit']);
+            ->with(['agenda.creator.unit', 'agenda.units']);
 
         // 1. Filter Search (Judul Rapat, Lokasi Ruang, atau Nomor BA/ID)
         if ($request->filled('search')) {
@@ -441,7 +446,10 @@ class AttendanceController extends Controller
             });
         }
 
+        $agenda->loadMissing(['creator', 'units']);
+
         $attendances = $attendancesQuery->paginate($perPage);
+        $attendances->getCollection()->each(fn (Attendance $att) => $att->setRelation('agenda', $agenda));
 
         return response()->json([
             'success' => true,
@@ -464,7 +472,7 @@ class AttendanceController extends Controller
     {
         Gate::authorize('view', $attendance);
 
-        $attendance->load(['user.unit', 'agenda.creator.unit']);
+        $attendance->load(['user.unit', 'agenda.creator.unit', 'agenda.units']);
 
         return response()->json([
             'success' => true,

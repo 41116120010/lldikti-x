@@ -21,22 +21,42 @@ class AttendancePolicy
      */
     public function view(User $user, Attendance $attendance): bool
     {
+        if ((int) $user->id === (int) $attendance->user_id) {
+            return true;
+        }
+
         if ($user->isAdministrator()) {
             return true;
         }
 
         $agenda = $attendance->fetchAgenda();
 
-        if ($user->isAdmin()) {
-            return $agenda !== null && (
-                $agenda->created_by === $user->id
-                || ($user->unit_id !== null && $attendance->attendeeUnitId() === $user->unit_id)
-                || ($user->unit_id !== null && $agenda->units()->where('units.id', $user->unit_id)->exists())
-                || $agenda->is_all_units
-            );
+        if ($agenda !== null && $agenda->pimpinan_id !== null && (int) $agenda->pimpinan_id === (int) $user->id) {
+            return true;
         }
 
-        return $user->id === $attendance->user_id;
+        if ($user->isAdmin()) {
+            if ($agenda === null) {
+                return false;
+            }
+
+            if (
+                (int) $agenda->created_by === (int) $user->id
+                || ($user->unit_id !== null && $agenda->creatorUnitId() === $user->unit_id)
+                || ($user->unit_id !== null && $attendance->attendeeUnitId() === $user->unit_id)
+                || $agenda->is_all_units
+            ) {
+                return true;
+            }
+
+            if ($user->unit_id !== null) {
+                return $agenda->relationLoaded('units')
+                    ? $agenda->units->contains('id', $user->unit_id)
+                    : $agenda->units()->where('units.id', $user->unit_id)->exists();
+            }
+        }
+
+        return false;
     }
 
     /**

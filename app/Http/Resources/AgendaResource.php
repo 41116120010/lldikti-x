@@ -93,10 +93,12 @@ class AgendaResource extends JsonResource
             'my_attendance' => $this->when($currentUser !== null, function () use ($currentUser) {
                 if ($this->relationLoaded('attendances')) {
                     $att = $this->attendances->firstWhere('user_id', $currentUser->id);
+                    $att?->setRelation('agenda', $this->resource);
 
                     return $att ? new AttendanceResource($att) : null;
                 }
                 $att = $this->attendances()->where('user_id', $currentUser->id)->first();
+                $att?->setRelation('agenda', $this->resource);
 
                 return $att ? new AttendanceResource($att) : null;
             }),
@@ -106,7 +108,11 @@ class AgendaResource extends JsonResource
             'notulensi_raw' => $this->notulensi,
             'kesimpulan_raw' => $this->kesimpulan,
             'documentations' => DocumentationResource::collection($this->whenLoaded('documentations')),
-            'attendances' => AttendanceResource::collection($this->whenLoaded('attendances')),
+            'attendances' => $this->whenLoaded('attendances', function () {
+                $this->attendances->each(fn ($att) => $att->setRelation('agenda', $this->resource));
+
+                return AttendanceResource::collection($this->attendances);
+            }),
             'nomor_ba' => $this->nomor_ba,
             'total_invited' => $this->total_invited,
             'total_attended' => $this->total_attended,
