@@ -500,6 +500,96 @@ class AgendaApiTest extends TestCase
         $this->assertNull($agenda->waktu_selesai);
         $this->assertStringContainsString('WIB s.d. Selesai', $agenda->rentang_waktu);
     }
+
+    public function test_api_store_and_update_digital_surat_edaran_lifecycle_and_cleanup(): void
+    {
+        Storage::fake('public');
+
+        $admin = User::where('role', 'administrator')->firstOrFail();
+        $startAt = now()->addDays(16)->setTime(9, 0, 0);
+        $endAt = $startAt->copy()->addHours(2);
+
+        // 1. Create agenda with surat_edaran_type => 'digital' via API v1
+        $createResponse = $this->actingAs($admin, 'sanctum')
+            ->postJson('/api/v1/agendas', [
+                'judul_rapat' => 'Rapat Digital Circular API Awal',
+                'jenis_rapat' => 'koordinasi',
+                'tipe_rapat' => 'offline',
+                'lokasi_ruang' => 'Ruang Rapat Anggrek',
+                'waktu_mulai' => $startAt->format('Y-m-d H:i:s'),
+                'waktu_selesai' => $endAt->format('Y-m-d H:i:s'),
+                'is_all_units' => true,
+                'surat_edaran_type' => 'digital',
+            ]);
+
+        $createResponse->assertCreated()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.surat_edaran.type', 'digital')
+            ->assertJsonPath('data.surat_edaran.is_digital', true);
+
+        $agenda = Agenda::findOrFail($createResponse->json('data.id'));
+        $this->assertSame('digital', $agenda->surat_edaran_type);
+        $this->assertNotEmpty($agenda->surat_edaran_config);
+        $this->assertNotEmpty($agenda->surat_edaran_path);
+
+        $digitalPath = $agenda->surat_edaran_path;
+        Storage::disk('public')->assertExists($digitalPath);
+        $initialPdfBytes = Storage::disk('public')->get($digitalPath);
+
+        // 2. Update schedule & title via API v1 while keeping digital mode -> PDF regenerated cleanly
+        $newStartAt = $startAt->copy()->addDay()->setTime(10, 30, 0);
+        $newEndAt = $newStartAt->copy()->addHours(2);
+        $updateResponse = $this->actingAs($admin, 'sanctum')
+            ->putJson("/api/v1/agendas/{$agenda->id}", [
+                'judul_rapat' => 'Rapat Digital Circular API Revisi Jadwal',
+                'jenis_rapat' => 'koordinasi',
+                'tipe_rapat' => 'offline',
+                'lokasi_ruang' => 'Ruang Rapat Melati',
+                'waktu_mulai' => $newStartAt->format('Y-m-d H:i:s'),
+                'waktu_selesai' => $newEndAt->format('Y-m-d H:i:s'),
+                'is_all_units' => true,
+                'surat_edaran_type' => 'digital',
+            ]);
+
+        $updateResponse->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.surat_edaran.is_digital', true);
+
+        $agenda->refresh();
+        Storage::disk('public')->assertExists($digitalPath);
+        $updatedPdfBytes = Storage::disk('public')->get($digitalPath);
+        $this->assertNotSame($initialPdfBytes, $updatedPdfBytes);
+
+        // 3. Switch back to 'upload' via multipart PUT -> digital PDF cleaned up and digital config cleared
+        $uploadedPdf = UploadedFile::fake()->create('edaran_manual_pengganti.pdf', 120, 'application/pdf');
+        $switchResponse = $this->actingAs($admin, 'sanctum')
+            ->post("/api/v1/agendas/{$agenda->id}", [
+                '_method' => 'PUT',
+                'judul_rapat' => $agenda->judul_rapat,
+                'jenis_rapat' => 'koordinasi',
+                'tipe_rapat' => 'offline',
+                'lokasi_ruang' => 'Ruang Rapat Melati',
+                'waktu_mulai' => $newStartAt->format('Y-m-d H:i:s'),
+                'waktu_selesai' => $newEndAt->format('Y-m-d H:i:s'),
+                'is_all_units' => '1',
+                'surat_edaran_type' => 'upload',
+                'surat_edaran' => $uploadedPdf,
+            ], [
+                'Accept' => 'application/json',
+            ]);
+
+        $switchResponse->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.surat_edaran.type', 'upload')
+            ->assertJsonPath('data.surat_edaran.is_digital', false);
+
+        $agenda->refresh();
+        $this->assertSame('upload', $agenda->surat_edaran_type);
+        $this->assertNull($agenda->surat_edaran_config);
+        $this->assertNotSame($digitalPath, $agenda->surat_edaran_path);
+        Storage::disk('public')->assertMissing($digitalPath);
+        Storage::disk('public')->assertExists($agenda->surat_edaran_path);
+    }
 }
 
 

@@ -79,7 +79,7 @@
                                     <button 
                                         type="button" 
                                         data-selfie-modal-trigger
-                                        data-selfie-url="{{ Storage::disk('public')->url($att->selfie_path) }}"
+                                        data-selfie-url="{{ route('attendances.selfie', $att) }}"
                                         data-user-name="{{ Auth::user()->name }}"
                                         data-user-nip="{{ Auth::user()->nip ?? '-' }}"
                                         data-unit-name="{{ Auth::user()->unit?->kode_unit ? Auth::user()->unit->kode_unit . ' — ' . Auth::user()->unit->nama_unit : 'Tingkat Lembaga' }}"
@@ -89,18 +89,18 @@
                                         title="Klik untuk memverifikasi & memperbesar Foto Selfie"
                                         aria-label="Verifikasi Foto Selfie Anda"
                                     >
-                                        <img src="{{ Storage::disk('public')->url($att->selfie_path) }}" alt="Foto selfie" class="w-full h-full object-cover" loading="lazy" decoding="async">
+                                        <img src="{{ route('attendances.selfie', $att) }}" alt="Foto selfie" class="w-full h-full object-cover" loading="lazy" decoding="async">
                                     </button>
 
                                     <!-- Signature Thumb (Clickable) -->
                                     <button 
                                         type="button" 
-                                        data-preview-media="{{ Storage::disk('public')->url($att->signature_path) }}"
+                                        data-preview-media="{{ route('attendances.signature', $att) }}"
                                         data-preview-title="Tanda Tangan Digital"
                                         class="w-8 h-8 rounded-lg overflow-hidden border border-slate-400 bg-white shadow-xs p-0.5 hover:border-slate-950 hover:ring-2 hover:ring-slate-400 transition cursor-pointer"
                                         title="Klik untuk memperbesar Tanda Tangan"
                                     >
-                                        <img src="{{ Storage::disk('public')->url($att->signature_path) }}" alt="Tanda tangan digital" class="w-full h-full object-contain" loading="lazy" decoding="async">
+                                        <img src="{{ route('attendances.signature', $att) }}" alt="Tanda tangan digital" class="w-full h-full object-contain" loading="lazy" decoding="async">
                                     </button>
                                 </div>
                             </td>

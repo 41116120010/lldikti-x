@@ -2,9 +2,11 @@
 
 namespace Tests\Feature\Api\V1;
 
+use App\Models\Agenda;
 use App\Models\Attendance;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -103,5 +105,72 @@ class BiometricMediaApiTest extends TestCase
 
         $response->assertOk();
         $this->assertEquals('admin-audit-selfie-data', $response->streamedContent());
+    }
+
+    public function test_api_checkin_stores_biometrics_on_private_local_disk(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+
+        $staff = User::where('role', 'staff')->firstOrFail();
+        $agenda = Agenda::create([
+            'created_by' => $staff->id,
+            'judul_rapat' => 'Rapat API Biometric Local ' . uniqid(),
+            'slug' => 'rapat-api-biometric-local-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Sidang 1',
+            'waktu_mulai' => now()->subMinutes(15),
+            'waktu_selesai' => now()->addHours(2),
+            'is_all_units' => true,
+            'status' => 'ongoing',
+        ]);
+
+        $response = $this->actingAs($staff, 'sanctum')
+            ->post("/api/v1/agendas/{$agenda->id}/attendances", [
+                'selfie_file' => UploadedFile::fake()->image('selfie.jpg', 400, 400),
+                'signature_file' => UploadedFile::fake()->image('signature.png', 200, 100),
+            ], [
+                'Accept' => 'application/json',
+            ]);
+
+        $response->assertStatus(201)->assertJsonPath('success', true);
+
+        $attendance = Attendance::where('agenda_id', $agenda->id)
+            ->where('user_id', $staff->id)
+            ->firstOrFail();
+
+        Storage::disk('local')->assertExists($attendance->selfie_path);
+        Storage::disk('local')->assertExists($attendance->signature_path);
+        Storage::disk('public')->assertMissing($attendance->selfie_path);
+        Storage::disk('public')->assertMissing($attendance->signature_path);
+    }
+
+    public function test_attendee_can_stream_own_biometrics_from_private_local_disk_via_api(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+
+        $attendance = Attendance::firstOrFail();
+        $attendee = $attendance->user;
+
+        $selfiePath = "attendances/{$attendance->agenda_id}/selfies/local_selfie.jpg";
+        $sigPath = "attendances/{$attendance->agenda_id}/signatures/local_sig.png";
+        Storage::disk('local')->put($selfiePath, 'private-local-selfie');
+        Storage::disk('local')->put($sigPath, 'private-local-signature');
+        $attendance->update([
+            'selfie_path' => $selfiePath,
+            'signature_path' => $sigPath,
+        ]);
+
+        $selfieRes = $this->actingAs($attendee, 'sanctum')
+            ->get("/api/v1/attendances/{$attendance->id}/selfie");
+        $selfieRes->assertOk();
+        $this->assertEquals('private-local-selfie', $selfieRes->streamedContent());
+
+        $sigRes = $this->actingAs($attendee, 'sanctum')
+            ->get("/api/v1/attendances/{$attendance->id}/signature");
+        $sigRes->assertOk();
+        $this->assertEquals('private-local-signature', $sigRes->streamedContent());
     }
 }

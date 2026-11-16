@@ -140,7 +140,15 @@ class PdfExportIntegrityTest extends TestCase
         $postResponse = $this->actingAs($superadmin)->post("/admin/reports/{$agenda->id}/export/pdf", [
             'document_title' => 'RAPAT UJI FALLBACK',
         ]);
-        $postResponse->assertRedirect(route('admin.agendas.show', $agenda));
+        $postResponse->assertRedirect(route('admin.reports.show', $agenda));
         $postResponse->assertSessionHas('error');
+
+        $agendaRefererResponse = $this->actingAs($superadmin)
+            ->from(route('admin.agendas.show', $agenda))
+            ->post("/admin/reports/{$agenda->id}/export/pdf", [
+                'document_title' => 'RAPAT UJI FALLBACK AGENDA',
+            ]);
+        $agendaRefererResponse->assertRedirect(route('admin.agendas.show', $agenda));
+        $agendaRefererResponse->assertSessionHas('error');
     }
 }

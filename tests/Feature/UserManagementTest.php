@@ -4,7 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\Unit;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class UserManagementTest extends TestCase
@@ -223,5 +225,94 @@ class UserManagementTest extends TestCase
         // Clean up test data
         $agenda->delete();
         $creator->delete();
+    }
+
+    public function test_deactivating_user_revokes_web_sessions_and_blocks_inactive_requests(): void
+    {
+        $superadmin = User::where('role', 'administrator')->firstOrFail();
+        $unit = Unit::firstOrFail();
+
+        $user = User::create([
+            'unit_id' => $unit->id,
+            'name' => 'Pegawai Uji Deaktivasi Sesi',
+            'nip' => '199808082022081001',
+            'username' => 'uji_deaktivasi_' . uniqid(),
+            'email' => 'uji_deaktivasi_' . uniqid() . '@lldikti.test',
+            'password' => Hash::make('Password123!'),
+            'role' => 'staff',
+            'is_active' => true,
+        ]);
+
+        $sessionTable = (string) config('session.table', 'sessions');
+        if (Schema::hasTable($sessionTable)) {
+            DB::table($sessionTable)->insert([
+                'id' => 'sess_' . uniqid(),
+                'user_id' => $user->id,
+                'ip_address' => '127.0.0.1',
+                'user_agent' => 'PHPUnit',
+                'payload' => 'test-payload',
+                'last_activity' => time(),
+            ]);
+            $this->assertDatabaseHas($sessionTable, ['user_id' => $user->id]);
+        }
+
+        $user->createToken('mobile-session-test');
+        $this->assertDatabaseHas('personal_access_tokens', ['tokenable_id' => $user->id]);
+
+        // Deactivate via toggleStatus: must mark inactive, delete web sessions & Sanctum tokens
+        $this->actingAs($superadmin)
+            ->patch("/admin/users/{$user->id}/toggle-status")
+            ->assertRedirect();
+
+        $user->refresh();
+        $this->assertFalse((bool) $user->is_active);
+        if (Schema::hasTable($sessionTable)) {
+            $this->assertDatabaseMissing($sessionTable, ['user_id' => $user->id]);
+        }
+        $this->assertDatabaseMissing('personal_access_tokens', ['tokenable_id' => $user->id]);
+
+        // Inactive user with lingering Web session must be logged out & redirected to /login
+        $webResponse = $this->actingAs($user)->get('/dashboard');
+        $webResponse->assertRedirect(route('login'));
+        $webResponse->assertSessionHas('error');
+        $this->assertGuest();
+
+        // Inactive user with an API token must receive 403 and have that current token deleted
+        $lingeringToken = $user->createToken('lingering-token')->plainTextToken;
+        $apiResponse = $this->withToken($lingeringToken)->getJson('/api/v1/profile');
+        $apiResponse->assertStatus(403)->assertJsonPath('success', false);
+        $this->assertDatabaseMissing('personal_access_tokens', ['tokenable_id' => $user->id]);
+
+        // Re-activate, re-seed session + token, and verify deactivation via PUT /admin/users/{id} also revokes both
+        $this->actingAs($superadmin)->patch("/admin/users/{$user->id}/toggle-status")->assertRedirect();
+        if (Schema::hasTable($sessionTable)) {
+            DB::table($sessionTable)->insert([
+                'id' => 'sess_put_' . uniqid(),
+                'user_id' => $user->id,
+                'ip_address' => '127.0.0.1',
+                'user_agent' => 'PHPUnit',
+                'payload' => 'test-payload-put',
+                'last_activity' => time(),
+            ]);
+        }
+        $user->createToken('mobile-put-test');
+
+        $this->actingAs($superadmin)
+            ->put("/admin/users/{$user->id}", [
+                'name' => $user->name,
+                'nip' => $user->nip,
+                'username' => $user->username,
+                'email' => $user->email,
+                'role' => $user->role instanceof \BackedEnum ? $user->role->value : $user->role,
+                'unit_id' => $user->unit_id,
+                'is_active' => 0,
+            ])
+            ->assertRedirect();
+
+        $this->assertFalse((bool) $user->fresh()->is_active);
+        if (Schema::hasTable($sessionTable)) {
+            $this->assertDatabaseMissing($sessionTable, ['user_id' => $user->id]);
+        }
+        $this->assertDatabaseMissing('personal_access_tokens', ['tokenable_id' => $user->id]);
     }
 }

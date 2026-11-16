@@ -8,6 +8,7 @@ use App\Http\Requests\User\UpdateUserRequest;
 use App\Http\Resources\UserResource;
 use App\Models\Agenda;
 use App\Models\User;
+use App\Services\AttendanceMetricsService;
 use App\Services\UserService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -29,7 +30,7 @@ class UserController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->whereLike('name', "%{$search}%")
                     ->orWhereLike('nip', "%{$search}%")
-                    ->orWhereLike('jabatan', "%{$search}%");
+                    ->orWhereLike('username', "%{$search}%");
             });
         }
 
@@ -130,29 +131,8 @@ class UserController extends Controller
         $staffUsers = (clone $scopedBaseQuery)->where('role', 'staff')->count();
         $activeUnits = \App\Models\Unit::where('is_active', true)->count();
 
-        // Calculate institutional attendance rate
-        $completedAgendas = \App\Models\Agenda::where('status', 'completed')->count();
-        if ($currentUser->isAdministrator()) {
-            $completedAttendances = \App\Models\Attendance::whereHas('agenda', fn ($q) => $q->where('status', 'completed'))->count();
-            $expected = $completedAgendas * max($activeUsers, 1);
-            $rate = ($completedAgendas === 0 || $activeUsers === 0)
-                ? 100.0
-                : round(min(($completedAttendances / max($expected, 1)) * 100, 100.0), 1);
-            $rateSubtext = $completedAgendas > 0
-                ? "Rata-rata Seluruh ASN ({$completedAgendas} Rapat)"
-                : 'Belum ada rapat dinas selesai';
-        } else {
-            $unitCompletedAttendances = \App\Models\Attendance::whereHas('user', fn ($q) => $q->where('unit_id', $currentUser->unit_id))
-                ->whereHas('agenda', fn ($q) => $q->where('status', 'completed'))
-                ->count();
-            $expected = $completedAgendas * max($totalUsers, 1);
-            $rate = ($completedAgendas === 0 || $totalUsers === 0)
-                ? 100.0
-                : round(min(($unitCompletedAttendances / max($expected, 1)) * 100, 100.0), 1);
-            $rateSubtext = $completedAgendas > 0
-                ? "Kehadiran Unit ({$totalUsers} Pegawai)"
-                : 'Belum ada rapat dinas selesai';
-        }
+        // Calculate institutional / scoped unit attendance rate
+        $attendanceMetrics = AttendanceMetricsService::forDashboardOrReport($currentUser);
 
         $summary = [
             'total_users' => $totalUsers,
@@ -161,9 +141,9 @@ class UserController extends Controller
             'admin_users' => $adminUsers,
             'staff_users' => $staffUsers,
             'active_units' => $activeUnits,
-            'attendance_rate' => $rate,
-            'attendance_rate_label' => "{$rate}%",
-            'attendance_rate_subtext' => $rateSubtext,
+            'attendance_rate' => $attendanceMetrics['attendance_rate'],
+            'attendance_rate_label' => $attendanceMetrics['attendance_rate_label'],
+            'attendance_rate_subtext' => $attendanceMetrics['attendance_rate_subtext'],
         ];
 
         return response()->json([

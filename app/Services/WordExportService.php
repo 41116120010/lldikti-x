@@ -67,20 +67,12 @@ class WordExportService
 
         // Embed media into optimized base64 data URIs
         $attendancesWithMedia = $agenda->attendances->map(function ($att) {
-            $sigBase64 = null;
-            try {
-                if ($att->signature_path && Storage::disk('public')->exists($att->signature_path)) {
-                    $raw = Storage::disk('public')->get($att->signature_path);
-                    $sigBase64 = $this->optimizeAndEncodeImage($raw, 140, 'png');
-                }
-            } catch (\Throwable $e) {
-                Log::warning("Failed to process signature for attendance {$att->id}: " . $e->getMessage());
-            }
+            $sigBase64 = $this->encodeBiometricSignature($att->signature_path, "signature for attendance {$att->id}");
 
             $selfieBase64 = null;
             try {
-                if ($att->selfie_path && Storage::disk('public')->exists($att->selfie_path)) {
-                    $raw = Storage::disk('public')->get($att->selfie_path);
+                $raw = $this->readBiometricFile($att->selfie_path);
+                if ($raw !== null) {
                     $selfieBase64 = $this->optimizeAndEncodeImage($raw, 80, 'jpeg', 85, true);
                 }
             } catch (\Throwable $e) {
@@ -95,28 +87,12 @@ class WordExportService
         });
 
         // Pimpinan digital signature base64 (if attended)
-        $pimpinanSigBase64 = null;
-        try {
-            $pimpinanAtt = $agenda->pimpinan_attendance;
-            if ($pimpinanAtt?->signature_path && Storage::disk('public')->exists($pimpinanAtt->signature_path)) {
-                $raw = Storage::disk('public')->get($pimpinanAtt->signature_path);
-                $pimpinanSigBase64 = $this->optimizeAndEncodeImage($raw, 140, 'png');
-            }
-        } catch (\Throwable $e) {
-            Log::warning("Failed to process meeting leader signature: " . $e->getMessage());
-        }
+        $pimpinanAtt = $agenda->pimpinan_attendance;
+        $pimpinanSigBase64 = $this->encodeBiometricSignature($pimpinanAtt?->signature_path, 'meeting leader signature');
 
         // Notulis digital signature base64 (if attended)
-        $notulisSigBase64 = null;
-        try {
-            $notulisAtt = $agenda->notulis_attendance;
-            if ($notulisAtt?->signature_path && Storage::disk('public')->exists($notulisAtt->signature_path)) {
-                $raw = Storage::disk('public')->get($notulisAtt->signature_path);
-                $notulisSigBase64 = $this->optimizeAndEncodeImage($raw, 140, 'png');
-            }
-        } catch (\Throwable $e) {
-            Log::warning("Failed to process minute taker signature: " . $e->getMessage());
-        }
+        $notulisAtt = $agenda->notulis_attendance;
+        $notulisSigBase64 = $this->encodeBiometricSignature($notulisAtt?->signature_path, 'minute taker signature');
 
         // Documentation photos with optimized base64 for Word/PDF
         $documentationsWithMedia = $agenda->documentations->map(function ($doc) {
@@ -334,5 +310,39 @@ class WordExportService
         }
 
         return [$width, $height];
+    }
+
+    /**
+     * Read attendance biometric file from private local disk with legacy public disk fallback.
+     */
+    private function readBiometricFile(?string $path): ?string
+    {
+        if (! $path) {
+            return null;
+        }
+
+        foreach (['local', 'public'] as $disk) {
+            if (Storage::disk($disk)->exists($path)) {
+                return Storage::disk($disk)->get($path);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Load and encode an attendance signature image for document export.
+     */
+    private function encodeBiometricSignature(?string $path, string $context): ?string
+    {
+        try {
+            $raw = $this->readBiometricFile($path);
+
+            return $raw !== null ? $this->optimizeAndEncodeImage($raw, 140, 'png') : null;
+        } catch (\Throwable $e) {
+            Log::warning("Failed to process {$context}: " . $e->getMessage());
+
+            return null;
+        }
     }
 }

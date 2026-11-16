@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\UnitController;
 use App\Http\Controllers\Api\V1\UserController;
+use App\Http\Middleware\EnsureAccountIsActive;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -36,7 +37,7 @@ Route::prefix('v1')->group(function () {
         ->name('api.v1.auth.reset-password');
 
     // 2. Protected Routes (Bearer Token via Sanctum)
-    Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
+    Route::middleware(['auth:sanctum', EnsureAccountIsActive::class, 'throttle:api'])->group(function () {
 
         // Session & Current User
         Route::get('/auth/me', [AuthController::class, 'me'])->name('api.v1.auth.me');

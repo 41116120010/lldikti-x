@@ -11,6 +11,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class Agenda extends Model
@@ -51,6 +53,11 @@ class Agenda extends Model
         'report_config',
         'status',
     ];
+
+    /**
+     * Request-scoped preloaded count for `total_invited` to eliminate list N+1 queries.
+     */
+    protected ?int $preloadedTotalInvited = null;
 
     protected function casts(): array
     {
@@ -923,10 +930,112 @@ class Agenda extends Model
     }
 
     /**
+     * Set the preloaded `total_invited` count for this agenda instance.
+     */
+    public function setPreloadedTotalInvited(?int $count): void
+    {
+        $this->preloadedTotalInvited = $count;
+    }
+
+    /**
+     * Whether `total_invited` has already been preloaded for this instance.
+     */
+    public function hasPreloadedTotalInvited(): bool
+    {
+        return $this->preloadedTotalInvited !== null;
+    }
+
+    /**
+     * Precompute `total_invited` across a collection of agendas using at most 3 aggregate queries.
+     *
+     * @param  Collection<int, Agenda>  $agendas
+     */
+    public static function preloadTotalInvited(Collection $agendas): void
+    {
+        $items = $agendas->filter(fn ($agenda): bool => $agenda instanceof self)->values();
+        if ($items->isEmpty()) {
+            return;
+        }
+
+        $allUnitsAgendas = [];
+        $selectedUserAgendas = [];
+        $selectedUnitAgendas = [];
+
+        foreach ($items as $agenda) {
+            if ($agenda->target_type === 'all_units' || $agenda->is_all_units) {
+                $allUnitsAgendas[] = $agenda;
+            } elseif ($agenda->target_type === 'selected_users') {
+                $selectedUserAgendas[] = $agenda;
+            } else {
+                $selectedUnitAgendas[] = $agenda;
+            }
+        }
+
+        if ($allUnitsAgendas !== []) {
+            $activeUserCount = User::where('is_active', true)->count();
+            foreach ($allUnitsAgendas as $agenda) {
+                $agenda->setPreloadedTotalInvited($activeUserCount);
+            }
+        }
+
+        if ($selectedUserAgendas !== []) {
+            $selectedUserAgendaIds = array_map(fn (self $agenda) => $agenda->id, $selectedUserAgendas);
+
+            $pivotSub = DB::table('agenda_users')
+                ->whereIn('agenda_id', $selectedUserAgendaIds)
+                ->select('agenda_id', 'user_id');
+
+            $pimpinanSub = DB::table('agendas')
+                ->whereIn('id', $selectedUserAgendaIds)
+                ->whereNotNull('pimpinan_id')
+                ->selectRaw('id AS agenda_id, pimpinan_id AS user_id');
+
+            $notulisSub = DB::table('agendas')
+                ->whereIn('id', $selectedUserAgendaIds)
+                ->whereNotNull('notulis_id')
+                ->selectRaw('id AS agenda_id, notulis_id AS user_id');
+
+            $unionQuery = $pivotSub->union($pimpinanSub)->union($notulisSub);
+
+            $selectedUserCounts = DB::query()
+                ->fromSub($unionQuery, 'invited')
+                ->join('users', 'users.id', '=', 'invited.user_id')
+                ->where('users.is_active', true)
+                ->groupBy('invited.agenda_id')
+                ->selectRaw('invited.agenda_id, COUNT(DISTINCT users.id) AS invited_count')
+                ->pluck('invited_count', 'invited.agenda_id');
+
+            foreach ($selectedUserAgendas as $agenda) {
+                $agenda->setPreloadedTotalInvited((int) ($selectedUserCounts[$agenda->id] ?? 0));
+            }
+        }
+
+        if ($selectedUnitAgendas !== []) {
+            $selectedUnitAgendaIds = array_map(fn (self $agenda) => $agenda->id, $selectedUnitAgendas);
+
+            $selectedUnitCounts = DB::table('agenda_units')
+                ->join('users', 'users.unit_id', '=', 'agenda_units.unit_id')
+                ->where('users.is_active', true)
+                ->whereIn('agenda_units.agenda_id', $selectedUnitAgendaIds)
+                ->groupBy('agenda_units.agenda_id')
+                ->selectRaw('agenda_units.agenda_id, COUNT(DISTINCT users.id) AS invited_count')
+                ->pluck('invited_count', 'agenda_units.agenda_id');
+
+            foreach ($selectedUnitAgendas as $agenda) {
+                $agenda->setPreloadedTotalInvited((int) ($selectedUnitCounts[$agenda->id] ?? 0));
+            }
+        }
+    }
+
+    /**
      * Get total active civil servants (ASN) invited to this agenda.
      */
     public function getTotalInvitedAttribute(): int
     {
+        if ($this->preloadedTotalInvited !== null) {
+            return $this->preloadedTotalInvited;
+        }
+
         if ($this->target_type === 'all_units' || $this->is_all_units) {
             return User::where('is_active', true)->count();
         }

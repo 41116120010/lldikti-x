@@ -500,6 +500,38 @@ class UserAndUnitApiTest extends TestCase
             ->assertJsonPath('success', true)
             ->assertJsonPath('meta.total', $totalActiveAcrossAllUnits);
     }
+
+    public function test_admin_unit_can_search_agenda_candidates_by_name_nip_and_username(): void
+    {
+        $admin = User::where('role', 'administrator')->first();
+        $this->assertNotNull($admin);
+
+        $unit = Unit::first();
+        $this->assertNotNull($unit);
+
+        $suffix = substr(md5((string) microtime(true)), 0, 8);
+        $targetUser = User::create([
+            'unit_id' => $unit->id,
+            'name' => "Kandidat Uji {$suffix}",
+            'nip' => '19991231' . str_pad((string) mt_rand(1000000000, 9999999999), 10, '0', STR_PAD_LEFT),
+            'username' => "kandidat_{$suffix}",
+            'email' => "kandidat.{$suffix}@lldikti10.test",
+            'password' => bcrypt('SecretPass123!'),
+            'role' => 'staff',
+            'is_active' => true,
+        ]);
+
+        foreach ([$targetUser->name, $targetUser->nip, $targetUser->username] as $term) {
+            $res = $this->actingAs($admin, 'sanctum')
+                ->getJson('/api/v1/users/candidates?search=' . urlencode($term));
+
+            $res->assertOk()
+                ->assertJsonPath('success', true);
+
+            $returnedIds = collect($res->json('data'))->pluck('id')->all();
+            $this->assertContains($targetUser->id, $returnedIds);
+        }
+    }
 }
 
 

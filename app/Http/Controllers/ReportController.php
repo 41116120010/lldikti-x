@@ -8,10 +8,12 @@ use App\Models\Attendance;
 use App\Models\Unit;
 use App\Models\User;
 use App\Services\ActivityLogger;
+use App\Services\AttendanceMetricsService;
 use App\Services\PdfExportService;
 use App\Services\ReportConfigService;
 use App\Services\DocxExportService;
 use App\Services\WordExportService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -30,6 +32,8 @@ class ReportController extends Controller
      */
     public function index(Request $request): View
     {
+        Gate::authorize('viewAny', Agenda::class);
+
         $user = Auth::user();
 
         // Base scoped agenda query.
@@ -41,43 +45,15 @@ class ReportController extends Controller
             ->with(['creator.unit', 'units'])
             ->withCount('attendances');
 
-        // Filter: Date Range (timestamp comparison — keeps the index usable)
-        $this->applyDateRange(
-            $query,
-            'waktu_mulai',
-            $request->input('start_date'),
-            $request->input('end_date'),
-        );
-
-        // Filter: Status
-        if ($status = $request->input('status')) {
-            if ($status !== 'all') {
-                $query->where('status', $status);
-            }
-        }
-
-        // Filter: Unit (Superadmin or Admin Unit filter)
-        if ($unitId = $request->input('unit_id')) {
-            if ($user->isAdministrator()) {
-                $query->where(function ($q) use ($unitId) {
-                    $q->where('is_all_units', true)
-                      ->orWhereHas('units', function ($sub) use ($unitId) {
-                          $sub->where('units.id', $unitId);
-                      });
-                });
-            }
-        }
-
-        // Filter: Format
-        if ($tipe = $request->input('tipe')) {
-            $query->where('tipe_rapat', $tipe);
-        }
+        $this->applyReportFilters($query, $request, $user);
 
         $agendas = $query->orderBy('waktu_mulai', 'desc')->paginate(10)->withQueryString();
+        Agenda::preloadTotalInvited($agendas->getCollection());
 
         // Direct database aggregate calculations (O(1) memory footprint).
-        // Format distribution and governance compliance calculated in a single aggregate pass.
+        // Apply the same active filters so KPI cards and format distribution stay consistent with the table.
         $baseScopedQuery = Agenda::visibleTo($user);
+        $this->applyReportFilters($baseScopedQuery, $request, $user);
         $agendaCounts = (clone $baseScopedQuery)
             ->selectRaw('COUNT(*) AS total')
             ->selectRaw("SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed")
@@ -115,36 +91,16 @@ class ReportController extends Controller
 
         // Correlated EXISTS instead of `whereIn('agenda_id', <subquery>)`, which
         // forced MySQL to materialise the entire scoped agenda id list.
-        $totalPresensi = Attendance::whereHas('agenda', fn ($q) => $q->visibleTo($user))->count();
+        $totalPresensi = Attendance::whereHas('agenda', function ($q) use ($user, $request) {
+            $q->visibleTo($user);
+            $this->applyReportFilters($q, $request, $user);
+        })->count();
         $avgPresensi = $totalAgendas > 0 ? round($totalPresensi / $totalAgendas, 1) : 0;
 
-        // Tingkat Kepatuhan Presensi ASN
-        $attendanceRate = 100.0;
-        $attendanceRateSubtext = 'Belum ada rapat dinas selesai';
-
-        if ($user->isAdministrator()) {
-            $totalActiveUsers = User::where('is_active', true)->count();
-            $completedAttendances = Attendance::whereHas('agenda', fn ($q) => $q->where('status', 'completed'))->count();
-            $expected = $completedAgendas * max($totalActiveUsers, 1);
-            $attendanceRate = ($completedAgendas === 0 || $totalActiveUsers === 0)
-                ? 100.0
-                : round(min(($completedAttendances / max($expected, 1)) * 100, 100.0), 1);
-            $attendanceRateSubtext = $completedAgendas > 0
-                ? "Rata-rata Seluruh ASN ({$totalActiveUsers} Pegawai)"
-                : 'Belum ada rapat dinas selesai';
-        } elseif ($user->isAdmin() && $user->unit_id) {
-            $unitUsersCount = User::forUnit($user->unit_id)->count();
-            $unitCompletedAttendances = Attendance::whereHas('user', fn ($q) => $q->where('unit_id', $user->unit_id))
-                ->whereHas('agenda', fn ($q) => $q->where('status', 'completed'))
-                ->count();
-            $expected = $completedAgendas * max($unitUsersCount, 1);
-            $attendanceRate = ($completedAgendas === 0 || $unitUsersCount === 0)
-                ? 100.0
-                : round(min(($unitCompletedAttendances / max($expected, 1)) * 100, 100.0), 1);
-            $attendanceRateSubtext = $completedAgendas > 0
-                ? "Kehadiran Unit ({$unitUsersCount} Pegawai)"
-                : 'Belum ada rapat dinas selesai';
-        }
+        // Tingkat Kepatuhan Presensi ASN (terpusat di AttendanceMetricsService)
+        $attendanceMetrics = AttendanceMetricsService::forDashboardOrReport($user);
+        $attendanceRate = $attendanceMetrics['attendance_rate'];
+        $attendanceRateSubtext = $attendanceMetrics['attendance_rate_subtext'];
 
         $units = $user->isAdministrator() ? Unit::active()->orderBy('nama_unit')->get() : collect();
         $unitStats = null;
@@ -247,6 +203,20 @@ class ReportController extends Controller
             'invitedUsers.unit',
         ]);
 
+        // Preload attendance records for effective pimpinan & notulis so signature blocks do not issue extra queries
+        $roleUserIds = array_values(array_unique(array_filter([
+            $agenda->effective_pimpinan?->id,
+            $agenda->effective_notulis?->id,
+        ])));
+
+        if (! empty($roleUserIds)) {
+            $agenda->load([
+                'attendances' => fn ($q) => $q->whereIn('user_id', $roleUserIds),
+            ]);
+        } else {
+            $agenda->setRelation('attendances', collect());
+        }
+
         $attendances = $agenda->attendances()
             ->with('user.unit')
             ->orderBy('signed_at', 'asc')
@@ -299,8 +269,11 @@ class ReportController extends Controller
                     'exception' => $fallbackException,
                 ]);
 
-                return redirect()->route('admin.agendas.show', $agenda)
-                    ->with('error', 'Terjadi kesalahan saat mengekspor dokumen Berita Acara. Silakan periksa kelengkapan data agenda dan coba kembali.');
+                return $this->redirectExportFailure(
+                    $request,
+                    $agenda,
+                    'Terjadi kesalahan saat mengekspor dokumen Berita Acara. Silakan periksa kelengkapan data agenda dan coba kembali.'
+                );
             }
         }
     }
@@ -330,9 +303,33 @@ class ReportController extends Controller
                 'exception' => $e,
             ]);
 
-            return redirect()->route('admin.agendas.show', $agenda)
-                ->with('error', 'Terjadi kesalahan saat mengekspor dokumen Word. Silakan coba kembali atau gunakan format Pratinjau Dokumen.');
+            return $this->redirectExportFailure(
+                $request,
+                $agenda,
+                'Terjadi kesalahan saat mengekspor dokumen Word. Silakan coba kembali atau gunakan format Pratinjau Dokumen.'
+            );
         }
+    }
+
+    /**
+     * Redirect failed document export back to the originating detail page without risking an export loop.
+     */
+    private function redirectExportFailure(Request $request, Agenda $agenda, string $message): RedirectResponse
+    {
+        $referer = (string) $request->headers->get('referer', '');
+        if ($referer !== '') {
+            $refererHost = parse_url($referer, PHP_URL_HOST);
+            $refererPath = (string) parse_url($referer, PHP_URL_PATH);
+
+            if (
+                ($refererHost === null || $refererHost === $request->getHost())
+                && str_contains($refererPath, '/admin/agendas/')
+            ) {
+                return redirect()->route('admin.agendas.show', $agenda)->with('error', $message);
+            }
+        }
+
+        return redirect()->route('admin.reports.show', $agenda)->with('error', $message);
     }
 
     /**
@@ -369,8 +366,8 @@ class ReportController extends Controller
         $configService = app(ReportConfigService::class);
         $config = $configService->extractFromRequest($request, $agenda);
 
-        // Check if admin opted to save this config as default for this agenda
-        if ($request->boolean('save_as_default') && (Auth::user()?->isAdministrator() || Auth::user()?->isAdmin())) {
+        // Check if authorized user opted to save this config as default for this agenda
+        if ($request->boolean('save_as_default') && Gate::allows('manageMinutes', $agenda)) {
             $agenda->update(['report_config' => $config]);
         }
 
@@ -378,10 +375,47 @@ class ReportController extends Controller
     }
 
     /**
+     * Apply common report filters (date range, status, unit_id, tipe_rapat/tipe).
+     */
+    private function applyReportFilters(Builder $query, Request $request, User $user): void
+    {
+        $this->applyDateRange(
+            $query,
+            'waktu_mulai',
+            $request->input('start_date'),
+            $request->input('end_date'),
+        );
+
+        if ($status = $request->input('status')) {
+            if ($status !== 'all') {
+                $query->where('status', $status);
+            }
+        }
+
+        if ($unitId = $request->input('unit_id')) {
+            if ($user->isAdministrator() && $unitId !== 'all') {
+                $query->where(function ($q) use ($unitId) {
+                    $q->where('is_all_units', true)
+                        ->orWhereHas('units', function ($sub) use ($unitId) {
+                            $sub->where('units.id', (int) $unitId);
+                        });
+                });
+            }
+        }
+
+        $tipe = $request->input('tipe_rapat') ?? $request->input('tipe');
+        if ($tipe && $tipe !== 'all') {
+            $query->where('tipe_rapat', $tipe);
+        }
+    }
+
+    /**
      * Export summary table of meetings to CSV / Excel spreadsheet.
      */
     public function exportSummaryCsv(Request $request): StreamedResponse
     {
+        Gate::authorize('viewAny', Agenda::class);
+
         $user = Auth::user();
         $query = Agenda::visibleTo($user)
             ->with([
@@ -397,31 +431,7 @@ class ReportController extends Controller
             targetModel: Agenda::class
         );
 
-        $this->applyDateRange(
-            $query,
-            'waktu_mulai',
-            $request->input('start_date'),
-            $request->input('end_date'),
-        );
-
-        if ($status = $request->input('status')) {
-            if ($status !== 'all') {
-                $query->where('status', $status);
-            }
-        }
-        if ($unitId = $request->input('unit_id')) {
-            if ($user->isAdministrator()) {
-                $query->where(function ($q) use ($unitId) {
-                    $q->where('is_all_units', true)
-                      ->orWhereHas('units', function ($sub) use ($unitId) {
-                          $sub->where('units.id', $unitId);
-                      });
-                });
-            }
-        }
-        if ($tipe = $request->input('tipe')) {
-            $query->where('tipe_rapat', $tipe);
-        }
+        $this->applyReportFilters($query, $request, $user);
 
         $headers = [
             'Content-Type' => 'text/csv; charset=UTF-8',
@@ -499,7 +509,7 @@ class ReportController extends Controller
                         strtoupper($agenda->tipe_rapat),
                         $safeLocation,
                         $agenda->waktu_mulai->format('d/m/Y H:i'),
-                        $agenda->waktu_selesai ? $agenda->waktu_selesai->format('d/m/Y H:i') : '-',
+                        $agenda->waktu_selesai ? $agenda->waktu_selesai->format('d/m/Y H:i') : 'Hingga Selesai',
                         $statusRapat,
                         $statusNotulensi,
                         $safePimpinan,

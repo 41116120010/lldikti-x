@@ -16,11 +16,13 @@
     <meta name="robots" content="@yield('meta_robots', 'noindex, nofollow, noarchive')">
     <link rel="canonical" href="{{ url()->current() }}">
 
-    <!-- Webfonts: preconnect first so the DNS lookup and TLS handshake overlap
-         with the rest of the document instead of blocking first paint. -->
+    <!-- Webfonts: preconnect + non-blocking load so offline/intranet environments never stall first paint -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
+    <noscript>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap">
+    </noscript>
 
     <!-- Geo Location Metadata -->
     <meta name="geo.region" content="ID-SB">

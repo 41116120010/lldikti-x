@@ -58,8 +58,15 @@ class AgendaController extends Controller
                 if ($unitId === 'all_units') {
                     $query->where('is_all_units', true);
                 } else {
-                    $query->whereHas('units', function ($sub) use ($unitId) {
-                        $sub->where('units.id', $unitId);
+                    $uid = (int) $unitId;
+                    $query->where(function ($q) use ($uid) {
+                        $q->where('is_all_units', true)
+                            ->orWhereHas('units', function ($sub) use ($uid) {
+                                $sub->where('units.id', $uid);
+                            })
+                            ->orWhereHas('invitedUsers', function ($sub) use ($uid) {
+                                $sub->where('users.unit_id', $uid);
+                            });
                     });
                 }
             }
@@ -74,6 +81,9 @@ class AgendaController extends Controller
         }
 
         $agendas = $query->orderBy('waktu_mulai', 'desc')->paginate(9)->withQueryString();
+        if (method_exists(Agenda::class, 'preloadTotalInvited')) {
+            Agenda::preloadTotalInvited($agendas->getCollection());
+        }
         $units = $currentUser->isAdministrator() ? Unit::active()->orderBy('nama_unit')->get() : collect();
 
         // Stat counts (single aggregated query for high performance & durability)
@@ -95,6 +105,71 @@ class AgendaController extends Controller
     }
 
     /**
+     * Async paginated candidate search for Web ASN role & participant pickers.
+     */
+    public function candidates(Request $request): JsonResponse
+    {
+        Gate::authorize('create', Agenda::class);
+
+        $query = User::query()->where('is_active', true)->with('unit');
+
+        if ($search = trim((string) $request->query('search', ''))) {
+            $query->where(function ($q) use ($search) {
+                $q->whereLike('name', "%{$search}%")
+                    ->orWhereLike('nip', "%{$search}%")
+                    ->orWhereLike('username', "%{$search}%")
+                    ->orWhereHas('unit', function ($uq) use ($search) {
+                        $uq->whereLike('nama_unit', "%{$search}%")
+                            ->orWhereLike('kode_unit', "%{$search}%");
+                    });
+            });
+        }
+
+        if ($unitId = $request->query('unit_id')) {
+            $query->where('unit_id', (int) $unitId);
+        }
+
+        $selectedIds = collect((array) $request->query('selected_ids', []))
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values();
+
+        if ($request->boolean('only_selected')) {
+            $selectedUsers = $selectedIds->isEmpty()
+                ? collect()
+                : (clone $query)->whereIn('id', $selectedIds)->orderBy('name')->limit(100)->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $selectedUsers->map(fn (User $u) => $this->formatCandidatePayload($u))->values(),
+                'meta' => [
+                    'current_page' => 1,
+                    'last_page' => 1,
+                    'per_page' => $selectedUsers->count(),
+                    'total' => $selectedUsers->count(),
+                    'has_more' => false,
+                ],
+            ]);
+        }
+
+        $perPage = min(max((int) $request->query('per_page', 25), 1), 25);
+        $paginator = $query->orderBy('name')->paginate($perPage);
+
+        return response()->json([
+            'success' => true,
+            'data' => $paginator->getCollection()->map(fn (User $u) => $this->formatCandidatePayload($u))->values(),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'has_more' => $paginator->hasMorePages(),
+            ],
+        ]);
+    }
+
+    /**
      * Show the form for creating a new agenda.
      */
     public function create(): View
@@ -104,15 +179,23 @@ class AgendaController extends Controller
         $currentUser = Auth::user();
         $currentUser->load('unit');
         $units = Unit::active()->orderBy('nama_unit')->get();
-        $users = User::query()->where('is_active', true)->with('unit')->orderBy('name')->get();
 
-        return view('agendas.create', compact('units', 'currentUser', 'users'));
+        $priorityIds = collect([
+            $currentUser->id,
+            old('pimpinan_id'),
+            old('notulis_id'),
+            ...((array) old('user_ids', [])),
+        ]);
+        $users = $this->loadInitialCandidateUsers($priorityIds);
+        $totalActiveUsers = User::query()->where('is_active', true)->count();
+
+        return view('agendas.create', compact('units', 'currentUser', 'users', 'totalActiveUsers'));
     }
 
     /**
      * Store a newly created agenda in storage.
      */
-    public function store(StoreAgendaRequest $request, AgendaService $agendaService, SuratEdaranService $suratEdaranService): RedirectResponse
+    public function store(StoreAgendaRequest $request, AgendaService $agendaService): RedirectResponse
     {
         $validated = $request->validated();
         $user = Auth::user();
@@ -127,14 +210,9 @@ class AgendaController extends Controller
             suratEdaran: $suratEdaranFile,
         );
 
-        if ($suratEdaranType === 'digital') {
-            $agenda->update(['surat_edaran_type' => 'digital']);
-            $suratEdaranService->saveDigitalSurat($agenda, $agenda->getDefaultSuratEdaranConfig());
-
-            if ($request->boolean('open_surat_edaran_after_save', true)) {
-                return redirect()->route('admin.agendas.surat-edaran', $agenda)
-                    ->with('success', "Agenda rapat '{$agenda->judul_rapat}' berhasil dibuat. Silakan sesuaikan isi naskah surat undangan resmi.");
-            }
+        if ($agenda->surat_edaran_type === 'digital' && $request->boolean('open_surat_edaran_after_save', true)) {
+            return redirect()->route('admin.agendas.surat-edaran', $agenda)
+                ->with('success', "Agenda rapat '{$agenda->judul_rapat}' berhasil dibuat. Silakan sesuaikan isi naskah surat undangan resmi.");
         }
 
         return redirect()->route('admin.agendas.show', $agenda)
@@ -163,6 +241,22 @@ class AgendaController extends Controller
             ->paginate(8, ['*'], 'page_attendees')
             ->withQueryString();
 
+        // Preload pimpinan & notulis attendance without firing extra queries if missing from current page
+        $roleUserIds = array_values(array_unique(array_filter([
+            $agenda->effective_pimpinan?->id,
+            $agenda->effective_notulis?->id,
+        ])));
+        if ($roleUserIds !== []) {
+            $loadedFromPage = $attendances->getCollection()->whereIn('user_id', $roleUserIds)->keyBy('user_id');
+            $missingIds = array_values(array_diff($roleUserIds, $loadedFromPage->keys()->all()));
+            $extraRecords = $missingIds !== []
+                ? $agenda->attendances()->whereIn('user_id', $missingIds)->get()->keyBy('user_id')
+                : collect();
+            $agenda->setRelation('attendances', $loadedFromPage->merge($extraRecords)->values());
+        } else {
+            $agenda->setRelation('attendances', collect());
+        }
+
         $documentations = $agenda->documentations()
             ->latest('id')
             ->paginate(6, ['*'], 'page_docs')
@@ -170,9 +264,33 @@ class AgendaController extends Controller
 
         $currentUser = Auth::user();
         $myAttendance = $agenda->attendances()->where('user_id', $currentUser->id)->first();
-        $users = User::query()->where('is_active', true)->with('unit')->orderBy('name')->get();
 
-        return view('agendas.show', compact('agenda', 'attendances', 'documentations', 'currentUser', 'myAttendance', 'users'));
+        $canUpdateAgenda = Gate::allows('update', $agenda);
+        $totalActiveUsers = $canUpdateAgenda ? User::query()->where('is_active', true)->count() : 0;
+        $users = $canUpdateAgenda
+            ? $this->loadInitialCandidateUsers(collect([
+                $currentUser->id,
+                $agenda->created_by,
+                $agenda->pimpinan_id,
+                $agenda->notulis_id,
+                old('pimpinan_id'),
+                old('notulis_id'),
+                ...$agenda->invitedUsers->pluck('id')->all(),
+            ]))
+            : collect();
+
+        $backUrl = $this->resolveSafeAgendaIndexBackUrl();
+
+        return view('agendas.show', compact(
+            'agenda',
+            'attendances',
+            'documentations',
+            'currentUser',
+            'myAttendance',
+            'users',
+            'totalActiveUsers',
+            'backUrl'
+        ));
     }
 
     /**
@@ -213,7 +331,7 @@ class AgendaController extends Controller
             $agenda->load([
                 'creator.unit',
                 'units',
-                'invitedUsers',
+                'invitedUsers.unit',
                 'pimpinan.unit',
                 'notulis.unit',
             ]);
@@ -221,9 +339,20 @@ class AgendaController extends Controller
             $currentUser = Auth::user();
             $currentUser->load('unit');
             $units = Unit::active()->orderBy('nama_unit')->get();
-            $users = User::query()->where('is_active', true)->with('unit')->orderBy('name')->get();
 
-            return view('agendas.edit', compact('agenda', 'units', 'currentUser', 'users'));
+            $priorityIds = collect([
+                $currentUser->id,
+                $agenda->created_by,
+                $agenda->pimpinan_id,
+                $agenda->notulis_id,
+                old('pimpinan_id'),
+                old('notulis_id'),
+                ...((array) old('user_ids', $agenda->invitedUsers->pluck('id')->all())),
+            ]);
+            $users = $this->loadInitialCandidateUsers($priorityIds);
+            $totalActiveUsers = User::query()->where('is_active', true)->count();
+
+            return view('agendas.edit', compact('agenda', 'units', 'currentUser', 'users', 'totalActiveUsers'));
         } catch (AuthorizationException $e) {
             throw $e;
         } catch (\Throwable $e) {
@@ -246,7 +375,7 @@ class AgendaController extends Controller
         $validated = $request->validated();
 
         try {
-            $agendaService->updateAgenda(
+            $updatedAgenda = $agendaService->updateAgenda(
                 agenda: $agenda,
                 actor: Auth::user(),
                 validated: $validated,
@@ -254,36 +383,9 @@ class AgendaController extends Controller
                 suratEdaran: $request->file('surat_edaran'),
             );
 
-            if ($request->input('surat_edaran_type') === 'digital') {
-                $agenda->update(['surat_edaran_type' => 'digital']);
-                $agenda->load([
-                    'creator.unit',
-                    'pimpinan.unit',
-                    'notulis.unit',
-                    'units',
-                    'invitedUsers.unit',
-                ]);
-                if (empty($agenda->surat_edaran_config)) {
-                    app(SuratEdaranService::class)->saveDigitalSurat($agenda, $agenda->getDefaultSuratEdaranConfig());
-                } else {
-                    app(SuratEdaranService::class)->generateAndStorePdf($agenda);
-                }
-
-                if ($request->boolean('open_surat_edaran_after_save')) {
-                    return redirect()->route('admin.agendas.surat-edaran', $agenda)
-                        ->with('success', "Agenda rapat '{$agenda->judul_rapat}' berhasil diperbarui. Silakan sesuaikan isi naskah surat undangan resmi.");
-                }
-            } elseif ($request->hasFile('surat_edaran')) {
-                $agenda->update(['surat_edaran_type' => 'upload']);
-            } elseif ($agenda->is_surat_edaran_digital) {
-                $agenda->load([
-                    'creator.unit',
-                    'pimpinan.unit',
-                    'notulis.unit',
-                    'units',
-                    'invitedUsers.unit',
-                ]);
-                app(SuratEdaranService::class)->generateAndStorePdf($agenda);
+            if ($updatedAgenda->surat_edaran_type === 'digital' && $request->boolean('open_surat_edaran_after_save')) {
+                return redirect()->route('admin.agendas.surat-edaran', $updatedAgenda)
+                    ->with('success', "Agenda rapat '{$updatedAgenda->judul_rapat}' berhasil diperbarui. Silakan sesuaikan isi naskah surat undangan resmi.");
             }
         } catch (\DomainException $e) {
             return back()->withInput()->with('error', $e->getMessage());
@@ -300,7 +402,80 @@ class AgendaController extends Controller
         }
 
         return redirect()->route('admin.agendas.show', $agenda)
-            ->with('success', "Agenda rapat '{$agenda->judul_rapat}' berhasil diperbarui.");
+            ->with('success', "Agenda rapat '{$updatedAgenda->judul_rapat}' berhasil diperbarui.");
+    }
+
+    /**
+     * Load initial minimal active ASN collection (selected/relevant + first 25) to avoid DOM bloat.
+     *
+     * @param  \Illuminate\Support\Collection<int, mixed>  $priorityIds
+     * @return \Illuminate\Database\Eloquent\Collection<int, User>
+     */
+    private function loadInitialCandidateUsers(\Illuminate\Support\Collection $priorityIds)
+    {
+        $ids = $priorityIds
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values();
+
+        $priorityUsers = $ids->isEmpty()
+            ? collect()
+            : User::query()->where('is_active', true)->whereIn('id', $ids)->with('unit')->orderBy('name')->get();
+
+        $initialPageUsers = User::query()
+            ->where('is_active', true)
+            ->with('unit')
+            ->orderBy('name')
+            ->limit(25)
+            ->get();
+
+        return $priorityUsers->merge($initialPageUsers)->unique('id')->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)->values();
+    }
+
+    /**
+     * Format single candidate payload for async picker JSON responses.
+     *
+     * @return array<string, mixed>
+     */
+    private function formatCandidatePayload(User $u): array
+    {
+        return [
+            'id' => (int) $u->id,
+            'name' => (string) $u->name,
+            'nip' => (string) ($u->nip ?? '-'),
+            'unit_id' => $u->unit_id ? (int) $u->unit_id : null,
+            'unit_code' => (string) ($u->unit?->kode_unit ?? 'Pusat'),
+            'unit_name' => (string) ($u->unit?->nama_unit ?? 'Pusat'),
+            'initials' => strtoupper(substr((string) $u->name, 0, 2)),
+        ];
+    }
+
+    /**
+     * Resolve safe back URL preserving /admin/agendas filters without open redirect risk.
+     */
+    private function resolveSafeAgendaIndexBackUrl(): string
+    {
+        $indexUrl = route('admin.agendas.index');
+        $previousUrl = url()->previous();
+        if (! $previousUrl) {
+            return $indexUrl;
+        }
+
+        $parsedPrev = parse_url($previousUrl);
+        $parsedIndex = parse_url($indexUrl);
+        if (! is_array($parsedPrev) || ! is_array($parsedIndex)) {
+            return $indexUrl;
+        }
+
+        $samePath = ($parsedPrev['path'] ?? '') === ($parsedIndex['path'] ?? '');
+        $allowedHosts = array_filter([
+            $parsedIndex['host'] ?? null,
+            request()->getHost(),
+        ]);
+        $sameHost = empty($parsedPrev['host']) || in_array($parsedPrev['host'], $allowedHosts, true);
+
+        return ($samePath && $sameHost) ? $previousUrl : $indexUrl;
     }
 
     /**

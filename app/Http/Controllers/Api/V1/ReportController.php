@@ -10,6 +10,7 @@ use App\Models\Attendance;
 use App\Models\Unit;
 use App\Models\User;
 use App\Services\ActivityLogger;
+use App\Services\AttendanceMetricsService;
 use App\Services\DocxExportService;
 use App\Services\PdfExportService;
 use App\Services\ReportConfigService;
@@ -30,6 +31,8 @@ class ReportController extends Controller
      */
     public function summary(Request $request): JsonResponse
     {
+        Gate::authorize('viewAny', Agenda::class);
+
         $user = $request->user();
 
         $query = Agenda::visibleTo($user);
@@ -76,33 +79,10 @@ class ReportController extends Controller
 
         $avgAttendances = $totalAgendas > 0 ? round($totalAttendances / $totalAgendas, 1) : 0;
 
-        // Institutional / Unit Attendance Compliance Rate
-        $attendanceRate = 100.0;
-        $attendanceRateSubtext = 'Belum ada rapat dinas selesai';
-
-        if ($user->isAdministrator()) {
-            $totalActiveUsers = User::where('is_active', true)->count();
-            $completedAttendances = Attendance::whereHas('agenda', fn ($q) => $q->where('status', 'completed'))->count();
-            $expected = $completedAgendas * max($totalActiveUsers, 1);
-            $attendanceRate = ($completedAgendas === 0 || $totalActiveUsers === 0)
-                ? 100.0
-                : round(min(($completedAttendances / max($expected, 1)) * 100, 100.0), 1);
-            $attendanceRateSubtext = $completedAgendas > 0
-                ? "Rata-rata Seluruh ASN ({$totalActiveUsers} Pegawai)"
-                : 'Belum ada rapat dinas selesai';
-        } elseif ($user->isAdmin() && $user->unit_id) {
-            $unitUsersCount = User::forUnit($user->unit_id)->count();
-            $unitCompletedAttendances = Attendance::whereHas('user', fn ($q) => $q->where('unit_id', $user->unit_id))
-                ->whereHas('agenda', fn ($q) => $q->where('status', 'completed'))
-                ->count();
-            $expected = $completedAgendas * max($unitUsersCount, 1);
-            $attendanceRate = ($completedAgendas === 0 || $unitUsersCount === 0)
-                ? 100.0
-                : round(min(($unitCompletedAttendances / max($expected, 1)) * 100, 100.0), 1);
-            $attendanceRateSubtext = $completedAgendas > 0
-                ? "Kehadiran Unit ({$unitUsersCount} Pegawai)"
-                : 'Belum ada rapat dinas selesai';
-        }
+        // Institutional / Unit Attendance Compliance Rate (centralized in AttendanceMetricsService)
+        $attendanceMetrics = AttendanceMetricsService::forDashboardOrReport($user);
+        $attendanceRate = $attendanceMetrics['attendance_rate'];
+        $attendanceRateSubtext = $attendanceMetrics['attendance_rate_subtext'];
 
         // Unit Participation Card (Administrator) or Unit Member Participation Card (Admin Unit)
         $unitStats = [];
@@ -196,6 +176,8 @@ class ReportController extends Controller
      */
     public function agendas(Request $request): JsonResponse
     {
+        Gate::authorize('viewAny', Agenda::class);
+
         $user = $request->user();
 
         $query = Agenda::visibleTo($user)
@@ -392,6 +374,8 @@ class ReportController extends Controller
      */
     public function exportSummaryCsv(Request $request): StreamedResponse
     {
+        Gate::authorize('viewAny', Agenda::class);
+
         $user = $request->user();
         $query = Agenda::visibleTo($user)
             ->with([
@@ -473,7 +457,7 @@ class ReportController extends Controller
                         strtoupper($agenda->tipe_rapat),
                         $safeLocation,
                         $agenda->waktu_mulai->format('d/m/Y H:i'),
-                        $agenda->waktu_selesai ? $agenda->waktu_selesai->format('d/m/Y H:i') : '-',
+                        $agenda->waktu_selesai ? $agenda->waktu_selesai->format('d/m/Y H:i') : 'Hingga Selesai',
                         $statusRapat,
                         $statusNotulensi,
                         $safePimpinan,

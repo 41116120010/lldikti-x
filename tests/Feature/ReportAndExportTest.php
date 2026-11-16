@@ -290,5 +290,85 @@ class ReportAndExportTest extends TestCase
             $reportShow->assertSee($fragment);
         }
     }
+
+    public function test_staff_cannot_access_reports_index_or_summary_csv(): void
+    {
+        $staff = User::where('role', 'staff')->firstOrFail();
+
+        $this->actingAs($staff)->get('/admin/reports')->assertStatus(403);
+        $this->actingAs($staff)->get('/admin/reports/summary/csv')->assertStatus(403);
+    }
+
+    public function test_reports_index_kpi_and_format_stats_follow_active_filters(): void
+    {
+        $superadmin = User::where('role', 'administrator')->firstOrFail();
+        $targetDay = now()->addDays(25);
+        $otherDay = now()->addDays(35);
+
+        Agenda::create([
+            'created_by' => $superadmin->id,
+            'judul_rapat' => 'Rapat Filter KPI Target ' . uniqid(),
+            'slug' => 'rapat-filter-kpi-target-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Utama',
+            'waktu_mulai' => $targetDay->copy()->setTime(9, 0),
+            'waktu_selesai' => $targetDay->copy()->setTime(11, 0),
+            'is_all_units' => true,
+            'status' => 'scheduled',
+        ]);
+
+        Agenda::create([
+            'created_by' => $superadmin->id,
+            'judul_rapat' => 'Rapat Filter KPI Lainnya ' . uniqid(),
+            'slug' => 'rapat-filter-kpi-lain-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'online',
+            'link_meeting' => 'https://zoom.us/j/555444333',
+            'waktu_mulai' => $otherDay->copy()->setTime(13, 0),
+            'waktu_selesai' => $otherDay->copy()->setTime(15, 0),
+            'is_all_units' => true,
+            'status' => 'completed',
+        ]);
+
+        $dateStr = $targetDay->format('Y-m-d');
+        $response = $this->actingAs($superadmin)
+            ->get("/admin/reports?start_date={$dateStr}&end_date={$dateStr}&status=scheduled");
+
+        $response->assertStatus(200);
+        $this->assertSame(1, $response->viewData('totalAgendas'));
+        $this->assertSame(0, $response->viewData('completedAgendas'));
+        $this->assertSame(1, $response->viewData('scheduledAgendas'));
+
+        $formatStats = $response->viewData('formatStats');
+        $this->assertSame(1, $formatStats['offline']);
+        $this->assertSame(0, $formatStats['online']);
+    }
+
+    public function test_summary_csv_prints_hingga_selesai_when_waktu_selesai_is_null(): void
+    {
+        $superadmin = User::where('role', 'administrator')->firstOrFail();
+        $title = 'Rapat Tanpa Batas Waktu CSV ' . uniqid();
+
+        Agenda::create([
+            'created_by' => $superadmin->id,
+            'judul_rapat' => $title,
+            'slug' => 'rapat-csv-hingga-selesai-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Rapat 2',
+            'waktu_mulai' => now()->addDays(12)->setTime(9, 0),
+            'waktu_selesai' => null,
+            'is_all_units' => true,
+            'status' => 'scheduled',
+        ]);
+
+        $response = $this->actingAs($superadmin)->get('/admin/reports/summary/csv');
+
+        $response->assertStatus(200);
+        $content = $response->streamedContent();
+        $this->assertStringContainsString($title, $content);
+        $this->assertStringContainsString('Hingga Selesai', $content);
+    }
 }
 

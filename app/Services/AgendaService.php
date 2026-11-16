@@ -16,7 +16,8 @@ use Illuminate\Support\Str;
 class AgendaService
 {
     public function __construct(
-        protected ReportConfigService $reportConfigService
+        protected ReportConfigService $reportConfigService,
+        protected SuratEdaranService $suratEdaranService,
     ) {}
 
     /**
@@ -26,67 +27,85 @@ class AgendaService
     {
         $targetType = $validated['target_type'] ?? ($isAllUnits ? 'all_units' : (!empty($validated['user_ids']) ? 'selected_users' : 'selected_units'));
         $effectiveIsAllUnits = ($targetType === 'all_units');
+        $suratEdaranType = $validated['surat_edaran_type'] ?? 'upload';
+        $storedUploadPath = null;
 
-        /** @var Agenda $agenda */
-        $agenda = AgendaConflictService::runUnderRoomLock(
-            data: $validated,
-            ignoreAgendaId: null,
-            user: $creator,
-            callback: function () use ($creator, $validated, $targetType, $effectiveIsAllUnits, $suratEdaran) {
-                return DB::transaction(function () use ($creator, $validated, $targetType, $effectiveIsAllUnits, $suratEdaran) {
-                    $waktuMulai = $validated['waktu_mulai'];
-                    $waktuSelesai = !empty($validated['waktu_selesai']) ? $validated['waktu_selesai'] : null;
+        try {
+            /** @var Agenda $agenda */
+            $agenda = AgendaConflictService::runUnderRoomLock(
+                data: $validated,
+                ignoreAgendaId: null,
+                user: $creator,
+                callback: function () use ($creator, $validated, $targetType, $effectiveIsAllUnits, $suratEdaran, $suratEdaranType, &$storedUploadPath) {
+                    return DB::transaction(function () use ($creator, $validated, $targetType, $effectiveIsAllUnits, $suratEdaran, $suratEdaranType, &$storedUploadPath) {
+                        $waktuMulai = $validated['waktu_mulai'];
+                        $waktuSelesai = !empty($validated['waktu_selesai']) ? $validated['waktu_selesai'] : null;
 
-                    $suratEdaranType = $validated['surat_edaran_type'] ?? ($suratEdaran ? 'upload' : 'upload');
+                        $agendaData = [
+                            'created_by' => $creator->id,
+                            'pimpinan_id' => $validated['pimpinan_id'] ?? null,
+                            'notulis_id' => $validated['notulis_id'] ?? null,
+                            'judul_rapat' => $validated['judul_rapat'],
+                            'slug' => Str::slug($validated['judul_rapat']) . '-' . Str::lower(Str::random(6)),
+                            'jenis_rapat' => $validated['jenis_rapat'],
+                            'tipe_rapat' => $validated['tipe_rapat'],
+                            'lokasi_ruang' => $validated['lokasi_ruang'] ?? null,
+                            'link_meeting' => $validated['link_meeting'] ?? null,
+                            'waktu_mulai' => $waktuMulai,
+                            'waktu_selesai' => $waktuSelesai,
+                            'target_type' => $targetType,
+                            'is_all_units' => $effectiveIsAllUnits,
+                            'surat_edaran_type' => $suratEdaranType,
+                            'status' => $validated['status'] ?? 'scheduled',
+                        ];
 
-                    $agendaData = [
-                        'created_by' => $creator->id,
-                        'pimpinan_id' => $validated['pimpinan_id'] ?? null,
-                        'notulis_id' => $validated['notulis_id'] ?? null,
-                        'judul_rapat' => $validated['judul_rapat'],
-                        'slug' => Str::slug($validated['judul_rapat']) . '-' . Str::lower(Str::random(6)),
-                        'jenis_rapat' => $validated['jenis_rapat'],
-                        'tipe_rapat' => $validated['tipe_rapat'],
-                        'lokasi_ruang' => $validated['lokasi_ruang'] ?? null,
-                        'link_meeting' => $validated['link_meeting'] ?? null,
-                        'waktu_mulai' => $waktuMulai,
-                        'waktu_selesai' => $waktuSelesai,
-                        'target_type' => $targetType,
-                        'is_all_units' => $effectiveIsAllUnits,
-                        'surat_edaran_type' => $suratEdaranType,
-                        'status' => $validated['status'] ?? 'scheduled',
-                    ];
-
-                    if ($suratEdaran) {
-                        $path = $suratEdaran->store('surat_edaran', 'public');
-                        $agendaData['surat_edaran_path'] = $path;
-                        $agendaData['surat_edaran_name'] = $suratEdaran->getClientOriginalName();
-                    }
-
-                    $agenda = Agenda::create($agendaData);
-
-                    // Sync participants according to target_type
-                    if ($targetType === 'all_units') {
-                        $allUnitIds = Unit::active()->pluck('id')->toArray();
-                        $agenda->units()->sync($allUnitIds);
-                        $agenda->invitedUsers()->sync([]);
-                    } elseif ($targetType === 'selected_users') {
-                        $userIds = $validated['user_ids'] ?? [];
-                        $agenda->invitedUsers()->sync($userIds);
-                        $agenda->units()->sync([]);
-                    } else {
-                        $unitIds = $validated['unit_ids'] ?? ($validated['units'] ?? []);
-                        if ($creator->isAdmin() && empty($unitIds)) {
-                            $unitIds = [$creator->unit_id];
+                        if ($suratEdaran && $suratEdaranType === 'upload') {
+                            $storedUploadPath = $suratEdaran->store('surat_edaran', 'public');
+                            $agendaData['surat_edaran_path'] = $storedUploadPath;
+                            $agendaData['surat_edaran_name'] = $suratEdaran->getClientOriginalName();
                         }
-                        $agenda->units()->sync($unitIds);
-                        $agenda->invitedUsers()->sync([]);
-                    }
 
-                    return $agenda;
-                });
+                        $agenda = Agenda::create($agendaData);
+
+                        // Sync participants according to target_type
+                        if ($targetType === 'all_units') {
+                            $allUnitIds = Unit::active()->pluck('id')->toArray();
+                            $agenda->units()->sync($allUnitIds);
+                            $agenda->invitedUsers()->sync([]);
+                        } elseif ($targetType === 'selected_users') {
+                            $userIds = $validated['user_ids'] ?? [];
+                            $agenda->invitedUsers()->sync($userIds);
+                            $agenda->units()->sync([]);
+                        } else {
+                            $unitIds = $validated['unit_ids'] ?? ($validated['units'] ?? []);
+                            if ($creator->isAdmin() && empty($unitIds)) {
+                                $unitIds = [$creator->unit_id];
+                            }
+                            $agenda->units()->sync($unitIds);
+                            $agenda->invitedUsers()->sync([]);
+                        }
+
+                        if ($suratEdaranType === 'digital') {
+                            $agenda->load([
+                                'creator.unit',
+                                'pimpinan.unit',
+                                'notulis.unit',
+                                'units',
+                                'invitedUsers.unit',
+                            ]);
+                            $this->suratEdaranService->saveDigitalSurat($agenda, $agenda->getDefaultSuratEdaranConfig());
+                        }
+
+                        return $agenda;
+                    });
+                }
+            );
+        } catch (\Throwable $e) {
+            if ($storedUploadPath && Storage::disk('public')->exists($storedUploadPath)) {
+                Storage::disk('public')->delete($storedUploadPath);
             }
-        );
+            throw $e;
+        }
 
         ActivityLogger::log(
             type: 'CREATE_AGENDA',
@@ -140,82 +159,221 @@ class AgendaService
         }
 
         $oldData = $agenda->toArray();
-        $newCircularPath = null;
-        $supersededCircularPath = null;
+        $wasDigital = $agenda->is_surat_edaran_digital;
+        $requestedType = $validated['surat_edaran_type'] ?? null;
+        $targetSuratType = ($suratEdaran !== null && $requestedType !== 'digital')
+            ? 'upload'
+            : ($requestedType ?? ($agenda->surat_edaran_type ?? 'upload'));
 
-        if ($suratEdaran) {
+        $oldCircularPath = $agenda->surat_edaran_path;
+        $oldCustomLogoPath = $agenda->surat_edaran_config['custom_logo_path'] ?? null;
+        $oldUnitIds = $agenda->units()->pluck('units.id')->map(fn ($id) => (int) $id)->sort()->values()->all();
+        $oldUserIds = $agenda->invitedUsers()->pluck('users.id')->map(fn ($id) => (int) $id)->sort()->values()->all();
+        $oldPdfSnapshot = [
+            'judul_rapat' => $agenda->judul_rapat,
+            'waktu_mulai' => $agenda->waktu_mulai?->format('Y-m-d H:i:s'),
+            'waktu_selesai' => $agenda->waktu_selesai?->format('Y-m-d H:i:s'),
+            'lokasi_ruang' => $agenda->lokasi_ruang,
+            'link_meeting' => $agenda->link_meeting,
+            'tipe_rapat' => $agenda->tipe_rapat,
+            'target_type' => $agenda->target_type,
+            'is_all_units' => (bool) $agenda->is_all_units,
+            'pimpinan_id' => $agenda->pimpinan_id ? (int) $agenda->pimpinan_id : null,
+            'notulis_id' => $agenda->notulis_id ? (int) $agenda->notulis_id : null,
+            'surat_edaran_type' => $agenda->surat_edaran_type ?? 'upload',
+        ];
+
+        $newCircularPath = null;
+        $filesToDeleteAfterCommit = [];
+
+        if ($suratEdaran !== null && $targetSuratType === 'upload') {
             $newCircularPath = $suratEdaran->store('circulars', 'public');
-            $supersededCircularPath = $agenda->surat_edaran_path;
         }
 
         $targetType = $validated['target_type'] ?? ($isAllUnits ? 'all_units' : (!empty($validated['user_ids']) ? 'selected_users' : 'selected_units'));
         $effectiveIsAllUnits = ($targetType === 'all_units');
 
-        AgendaConflictService::runUnderRoomLock(
-            data: $validated,
-            ignoreAgendaId: (int) $agenda->getKey(),
-            user: $actor,
-            callback: function () use ($validated, $agenda, $oldData, $newCircularPath, $targetType, $effectiveIsAllUnits) {
-                DB::transaction(function () use ($validated, $agenda, $oldData, $newCircularPath, $targetType, $effectiveIsAllUnits) {
-                    $waktuMulai = $validated['waktu_mulai'];
-                    $waktuSelesai = !empty($validated['waktu_selesai']) ? $validated['waktu_selesai'] : null;
+        try {
+            AgendaConflictService::runUnderRoomLock(
+                data: $validated,
+                ignoreAgendaId: (int) $agenda->getKey(),
+                user: $actor,
+                callback: function () use (
+                    $validated,
+                    $agenda,
+                    $oldData,
+                    $newCircularPath,
+                    $suratEdaran,
+                    $targetSuratType,
+                    $wasDigital,
+                    $oldCircularPath,
+                    $oldCustomLogoPath,
+                    $oldUnitIds,
+                    $oldUserIds,
+                    $oldPdfSnapshot,
+                    $targetType,
+                    $effectiveIsAllUnits,
+                    &$filesToDeleteAfterCommit
+                ) {
+                    DB::transaction(function () use (
+                        $validated,
+                        $agenda,
+                        $oldData,
+                        $newCircularPath,
+                        $suratEdaran,
+                        $targetSuratType,
+                        $wasDigital,
+                        $oldCircularPath,
+                        $oldCustomLogoPath,
+                        $oldUnitIds,
+                        $oldUserIds,
+                        $oldPdfSnapshot,
+                        $targetType,
+                        $effectiveIsAllUnits,
+                        &$filesToDeleteAfterCommit
+                    ) {
+                        $waktuMulai = $validated['waktu_mulai'];
+                        $waktuSelesai = !empty($validated['waktu_selesai']) ? $validated['waktu_selesai'] : null;
 
-                    $updateData = [
-                        'pimpinan_id' => $validated['pimpinan_id'] ?? null,
-                        'notulis_id' => $validated['notulis_id'] ?? null,
-                        'judul_rapat' => $validated['judul_rapat'],
-                        'jenis_rapat' => $validated['jenis_rapat'],
-                        'tipe_rapat' => $validated['tipe_rapat'],
-                        'lokasi_ruang' => $validated['lokasi_ruang'] ?? null,
-                        'link_meeting' => $validated['link_meeting'] ?? null,
-                        'waktu_mulai' => $waktuMulai,
-                        'waktu_selesai' => $waktuSelesai,
-                        'target_type' => $targetType,
-                        'is_all_units' => $effectiveIsAllUnits,
-                        'status' => $validated['status'] ?? $agenda->status,
-                    ];
+                        $updateData = [
+                            'pimpinan_id' => $validated['pimpinan_id'] ?? null,
+                            'notulis_id' => $validated['notulis_id'] ?? null,
+                            'judul_rapat' => $validated['judul_rapat'],
+                            'jenis_rapat' => $validated['jenis_rapat'],
+                            'tipe_rapat' => $validated['tipe_rapat'],
+                            'lokasi_ruang' => $validated['lokasi_ruang'] ?? null,
+                            'link_meeting' => $validated['link_meeting'] ?? null,
+                            'waktu_mulai' => $waktuMulai,
+                            'waktu_selesai' => $waktuSelesai,
+                            'target_type' => $targetType,
+                            'is_all_units' => $effectiveIsAllUnits,
+                            'surat_edaran_type' => $targetSuratType,
+                            'status' => $validated['status'] ?? $agenda->status,
+                        ];
 
-                    if (isset($validated['surat_edaran_type'])) {
-                        $updateData['surat_edaran_type'] = $validated['surat_edaran_type'];
-                    }
+                        if ($targetSuratType === 'upload') {
+                            if ($newCircularPath !== null) {
+                                $updateData['surat_edaran_path'] = $newCircularPath;
+                                $updateData['surat_edaran_name'] = $suratEdaran?->getClientOriginalName();
 
-                    if ($newCircularPath !== null) {
-                        $updateData['surat_edaran_path'] = $newCircularPath;
-                    }
+                                if ($oldCircularPath && $oldCircularPath !== $newCircularPath) {
+                                    $filesToDeleteAfterCommit[] = $oldCircularPath;
+                                }
+                                if ($wasDigital || ! empty($agenda->surat_edaran_config) || ! empty($agenda->surat_edaran_content)) {
+                                    $updateData['surat_edaran_config'] = null;
+                                    $updateData['surat_edaran_content'] = null;
+                                    if ($oldCustomLogoPath) {
+                                        $filesToDeleteAfterCommit[] = $oldCustomLogoPath;
+                                    }
+                                }
+                            } elseif ($wasDigital) {
+                                $updateData['surat_edaran_path'] = null;
+                                $updateData['surat_edaran_name'] = null;
+                                $updateData['surat_edaran_config'] = null;
+                                $updateData['surat_edaran_content'] = null;
+                                if ($oldCircularPath) {
+                                    $filesToDeleteAfterCommit[] = $oldCircularPath;
+                                }
+                                if ($oldCustomLogoPath) {
+                                    $filesToDeleteAfterCommit[] = $oldCustomLogoPath;
+                                }
+                            }
+                        } else {
+                            // Switching upload -> digital: remove legacy uploaded circular path (keep digital PDF path slot)
+                            $digitalPdfPath = "surat_edaran/surat_digital_{$agenda->id}.pdf";
+                            if (! $wasDigital && $oldCircularPath && $oldCircularPath !== $digitalPdfPath) {
+                                $filesToDeleteAfterCommit[] = $oldCircularPath;
+                                $updateData['surat_edaran_path'] = null;
+                                $updateData['surat_edaran_name'] = null;
+                            }
+                        }
 
-                    $agenda->update($updateData);
+                        $agenda->update($updateData);
 
-                    // Sync participants according to target_type
-                    if ($targetType === 'all_units') {
-                        $allUnitIds = Unit::active()->pluck('id')->toArray();
-                        $agenda->units()->sync($allUnitIds);
-                        $agenda->invitedUsers()->sync([]);
-                    } elseif ($targetType === 'selected_users') {
-                        $userIds = $validated['user_ids'] ?? [];
-                        $agenda->invitedUsers()->sync($userIds);
-                        $agenda->units()->sync([]);
-                    } else {
-                        $unitIds = $validated['unit_ids'] ?? ($validated['units'] ?? []);
-                        $agenda->units()->sync($unitIds);
-                        $agenda->invitedUsers()->sync([]);
-                    }
+                        // Sync participants according to target_type
+                        if ($targetType === 'all_units') {
+                            $allUnitIds = Unit::active()->pluck('id')->toArray();
+                            $agenda->units()->sync($allUnitIds);
+                            $agenda->invitedUsers()->sync([]);
+                            $newUnitIds = collect($allUnitIds)->map(fn ($id) => (int) $id)->sort()->values()->all();
+                            $newUserIds = [];
+                        } elseif ($targetType === 'selected_users') {
+                            $userIds = $validated['user_ids'] ?? [];
+                            $agenda->invitedUsers()->sync($userIds);
+                            $agenda->units()->sync([]);
+                            $newUnitIds = [];
+                            $newUserIds = collect($userIds)->map(fn ($id) => (int) $id)->sort()->values()->all();
+                        } else {
+                            $unitIds = $validated['unit_ids'] ?? ($validated['units'] ?? []);
+                            $agenda->units()->sync($unitIds);
+                            $agenda->invitedUsers()->sync([]);
+                            $newUnitIds = collect($unitIds)->map(fn ($id) => (int) $id)->sort()->values()->all();
+                            $newUserIds = [];
+                        }
 
-                    ActivityLogger::log(
-                        type: 'UPDATE_AGENDA',
-                        description: "Agenda rapat '{$agenda->judul_rapat}' diperbarui.",
-                        targetModel: Agenda::class,
-                        targetId: $agenda->id,
-                        properties: ['old' => $oldData, 'new' => $agenda->toArray()]
-                    );
-                });
+                        if ($targetSuratType === 'digital') {
+                            $agenda->refresh();
+                            $newPdfSnapshot = [
+                                'judul_rapat' => $agenda->judul_rapat,
+                                'waktu_mulai' => $agenda->waktu_mulai?->format('Y-m-d H:i:s'),
+                                'waktu_selesai' => $agenda->waktu_selesai?->format('Y-m-d H:i:s'),
+                                'lokasi_ruang' => $agenda->lokasi_ruang,
+                                'link_meeting' => $agenda->link_meeting,
+                                'tipe_rapat' => $agenda->tipe_rapat,
+                                'target_type' => $agenda->target_type,
+                                'is_all_units' => (bool) $agenda->is_all_units,
+                                'pimpinan_id' => $agenda->pimpinan_id ? (int) $agenda->pimpinan_id : null,
+                                'notulis_id' => $agenda->notulis_id ? (int) $agenda->notulis_id : null,
+                                'surat_edaran_type' => $agenda->surat_edaran_type ?? 'upload',
+                            ];
+
+                            $relevantChanged = ($oldPdfSnapshot !== $newPdfSnapshot)
+                                || ($oldUnitIds !== $newUnitIds)
+                                || ($oldUserIds !== $newUserIds);
+
+                            $hasCachedPdf = $agenda->surat_edaran_path
+                                && Storage::disk('public')->exists($agenda->surat_edaran_path);
+
+                            if ($relevantChanged || empty($agenda->surat_edaran_config) || ! $hasCachedPdf) {
+                                $agenda->load([
+                                    'creator.unit',
+                                    'pimpinan.unit',
+                                    'notulis.unit',
+                                    'units',
+                                    'invitedUsers.unit',
+                                ]);
+
+                                if (empty($agenda->surat_edaran_config)) {
+                                    $this->suratEdaranService->saveDigitalSurat($agenda, $agenda->getDefaultSuratEdaranConfig());
+                                } else {
+                                    $this->suratEdaranService->generateAndStorePdf($agenda);
+                                }
+                            }
+                        }
+
+                        ActivityLogger::log(
+                            type: 'UPDATE_AGENDA',
+                            description: "Agenda rapat '{$agenda->judul_rapat}' diperbarui.",
+                            targetModel: Agenda::class,
+                            targetId: $agenda->id,
+                            properties: ['old' => $oldData, 'new' => $agenda->toArray()]
+                        );
+                    });
+                }
+            );
+        } catch (\Throwable $e) {
+            if ($newCircularPath && Storage::disk('public')->exists($newCircularPath)) {
+                Storage::disk('public')->delete($newCircularPath);
             }
-        );
-
-        if ($supersededCircularPath && $supersededCircularPath !== $newCircularPath) {
-            Storage::disk('public')->delete($supersededCircularPath);
+            throw $e;
         }
 
-        return $agenda;
+        $filesToDeleteAfterCommit = array_values(array_unique(array_filter($filesToDeleteAfterCommit)));
+        if ($filesToDeleteAfterCommit !== []) {
+            Storage::disk('public')->delete($filesToDeleteAfterCommit);
+        }
+
+        return $agenda->fresh();
     }
 
     /**
@@ -338,6 +496,8 @@ class AgendaService
             }
         }
 
+        $expectedFromStatus = $agenda->status;
+
         // 4. Transisi draft -> scheduled: Penguncian Ruangan, Validasi Konflik, dan Anti-Waktu Lampau
         if ($agenda->status === 'draft' && $newStatus === 'scheduled') {
             if ($agenda->waktu_mulai && $agenda->waktu_mulai->isPast()) {
@@ -360,34 +520,55 @@ class AgendaService
                 data: $data,
                 ignoreAgendaId: (int) $agenda->getKey(),
                 user: $actor,
-                callback: function () use ($agenda, $newStatus, $statusText) {
-                    return $this->applyStatusUpdate($agenda, $newStatus, $statusText);
+                callback: function () use ($agenda, $newStatus, $statusText, $expectedFromStatus) {
+                    return $this->applyStatusUpdate($agenda, $newStatus, $statusText, $expectedFromStatus);
                 }
             );
         }
 
-        return $this->applyStatusUpdate($agenda, $newStatus, $statusText);
+        return $this->applyStatusUpdate($agenda, $newStatus, $statusText, $expectedFromStatus);
     }
 
     /**
-     * Terapkan update status agenda dan catat activity log.
+     * Terapkan update status agenda di bawah row lock (anti race condition) dan catat activity log.
      */
-    private function applyStatusUpdate(Agenda $agenda, string $newStatus, string $statusText): string
+    private function applyStatusUpdate(Agenda $agenda, string $newStatus, string $statusText, ?string $expectedFromStatus = null): string
     {
-        DB::transaction(function () use ($agenda, $newStatus, $statusText) {
-            $agenda->status = $newStatus;
-            $agenda->save();
+        return DB::transaction(function () use ($agenda, $newStatus, $statusText, $expectedFromStatus) {
+            /** @var Agenda $locked */
+            $locked = Agenda::query()
+                ->whereKey($agenda->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($locked->status === $newStatus) {
+                $agenda->setRawAttributes($locked->getAttributes(), true);
+
+                return $statusText;
+            }
+
+            if ($expectedFromStatus !== null && $locked->status !== $expectedFromStatus) {
+                throw new \DomainException("Status agenda telah berubah menjadi '{$locked->status}' oleh proses lain. Silakan muat ulang halaman.");
+            }
+
+            if (! $locked->canTransitionTo($newStatus)) {
+                throw new \DomainException("Perubahan status agenda dari '{$locked->status}' menjadi '{$newStatus}' tidak diizinkan oleh sistem.");
+            }
+
+            $locked->status = $newStatus;
+            $locked->save();
+            $agenda->setRawAttributes($locked->getAttributes(), true);
 
             ActivityLogger::log(
                 type: 'UPDATE_AGENDA_STATUS',
-                description: "Status agenda rapat '{$agenda->judul_rapat}' diubah menjadi {$statusText}.",
+                description: "Status agenda rapat '{$locked->judul_rapat}' diubah menjadi {$statusText}.",
                 targetModel: Agenda::class,
-                targetId: $agenda->id,
+                targetId: $locked->id,
                 properties: ['status' => $newStatus]
             );
-        });
 
-        return $statusText;
+            return $statusText;
+        });
     }
 
     /**

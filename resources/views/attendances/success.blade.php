@@ -72,7 +72,7 @@
                             <button 
                                 type="button" 
                                 data-selfie-modal-trigger
-                                data-selfie-url="{{ Storage::disk('public')->url($attendance->selfie_path) }}"
+                                data-selfie-url="{{ route('attendances.selfie', $attendance) }}"
                                 data-user-name="{{ $attendance->user->name }}"
                                 data-user-nip="{{ $attendance->user->nip ?? '-' }}"
                                 data-unit-name="{{ $attendance->user->unit?->kode_unit ? $attendance->user->unit->kode_unit . ' — ' . $attendance->user->unit->nama_unit : 'Tingkat Lembaga' }}"
@@ -82,7 +82,7 @@
                                 title="Klik untuk memperbesar & memverifikasi Foto Selfie"
                                 aria-label="Perbesar Foto Selfie"
                             >
-                                <img src="{{ Storage::disk('public')->url($attendance->selfie_path) }}" alt="Foto Selfie" class="w-full h-full object-cover group-hover:scale-105 transition duration-200">
+                                <img src="{{ route('attendances.selfie', $attendance) }}" alt="Foto Selfie" class="w-full h-full object-cover group-hover:scale-105 transition duration-200">
                                 <div class="absolute inset-0 bg-slate-950/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none print:hidden">
                                     <span class="bg-slate-900/90 text-white text-[10px] font-bold px-2 py-1 rounded-md flex items-center gap-1 shadow-xs">
                                         <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
@@ -96,7 +96,7 @@
                         <div class="p-3 bg-slate-50 rounded-xl border border-slate-300 text-center space-y-2 print:border-slate-300">
                             <div class="text-[11px] font-bold text-slate-900">Tanda Tangan Digital</div>
                             <div class="w-full aspect-[4/3] max-w-[200px] mx-auto rounded-lg overflow-hidden bg-white border border-slate-300 flex items-center justify-center p-2">
-                                <img src="{{ Storage::disk('public')->url($attendance->signature_path) }}" alt="Tanda Tangan" class="max-w-full max-h-full object-contain">
+                                <img src="{{ route('attendances.signature', $attendance) }}" alt="Tanda Tangan" class="max-w-full max-h-full object-contain">
                             </div>
                         </div>
                     </div>

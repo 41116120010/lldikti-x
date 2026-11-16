@@ -2,12 +2,39 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Agenda;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Pagination\AbstractPaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 
 class AgendaResource extends JsonResource
 {
+    /**
+     * Preload batch `total_invited` counts before transforming a list of agendas.
+     *
+     * @param  mixed  $resource
+     * @return AnonymousResourceCollection
+     */
+    public static function collection($resource)
+    {
+        $items = $resource instanceof AbstractPaginator
+            ? $resource->getCollection()
+            : ($resource instanceof Collection ? $resource : collect($resource));
+
+        $unpreloadedAgendas = $items
+            ->filter(fn ($item): bool => $item instanceof Agenda && ! $item->hasPreloadedTotalInvited())
+            ->values();
+
+        if ($unpreloadedAgendas->isNotEmpty()) {
+            Agenda::preloadTotalInvited($unpreloadedAgendas);
+        }
+
+        return parent::collection($resource);
+    }
+
     /**
      * Transform the resource into an array.
      *

@@ -572,12 +572,24 @@ function initGlobalListeners() {
     SuratEdaranWorkstation.init();
 }
 
+// --- 2.4.5. PAGE CLEANUP REGISTRY (PREVENT SPA LISTENER ACCUMULATION) ---
+window.__siperapatCleanup = window.__siperapatCleanup || [];
+window.registerSiperapatCleanup = function (fn) {
+    if (typeof fn === 'function') {
+        window.__siperapatCleanup = window.__siperapatCleanup || [];
+        window.__siperapatCleanup.push(fn);
+    }
+};
+
 // --- 2.5. MICROSOFT WORD RIBBON RICH TEXT EDITOR CONTROLLER ---
 const WordEditor = {
     init() {
         document.querySelectorAll('.word-editor-wrapper').forEach(wrapper => {
             if (wrapper.dataset.initialized === 'true') return;
             wrapper.dataset.initialized = 'true';
+
+            const pageAc = new AbortController();
+            window.registerSiperapatCleanup(() => pageAc.abort());
 
             const contentEl = wrapper.querySelector('.word-editor-content');
             const hiddenInput = wrapper.querySelector('textarea[name], input[name]');
@@ -802,7 +814,7 @@ const WordEditor = {
                         if (!tablePicker.contains(e.target) && e.target !== tableBtn) {
                             tablePicker.classList.remove('open');
                         }
-                    });
+                    }, { signal: pageAc.signal });
                 }
 
                 // 6. Clear All Button with confirmation
@@ -1217,6 +1229,9 @@ const OfficeWorkstation = {
         if (!workstation || workstation.dataset.initialized === 'true') return;
         workstation.dataset.initialized = 'true';
 
+        const pageAc = new AbortController();
+        window.registerSiperapatCleanup(() => pageAc.abort());
+
         const ribbon = workstation.querySelector('.word-editor-ribbon');
         const zoomContainer = workstation.querySelector('#office-zoom-container');
         const deskCanvas = workstation.querySelector('.office-desk-canvas');
@@ -1261,7 +1276,7 @@ const OfficeWorkstation = {
 
         window.addEventListener('office:dirty-change', (e) => {
             updateSaveStateUI(e.detail?.dirty ?? true);
-        });
+        }, { signal: pageAc.signal });
 
         const updateWordCounter = () => {
             if (!statusWordsEl) return;
@@ -1452,7 +1467,7 @@ const OfficeWorkstation = {
             });
             statusPageEl.textContent = `Halaman ${activePage} dari ${curSheets.length}`;
         };
-        window.addEventListener('scroll', handleScroll, { passive: true });
+        window.addEventListener('scroll', handleScroll, { passive: true, signal: pageAc.signal });
         if (deskCanvas) {
             deskCanvas.addEventListener('scroll', handleScroll, { passive: true });
         }
@@ -1961,7 +1976,7 @@ const OfficeWorkstation = {
 
         window.addEventListener('office:reflow', () => {
             if (paginationEngine) paginationEngine.reflow();
-        });
+        }, { signal: pageAc.signal });
 
         // Initialize active editor to notulensi by default
         setActiveEditor(notulensiBox, notulensiHidden);
@@ -2158,7 +2173,7 @@ const OfficeWorkstation = {
                     if (!tablePicker.contains(e.target) && e.target !== tableBtn) {
                         tablePicker.classList.remove('open');
                     }
-                });
+                }, { signal: pageAc.signal });
             }
 
             // Clear All Button (Consistent System Modal + Reflow)
@@ -2207,7 +2222,7 @@ const OfficeWorkstation = {
                     saveForm.requestSubmit ? saveForm.requestSubmit() : saveForm.submit();
                 }
             }
-        });
+        }, { signal: pageAc.signal });
 
         // 5. Beforeunload Guard for Unsaved Changes
         window.addEventListener('beforeunload', (e) => {
@@ -2215,7 +2230,7 @@ const OfficeWorkstation = {
                 e.preventDefault();
                 e.returnValue = '';
             }
-        });
+        }, { signal: pageAc.signal });
 
         // Form Submit: Ensure latest sync before submission
         const form = workstation.querySelector('#notulen-form') || workstation.querySelector('form');
@@ -2381,7 +2396,25 @@ const SeamlessNavigation = {
         }
     },
 
+    runPageCleanup() {
+        if (Array.isArray(window.__siperapatCleanup)) {
+            window.__siperapatCleanup.forEach((fn) => {
+                if (typeof fn === 'function') {
+                    try {
+                        fn();
+                    } catch (_) {
+                        // Ignore cleanup errors on detached elements
+                    }
+                }
+            });
+        }
+        window.__siperapatCleanup = [];
+    },
+
     applyDomSwap(newDoc, url, pushState) {
+        // 0. Run page-level cleanup callbacks before replacing #main-content
+        this.runPageCleanup();
+
         // 1. Update Document Title
         document.title = newDoc.title;
 
@@ -2500,6 +2533,9 @@ const SuratEdaranWorkstation = {
         if (!workstation || workstation.dataset.initialized === 'true') return;
         workstation.dataset.initialized = 'true';
 
+        const pageAc = new AbortController();
+        window.registerSiperapatCleanup(() => pageAc.abort());
+
         const ribbon = workstation.querySelector('.word-editor-ribbon');
         const zoomContainer = workstation.querySelector('#office-zoom-container');
         const deskCanvas = workstation.querySelector('.office-desk-canvas');
@@ -2571,7 +2607,7 @@ const SuratEdaranWorkstation = {
                 e.returnValue = 'Perubahan naskah surat belum disimpan.';
                 return e.returnValue;
             }
-        });
+        }, { signal: pageAc.signal });
 
         const updateWordCounter = () => {
             if (!statusWordsEl) return;
@@ -3122,7 +3158,7 @@ const SuratEdaranWorkstation = {
                     if (tablePicker && !tablePicker.contains(e.target) && !e.target.closest('[data-action="openTablePicker"], [data-action="insertTable"]')) {
                         tablePicker.classList.remove('open');
                     }
-                });
+                }, { signal: pageAc.signal });
             }
         }
 
@@ -3228,7 +3264,7 @@ const SuratEdaranWorkstation = {
             statusPageEl.textContent = `Halaman ${activePage} dari ${totalPages}`;
         };
 
-        window.addEventListener('scroll', updateActivePageStatus, { passive: true });
+        window.addEventListener('scroll', updateActivePageStatus, { passive: true, signal: pageAc.signal });
         if (deskCanvas) {
             deskCanvas.addEventListener('scroll', updateActivePageStatus, { passive: true });
         }
@@ -3542,7 +3578,7 @@ const SuratEdaranWorkstation = {
                     window.closeSuratConfigModal();
                 }
             }
-        });
+        }, { signal: pageAc.signal });
 
         // Save button pre-sync click handler
         const saveBtn = workstation.querySelector('button[form="surat-edaran-form"]');
@@ -3593,7 +3629,7 @@ const SuratEdaranWorkstation = {
                     }
                 }
             }
-        });
+        }, { signal: pageAc.signal });
 
         if (form) {
             form.addEventListener('submit', () => {

@@ -314,6 +314,57 @@ class DashboardAndReportApiTest extends TestCase
         $this->assertStringContainsString('Format Kehadiran', $content);
         $this->assertStringContainsString('Status Presensi', $content);
     }
+
+    public function test_staff_cannot_access_report_summary_agendas_or_summary_csv_via_api(): void
+    {
+        $staff = User::where('role', 'staff')->firstOrFail();
+
+        $this->actingAs($staff, 'sanctum')
+            ->getJson('/api/v1/reports/summary')
+            ->assertStatus(403);
+
+        $this->actingAs($staff, 'sanctum')
+            ->getJson('/api/v1/reports/agendas')
+            ->assertStatus(403);
+
+        $this->actingAs($staff, 'sanctum')
+            ->getJson('/api/v1/reports/summary/csv')
+            ->assertStatus(403);
+    }
+
+    public function test_summary_csv_api_prints_hingga_selesai_and_report_summary_has_consistent_attendance_rate(): void
+    {
+        $admin = User::where('role', 'administrator')->firstOrFail();
+        $title = 'Rapat API CSV Hingga Selesai ' . uniqid();
+
+        Agenda::create([
+            'created_by' => $admin->id,
+            'judul_rapat' => $title,
+            'slug' => 'rapat-api-csv-selesai-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Rapat 3',
+            'waktu_mulai' => now()->addDays(16)->setTime(9, 0),
+            'waktu_selesai' => null,
+            'is_all_units' => true,
+            'status' => 'scheduled',
+        ]);
+
+        $csvResponse = $this->actingAs($admin, 'sanctum')
+            ->get('/api/v1/reports/summary/csv');
+
+        $csvResponse->assertOk();
+        $csvContent = $csvResponse->streamedContent();
+        $this->assertStringContainsString($title, $csvContent);
+        $this->assertStringContainsString('Hingga Selesai', $csvContent);
+
+        $summaryResponse = $this->actingAs($admin, 'sanctum')
+            ->getJson('/api/v1/reports/summary');
+
+        $summaryResponse->assertOk();
+        $this->assertIsNumeric($summaryResponse->json('data.attendance_rate'));
+        $this->assertNotEmpty($summaryResponse->json('data.attendance_rate_subtext'));
+    }
 }
 
 

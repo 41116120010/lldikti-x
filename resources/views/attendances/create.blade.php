@@ -209,8 +209,10 @@ function initAttendanceCheckIn() {
     const selfieDataInput = document.getElementById('selfie_data');
     const selfieBadge = document.getElementById('selfie-status-badge');
     const fallbackFileInput = document.getElementById('fallback-selfie-file');
+    const form = document.getElementById('attendance-form');
 
-    if (!video || !canvas || !btnCapture) return;
+    if (!video || !canvas || !btnCapture || (form && form.dataset.siperapatInit === '1')) return;
+    if (form) form.dataset.siperapatInit = '1';
 
     // Release any previously opened camera stream before re-initializing
     if (window.__siperapatCameraStream) {
@@ -246,6 +248,49 @@ function initAttendanceCheckIn() {
 
     initCamera();
 
+    // Client-side Canvas Compression (Max 600x800 proportional, JPEG quality <= 0.75, target <= 150 KB)
+    function compressSelfieToDataUrl(source, sourceWidth, sourceHeight) {
+        const maxWidth = 600;
+        const maxHeight = 800;
+        const scale = Math.min(1, maxWidth / sourceWidth, maxHeight / sourceHeight);
+        const targetWidth = Math.max(1, Math.round(sourceWidth * scale));
+        const targetHeight = Math.max(1, Math.round(sourceHeight * scale));
+
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(source, 0, 0, targetWidth, targetHeight);
+
+        const maxBytes = 150 * 1024;
+        const qualities = [0.75, 0.65, 0.55, 0.45, 0.35];
+        let dataUrl = canvas.toDataURL('image/jpeg', qualities[0]);
+
+        for (let i = 1; i < qualities.length; i++) {
+            const commaIdx = dataUrl.indexOf(',');
+            const approxBytes = Math.ceil(((dataUrl.length - commaIdx - 1) * 3) / 4);
+            if (approxBytes <= maxBytes) break;
+            dataUrl = canvas.toDataURL('image/jpeg', qualities[i]);
+        }
+
+        return dataUrl;
+    }
+
+    function applyCapturedSelfie(dataUrl, badgeLabel) {
+        selfieDataInput.value = dataUrl;
+
+        preview.src = dataUrl;
+        preview.classList.remove('hidden');
+        video.classList.add('hidden');
+        if (guide) guide.classList.add('hidden');
+
+        btnCapture.classList.add('hidden');
+        if (actionsAfterCapture) actionsAfterCapture.classList.remove('hidden');
+        btnRetake.classList.remove('hidden');
+
+        selfieBadge.textContent = badgeLabel;
+        selfieBadge.className = 'text-[11px] font-bold text-emerald-600';
+    }
+
     btnCapture.addEventListener('click', () => {
         if (!video.videoWidth) {
             window.showModal({
@@ -257,37 +302,14 @@ function initAttendanceCheckIn() {
             return;
         }
 
-        // Client-side Canvas Compression (Max 600x800, JPEG 0.75)
-        const maxWidth = 600;
-        const scale = maxWidth / video.videoWidth;
-        const targetWidth = maxWidth;
-        const targetHeight = video.videoHeight * scale;
-
-        canvas.width = targetWidth;
-        canvas.height = targetHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
-
-        // Export compressed JPEG base64
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
-        selfieDataInput.value = dataUrl;
-
-        // Display preview
-        preview.src = dataUrl;
-        preview.classList.remove('hidden');
-        video.classList.add('hidden');
-        if (guide) guide.classList.add('hidden');
-
-        btnCapture.classList.add('hidden');
-        if (actionsAfterCapture) actionsAfterCapture.classList.remove('hidden');
-        btnRetake.classList.remove('hidden');
-
-        selfieBadge.textContent = 'Foto Terverifikasi';
-        selfieBadge.className = 'text-[11px] font-bold text-emerald-600';
+        const dataUrl = compressSelfieToDataUrl(video, video.videoWidth, video.videoHeight);
+        if (fallbackFileInput) fallbackFileInput.value = '';
+        applyCapturedSelfie(dataUrl, 'Foto Terverifikasi');
     });
 
     btnRetake.addEventListener('click', () => {
         selfieDataInput.value = '';
+        if (fallbackFileInput) fallbackFileInput.value = '';
         preview.classList.add('hidden');
         video.classList.remove('hidden');
         if (guide) guide.classList.remove('hidden');
@@ -334,27 +356,13 @@ function initAttendanceCheckIn() {
             reader.onload = (event) => {
                 const img = new Image();
                 img.onload = () => {
-                    const maxWidth = 600;
-                    const scale = maxWidth / img.width;
-                    canvas.width = maxWidth;
-                    canvas.height = img.height * scale;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
-                    selfieDataInput.value = dataUrl;
-
-                    preview.src = dataUrl;
-                    preview.classList.remove('hidden');
-                    video.classList.add('hidden');
-                    if (guide) guide.classList.add('hidden');
-
-                    btnCapture.classList.add('hidden');
-                    if (actionsAfterCapture) actionsAfterCapture.classList.remove('hidden');
-                    btnRetake.classList.remove('hidden');
-
-                    selfieBadge.textContent = 'Berkas Foto Siap';
-                    selfieBadge.className = 'text-[11px] font-bold text-emerald-600';
+                    const dataUrl = compressSelfieToDataUrl(img, img.width, img.height);
+                    applyCapturedSelfie(dataUrl, 'Berkas Foto Siap');
+                    // Clear raw file input so oversized (>512 KB) original files are not submitted alongside compressed base64
+                    fallbackFileInput.value = '';
+                };
+                img.onerror = () => {
+                    fallbackFileInput.value = '';
                 };
                 img.src = event.target.result;
             };
@@ -399,7 +407,23 @@ function initAttendanceCheckIn() {
     }
 
     window.addEventListener('resize', resizeSigCanvas);
-    setTimeout(resizeSigCanvas, 50);
+    const resizeTimer = setTimeout(resizeSigCanvas, 50);
+
+    window.__siperapatCleanup = window.__siperapatCleanup || [];
+    window.__siperapatCleanup.push(() => {
+        clearTimeout(resizeTimer);
+        window.removeEventListener('resize', resizeSigCanvas);
+        if (window.__siperapatCameraStream) {
+            try {
+                window.__siperapatCameraStream.getTracks().forEach((t) => t.stop());
+            } catch (e) {}
+            window.__siperapatCameraStream = null;
+        }
+        if (window.__siperapatAttendancePageLoadedHandler) {
+            window.removeEventListener('page:loaded', window.__siperapatAttendancePageLoadedHandler);
+            window.__siperapatAttendancePageLoadedHandler = null;
+        }
+    });
 
     function getCanvasCoordinates(e) {
         const rect = sigCanvas.getBoundingClientRect();
@@ -466,7 +490,6 @@ function initAttendanceCheckIn() {
     }
 
     // --- 3. FORM VALIDATION BEFORE SUBMIT ---
-    const form = document.getElementById('attendance-form');
     if (form) {
         form.addEventListener('submit', (e) => {
             if (!selfieDataInput.value && (!fallbackFileInput || !fallbackFileInput.files.length)) {
@@ -502,13 +525,18 @@ function initAttendanceCheckIn() {
     }
 }
 
-// Auto-run on direct load and on dynamic seamless navigation swap
+// Auto-run on direct load and on dynamic seamless navigation swap without duplicate listeners
+if (window.__siperapatAttendancePageLoadedHandler) {
+    window.removeEventListener('page:loaded', window.__siperapatAttendancePageLoadedHandler);
+}
+window.__siperapatAttendancePageLoadedHandler = initAttendanceCheckIn;
+window.addEventListener('page:loaded', window.__siperapatAttendancePageLoadedHandler);
+
 if (document.readyState !== 'loading') {
     initAttendanceCheckIn();
 } else {
-    document.addEventListener('DOMContentLoaded', initAttendanceCheckIn);
+    document.addEventListener('DOMContentLoaded', initAttendanceCheckIn, { once: true });
 }
-window.addEventListener('page:loaded', initAttendanceCheckIn);
 </script>
 
 @if($agenda->surat_edaran_path || $agenda->is_surat_edaran_digital)

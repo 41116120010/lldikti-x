@@ -51,7 +51,7 @@
         <div class="pt-4 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
             <!-- Left: Back Navigation & User Capacity Indicator -->
             <div class="flex flex-wrap items-center gap-2.5">
-                <a href="{{ route('admin.agendas.index') }}" class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold text-white bg-white/10 hover:bg-white/20 border border-white/20 transition">
+                <a href="{{ $backUrl ?? route('admin.agendas.index') }}" class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold text-white bg-white/10 hover:bg-white/20 border border-white/20 transition">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                     <span>Daftar Agenda</span>
                 </a>
@@ -334,7 +334,7 @@
                                         <button 
                                             type="button" 
                                             data-selfie-modal-trigger
-                                            data-selfie-url="{{ Storage::disk('public')->url($attendance->selfie_path) }}"
+                                            data-selfie-url="{{ route('attendances.selfie', $attendance) }}"
                                             data-user-name="{{ $attendance->user->name }}"
                                             data-user-nip="{{ $attendance->user->nip ?? '-' }}"
                                             data-unit-name="{{ $attendance->user->unit?->kode_unit ? $attendance->user->unit->kode_unit . ' — ' . $attendance->user->unit->nama_unit : 'Tingkat Lembaga' }}"
@@ -344,7 +344,7 @@
                                             title="Klik untuk memverifikasi foto selfie {{ $attendance->user->name }}"
                                             aria-label="Verifikasi foto selfie {{ $attendance->user->name }}"
                                         >
-                                            <img src="{{ Storage::disk('public')->url($attendance->selfie_path) }}" alt="{{ $attendance->user->name }}" class="w-full h-full object-cover" loading="lazy" decoding="async">
+                                            <img src="{{ route('attendances.selfie', $attendance) }}" alt="{{ $attendance->user->name }}" class="w-full h-full object-cover" loading="lazy" decoding="async">
                                         </button>
                                     @else
                                         <div class="w-8 h-8 rounded-full bg-slate-900 text-white font-bold flex items-center justify-center text-[10px] shrink-0">
@@ -361,7 +361,7 @@
                                     <button 
                                         type="button" 
                                         data-selfie-modal-trigger
-                                        data-selfie-url="{{ Storage::disk('public')->url($attendance->selfie_path) }}"
+                                        data-selfie-url="{{ route('attendances.selfie', $attendance) }}"
                                         data-user-name="{{ $attendance->user->name }}"
                                         data-user-nip="{{ $attendance->user->nip ?? '-' }}"
                                         data-unit-name="{{ $attendance->user->unit?->kode_unit ? $attendance->user->unit->kode_unit . ' — ' . $attendance->user->unit->nama_unit : 'Tingkat Lembaga' }}"
@@ -532,7 +532,7 @@
                             <div class="text-[10px] uppercase font-bold text-slate-500 tracking-wider font-mono">Pemimpin Rapat</div>
                             <div class="h-16 flex items-center justify-center">
                                 @if($pimpinanAtt && $pimpinanAtt->signature_path)
-                                    <img src="{{ Storage::disk('public')->url($pimpinanAtt->signature_path) }}" alt="Tanda Tangan Pimpinan" class="h-14 max-w-[140px] object-contain">
+                                    <img src="{{ route('attendances.signature', $pimpinanAtt) }}" alt="Tanda Tangan Pimpinan" class="h-14 max-w-[140px] object-contain">
                                 @else
                                     <div class="px-3 py-2 border border-dashed border-slate-300 rounded-lg bg-slate-50 text-[11px] text-slate-400 italic">
                                         Belum Mengisi Presensi
@@ -565,7 +565,7 @@
                             <div class="text-[10px] uppercase font-bold text-slate-500 tracking-wider font-mono">Notulis Rapat</div>
                             <div class="h-16 flex items-center justify-center">
                                 @if($notulisAtt && $notulisAtt->signature_path)
-                                    <img src="{{ Storage::disk('public')->url($notulisAtt->signature_path) }}" alt="Tanda Tangan Notulis" class="h-14 max-w-[140px] object-contain">
+                                    <img src="{{ route('attendances.signature', $notulisAtt) }}" alt="Tanda Tangan Notulis" class="h-14 max-w-[140px] object-contain">
                                 @else
                                     <div class="px-3 py-2 border border-dashed border-slate-300 rounded-lg bg-slate-50 text-[11px] text-slate-400 italic">
                                         Belum Mengisi Presensi
@@ -779,6 +779,7 @@
                     :selectedId="old('pimpinan_id', $agenda->pimpinan_id)"
                     :defaultUser="$agenda->creator ?? $currentUser"
                     :users="$users"
+                    :totalUsers="$totalActiveUsers ?? null"
                     :invitedUserIds="$agenda->invitedUsers->pluck('id')->toArray()"
                 />
 
@@ -791,6 +792,7 @@
                     :selectedId="old('notulis_id', $agenda->notulis_id)"
                     :defaultUser="$agenda->creator ?? $currentUser"
                     :users="$users"
+                    :totalUsers="$totalActiveUsers ?? null"
                     :invitedUserIds="$agenda->invitedUsers->pluck('id')->toArray()"
                 />
             </div>
@@ -825,11 +827,18 @@
         }
     }
 
-    document.addEventListener('keydown', function(event) {
-        if (event.key === 'Escape') {
-            closeRolesModal();
-        }
-    });
+    (function () {
+        const handleRolesEscKey = function(event) {
+            if (event.key === 'Escape') {
+                closeRolesModal();
+            }
+        };
+        document.addEventListener('keydown', handleRolesEscKey);
+        window.__siperapatCleanup = window.__siperapatCleanup || [];
+        window.__siperapatCleanup.push(() => {
+            document.removeEventListener('keydown', handleRolesEscKey);
+        });
+    })();
 
     document.getElementById('modal-roles')?.addEventListener('click', function(e) {
         if (e.target === this) {

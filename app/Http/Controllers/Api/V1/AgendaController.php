@@ -76,7 +76,12 @@ class AgendaController extends Controller
             if ($unitId === 'all_units') {
                 $query->where('is_all_units', true);
             } elseif ($user->isAdministrator()) {
-                $query->whereHas('units', fn ($q) => $q->where('units.id', (int) $unitId));
+                $uid = (int) $unitId;
+                $query->where(function (Builder $q) use ($uid) {
+                    $q->where('is_all_units', true)
+                        ->orWhereHas('units', fn (Builder $u) => $u->where('units.id', $uid))
+                        ->orWhereHas('invitedUsers', fn (Builder $iu) => $iu->where('users.unit_id', $uid));
+                });
             }
         }
 
@@ -114,6 +119,10 @@ class AgendaController extends Controller
             ->withCount('attendances')
             ->latest('waktu_mulai')
             ->paginate($perPage);
+
+        if (method_exists(Agenda::class, 'preloadTotalInvited')) {
+            Agenda::preloadTotalInvited($agendas->getCollection());
+        }
 
         return response()->json([
             'success' => true,

@@ -6,6 +6,8 @@
     'selectedId' => null,
     'defaultUser',
     'users',
+    'totalUsers' => null,
+    'candidatesUrl' => null,
     'invitedUserIds' => [],
 ])
 
@@ -17,6 +19,8 @@
     $normalizedInvitedIds = is_array($invitedUserIds) 
         ? $invitedUserIds 
         : ($invitedUserIds instanceof \Illuminate\Support\Collection ? $invitedUserIds->toArray() : []);
+    $resolvedCandidatesUrl = $candidatesUrl ?: route('admin.agendas.candidates');
+    $resolvedTotalUsers = $totalUsers ?? $users->count();
 @endphp
 
 <div class="field asn-role-selector-field" id="{{ $instanceId }}-root" data-instance="{{ $instanceId }}">
@@ -139,8 +143,8 @@
                         class="flex-1 py-1.5 px-3 rounded-lg text-center transition cursor-pointer min-h-[36px] flex items-center justify-center gap-1.5 text-slate-600 hover:text-slate-900"
                     >
                         <span>Semua Pegawai</span>
-                        <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-200 text-slate-700">
-                            {{ $users->count() }}
+                        <span id="{{ $instanceId }}-all-count" class="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-200 text-slate-700">
+                            {{ $resolvedTotalUsers }}
                         </span>
                     </button>
                 </div>
@@ -210,6 +214,18 @@
                 <div id="{{ $instanceId }}-empty" class="hidden text-center py-6 text-xs text-slate-500 font-medium">
                     Tidak ditemukan ASN yang cocok dengan kriteria pencarian / tab aktif.
                 </div>
+
+                <!-- Async Load More Trigger -->
+                <div id="{{ $instanceId }}-load-more-wrap" class="{{ ($resolvedTotalUsers > $users->count()) ? '' : 'hidden' }} pt-2 text-center">
+                    <button
+                        type="button"
+                        id="{{ $instanceId }}-load-more"
+                        onclick="window['{{ $instanceId }}'].loadMore()"
+                        class="px-3.5 py-2 rounded-lg text-xs font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-300 transition min-h-[40px] cursor-pointer"
+                    >
+                        Muat Pegawai Lainnya...
+                    </button>
+                </div>
             </div>
 
             <!-- Modal Footer -->
@@ -226,6 +242,8 @@
 <script>
 (function() {
     const instanceId = '{{ $instanceId }}';
+    const candidatesUrl = @json($resolvedCandidatesUrl);
+    const totalActiveUsers = {{ (int) $resolvedTotalUsers }};
     const defaultUser = {
         id: '{{ $defaultUser->id }}',
         name: '{{ addslashes($defaultUser->name) }}',
@@ -235,6 +253,100 @@
 
     let activeTab = 'invited';
     let invitedUserIds = new Set(@json(array_map('strval', $normalizedInvitedIds)));
+    const renderedIds = new Set();
+    document.querySelectorAll('.' + instanceId + '-item').forEach(el => {
+        const id = el.getAttribute('data-id');
+        if (id) renderedIds.add(String(id));
+    });
+
+    let currentQuery = '';
+    let currentPage = 1;
+    let hasMore = totalActiveUsers > renderedIds.size;
+    let isFetching = false;
+    let searchTimer = null;
+    let fetchAc = null;
+
+    function buildCandidateRow(u) {
+        const row = document.createElement('div');
+        row.className = instanceId + '-item p-2.5 rounded-xl border border-slate-200 hover:border-slate-400 bg-white hover:bg-slate-50 transition cursor-pointer flex items-center justify-between gap-2 min-h-[44px]';
+        row.setAttribute('data-id', String(u.id));
+        row.setAttribute('data-name', String(u.name || '').toLowerCase());
+        row.setAttribute('data-nip', String(u.nip || ''));
+        row.setAttribute('data-unit', (String(u.unit_name || '') + ' ' + String(u.unit_code || '')).toLowerCase());
+
+        const left = document.createElement('div');
+        left.className = 'flex items-center gap-2.5 min-w-0';
+
+        const avatar = document.createElement('div');
+        avatar.className = 'w-8 h-8 rounded-lg bg-slate-100 text-slate-900 border border-slate-200 font-bold flex items-center justify-center text-xs shrink-0';
+        avatar.textContent = u.initials || String(u.name || 'AS').substring(0, 2).toUpperCase();
+
+        const metaWrap = document.createElement('div');
+        metaWrap.className = 'min-w-0';
+
+        const titleRow = document.createElement('div');
+        titleRow.className = 'font-bold text-xs text-slate-900 truncate flex items-center gap-1.5';
+
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = u.name || '';
+        const tagSpan = document.createElement('span');
+        tagSpan.className = instanceId + '-invited-tag hidden px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-blue-50 text-blue-900 border border-blue-200';
+        tagSpan.textContent = 'Peserta';
+        titleRow.appendChild(nameSpan);
+        titleRow.appendChild(tagSpan);
+
+        const subDiv = document.createElement('div');
+        subDiv.className = 'text-[10px] text-slate-500 font-mono truncate';
+        subDiv.textContent = 'NIP: ' + (u.nip || '-') + ' \u2022 ' + (u.unit_name || 'Pusat') + ' (' + (u.unit_code || 'Umum') + ')';
+
+        metaWrap.appendChild(titleRow);
+        metaWrap.appendChild(subDiv);
+        left.appendChild(avatar);
+        left.appendChild(metaWrap);
+
+        const pickBtn = document.createElement('button');
+        pickBtn.type = 'button';
+        pickBtn.className = 'px-2.5 py-1 rounded-md text-[11px] font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-300 shrink-0';
+        pickBtn.textContent = 'Pilih';
+
+        row.appendChild(left);
+        row.appendChild(pickBtn);
+        row.addEventListener('click', function() {
+            controller.selectUser(String(u.id), u.name || '', u.nip || '-', u.unit_code || 'Pusat', false);
+        });
+
+        return row;
+    }
+
+    function appendCandidates(items) {
+        const listEl = document.getElementById(instanceId + '-list');
+        const emptyEl = document.getElementById(instanceId + '-empty');
+        if (!listEl || !Array.isArray(items)) return;
+
+        items.forEach(u => {
+            const idStr = String(u.id);
+            if (renderedIds.has(idStr)) return;
+            renderedIds.add(idStr);
+            const row = buildCandidateRow(u);
+            if (emptyEl && emptyEl.parentNode === listEl) {
+                listEl.insertBefore(row, emptyEl);
+            } else {
+                listEl.appendChild(row);
+            }
+        });
+    }
+
+    function updateLoadMoreVisibility() {
+        const wrap = document.getElementById(instanceId + '-load-more-wrap');
+        const btn = document.getElementById(instanceId + '-load-more');
+        if (!wrap) return;
+        const show = activeTab === 'all' && hasMore;
+        wrap.classList.toggle('hidden', !show);
+        if (btn) {
+            btn.disabled = isFetching;
+            btn.textContent = isFetching ? 'Memuat...' : 'Muat Pegawai Lainnya...';
+        }
+    }
 
     const controller = {
         openModal() {
@@ -247,7 +359,9 @@
                 }, 50);
             }
             this.refreshInvitedFromForm();
-            this.filterList();
+            this.hydrateMissingInvited();
+            this.applyLocalFilter();
+            updateLoadMoreVisibility();
         },
 
         closeModal() {
@@ -268,7 +382,8 @@
                 tabInvited.className = 'flex-1 py-1.5 px-3 rounded-lg text-center transition cursor-pointer min-h-[36px] flex items-center justify-center gap-1.5 text-slate-600 hover:text-slate-900 font-bold';
             }
 
-            this.filterList();
+            this.applyLocalFilter();
+            updateLoadMoreVisibility();
         },
 
         refreshInvitedFromForm() {
@@ -276,8 +391,11 @@
             const checkedBoxes = document.querySelectorAll('.asn-checkbox:checked');
             if (checkedBoxes.length > 0) {
                 invitedUserIds = new Set(Array.from(checkedBoxes).map(cb => String(cb.value)));
-            } else if (invitedUserIds.size === 0) {
-                // If in all_units or no ASN checked yet, default to all
+            } else if (document.querySelectorAll('.asn-checkbox').length > 0) {
+                invitedUserIds = new Set();
+            }
+
+            if (invitedUserIds.size === 0) {
                 const targetRadio = document.querySelector('input[name="target_type"]:checked');
                 if (targetRadio && targetRadio.value !== 'selected_users') {
                     activeTab = 'all';
@@ -305,7 +423,78 @@
             });
         },
 
+        async hydrateMissingInvited() {
+            const missingIds = Array.from(invitedUserIds).filter(id => !renderedIds.has(String(id)));
+            if (missingIds.length === 0 || !candidatesUrl) return;
+            try {
+                const params = new URLSearchParams();
+                params.set('only_selected', '1');
+                missingIds.forEach(id => params.append('selected_ids[]', id));
+                const res = await fetch(candidatesUrl + '?' + params.toString(), {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (!res.ok) return;
+                const payload = await res.json();
+                appendCandidates(payload.data || []);
+                this.refreshInvitedFromForm();
+                this.applyLocalFilter();
+            } catch (_) {
+                // Ignore transient fetch errors
+            }
+        },
+
+        async fetchCandidates(query, page, isLoadMore) {
+            if (!candidatesUrl) return;
+            if (fetchAc) fetchAc.abort();
+            fetchAc = new AbortController();
+            isFetching = true;
+            updateLoadMoreVisibility();
+
+            try {
+                const params = new URLSearchParams();
+                if (query) params.set('search', query);
+                params.set('page', String(page));
+                params.set('per_page', '25');
+                const res = await fetch(candidatesUrl + '?' + params.toString(), {
+                    signal: fetchAc.signal,
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (!res.ok) return;
+                const payload = await res.json();
+                appendCandidates(payload.data || []);
+                currentPage = payload.meta?.current_page || page;
+                hasMore = Boolean(payload.meta?.has_more);
+                this.refreshInvitedFromForm();
+                this.applyLocalFilter();
+            } catch (err) {
+                if (err && err.name === 'AbortError') return;
+            } finally {
+                isFetching = false;
+                updateLoadMoreVisibility();
+            }
+        },
+
+        loadMore() {
+            if (isFetching || !hasMore) return;
+            void this.fetchCandidates(currentQuery, currentPage + 1, true);
+        },
+
         filterList() {
+            const searchInput = document.getElementById(instanceId + '-search');
+            const q = searchInput ? searchInput.value.toLowerCase().trim() : '';
+            this.applyLocalFilter();
+
+            if (q !== currentQuery) {
+                currentQuery = q;
+                currentPage = 1;
+                if (searchTimer) clearTimeout(searchTimer);
+                searchTimer = setTimeout(() => {
+                    void this.fetchCandidates(currentQuery, 1, false);
+                }, 220);
+            }
+        },
+
+        applyLocalFilter() {
             const searchInput = document.getElementById(instanceId + '-search');
             const q = searchInput ? searchInput.value.toLowerCase().trim() : '';
             const items = document.querySelectorAll('.' + instanceId + '-item');
@@ -330,7 +519,7 @@
             });
 
             if (emptyEl) {
-                if (visibleCount === 0) {
+                if (visibleCount === 0 && !isFetching) {
                     emptyEl.classList.remove('hidden');
                 } else {
                     emptyEl.classList.add('hidden');
@@ -396,11 +585,18 @@
 
     window['{{ $instanceId }}'] = controller;
 
-    // Listen to Escape key to close modal
-    document.addEventListener('keydown', function(e) {
+    // Listen to Escape key to close modal (registered with SPA cleanup)
+    const onEscapeKeydown = function(e) {
         if (e.key === 'Escape') {
             controller.closeModal();
         }
+    };
+    document.addEventListener('keydown', onEscapeKeydown);
+    window.__siperapatCleanup = window.__siperapatCleanup || [];
+    window.__siperapatCleanup.push(() => {
+        document.removeEventListener('keydown', onEscapeKeydown);
+        if (searchTimer) clearTimeout(searchTimer);
+        if (fetchAc) fetchAc.abort();
     });
 
     // Close on outside click
@@ -414,6 +610,7 @@
     // Initialize counts on page load
     setTimeout(() => {
         controller.refreshInvitedFromForm();
-    }, 100);
+        updateLoadMoreVisibility();
+    }, 50);
 })();
 </script>

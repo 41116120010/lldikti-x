@@ -57,15 +57,23 @@ class SyncAgendaStatus extends Command
 
         foreach ($expiredAgendas as $agenda) {
             DB::transaction(function () use ($agenda, &$closedCount) {
-                $effectiveEnd = $agenda->effective_end_at;
+                $locked = Agenda::whereKey($agenda->id)->lockForUpdate()->first();
+                if (! $locked || $locked->status !== 'ongoing') {
+                    return;
+                }
 
-                $agenda->update(['status' => 'completed']);
+                $effectiveEnd = $locked->effective_end_at;
+                if (! now()->gt($effectiveEnd)) {
+                    return;
+                }
+
+                $locked->update(['status' => 'completed']);
 
                 ActivityLogger::log(
                     type: 'AUTO_CLOSE_AGENDA',
-                    description: "Status agenda rapat '{$agenda->judul_rapat}' otomatis ditutup (Selesai) oleh sistem scheduler karena telah melewati batas akhir pelaksanaan.",
+                    description: "Status agenda rapat '{$locked->judul_rapat}' otomatis ditutup (Selesai) oleh sistem scheduler karena telah melewati batas akhir pelaksanaan.",
                     targetModel: Agenda::class,
-                    targetId: $agenda->id,
+                    targetId: $locked->id,
                     properties: [
                         'previous_status' => 'ongoing',
                         'new_status' => 'completed',

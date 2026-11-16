@@ -1026,6 +1026,88 @@ class AgendaManagementTest extends TestCase
         // Request completes without throwing unhandled HTTP 500 exception
         $this->assertFalse($validator->fails());
     }
+
+    public function test_admin_can_fetch_paginated_candidates_and_staff_is_forbidden(): void
+    {
+        $superadmin = User::where('role', 'administrator')->firstOrFail();
+        $staff = User::where('role', 'staff')->where('is_active', true)->firstOrFail();
+
+        $staffResponse = $this->actingAs($staff)->getJson('/admin/agendas/candidates?search=a');
+        $staffResponse->assertStatus(403);
+
+        $adminResponse = $this->actingAs($superadmin)->getJson('/admin/agendas/candidates?search=' . urlencode($superadmin->name) . '&per_page=100');
+        $adminResponse->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonStructure([
+                'success',
+                'data' => [
+                    '*' => ['id', 'name', 'nip', 'unit_id', 'unit_code', 'unit_name', 'initials'],
+                ],
+                'meta' => ['current_page', 'last_page', 'per_page', 'total', 'has_more'],
+            ]);
+
+        $this->assertLessThanOrEqual(25, (int) $adminResponse->json('meta.per_page'));
+        $ids = collect($adminResponse->json('data'))->pluck('id')->all();
+        $this->assertContains($superadmin->id, $ids);
+    }
+
+    public function test_unit_id_filter_includes_all_units_and_selected_users_from_target_unit(): void
+    {
+        $superadmin = User::where('role', 'administrator')->firstOrFail();
+        $unitA = Unit::firstOrFail();
+        $unitB = Unit::where('id', '!=', $unitA->id)->firstOrFail();
+        $staffInUnitA = User::where('unit_id', $unitA->id)->where('is_active', true)->firstOrFail();
+
+        $plenoAgenda = Agenda::create([
+            'created_by' => $superadmin->id,
+            'judul_rapat' => 'Rapat Pleno Filter Unit ' . uniqid(),
+            'slug' => 'rapat-pleno-filter-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Aula Pleno',
+            'waktu_mulai' => now()->addDays(5),
+            'waktu_selesai' => now()->addDays(5)->addHours(2),
+            'target_type' => 'all_units',
+            'is_all_units' => true,
+            'status' => 'scheduled',
+        ]);
+
+        $selectedUserAgenda = Agenda::create([
+            'created_by' => $superadmin->id,
+            'judul_rapat' => 'Rapat Undangan ASN Unit A ' . uniqid(),
+            'slug' => 'rapat-asn-unita-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'online',
+            'link_meeting' => 'https://zoom.us/j/9988776655',
+            'waktu_mulai' => now()->addDays(6),
+            'waktu_selesai' => now()->addDays(6)->addHours(2),
+            'target_type' => 'selected_users',
+            'is_all_units' => false,
+            'status' => 'scheduled',
+        ]);
+        $selectedUserAgenda->invitedUsers()->sync([$staffInUnitA->id]);
+
+        $otherUnitAgenda = Agenda::create([
+            'created_by' => $superadmin->id,
+            'judul_rapat' => 'Rapat Internal Unit B ' . uniqid(),
+            'slug' => 'rapat-internal-unitb-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Unit B',
+            'waktu_mulai' => now()->addDays(7),
+            'waktu_selesai' => now()->addDays(7)->addHours(2),
+            'target_type' => 'selected_units',
+            'is_all_units' => false,
+            'status' => 'scheduled',
+        ]);
+        $otherUnitAgenda->units()->sync([$unitB->id]);
+
+        $response = $this->actingAs($superadmin)->get("/admin/agendas?unit_id={$unitA->id}");
+        $response->assertOk();
+        $response->assertSee($plenoAgenda->judul_rapat);
+        $response->assertSee($selectedUserAgenda->judul_rapat);
+        $response->assertDontSee($otherUnitAgenda->judul_rapat);
+    }
 }
 
 

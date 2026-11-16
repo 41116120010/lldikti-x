@@ -108,6 +108,7 @@ class AttendanceCheckInTest extends TestCase
 
     public function test_user_can_successfully_check_in_with_canvas_base64_media(): void
     {
+        Storage::fake('local');
         Storage::fake('public');
         $staff = User::where('role', 'staff')->firstOrFail();
         
@@ -136,9 +137,11 @@ class AttendanceCheckInTest extends TestCase
         $attendance = Attendance::where('agenda_id', $agenda->id)->where('user_id', $staff->id)->first();
         $this->assertNotNull($attendance);
 
-        // Verify files stored in storage
-        Storage::disk('public')->assertExists($attendance->selfie_path);
-        Storage::disk('public')->assertExists($attendance->signature_path);
+        // Verify biometric files stored in private local disk, never public disk
+        Storage::disk('local')->assertExists($attendance->selfie_path);
+        Storage::disk('local')->assertExists($attendance->signature_path);
+        Storage::disk('public')->assertMissing($attendance->selfie_path);
+        Storage::disk('public')->assertMissing($attendance->signature_path);
 
         // Verify Audit Log
         $this->assertDatabaseHas('activity_logs', [
@@ -147,6 +150,13 @@ class AttendanceCheckInTest extends TestCase
         ]);
 
         $response->assertRedirect("/agendas/{$agenda->id}/presensi/{$attendance->id}/sukses");
+
+        // Receipt page must reference protected streaming routes, not public /storage URLs
+        $receipt = $this->actingAs($staff)->get(route('attendances.success', [$agenda, $attendance]));
+        $receipt->assertStatus(200);
+        $receipt->assertSee(route('attendances.selfie', $attendance));
+        $receipt->assertSee(route('attendances.signature', $attendance));
+        $receipt->assertDontSee('/storage/attendances/');
     }
 
     public function test_anti_double_checkin_prevention(): void
@@ -406,6 +416,76 @@ class AttendanceCheckInTest extends TestCase
         // Cleanup created test entities to preserve pristine state
         $attendance->delete();
         $agenda->delete();
+    }
+
+    public function test_web_biometric_streaming_supports_local_and_legacy_public_fallback_with_policy(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+
+        $staff = User::where('role', 'staff')->firstOrFail();
+        $otherStaff = User::where('role', 'staff')->where('id', '!=', $staff->id)->firstOrFail();
+        $superadmin = User::where('role', 'administrator')->firstOrFail();
+
+        $agenda = Agenda::create([
+            'created_by' => $superadmin->id,
+            'judul_rapat' => 'Rapat Streaming Media Test ' . uniqid(),
+            'slug' => 'rapat-stream-media-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang 1',
+            'waktu_mulai' => now()->subMinutes(10),
+            'waktu_selesai' => now()->addHours(2),
+            'is_all_units' => true,
+            'status' => 'ongoing',
+        ]);
+
+        // 1. Primary private 'local' disk files
+        $localSelfie = "attendances/{$agenda->id}/selfies/local_web_selfie.jpg";
+        $localSig = "attendances/{$agenda->id}/signatures/local_web_sig.png";
+        Storage::disk('local')->put($localSelfie, 'local-web-selfie-bytes');
+        Storage::disk('local')->put($localSig, 'local-web-sig-bytes');
+
+        $attendance = Attendance::create([
+            'agenda_id' => $agenda->id,
+            'user_id' => $staff->id,
+            'signed_at' => now(),
+            'selfie_path' => $localSelfie,
+            'signature_path' => $localSig,
+        ]);
+
+        $this->actingAs($staff)
+            ->get(route('attendances.selfie', $attendance))
+            ->assertOk();
+        $this->assertEquals('local-web-selfie-bytes', $this->actingAs($staff)->get(route('attendances.selfie', $attendance))->streamedContent());
+        $this->assertEquals('local-web-sig-bytes', $this->actingAs($superadmin)->get(route('attendances.signature', $attendance))->streamedContent());
+
+        // Unauthorized unrelated staff must get 403
+        $this->actingAs($otherStaff)
+            ->get(route('attendances.selfie', $attendance))
+            ->assertStatus(403);
+        $this->actingAs($otherStaff)
+            ->get(route('attendances.signature', $attendance))
+            ->assertStatus(403);
+
+        // 2. Legacy 'public' disk fallback for older attendance rows
+        $legacySelfie = "attendances/{$agenda->id}/selfies/legacy_selfie.jpg";
+        $legacySig = "attendances/{$agenda->id}/signatures/legacy_sig.png";
+        Storage::disk('public')->put($legacySelfie, 'legacy-public-selfie-bytes');
+        Storage::disk('public')->put($legacySig, 'legacy-public-sig-bytes');
+
+        $attendance->update([
+            'selfie_path' => $legacySelfie,
+            'signature_path' => $legacySig,
+        ]);
+
+        $legacySelfieRes = $this->actingAs($staff)->get(route('attendances.selfie', $attendance));
+        $legacySelfieRes->assertOk();
+        $this->assertEquals('legacy-public-selfie-bytes', $legacySelfieRes->streamedContent());
+
+        $legacySigRes = $this->actingAs($staff)->get(route('attendances.signature', $attendance));
+        $legacySigRes->assertOk();
+        $this->assertEquals('legacy-public-sig-bytes', $legacySigRes->streamedContent());
     }
 }
 

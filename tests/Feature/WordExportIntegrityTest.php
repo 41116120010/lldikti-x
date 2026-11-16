@@ -186,7 +186,13 @@ class WordExportIntegrityTest extends TestCase
         $this->app->instance(DocxExportService::class, $mock);
 
         $response = $this->actingAs($superadmin)->get("/admin/reports/{$agenda->id}/export/word");
-        $response->assertRedirect(route('admin.agendas.show', $agenda));
+        $response->assertRedirect(route('admin.reports.show', $agenda));
         $response->assertSessionHas('error');
+
+        $agendaRefererResponse = $this->actingAs($superadmin)
+            ->from(route('admin.agendas.show', $agenda))
+            ->get("/admin/reports/{$agenda->id}/export/word");
+        $agendaRefererResponse->assertRedirect(route('admin.agendas.show', $agenda));
+        $agendaRefererResponse->assertSessionHas('error');
     }
 }

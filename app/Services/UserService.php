@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 
 class UserService
 {
@@ -76,6 +77,10 @@ class UserService
                 $user->tokens()->delete();
             }
 
+            if ($deactivated) {
+                $this->revokeWebSessions($user);
+            }
+
             ActivityLogger::log(
                 type: 'UPDATE_USER',
                 description: "Data pengguna '{$user->name}' (NIP: {$user->nip}) diperbarui.",
@@ -141,9 +146,12 @@ class UserService
             $lockedUser->is_active = !$lockedUser->is_active;
             $lockedUser->save();
 
-            // Revoke tokens if deactivated
-            if (!$lockedUser->is_active && method_exists($lockedUser, 'tokens')) {
-                $lockedUser->tokens()->delete();
+            // Revoke tokens and active web sessions if deactivated
+            if (!$lockedUser->is_active) {
+                if (method_exists($lockedUser, 'tokens')) {
+                    $lockedUser->tokens()->delete();
+                }
+                $this->revokeWebSessions($lockedUser);
             }
 
             $label = $lockedUser->is_active ? 'diaktifkan' : 'dinonaktifkan';
@@ -201,5 +209,17 @@ class UserService
         });
 
         return $user;
+    }
+
+    /**
+     * Terminate active database-backed web sessions belonging to a deactivated user.
+     */
+    private function revokeWebSessions(User $user): void
+    {
+        $sessionTable = (string) config('session.table', 'sessions');
+
+        if (Schema::hasTable($sessionTable)) {
+            DB::table($sessionTable)->where('user_id', $user->id)->delete();
+        }
     }
 }

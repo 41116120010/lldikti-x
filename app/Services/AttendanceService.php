@@ -133,7 +133,7 @@ class AttendanceService
      * @param  \Illuminate\Http\UploadedFile|null  $file Direct upload fallback.
      * @param  string  $directory Disk-relative directory.
      * @param  string  $prefix    Human-readable filename prefix, e.g. `selfie_7`.
-     * @return string Path relative to the public disk.
+     * @return string Path relative to the private local disk.
      */
     public function saveImageFile(?string $dataUri, ?UploadedFile $file, string $directory, string $prefix): string
     {
@@ -147,7 +147,7 @@ class AttendanceService
             }
 
             $filename = "{$prefix}_" . Str::random(16) . '.' . $ext;
-            return $file->storeAs($directory, $filename, 'public');
+            return $file->storeAs($directory, $filename, 'local');
         }
 
         // 2. If uploaded as Base64 Data URI from Canvas
@@ -170,7 +170,7 @@ class AttendanceService
             $filename = "{$prefix}_" . Str::random(16) . ".{$extension}";
             $path = "{$directory}/{$filename}";
 
-            Storage::disk('public')->put($path, $decoded);
+            Storage::disk('local')->put($path, $decoded);
 
             return $path;
         }
@@ -186,8 +186,8 @@ class AttendanceService
     protected function cleanupFiles(array $paths): void
     {
         foreach ($paths as $path) {
-            if ($path && Storage::disk('public')->exists($path)) {
-                Storage::disk('public')->delete($path);
+            if ($path && Storage::disk('local')->exists($path)) {
+                Storage::disk('local')->delete($path);
             }
         }
     }

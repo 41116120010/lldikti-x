@@ -12,6 +12,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserController;
+use App\Http\Middleware\EnsureAccountIsActive;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -47,7 +48,7 @@ Route::middleware('guest')->group(function () {
 });
 
 // Authenticated Routes
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', EnsureAccountIsActive::class])->group(function () {
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
@@ -72,6 +73,7 @@ Route::middleware('auth')->group(function () {
     Route::prefix('admin/agendas')->name('admin.agendas.')->group(function () {
         Route::get('/', [AgendaController::class, 'index'])->name('index');
         Route::get('/create', [AgendaController::class, 'create'])->name('create');
+        Route::get('/candidates', [AgendaController::class, 'candidates'])->name('candidates');
         Route::post('/', [AgendaController::class, 'store'])->name('store');
         Route::get('/{agenda}', [AgendaController::class, 'show'])->name('show');
         Route::get('/{agenda}/edit', [AgendaController::class, 'edit'])->name('edit');

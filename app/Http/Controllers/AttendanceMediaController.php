@@ -16,16 +16,7 @@ class AttendanceMediaController extends Controller
     {
         Gate::authorize('view', $attendance);
 
-        if (!$attendance->selfie_path || !Storage::disk('public')->exists($attendance->selfie_path)) {
-            abort(404, 'Berkas foto selfie tidak ditemukan.');
-        }
-
-        return Storage::disk('public')->response(
-            $attendance->selfie_path,
-            headers: [
-                'Cache-Control' => 'private, no-cache, no-store, must-revalidate',
-            ]
-        );
+        return $this->streamProtectedMedia($attendance->selfie_path, 'Berkas foto selfie tidak ditemukan.');
     }
 
     /**
@@ -35,15 +26,29 @@ class AttendanceMediaController extends Controller
     {
         Gate::authorize('view', $attendance);
 
-        if (!$attendance->signature_path || !Storage::disk('public')->exists($attendance->signature_path)) {
-            abort(404, 'Berkas tanda tangan digital tidak ditemukan.');
+        return $this->streamProtectedMedia($attendance->signature_path, 'Berkas tanda tangan digital tidak ditemukan.');
+    }
+
+    /**
+     * Stream protected attendance biometric file from private local disk with legacy public fallback.
+     */
+    private function streamProtectedMedia(?string $path, string $notFoundMessage): Response
+    {
+        if (! $path) {
+            abort(404, $notFoundMessage);
         }
 
-        return Storage::disk('public')->response(
-            $attendance->signature_path,
-            headers: [
-                'Cache-Control' => 'private, no-cache, no-store, must-revalidate',
-            ]
-        );
+        foreach (['local', 'public'] as $disk) {
+            if (Storage::disk($disk)->exists($path)) {
+                return Storage::disk($disk)->response(
+                    $path,
+                    headers: [
+                        'Cache-Control' => 'private, no-cache, no-store, must-revalidate',
+                    ]
+                );
+            }
+        }
+
+        abort(404, $notFoundMessage);
     }
 }

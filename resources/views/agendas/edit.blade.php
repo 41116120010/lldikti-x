@@ -293,9 +293,10 @@
                     <div id="asn-list-container" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
                         @foreach($users as $u)
                             <label class="asn-item flex items-center gap-2.5 p-2 bg-white border border-slate-300 rounded-lg cursor-pointer hover:bg-slate-100 text-xs font-medium min-h-[44px]"
+                                data-id="{{ $u->id }}"
                                 data-name="{{ strtolower($u->name) }}"
                                 data-nip="{{ $u->nip ?? '' }}"
-                                data-unit="{{ strtolower($u->unit?->nama_unit ?? '') }}"
+                                data-unit="{{ strtolower($u->unit?->nama_unit ?? '') }} {{ strtolower($u->unit?->kode_unit ?? '') }}"
                             >
                                 <input 
                                     type="checkbox" 
@@ -316,6 +317,11 @@
                     </div>
                     <div id="asn-empty-state" class="hidden text-center py-4 text-xs text-slate-500 font-medium">
                         Tidak ditemukan ASN yang cocok dengan kata kunci pencarian.
+                    </div>
+                    <div id="asn-load-more-wrap" class="{{ (($totalActiveUsers ?? $users->count()) > $users->count()) ? '' : 'hidden' }} text-center pt-1">
+                        <button type="button" id="asn-load-more-btn" onclick="loadMoreAsnCandidates()" class="px-3.5 py-2 rounded-lg text-xs font-bold text-slate-800 bg-white hover:bg-slate-100 border border-slate-300 transition min-h-[40px] cursor-pointer">
+                            Muat Pegawai Lainnya...
+                        </button>
                     </div>
                     @error('user_ids')
                         <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>
@@ -340,6 +346,7 @@
                         :selectedId="old('pimpinan_id', $agenda->pimpinan_id)"
                         :defaultUser="$agenda->creator ?? $currentUser"
                         :users="$users"
+                        :totalUsers="$totalActiveUsers ?? null"
                         :invitedUserIds="$selectedUserIds"
                     />
 
@@ -352,6 +359,7 @@
                         :selectedId="old('notulis_id', $agenda->notulis_id)"
                         :defaultUser="$agenda->creator ?? $currentUser"
                         :users="$users"
+                        :totalUsers="$totalActiveUsers ?? null"
                         :invitedUserIds="$selectedUserIds"
                     />
                 </div>
@@ -777,7 +785,105 @@ function updateAsnCount() {
     notifyRoleSelectors();
 }
 
-function filterAsnList(query) {
+var asnCandidatesUrl = @json(route('admin.agendas.candidates'));
+var asnTotalActiveCount = {{ (int) ($totalActiveUsers ?? $users->count()) }};
+var asnRenderedIds = new Set(Array.from(document.querySelectorAll('.asn-item')).map(el => String(el.getAttribute('data-id') || el.querySelector('.asn-checkbox')?.value || '')));
+var asnSearchQuery = '';
+var asnCurrentPage = 1;
+var asnHasMore = asnTotalActiveCount > asnRenderedIds.size;
+var asnIsFetching = false;
+var asnSearchTimer = null;
+var asnFetchAc = null;
+
+function createAsnCheckboxItem(u) {
+    const label = document.createElement('label');
+    label.className = 'asn-item flex items-center gap-2.5 p-2 bg-white border border-slate-300 rounded-lg cursor-pointer hover:bg-slate-100 text-xs font-medium min-h-[44px]';
+    label.setAttribute('data-id', String(u.id));
+    label.setAttribute('data-name', String(u.name || '').toLowerCase());
+    label.setAttribute('data-nip', String(u.nip || ''));
+    label.setAttribute('data-unit', (String(u.unit_name || '') + ' ' + String(u.unit_code || '')).toLowerCase());
+
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.name = 'user_ids[]';
+    input.value = String(u.id);
+    input.className = 'w-4 h-4 accent-slate-950 rounded asn-checkbox shrink-0';
+    input.addEventListener('change', updateAsnCount);
+
+    const meta = document.createElement('div');
+    meta.className = 'min-w-0 flex-1';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'font-bold text-slate-900 truncate';
+    nameEl.textContent = u.name || '';
+
+    const subEl = document.createElement('div');
+    subEl.className = 'text-[10px] text-slate-500 font-mono truncate';
+    subEl.textContent = 'NIP: ' + (u.nip || '-') + ' \u2022 ' + (u.unit_code || 'Umum');
+
+    meta.appendChild(nameEl);
+    meta.appendChild(subEl);
+    label.appendChild(input);
+    label.appendChild(meta);
+    return label;
+}
+
+function updateAsnLoadMoreState() {
+    const wrap = document.getElementById('asn-load-more-wrap');
+    const btn = document.getElementById('asn-load-more-btn');
+    if (!wrap) return;
+    wrap.classList.toggle('hidden', !asnHasMore);
+    if (btn) {
+        btn.disabled = asnIsFetching;
+        btn.textContent = asnIsFetching ? 'Memuat...' : 'Muat Pegawai Lainnya...';
+    }
+}
+
+async function fetchAsnCandidates(query, page) {
+    if (!asnCandidatesUrl) return;
+    if (asnFetchAc) asnFetchAc.abort();
+    asnFetchAc = new AbortController();
+    asnIsFetching = true;
+    updateAsnLoadMoreState();
+
+    try {
+        const params = new URLSearchParams();
+        if (query) params.set('search', query);
+        params.set('page', String(page));
+        params.set('per_page', '25');
+
+        const res = await fetch(asnCandidatesUrl + '?' + params.toString(), {
+            signal: asnFetchAc.signal,
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        if (!res.ok) return;
+        const payload = await res.json();
+        const container = document.getElementById('asn-list-container');
+        if (container && Array.isArray(payload.data)) {
+            payload.data.forEach(u => {
+                const idStr = String(u.id);
+                if (asnRenderedIds.has(idStr)) return;
+                asnRenderedIds.add(idStr);
+                container.appendChild(createAsnCheckboxItem(u));
+            });
+        }
+        asnCurrentPage = payload.meta?.current_page || page;
+        asnHasMore = Boolean(payload.meta?.has_more);
+        applyLocalAsnFilter(query);
+    } catch (err) {
+        if (err && err.name === 'AbortError') return;
+    } finally {
+        asnIsFetching = false;
+        updateAsnLoadMoreState();
+    }
+}
+
+function loadMoreAsnCandidates() {
+    if (asnIsFetching || !asnHasMore) return;
+    void fetchAsnCandidates(asnSearchQuery, asnCurrentPage + 1);
+}
+
+function applyLocalAsnFilter(query) {
     const q = (query || '').toLowerCase().trim();
     const items = document.querySelectorAll('.asn-item');
     const emptyState = document.getElementById('asn-empty-state');
@@ -797,11 +903,25 @@ function filterAsnList(query) {
     });
 
     if (emptyState) {
-        if (visibleCount === 0) {
+        if (visibleCount === 0 && !asnIsFetching) {
             emptyState.classList.remove('hidden');
         } else {
             emptyState.classList.add('hidden');
         }
+    }
+}
+
+function filterAsnList(query) {
+    const q = (query || '').toLowerCase().trim();
+    applyLocalAsnFilter(q);
+
+    if (q !== asnSearchQuery) {
+        asnSearchQuery = q;
+        asnCurrentPage = 1;
+        if (asnSearchTimer) clearTimeout(asnSearchTimer);
+        asnSearchTimer = setTimeout(() => {
+            void fetchAsnCandidates(asnSearchQuery, 1);
+        }, 220);
     }
 }
 
@@ -912,6 +1032,8 @@ function initAgendaEditForm() {
     }
     updateAsnCount();
 
+    updateAsnLoadMoreState();
+
     const suratEdaranInput = document.getElementById('surat_edaran');
     if (suratEdaranInput && !suratEdaranInput.dataset.previewBound) {
         suratEdaranInput.dataset.previewBound = 'true';
@@ -925,6 +1047,12 @@ if (document.readyState !== 'loading') {
     document.addEventListener('DOMContentLoaded', initAgendaEditForm);
 }
 window.addEventListener('page:loaded', initAgendaEditForm);
+window.__siperapatCleanup = window.__siperapatCleanup || [];
+window.__siperapatCleanup.push(() => {
+    window.removeEventListener('page:loaded', initAgendaEditForm);
+    if (asnSearchTimer) clearTimeout(asnSearchTimer);
+    if (asnFetchAc) asnFetchAc.abort();
+});
 </script>
 
 @if($agenda->surat_edaran_path)

@@ -314,7 +314,7 @@
                                 <div class="text-[11px] text-slate-700 flex flex-wrap items-center gap-2 mt-0.5 font-medium">
                                     <span class="inline-flex items-center gap-1">
                                         <svg class="text-slate-600 shrink-0" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-                                        <span>{{ $agenda->waktu_mulai->translatedFormat('d M Y, H:i') }} WIB</span>
+                                        <span>{{ $agenda->waktu_mulai->translatedFormat('d M Y, H:i') }} {{ $agenda->waktu_selesai ? '- ' . $agenda->waktu_selesai->format('H:i') . ' WIB' : 'WIB s.d. Selesai' }}</span>
                                     </span>
                                     <span>&bull;</span>
                                     <span class="uppercase font-mono font-bold">{{ $agenda->tipe_rapat }}</span>
