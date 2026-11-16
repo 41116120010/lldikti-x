@@ -385,6 +385,121 @@ class AgendaApiTest extends TestCase
 
         $streamRes->assertOk();
     }
+
+    public function test_administrator_can_create_agenda_with_until_finished_schedule_via_api(): void
+    {
+        $admin = User::where('role', 'administrator')->first();
+        $this->assertNotNull($admin);
+
+        $startAt = now()->addDays(14)->setTime(9, 0, 0);
+
+        $payload = [
+            'judul_rapat' => 'Rapat Evaluasi Hingga Selesai via API',
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'luring',
+            'lokasi_ruang' => 'Ruang Sidang Utama',
+            'waktu_mulai' => $startAt->format('Y-m-d H:i:s'),
+            'waktu_selesai' => null,
+            'is_all_units' => true,
+        ];
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->postJson('/api/v1/agendas', $payload);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.waktu_selesai', null);
+
+        $this->assertStringContainsString('WIB s.d. Selesai', (string) $response->json('data.rentang_waktu'));
+    }
+
+    public function test_administrator_can_update_agenda_from_fixed_end_time_to_until_finished_via_api(): void
+    {
+        Storage::fake('public');
+
+        $admin = User::where('role', 'administrator')->first();
+        $this->assertNotNull($admin);
+
+        $startAt = now()->addDays(15)->setTime(9, 0, 0);
+        $fixedEndAt = $startAt->copy()->addHours(3);
+
+        $agenda = Agenda::create([
+            'created_by' => $admin->id,
+            'judul_rapat' => 'Rapat Uji Transisi Hingga Selesai',
+            'slug' => 'rapat-uji-transisi-hingga-selesai',
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Rapat Teratai',
+            'waktu_mulai' => $startAt,
+            'waktu_selesai' => $fixedEndAt,
+            'target_type' => 'all_units',
+            'is_all_units' => true,
+            'status' => 'scheduled',
+        ]);
+
+        // 1. Update via JSON PUT setting waktu_selesai => null
+        $jsonResponse = $this->actingAs($admin, 'sanctum')
+            ->putJson("/api/v1/agendas/{$agenda->id}", [
+                'judul_rapat' => $agenda->judul_rapat,
+                'jenis_rapat' => 'koordinasi',
+                'tipe_rapat' => 'offline',
+                'lokasi_ruang' => 'Ruang Rapat Teratai',
+                'waktu_mulai' => $startAt->format('Y-m-d H:i:s'),
+                'waktu_selesai' => null,
+                'is_all_units' => true,
+            ]);
+
+        $jsonResponse->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.waktu_selesai', null);
+
+        $agenda->refresh();
+        $this->assertNull($agenda->waktu_selesai);
+        $this->assertStringContainsString('WIB s.d. Selesai', $agenda->rentang_waktu);
+        $this->assertStringContainsString('WIB s.d. Selesai', (string) $jsonResponse->json('data.rentang_waktu'));
+
+        // 2. Restore fixed end time (+3 hours)
+        $restoreResponse = $this->actingAs($admin, 'sanctum')
+            ->putJson("/api/v1/agendas/{$agenda->id}", [
+                'judul_rapat' => $agenda->judul_rapat,
+                'jenis_rapat' => 'koordinasi',
+                'tipe_rapat' => 'offline',
+                'lokasi_ruang' => 'Ruang Rapat Teratai',
+                'waktu_mulai' => $startAt->format('Y-m-d H:i:s'),
+                'waktu_selesai' => $fixedEndAt->format('Y-m-d H:i:s'),
+                'is_all_units' => true,
+            ]);
+
+        $restoreResponse->assertOk();
+        $agenda->refresh();
+        $this->assertNotNull($agenda->waktu_selesai);
+
+        // 3. Update back to until-finished via multipart POST (_method => PUT) with empty string waktu_selesai
+        $pdf = UploadedFile::fake()->create('edaran.pdf', 100, 'application/pdf');
+        $multipartResponse = $this->actingAs($admin, 'sanctum')
+            ->post("/api/v1/agendas/{$agenda->id}", [
+                '_method' => 'PUT',
+                'judul_rapat' => $agenda->judul_rapat,
+                'jenis_rapat' => 'koordinasi',
+                'tipe_rapat' => 'offline',
+                'lokasi_ruang' => 'Ruang Rapat Teratai',
+                'waktu_mulai' => $startAt->format('Y-m-d H:i:s'),
+                'waktu_selesai' => '',
+                'is_all_units' => '1',
+                'surat_edaran_type' => 'upload',
+                'surat_edaran' => $pdf,
+            ], [
+                'Accept' => 'application/json',
+            ]);
+
+        $multipartResponse->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.waktu_selesai', null);
+
+        $agenda->refresh();
+        $this->assertNull($agenda->waktu_selesai);
+        $this->assertStringContainsString('WIB s.d. Selesai', $agenda->rentang_waktu);
+    }
 }
 
 
