@@ -24,7 +24,12 @@ class UserController extends Controller
     {
         Gate::authorize('create', Agenda::class);
 
-        $query = User::where('is_active', true)->with('unit');
+        $includeInactive = $request->boolean('include_inactive') && ($request->user()?->isAdministrator() ?? false);
+        $query = User::query()->with('unit');
+
+        if (! $includeInactive) {
+            $query->where('is_active', true);
+        }
 
         if ($search = trim((string) $request->query('search', ''))) {
             $query->where(function ($q) use ($search) {

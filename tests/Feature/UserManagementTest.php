@@ -280,7 +280,9 @@ class UserManagementTest extends TestCase
         // Inactive user with an API token must receive 403 and have that current token deleted
         $lingeringToken = $user->createToken('lingering-token')->plainTextToken;
         $apiResponse = $this->withToken($lingeringToken)->getJson('/api/v1/profile');
-        $apiResponse->assertStatus(403)->assertJsonPath('success', false);
+        $apiResponse->assertStatus(403)
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('code', 'ACCOUNT_INACTIVE');
         $this->assertDatabaseMissing('personal_access_tokens', ['tokenable_id' => $user->id]);
 
         // Re-activate, re-seed session + token, and verify deactivation via PUT /admin/users/{id} also revokes both

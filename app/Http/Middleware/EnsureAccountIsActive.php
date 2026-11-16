@@ -30,6 +30,7 @@ class EnsureAccountIsActive
 
                 return response()->json([
                     'success' => false,
+                    'code' => 'ACCOUNT_INACTIVE',
                     'message' => self::INACTIVE_MESSAGE,
                 ], 403);
             }

@@ -532,6 +532,52 @@ class UserAndUnitApiTest extends TestCase
             $this->assertContains($targetUser->id, $returnedIds);
         }
     }
+
+    public function test_administrator_can_include_inactive_users_in_candidates_while_admin_unit_cannot(): void
+    {
+        $administrator = User::where('role', 'administrator')->first();
+        $this->assertNotNull($administrator);
+
+        $unit = Unit::first();
+        $this->assertNotNull($unit);
+
+        $adminUnit = User::where('role', 'staff')->where('is_active', true)->first();
+        $this->assertNotNull($adminUnit);
+        $adminUnit->update([
+            'role' => 'admin',
+            'unit_id' => $unit->id,
+        ]);
+
+        $suffix = substr(md5((string) microtime(true)), 0, 8);
+        $inactiveUser = User::create([
+            'unit_id' => $unit->id,
+            'name' => "Nonaktif Uji {$suffix}",
+            'nip' => '19981231' . str_pad((string) mt_rand(1000000000, 9999999999), 10, '0', STR_PAD_LEFT),
+            'username' => "nonaktif_{$suffix}",
+            'email' => "nonaktif.{$suffix}@lldikti10.test",
+            'password' => bcrypt('SecretPass123!'),
+            'role' => 'staff',
+            'is_active' => false,
+        ]);
+
+        // Default candidates excludes inactive users
+        $defaultRes = $this->actingAs($administrator, 'sanctum')
+            ->getJson('/api/v1/users/candidates');
+        $defaultRes->assertOk();
+        $this->assertNotContains($inactiveUser->id, collect($defaultRes->json('data'))->pluck('id')->all());
+
+        // Administrator with ?include_inactive=1 receives inactive users
+        $adminIncludeRes = $this->actingAs($administrator, 'sanctum')
+            ->getJson('/api/v1/users/candidates?include_inactive=1');
+        $adminIncludeRes->assertOk();
+        $this->assertContains($inactiveUser->id, collect($adminIncludeRes->json('data'))->pluck('id')->all());
+
+        // Admin Unit with ?include_inactive=1 still excludes inactive users
+        $unitAdminIncludeRes = $this->actingAs($adminUnit->fresh(), 'sanctum')
+            ->getJson('/api/v1/users/candidates?include_inactive=1');
+        $unitAdminIncludeRes->assertOk();
+        $this->assertNotContains($inactiveUser->id, collect($unitAdminIncludeRes->json('data'))->pluck('id')->all());
+    }
 }
 
 
