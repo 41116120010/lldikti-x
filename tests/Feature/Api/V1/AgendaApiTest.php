@@ -590,6 +590,147 @@ class AgendaApiTest extends TestCase
         Storage::disk('public')->assertMissing($digitalPath);
         Storage::disk('public')->assertExists($agenda->surat_edaran_path);
     }
+
+    public function test_api_participants_addition_and_allow_schedule_overlap_contract(): void
+    {
+        $admin = User::where('role', 'administrator')->firstOrFail();
+        $units = \App\Models\Unit::where('is_active', true)->orderBy('id')->take(2)->get();
+        $this->assertCount(2, $units);
+        [$unitA, $unitB] = [$units[0], $units[1]];
+
+        $pimpinan = User::create([
+            'name' => 'Pimpinan API ' . uniqid(),
+            'username' => 'pimp_api_' . uniqid(),
+            'nip' => (string) random_int(100000000000000000, 999999999999999999),
+            'email' => 'pimp_api_' . uniqid() . '@lldikti10.test',
+            'password' => bcrypt('Secret123!'),
+            'role' => 'staff',
+            'unit_id' => $unitB->id,
+            'is_active' => true,
+        ]);
+
+        $extraStaff = User::create([
+            'name' => 'Extra ASN API ' . uniqid(),
+            'username' => 'extra_api_' . uniqid(),
+            'nip' => (string) random_int(100000000000000000, 999999999999999999),
+            'email' => 'extra_api_' . uniqid() . '@lldikti10.test',
+            'password' => bcrypt('Secret123!'),
+            'role' => 'staff',
+            'unit_id' => $unitB->id,
+            'is_active' => true,
+        ]);
+
+        $plainStaff = User::create([
+            'name' => 'Plain ASN API ' . uniqid(),
+            'username' => 'plain_api_' . uniqid(),
+            'nip' => (string) random_int(100000000000000000, 999999999999999999),
+            'email' => 'plain_api_' . uniqid() . '@lldikti10.test',
+            'password' => bcrypt('Secret123!'),
+            'role' => 'staff',
+            'unit_id' => $unitA->id,
+            'is_active' => true,
+        ]);
+
+        // 1. Concurrent scheduling via API: soft conflict blocked by default, allowed with flag, same room always 422
+        $day = now()->addDays(14);
+        $this->actingAs($admin, 'sanctum')
+            ->postJson('/api/v1/agendas', [
+                'judul_rapat' => 'Rapat API Utama ' . uniqid(),
+                'jenis_rapat' => 'koordinasi',
+                'tipe_rapat' => 'offline',
+                'lokasi_ruang' => 'Ruang Rapat API 1',
+                'waktu_mulai' => $day->copy()->setTime(9, 0)->format('Y-m-d H:i:s'),
+                'waktu_selesai' => $day->copy()->setTime(11, 0)->format('Y-m-d H:i:s'),
+                'target_type' => 'selected_units',
+                'unit_ids' => [$unitA->id],
+                'pimpinan_id' => $pimpinan->id,
+            ])
+            ->assertCreated();
+
+        $overlapPayload = [
+            'judul_rapat' => 'Rapat API Paralel ' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Rapat API 2',
+            'waktu_mulai' => $day->copy()->setTime(10, 0)->format('Y-m-d H:i:s'),
+            'waktu_selesai' => $day->copy()->setTime(12, 0)->format('Y-m-d H:i:s'),
+            'target_type' => 'selected_units',
+            'unit_ids' => [$unitA->id],
+            'pimpinan_id' => $pimpinan->id,
+        ];
+
+        $this->actingAs($admin, 'sanctum')
+            ->postJson('/api/v1/agendas', $overlapPayload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['pimpinan_id']);
+
+        $this->actingAs($admin, 'sanctum')
+            ->postJson('/api/v1/agendas', array_merge($overlapPayload, ['allow_schedule_overlap' => true]))
+            ->assertCreated();
+
+        $this->actingAs($admin, 'sanctum')
+            ->postJson('/api/v1/agendas', array_merge($overlapPayload, [
+                'lokasi_ruang' => 'Ruang Rapat API 1',
+                'allow_schedule_overlap' => true,
+            ]))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['lokasi_ruang']);
+
+        // 2. Ongoing agenda ad-hoc participants via Pimpinan vs forbidden for plain staff
+        $ongoing = Agenda::create([
+            'created_by' => $admin->id,
+            'pimpinan_id' => $pimpinan->id,
+            'judul_rapat' => 'Rapat API Adhoc ' . uniqid(),
+            'slug' => 'rapat-api-adhoc-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'online',
+            'link_meeting' => 'https://zoom.us/j/777888',
+            'waktu_mulai' => now()->subMinutes(10),
+            'waktu_selesai' => now()->addHours(2),
+            'is_all_units' => false,
+            'status' => 'ongoing',
+        ]);
+        $ongoing->units()->sync([$unitA->id]);
+
+        $this->actingAs($pimpinan, 'sanctum')
+            ->getJson("/api/v1/agendas/{$ongoing->id}")
+            ->assertOk()
+            ->assertJsonPath('data.permissions.can_manage_participants', true);
+
+        $this->actingAs($plainStaff, 'sanctum')
+            ->getJson("/api/v1/agendas/{$ongoing->id}")
+            ->assertOk()
+            ->assertJsonPath('data.permissions.can_manage_participants', false);
+
+        $this->actingAs($plainStaff, 'sanctum')
+            ->getJson("/api/v1/users/candidates?agenda_id={$ongoing->id}")
+            ->assertForbidden();
+
+        $this->actingAs($pimpinan, 'sanctum')
+            ->getJson("/api/v1/users/candidates?agenda_id={$ongoing->id}")
+            ->assertOk();
+
+        $this->actingAs($plainStaff, 'sanctum')
+            ->postJson("/api/v1/agendas/{$ongoing->id}/participants", ['user_ids' => [$extraStaff->id]])
+            ->assertForbidden();
+
+        $addResp = $this->actingAs($pimpinan, 'sanctum')
+            ->postJson("/api/v1/agendas/{$ongoing->id}/participants", [
+                'user_ids' => [$extraStaff->id],
+            ])
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $invitedIds = collect($addResp->json('data.invited_users'))->pluck('id')->all();
+        $this->assertContains($extraStaff->id, $invitedIds);
+        $this->assertTrue($ongoing->fresh()->isUserEligible($extraStaff));
+
+        $unattendedResp = $this->actingAs($pimpinan, 'sanctum')
+            ->getJson("/api/v1/agendas/{$ongoing->id}/attendances?status=unattended&per_page=100")
+            ->assertOk();
+        $unattendedIds = collect($unattendedResp->json('data'))->pluck('user_id')->all();
+        $this->assertContains($extraStaff->id, $unattendedIds);
+    }
 }
 
 

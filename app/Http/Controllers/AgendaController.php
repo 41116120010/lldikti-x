@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Agenda\AddAgendaParticipantsRequest;
 use App\Http\Requests\Agenda\StoreAgendaRequest;
 use App\Http\Requests\Agenda\UpdateAgendaRequest;
 use App\Http\Requests\Agenda\UpdateAgendaStatusRequest;
@@ -109,7 +110,19 @@ class AgendaController extends Controller
      */
     public function candidates(Request $request): JsonResponse
     {
-        Gate::authorize('create', Agenda::class);
+        $user = Auth::user();
+        $agendaId = $request->query('agenda_id');
+        $targetAgenda = $agendaId ? Agenda::find((int) $agendaId) : null;
+
+        $canManageForAgenda = $targetAgenda !== null && Gate::allows('manageParticipants', $targetAgenda);
+        $isActivePimpinan = $user !== null && Agenda::query()
+            ->where('pimpinan_id', $user->id)
+            ->whereIn('status', ['scheduled', 'ongoing'])
+            ->exists();
+
+        if (! Gate::allows('create', Agenda::class) && ! $canManageForAgenda && ! $isActivePimpinan) {
+            Gate::authorize('create', Agenda::class);
+        }
 
         $query = User::query()->where('is_active', true)->with('unit');
 
@@ -514,12 +527,54 @@ class AgendaController extends Controller
         $validated = $request->validated();
 
         try {
-            $statusText = $agendaService->updateStatus($agenda, $validated['status'], Auth::user());
+            $statusText = $agendaService->updateStatus(
+                $agenda,
+                $validated['status'],
+                Auth::user(),
+                (bool) ($validated['allow_schedule_overlap'] ?? false)
+            );
         } catch (\DomainException $e) {
             return back()->with('error', $e->getMessage());
         }
 
         return back()->with('success', "Status agenda rapat berhasil diubah menjadi {$statusText}.");
+    }
+
+    /**
+     * Add ad-hoc ASN participants to an agenda (e.g. during active session).
+     */
+    public function addParticipants(AddAgendaParticipantsRequest $request, Agenda $agenda, AgendaService $agendaService): RedirectResponse|JsonResponse
+    {
+        try {
+            $updated = $agendaService->addParticipants(
+                $agenda,
+                $request->validated('user_ids'),
+                Auth::user()
+            );
+        } catch (\DomainException $e) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                ], 422);
+            }
+
+            return back()->with('error', $e->getMessage());
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Peserta ASN tambahan berhasil ditambahkan ke agenda.',
+                'data' => [
+                    'agenda_id' => $updated->id,
+                    'total_invited' => $updated->total_invited,
+                    'invited_users' => $updated->invitedUsers->map(fn (User $u) => $this->formatCandidatePayload($u))->values(),
+                ],
+            ]);
+        }
+
+        return back()->with('success', 'Peserta ASN tambahan berhasil ditambahkan ke agenda.');
     }
 
     /**

@@ -22,7 +22,19 @@ class UserController extends Controller
      */
     public function candidates(Request $request): JsonResponse
     {
-        Gate::authorize('create', Agenda::class);
+        $currentUser = $request->user();
+        $agendaId = $request->query('agenda_id');
+        $targetAgenda = $agendaId ? Agenda::find((int) $agendaId) : null;
+
+        $canManageForAgenda = $targetAgenda !== null && Gate::allows('manageParticipants', $targetAgenda);
+        $isActivePimpinan = $currentUser !== null && Agenda::query()
+            ->where('pimpinan_id', $currentUser->id)
+            ->whereIn('status', ['scheduled', 'ongoing'])
+            ->exists();
+
+        if (! Gate::allows('create', Agenda::class) && ! $canManageForAgenda && ! $isActivePimpinan) {
+            Gate::authorize('create', Agenda::class);
+        }
 
         $includeInactive = $request->boolean('include_inactive') && ($request->user()?->isAdministrator() ?? false);
         $query = User::query()->with('unit');

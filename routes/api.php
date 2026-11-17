@@ -72,6 +72,7 @@ Route::prefix('v1')->group(function () {
         Route::delete('/agendas/{agenda}', [AgendaController::class, 'destroy'])->name('api.v1.agendas.destroy');
         Route::patch('/agendas/{agenda}/status', [AgendaController::class, 'updateStatus'])->name('api.v1.agendas.status');
         Route::patch('/agendas/{agenda}/roles', [AgendaController::class, 'updateRoles'])->name('api.v1.agendas.roles');
+        Route::post('/agendas/{agenda}/participants', [AgendaController::class, 'addParticipants'])->name('api.v1.agendas.participants.store');
         Route::get('/agendas/{agenda}/notulen', [AgendaController::class, 'notulen'])->name('api.v1.agendas.notulen.show');
         Route::match(['PUT', 'POST'], '/agendas/{agenda}/notulen', [AgendaController::class, 'updateNotulen'])->name('api.v1.agendas.notulen');
         Route::post('/agendas/{agenda}/documentations', [AgendaController::class, 'uploadDocumentation'])->name('api.v1.agendas.documentations.store');

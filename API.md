@@ -86,12 +86,13 @@ Seluruh path berikut relatif terhadap prefix `/api/v1`.
 | Method | Path | Akses | Deskripsi & Parameter / Payload |
 |---|---|---|---|
 | `GET` | `/agendas` | Sanctum | Daftar agenda sesuai `visibleTo($user)` (`page`, `per_page` max 50, `status`, `tipe_rapat`, `unit_id`, `search`). |
-| `POST` | `/agendas` | `administrator`, `admin` | Buat agenda baru (JSON atau multipart jika disertai berkas `surat_edaran` PDF/gambar maks. 5 MB). Mendukung `waktu_selesai` bernilai `null` untuk mode **"Hingga Selesai"**, `target_type` (`all_units`, `selected_units`, `selected_users`), `unit_ids[]`, `user_ids[]`, `pimpinan_id`, `notulis_id`, `surat_edaran_type` (`upload`/`digital`). |
-| `GET` | `/agendas/{agenda}` | Policy `view` / `viewStaff` | Detail lengkap agenda termasuk relasi peserta, notulensi tersanitasi, dokumentasi, dan objek `permissions`. |
-| `PUT` / `POST` | `/agendas/{agenda}` | Policy `update` | Pembaruan agenda (gunakan `POST` + `_method=PUT` untuk unggahan multipart). |
+| `POST` | `/agendas` | `administrator`, `admin` | Buat agenda baru (JSON atau multipart jika disertai berkas `surat_edaran` PDF/gambar maks. 5 MB). Mendukung `waktu_selesai` bernilai `null` untuk mode **"Hingga Selesai"**, `target_type` (`all_units`, `selected_units`, `selected_users`), `unit_ids[]`, `user_ids[]`, `pimpinan_id`, `notulis_id`, `surat_edaran_type` (`upload`/`digital`), serta opsional `allow_schedule_overlap` (boolean untuk mengizinkan jadwal paralel unit/personel; bentrok ruangan fisik dan waktu lampau tetap diblokir). |
+| `GET` | `/agendas/{agenda}` | Policy `view` / `viewStaff` | Detail lengkap agenda termasuk relasi peserta, notulensi tersanitasi, dokumentasi, dan objek `permissions` (termasuk `can_manage_participants`). |
+| `PUT` / `POST` | `/agendas/{agenda}` | Policy `update` | Pembaruan agenda (gunakan `POST` + `_method=PUT` untuk unggahan multipart; mendukung `allow_schedule_overlap`). |
 | `DELETE` | `/agendas/{agenda}` | Policy `delete` | Hapus agenda beserta lampirannya. |
-| `PATCH` | `/agendas/{agenda}/status` | Policy `manageStatus` | Ubah status agenda sesuai state machine `ALLOWED_TRANSITIONS` (`draft`, `scheduled`, `ongoing`, `completed`, `cancelled`). Pembukaan `ongoing` divalidasi minimal 15 menit sebelum `waktu_mulai`. |
+| `PATCH` | `/agendas/{agenda}/status` | Policy `manageStatus` | Ubah status agenda sesuai state machine `ALLOWED_TRANSITIONS` (`draft`, `scheduled`, `ongoing`, `completed`, `cancelled`). Pembukaan `ongoing` divalidasi minimal 15 menit sebelum `waktu_mulai`; mendukung opsional `allow_schedule_overlap` saat menerbitkan jadwal. |
 | `PATCH` | `/agendas/{agenda}/roles` | Policy `update` | Ubah penugasan `pimpinan_id` & `notulis_id`. |
+| `POST` | `/agendas/{agenda}/participants` | Policy `manageParticipants` | Tambah peserta ASN secara ad-hoc (`user_ids[]`) pada rapat berstatus `scheduled` atau `ongoing` (termasuk oleh `staff` berstatus `pimpinan_id`) tanpa menimpa daftar `selected_units`. |
 | `GET` | `/agendas/{agenda}/surat-edaran` | Policy `view` / `viewStaff` | Streaming biner berkas `surat_edaran` (PDF/gambar). |
 | `POST` | `/agendas/{agenda}/surat-edaran` | Policy `manageCircular` | Unggah/ganti berkas surat edaran (`surat_edaran`: `pdf,jpg,jpeg,png,webp`, maks. 5 MB). |
 | `GET` | `/agendas/{agenda}/surat-edaran/digital` | Policy `view` / `viewStaff` | Membaca konfigurasi dan isi HTML surat edaran digital. |
@@ -118,7 +119,7 @@ Seluruh path berikut relatif terhadap prefix `/api/v1`.
 
 | Method | Path | Akses | Deskripsi & Parameter / Payload |
 |---|---|---|---|
-| `GET` | `/users/candidates` | `administrator`, `admin` | Daftar kandidat ASN lintas seluruh unit (`search`, `unit_id`). Parameter `include_inactive=1` didukung khusus bagi `administrator` (mis. filter aktor log audit historis). |
+| `GET` | `/users/candidates` | `administrator`, `admin`, atau `staff` Pimpinan | Daftar kandidat ASN lintas seluruh unit (`search`, `unit_id`, opsional `agenda_id`). Akun `staff` diizinkan selama bertindak sebagai Pimpinan Rapat (`pimpinan_id`) pada `agenda_id` berstatus `scheduled`/`ongoing` (atau rapat aktif miliknya). Parameter `include_inactive=1` didukung khusus bagi `administrator`. |
 | `GET` | `/users` | `administrator`, `admin` | Daftar pegawai terpaginasi (`page`, `per_page` max 50, `search`, `role`, `status`, `unit_id`) + statistik ringkas. |
 | `POST` | `/users` | Policy `create` | Tambah pegawai baru (`name`, `nip`, `username`, `email`, `role`, `unit_id`, `phone`, `is_active`, `password`). |
 | `GET` / `PUT` / `DELETE` | `/users/{user}` | `UserPolicy` | Detail, ubah, dan hapus akun pengguna sesuai batasan unit/peran. |

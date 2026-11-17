@@ -390,7 +390,21 @@ class AttendanceController extends Controller
                 $unattendedQuery->whereIn('id', array_unique($invitedUserIds));
             } elseif (! $agenda->is_all_units && $agenda->target_type !== 'all_units') {
                 $unitIds = $agenda->units()->pluck('units.id');
-                $unattendedQuery->whereIn('unit_id', $unitIds);
+                $extraUserIds = $agenda->invitedUsers()->pluck('users.id')->toArray();
+                if ($agenda->pimpinan_id) {
+                    $extraUserIds[] = $agenda->pimpinan_id;
+                }
+                if ($agenda->notulis_id) {
+                    $extraUserIds[] = $agenda->notulis_id;
+                }
+                $extraUserIds = array_values(array_unique(array_filter($extraUserIds)));
+
+                $unattendedQuery->where(function ($q) use ($unitIds, $extraUserIds) {
+                    $q->whereIn('unit_id', $unitIds);
+                    if (! empty($extraUserIds)) {
+                        $q->orWhereIn('id', $extraUserIds);
+                    }
+                });
             }
 
             if ($request->filled('search')) {

@@ -243,6 +243,40 @@ class AgendaPolicy
     }
 
     /**
+     * Determine whether the user can add ad-hoc ASN participants to the agenda.
+     */
+    public function manageParticipants(User $user, Agenda $agenda): bool
+    {
+        if (! $user->is_active) {
+            return false;
+        }
+
+        if (! in_array($agenda->status, ['scheduled', 'ongoing'], true)) {
+            return false;
+        }
+
+        if ($user->isAdministrator()) {
+            return true;
+        }
+
+        if ($agenda->pimpinan_id !== null && (int) $agenda->pimpinan_id === (int) $user->id) {
+            return true;
+        }
+
+        if ($user->isAdmin()) {
+            if ((int) $agenda->created_by === (int) $user->id) {
+                return true;
+            }
+
+            if ($user->unit_id !== null && $agenda->creatorUnitId() === $user->unit_id) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Determine whether the user was appointed as leader or notulis for this agenda.
      */
     private function isAppointed(User $user, Agenda $agenda): bool

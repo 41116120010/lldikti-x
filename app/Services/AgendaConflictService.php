@@ -154,23 +154,43 @@ class AgendaConflictService
     /**
      * Check all potential conflicts for agenda creation or update.
      *
-     * @param array $data Validated or raw input data
-     * @param int|null $ignoreAgendaId Agenda ID to exclude when updating
-     * @param User|null $user The user performing the action
-     * @return array{has_conflicts: bool, errors: array<string, array<string>>}
+     * Hard conflicts (past start time for new scheduled agenda, physical room collision)
+     * are always enforced. Soft conflicts (unit schedule, ongoing unit meeting, personnel
+     * double-booking) are skipped when $allowScheduleOverlap or $data['allow_schedule_overlap']
+     * is truthy.
+     *
+     * @param  array  $data  Validated or raw input data
+     * @param  int|null  $ignoreAgendaId  Agenda ID to exclude when updating
+     * @param  User|null  $user  The user performing the action
+     * @return array{has_conflicts: bool, errors: array<string, array<string>>, hard_conflict_fields: list<string>, can_override_overlap: bool}
      */
-    public static function checkConflicts(array $data, ?int $ignoreAgendaId = null, ?User $user = null): array
-    {
+    public static function checkConflicts(
+        array $data,
+        ?int $ignoreAgendaId = null,
+        ?User $user = null,
+        bool $allowScheduleOverlap = false,
+    ): array {
         $errors = [];
+        $hardConflictFields = [];
 
         if (empty($data['waktu_mulai'])) {
-            return ['has_conflicts' => false, 'errors' => []];
+            return [
+                'has_conflicts' => false,
+                'errors' => [],
+                'hard_conflict_fields' => [],
+                'can_override_overlap' => false,
+            ];
         }
 
         try {
             $mulai = Carbon::parse($data['waktu_mulai']);
         } catch (\Throwable) {
-            return ['has_conflicts' => false, 'errors' => []];
+            return [
+                'has_conflicts' => false,
+                'errors' => [],
+                'hard_conflict_fields' => [],
+                'can_override_overlap' => false,
+            ];
         }
 
         $selesai = null;
@@ -190,46 +210,52 @@ class AgendaConflictService
             ? ($data['target_type'] === 'all_units')
             : (isset($data['is_all_units']) ? (bool) $data['is_all_units'] : true);
         $unitIds = $data['unit_ids'] ?? [];
+        $allowOverlap = $allowScheduleOverlap
+            || filter_var($data['allow_schedule_overlap'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
-        // 1. Pencegahan Waktu Mulai di Masa Lampau (Hanya untuk Agenda Baru 'scheduled')
+        // HARD CONFLICT 1: Pencegahan Waktu Mulai di Masa Lampau (Agenda Baru 'scheduled')
         if ($ignoreAgendaId === null && $status === 'scheduled') {
             $pastError = self::validatePastDateTime($mulai);
             if ($pastError) {
                 $errors['waktu_mulai'][] = $pastError;
+                $hardConflictFields['waktu_mulai'] = true;
             }
         }
 
-        // 2. Pencegahan Rapat Unit Belum Selesai (Active Ongoing Meeting)
-        if ($user) {
-            $ongoingError = self::validateOngoingUnitConflict($user, $status, $mulai, $ignoreAgendaId);
-            if ($ongoingError) {
-                $errors['status'][] = $ongoingError;
-            }
-        }
-
-        // 3. Pencegahan Bentrok Ruangan Fisik (Physical Room Collision)
+        // HARD CONFLICT 2: Bentrok Ruangan Fisik (Physical Room Collision — tidak dapat di-override)
         if (in_array($tipeRapat, ['offline', 'hybrid']) && filled($ruangan)) {
             $roomError = self::validateRoomConflict($ignoreAgendaId, $ruangan, $mulai, $selesai);
             if ($roomError) {
                 $errors['lokasi_ruang'][] = $roomError;
+                $hardConflictFields['lokasi_ruang'] = true;
             }
         }
 
-        // 4. Pencegahan Bentrok Jadwal Unit Kerja (Unit Schedule Collision)
-        $unitError = self::validateUnitScheduleConflict($ignoreAgendaId, $user, $isAllUnits, $unitIds, $mulai, $selesai);
-        if ($unitError) {
-            $errors['waktu_mulai'][] = $unitError;
-        }
+        // SOFT CONFLICTS: Dapat diizinkan secara sadar via allow_schedule_overlap = true
+        if (! $allowOverlap) {
+            if ($user) {
+                $ongoingError = self::validateOngoingUnitConflict($user, $status, $mulai, $ignoreAgendaId);
+                if ($ongoingError) {
+                    $errors['status'][] = $ongoingError;
+                }
+            }
 
-        // 5. Pencegahan Bentrok Personel (Pimpinan & Notulis Double-Booking)
-        $personnelErrors = self::validatePersonnelConflict($ignoreAgendaId, $pimpinanId, $notulisId, $mulai, $selesai);
-        foreach ($personnelErrors as $field => $msg) {
-            $errors[$field][] = $msg;
+            $unitError = self::validateUnitScheduleConflict($ignoreAgendaId, $user, $isAllUnits, $unitIds, $mulai, $selesai);
+            if ($unitError) {
+                $errors['waktu_mulai'][] = $unitError;
+            }
+
+            $personnelErrors = self::validatePersonnelConflict($ignoreAgendaId, $pimpinanId, $notulisId, $mulai, $selesai);
+            foreach ($personnelErrors as $field => $msg) {
+                $errors[$field][] = $msg;
+            }
         }
 
         return [
             'has_conflicts' => !empty($errors),
             'errors' => $errors,
+            'hard_conflict_fields' => array_keys($hardConflictFields),
+            'can_override_overlap' => !empty($errors) && empty($hardConflictFields),
         ];
     }
 

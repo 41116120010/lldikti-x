@@ -5,6 +5,46 @@
 @section('subtitle', 'Agenda: ' . $agenda->judul_rapat)
 
 @section('content')
+<style>
+    .sheet-attendance-annex {
+        margin-top: 18pt;
+        padding-top: 12pt;
+        border-top: 1.5pt dashed #94a3b8;
+    }
+    .attendance-annex-page-break {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        margin-bottom: 10pt;
+        font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #475569;
+    }
+    .attendance-annex-page-break::before,
+    .attendance-annex-page-break::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background-color: #cbd5e1;
+    }
+    @media print {
+        #sheet-seksi-2-wrapper,
+        .sheet-attendance-annex {
+            page-break-before: always !important;
+            break-before: page !important;
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+            border-top: none !important;
+        }
+        .attendance-annex-page-break {
+            display: none !important;
+        }
+    }
+</style>
 @php
     $defaultBundledLogoUrl = asset('images/tut-wuri-handayani.png');
     $currentSavedLogoUrl = (!empty($config['custom_logo_path']) && Storage::disk('public')->exists($config['custom_logo_path']))
@@ -580,9 +620,10 @@
                         </div>
                     </div>
 
-                    <!-- Seksi II: Daftar Kehadiran Peserta (Spreadsheet / Word Table) -->
-                    <div id="sheet-seksi-2-wrapper" style="{{ ($config['show_attendees'] ?? true) ? '' : 'display: none;' }}">
-                    <div id="sheet-seksi-2-container" class="section-title" style="font-size: {{ \App\Support\DocumentLayout::SECTION_SIZE_PT }}pt; font-weight: bold; margin: {{ \App\Support\DocumentLayout::SECTION_GAP_TOP_PT + 6 }}pt 0 {{ \App\Support\DocumentLayout::SECTION_GAP_BOTTOM_PT }}pt 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif;">
+                    <!-- Seksi II: Daftar Kehadiran Peserta (Spreadsheet / Word Table, Halaman Lampiran Baru) -->
+                    <div id="sheet-seksi-2-wrapper" class="sheet-attendance-annex" style="page-break-before: always; break-before: page; {{ ($config['show_attendees'] ?? true) ? '' : 'display: none;' }}">
+                    <div class="attendance-annex-page-break" aria-hidden="true">Halaman Lampiran Baru — Daftar Kehadiran Peserta</div>
+                    <div id="sheet-seksi-2-container" class="section-title" style="font-size: {{ \App\Support\DocumentLayout::SECTION_SIZE_PT }}pt; font-weight: bold; margin: 0 0 {{ \App\Support\DocumentLayout::SECTION_GAP_BOTTOM_PT }}pt 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif;">
                         II. DAFTAR KEHADIRAN PESERTA ({{ $attendances->count() }} Orang)
                     </div>
                     @php

@@ -72,6 +72,13 @@ class StoreAgendaRequest extends FormRequest
             $this->merge(['notulis_id' => null]);
         }
 
+        if ($this->has('allow_schedule_overlap')) {
+            $coerced = filter_var($this->input('allow_schedule_overlap'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            if ($coerced !== null) {
+                $this->merge(['allow_schedule_overlap' => $coerced]);
+            }
+        }
+
         // Resolve target_type and is_all_units seamlessly
         if ($this->has('target_type')) {
             $targetType = (string) $this->input('target_type');
@@ -124,6 +131,7 @@ class StoreAgendaRequest extends FormRequest
             'open_surat_edaran_after_save' => ['nullable', 'boolean'],
             'surat_edaran' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:5120'],
             'status' => ['nullable', 'string', Rule::in(['draft', 'scheduled'])],
+            'allow_schedule_overlap' => ['sometimes', 'nullable', 'boolean'],
         ];
     }
 

@@ -306,9 +306,13 @@ class AgendaService
                         } else {
                             $unitIds = $validated['unit_ids'] ?? ($validated['units'] ?? []);
                             $agenda->units()->sync($unitIds);
-                            $agenda->invitedUsers()->sync([]);
                             $newUnitIds = collect($unitIds)->map(fn ($id) => (int) $id)->sort()->values()->all();
-                            $newUserIds = [];
+                            $newUserIds = $agenda->invitedUsers()
+                                ->pluck('users.id')
+                                ->map(fn ($id) => (int) $id)
+                                ->sort()
+                                ->values()
+                                ->all();
                         }
 
                         if ($targetSuratType === 'digital') {
@@ -453,7 +457,7 @@ class AgendaService
      *
      * @throws \DomainException If status transition is prohibited or time preconditions fail.
      */
-    public function updateStatus(Agenda $agenda, string $newStatus, ?User $actor = null): string
+    public function updateStatus(Agenda $agenda, string $newStatus, ?User $actor = null, bool $allowScheduleOverlap = false): string
     {
         $statusLabels = [
             'draft' => 'Draft',
@@ -512,8 +516,10 @@ class AgendaService
                 'pimpinan_id' => $agenda->pimpinan_id,
                 'notulis_id' => $agenda->notulis_id,
                 'is_all_units' => $agenda->is_all_units,
+                'target_type' => $agenda->target_type,
                 'unit_ids' => $agenda->units()->pluck('units.id')->all(),
                 'status' => 'scheduled',
+                'allow_schedule_overlap' => $allowScheduleOverlap,
             ];
 
             return AgendaConflictService::runUnderRoomLock(
@@ -568,6 +574,61 @@ class AgendaService
             );
 
             return $statusText;
+        });
+    }
+
+    /**
+     * Add ad-hoc active ASN participants to an agenda (e.g. during live sessions).
+     *
+     * @param  array<int, int|string>  $userIds
+     */
+    public function addParticipants(Agenda $agenda, array $userIds, User $actor): Agenda
+    {
+        if ($agenda->target_type === 'all_units' || $agenda->is_all_units) {
+            throw new \DomainException('Agenda rapat Pleno sudah mengundang seluruh pegawai ASN aktif tanpa perlu penambahan peserta khusus.');
+        }
+
+        $cleanIds = collect($userIds)
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        $activeUserIds = empty($cleanIds)
+            ? []
+            : User::where('is_active', true)->whereIn('id', $cleanIds)->pluck('id')->all();
+
+        if (empty($activeUserIds)) {
+            throw new \DomainException('Pilih minimal satu pegawai ASN aktif untuk ditambahkan sebagai peserta rapat.');
+        }
+
+        return DB::transaction(function () use ($agenda, $activeUserIds, $actor) {
+            /** @var Agenda $locked */
+            $locked = Agenda::query()
+                ->whereKey($agenda->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $existingIds = $locked->invitedUsers()->pluck('users.id')->map(fn ($id) => (int) $id)->all();
+            $newlyAddedIds = array_values(array_diff($activeUserIds, $existingIds));
+
+            $locked->invitedUsers()->syncWithoutDetaching($activeUserIds);
+
+            $addedCount = count($newlyAddedIds);
+            ActivityLogger::log(
+                type: 'ADD_AGENDA_PARTICIPANTS',
+                description: "Penambahan {$addedCount} peserta ASN susulan pada agenda '{$locked->judul_rapat}'.",
+                targetModel: Agenda::class,
+                targetId: $locked->id,
+                properties: [
+                    'added_user_ids' => $newlyAddedIds,
+                    'requested_user_ids' => $activeUserIds,
+                ],
+                user: $actor
+            );
+
+            return $locked->fresh(['creator.unit', 'pimpinan.unit', 'notulis.unit', 'units', 'invitedUsers.unit']);
         });
     }
 

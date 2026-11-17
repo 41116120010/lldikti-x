@@ -302,12 +302,11 @@ class DocxExportService
             return;
         }
 
-        // The preceding block is a table in every configuration: the closing
-        // prose box when either minutes section is on, the meeting detail table
-        // when both are off. See spacer().
-        $this->spacer($section);
-
-        $section->addText($this->plain('II. DAFTAR KEHADIRAN PESERTA ('.$attendances->count().' Orang)'), ...$this->style(DocumentLayout::BODY_SIZE_PT, true)
+        $heading = $this->style(DocumentLayout::BODY_SIZE_PT, true);
+        $heading[1]['pageBreakBefore'] = true;
+        $section->addText(
+            $this->plain('II. DAFTAR KEHADIRAN PESERTA ('.$attendances->count().' Orang)'),
+            ...$heading
         );
 
         $contentCm = DocumentLayout::contentWidthCm();

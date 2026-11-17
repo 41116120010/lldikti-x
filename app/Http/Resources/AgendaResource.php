@@ -129,6 +129,7 @@ class AgendaResource extends JsonResource
                 'can_manage_status' => Gate::forUser($currentUser)->allows('manageStatus', $this->resource),
                 'can_manage_minutes' => Gate::forUser($currentUser)->allows('manageMinutes', $this->resource),
                 'can_manage_circular' => Gate::forUser($currentUser)->allows('manageCircular', $this->resource),
+                'can_manage_participants' => Gate::forUser($currentUser)->allows('manageParticipants', $this->resource),
                 'can_attend' => $this->status === 'ongoing' && $isEligible && ! $hasAttended,
                 'can_export' => Gate::forUser($currentUser)->allows('view', $this->resource),
             ] : null,

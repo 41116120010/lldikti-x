@@ -370,5 +370,60 @@ class ReportAndExportTest extends TestCase
         $this->assertStringContainsString($title, $content);
         $this->assertStringContainsString('Hingga Selesai', $content);
     }
+
+    public function test_word_and_pdf_berita_acara_place_attendance_section_on_new_page(): void
+    {
+        $superadmin = User::where('role', 'administrator')->firstOrFail();
+        $agenda = Agenda::create([
+            'created_by' => $superadmin->id,
+            'judul_rapat' => 'Rapat Verifikasi Page Break ' . uniqid(),
+            'slug' => 'rapat-page-break-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Rapat 1',
+            'waktu_mulai' => now()->subHours(2),
+            'waktu_selesai' => now()->subHour(),
+            'is_all_units' => true,
+            'status' => 'completed',
+            'notulensi' => '<p>Catatan rapat inti.</p>',
+            'kesimpulan' => '<p>Kesimpulan rapat inti.</p>',
+        ]);
+
+        Attendance::create([
+            'agenda_id' => $agenda->id,
+            'user_id' => $superadmin->id,
+            'signed_at' => now()->subHours(2),
+            'selfie_path' => 'attendances/selfie_pagebreak_dummy.jpg',
+            'signature_path' => 'attendances/ttd_pagebreak_dummy.png',
+        ]);
+
+        // 1. Word (.docx) XML must apply w:pageBreakBefore on Section II heading paragraph
+        $wordResponse = $this->actingAs($superadmin)->get("/admin/reports/{$agenda->id}/export/word");
+        $wordResponse->assertStatus(200);
+
+        $tmp = tempnam(sys_get_temp_dir(), 'docx_pb_');
+        file_put_contents($tmp, $wordResponse->getContent());
+        $zip = new \ZipArchive;
+        $this->assertTrue($zip->open($tmp));
+        $documentXml = $zip->getFromName('word/document.xml');
+        $zip->close();
+        @unlink($tmp);
+
+        $this->assertNotFalse($documentXml);
+        $this->assertSame(
+            1,
+            preg_match('/<w:p\b[^>]*>.*?<w:pageBreakBefore\b.*?II\. DAFTAR KEHADIRAN PESERTA \(1 Orang\)/s', $documentXml),
+            'Section II Daftar Kehadiran Peserta pada DOCX harus dimulai di halaman baru (w:pageBreakBefore).'
+        );
+
+        // 2. HTML template used by PDF/print must wrap Section II inside sheet-attendance-annex page-break-before
+        $htmlResponse = app(\App\Services\PdfExportService::class)->exportBeritaAcara($agenda->fresh(['units', 'invitedUsers', 'attendances.user.unit', 'pimpinan', 'notulis', 'creator', 'documentations']), []);
+        $this->assertSame(200, $htmlResponse->getStatusCode());
+        $html = $htmlResponse->getContent();
+        $this->assertMatchesRegularExpression(
+            '/<div[^>]*class="sheet-attendance-annex"[^>]*page-break-before:\s*always[^>]*>.*?II\. DAFTAR KEHADIRAN PESERTA \(1 Orang\)/s',
+            $html
+        );
+    }
 }
 

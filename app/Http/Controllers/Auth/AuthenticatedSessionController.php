@@ -44,8 +44,7 @@ class AuthenticatedSessionController extends Controller
             user: $user
         );
 
-        return redirect()->intended(route('dashboard'))
-            ->with('success', "Selamat datang kembali, {$user->name}!");
+        return redirect()->intended(route('dashboard'));
     }
 
     /**

@@ -1108,6 +1108,94 @@ class AgendaManagementTest extends TestCase
         $response->assertSee($selectedUserAgenda->judul_rapat);
         $response->assertDontSee($otherUnitAgenda->judul_rapat);
     }
+
+    public function test_pimpinan_and_admin_can_add_adhoc_participants_on_selected_units_meeting_without_overwriting_units(): void
+    {
+        $superadmin = User::where('role', 'administrator')->firstOrFail();
+        $units = Unit::where('is_active', true)->orderBy('id')->take(2)->get();
+        $this->assertCount(2, $units);
+        [$unitA, $unitB] = [$units[0], $units[1]];
+
+        $plainStaff = User::create([
+            'name' => 'Staff Biasa Unit A',
+            'username' => 'staff_plain_' . uniqid(),
+            'nip' => (string) random_int(100000000000000000, 999999999999999999),
+            'email' => 'plain_' . uniqid() . '@lldikti10.test',
+            'password' => bcrypt('Secret123!'),
+            'role' => 'staff',
+            'unit_id' => $unitA->id,
+            'is_active' => true,
+        ]);
+
+        $pimpinan = User::create([
+            'name' => 'Staff Pimpinan Unit B',
+            'username' => 'staff_pimp_' . uniqid(),
+            'nip' => (string) random_int(100000000000000000, 999999999999999999),
+            'email' => 'pimp_' . uniqid() . '@lldikti10.test',
+            'password' => bcrypt('Secret123!'),
+            'role' => 'staff',
+            'unit_id' => $unitB->id,
+            'is_active' => true,
+        ]);
+
+        $extraStaff = User::create([
+            'name' => 'ASN Tambahan Unit B',
+            'username' => 'staff_extra_' . uniqid(),
+            'nip' => (string) random_int(100000000000000000, 999999999999999999),
+            'email' => 'extra_' . uniqid() . '@lldikti10.test',
+            'password' => bcrypt('Secret123!'),
+            'role' => 'staff',
+            'unit_id' => $unitB->id,
+            'is_active' => true,
+        ]);
+
+        $agenda = Agenda::create([
+            'created_by' => $superadmin->id,
+            'pimpinan_id' => $pimpinan->id,
+            'judul_rapat' => 'Rapat Unit A + Adhoc ' . uniqid(),
+            'slug' => 'rapat-unit-adhoc-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'online',
+            'link_meeting' => 'https://zoom.us/j/555666',
+            'waktu_mulai' => now()->subMinutes(10),
+            'waktu_selesai' => now()->addHours(2),
+            'is_all_units' => false,
+            'status' => 'ongoing',
+        ]);
+        $agenda->units()->sync([$unitA->id]);
+
+        $this->assertFalse($agenda->fresh()->isUserEligible($extraStaff));
+
+        // Plain staff cannot access candidates or add participants
+        $this->actingAs($plainStaff)
+            ->getJson("/admin/agendas/candidates?agenda_id={$agenda->id}")
+            ->assertForbidden();
+
+        $this->actingAs($plainStaff)
+            ->postJson("/admin/agendas/{$agenda->id}/participants", ['user_ids' => [$extraStaff->id]])
+            ->assertForbidden();
+
+        // Pimpinan (even with role=staff) can fetch candidates & add ad-hoc participants
+        $this->actingAs($pimpinan)
+            ->getJson("/admin/agendas/candidates?agenda_id={$agenda->id}")
+            ->assertOk();
+
+        $this->actingAs($pimpinan)
+            ->postJson("/admin/agendas/{$agenda->id}/participants", [
+                'user_ids' => [$extraStaff->id],
+            ])
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $agenda->refresh()->load(['units', 'invitedUsers']);
+        $this->assertTrue($agenda->units->contains('id', $unitA->id));
+        $this->assertTrue($agenda->invitedUsers->contains('id', $extraStaff->id));
+        $this->assertTrue($agenda->isUserEligible($extraStaff));
+        $this->assertSame(
+            $unitA->users()->where('is_active', true)->count() + 2, // + pimpinan & extraStaff in unitB
+            $agenda->total_invited
+        );
+    }
 }
 
 

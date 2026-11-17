@@ -14,6 +14,16 @@ class UpdateAgendaStatusRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('allow_schedule_overlap')) {
+            $coerced = filter_var($this->input('allow_schedule_overlap'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            if ($coerced !== null) {
+                $this->merge(['allow_schedule_overlap' => $coerced]);
+            }
+        }
+    }
+
     /**
      * Get the validation rules that apply to the request.
      *
@@ -23,6 +33,7 @@ class UpdateAgendaStatusRequest extends FormRequest
     {
         return [
             'status' => ['required', 'string', 'in:draft,scheduled,ongoing,completed,cancelled'],
+            'allow_schedule_overlap' => ['sometimes', 'nullable', 'boolean'],
         ];
     }
 

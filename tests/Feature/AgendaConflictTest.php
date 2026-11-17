@@ -460,4 +460,90 @@ class AgendaConflictTest extends TestCase
             $existingPleno->delete();
         }
     }
+
+    public function test_allow_schedule_overlap_skips_soft_conflicts_but_still_blocks_same_physical_room(): void
+    {
+        $superadmin = User::where('role', 'administrator')->firstOrFail();
+        $unit = Unit::where('is_active', true)->firstOrFail();
+        $pimpinan = User::where('role', 'staff')->where('is_active', true)->firstOrFail();
+
+        $day = now()->addDays(9);
+        $existing = Agenda::create([
+            'created_by' => $superadmin->id,
+            'pimpinan_id' => $pimpinan->id,
+            'judul_rapat' => 'Rapat Dasar Bentrok ' . uniqid(),
+            'slug' => 'rapat-dasar-bentrok-' . uniqid(),
+            'jenis_rapat' => 'koordinasi',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Sidang Utama',
+            'waktu_mulai' => $day->copy()->setTime(9, 0),
+            'waktu_selesai' => $day->copy()->setTime(11, 0),
+            'is_all_units' => false,
+            'status' => 'scheduled',
+        ]);
+        $existing->units()->sync([$unit->id]);
+
+        try {
+            $basePayload = [
+                'judul_rapat' => 'Rapat Paralel Uji ' . uniqid(),
+                'jenis_rapat' => 'koordinasi',
+                'tipe_rapat' => 'offline',
+                'lokasi_ruang' => 'Ruang Rapat Melati',
+                'waktu_mulai' => $day->copy()->setTime(10, 0)->format('Y-m-d H:i'),
+                'waktu_selesai' => $day->copy()->setTime(12, 0)->format('Y-m-d H:i'),
+                'target_type' => 'selected_units',
+                'unit_ids' => [$unit->id],
+                'pimpinan_id' => $pimpinan->id,
+                'status' => 'scheduled',
+            ];
+
+            // 1. Without allow_schedule_overlap -> soft conflict (pimpinan) rejected
+            $this->actingAs($superadmin)
+                ->post('/admin/agendas', $basePayload)
+                ->assertSessionHasErrors('pimpinan_id');
+
+            // 2. With allow_schedule_overlap=1 on different room -> allowed
+            $this->actingAs($superadmin)
+                ->post('/admin/agendas', array_merge($basePayload, ['allow_schedule_overlap' => '1']))
+                ->assertRedirect()
+                ->assertSessionHasNoErrors();
+
+            // 3. Even with allow_schedule_overlap=1, same physical room is STILL blocked
+            $this->actingAs($superadmin)
+                ->post('/admin/agendas', array_merge($basePayload, [
+                    'judul_rapat' => 'Rapat Ruangan Sama ' . uniqid(),
+                    'lokasi_ruang' => 'Ruang Sidang Utama',
+                    'allow_schedule_overlap' => '1',
+                ]))
+                ->assertSessionHasErrors('lokasi_ruang');
+
+            // 4. Draft -> Scheduled transition also honors allow_schedule_overlap
+            $draft = Agenda::create([
+                'created_by' => $superadmin->id,
+                'pimpinan_id' => $pimpinan->id,
+                'judul_rapat' => 'Draft Paralel ' . uniqid(),
+                'slug' => 'draft-paralel-' . uniqid(),
+                'jenis_rapat' => 'koordinasi',
+                'tipe_rapat' => 'online',
+                'link_meeting' => 'https://zoom.us/j/123456',
+                'waktu_mulai' => $day->copy()->setTime(10, 0),
+                'waktu_selesai' => $day->copy()->setTime(12, 0),
+                'is_all_units' => false,
+                'status' => 'draft',
+            ]);
+            $draft->units()->sync([$unit->id]);
+
+            $this->actingAs($superadmin)
+                ->patch("/admin/agendas/{$draft->id}/status", [
+                    'status' => 'scheduled',
+                    'allow_schedule_overlap' => '1',
+                ])
+                ->assertRedirect()
+                ->assertSessionHasNoErrors();
+
+            $this->assertSame('scheduled', $draft->fresh()->status);
+        } finally {
+            $existing->delete();
+        }
+    }
 }

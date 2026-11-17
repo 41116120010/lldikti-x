@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Agenda\AddAgendaParticipantsRequest;
 use App\Http\Requests\Agenda\StoreAgendaRequest;
 use App\Http\Requests\Agenda\UpdateAgendaRequest;
 use App\Http\Requests\Agenda\UpdateAgendaStatusRequest;
@@ -390,7 +391,12 @@ class AgendaController extends Controller
         $validated = $request->validated();
 
         try {
-            $statusText = $agendaService->updateStatus($agenda, $validated['status'], $request->user());
+            $statusText = $agendaService->updateStatus(
+                $agenda,
+                $validated['status'],
+                $request->user(),
+                (bool) ($validated['allow_schedule_overlap'] ?? false)
+            );
         } catch (\DomainException $e) {
             return response()->json([
                 'success' => false,
@@ -404,6 +410,33 @@ class AgendaController extends Controller
             'success' => true,
             'message' => "Status agenda rapat berhasil diubah menjadi {$statusText}.",
             'data' => new AgendaResource($agenda),
+        ]);
+    }
+
+    /**
+     * Add ad-hoc ASN participants to an agenda (Administrator, organizer Admin Unit, or appointed Pimpinan).
+     */
+    public function addParticipants(AddAgendaParticipantsRequest $request, Agenda $agenda, AgendaService $agendaService): JsonResponse
+    {
+        try {
+            $updated = $agendaService->addParticipants(
+                $agenda,
+                $request->validated('user_ids'),
+                $request->user()
+            );
+        } catch (\DomainException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+
+        $updated->loadCount('attendances');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Peserta ASN tambahan berhasil ditambahkan ke agenda.',
+            'data' => new AgendaResource($updated),
         ]);
     }
 

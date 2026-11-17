@@ -81,6 +81,7 @@ Route::middleware(['auth', EnsureAccountIsActive::class])->group(function () {
         Route::delete('/{agenda}', [AgendaController::class, 'destroy'])->name('destroy');
         Route::patch('/{agenda}/status', [AgendaController::class, 'updateStatus'])->name('update-status');
         Route::patch('/{agenda}/roles', [AgendaController::class, 'updateRoles'])->name('update-roles');
+        Route::post('/{agenda}/participants', [AgendaController::class, 'addParticipants'])->name('add-participants');
         Route::get('/{agenda}/notulen', [AgendaController::class, 'notulen'])->name('notulen');
         Route::put('/{agenda}/notulen', [AgendaController::class, 'updateNotulen'])->name('update-notulen');
         Route::delete('/{agenda}/documentations/{documentation}', [AgendaController::class, 'deleteDocumentation'])->name('delete-documentation');

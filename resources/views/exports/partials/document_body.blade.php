@@ -170,9 +170,10 @@
 </div>
 @endif
 
-<!-- Seksi II: Daftar Hadir Peserta -->
+<!-- Seksi II: Daftar Hadir Peserta (Halaman Lampiran Baru Setelah Tanda Tangan) -->
 @if($config['show_attendees'] ?? true)
-<div class="section-title" style="font-size: {{ DocumentLayout::SECTION_SIZE_PT }}pt; font-weight: bold; margin: {{ DocumentLayout::SECTION_GAP_TOP_PT + 6 }}pt 0 {{ DocumentLayout::SECTION_GAP_BOTTOM_PT }}pt 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif; page-break-after: avoid; break-after: avoid;">II. DAFTAR KEHADIRAN PESERTA ({{ $agenda->attendances->count() }} Orang)</div>
+<div class="sheet-attendance-annex" style="page-break-before: always; break-before: page; margin: 0; padding: 0;">
+<div class="section-title" style="font-size: {{ DocumentLayout::SECTION_SIZE_PT }}pt; font-weight: bold; margin: 0 0 {{ DocumentLayout::SECTION_GAP_BOTTOM_PT }}pt 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif; page-break-after: avoid; break-after: avoid;">II. DAFTAR KEHADIRAN PESERTA ({{ $agenda->attendances->count() }} Orang)</div>
 <table class="attendance-table" width="100%" border="1" cellspacing="0" cellpadding="0" bordercolor="#{{ DocumentLayout::BORDER_COLOR }}" style="width: 100%; table-layout: fixed; border-collapse: collapse; border: {{ DocumentLayout::BORDER_PT }}px solid #{{ DocumentLayout::BORDER_COLOR }}; margin: 0; font-size: {{ DocumentLayout::ATTENDANCE_SIZE_PT }}pt; line-height: {{ DocumentLayout::ATTENDANCE_LINE_PT }}pt; font-family: 'Times New Roman', Times, serif; word-wrap: break-word; overflow-wrap: break-word;">
     <thead>
         <tr style="background-color: #f2f2f2; mso-yfti-tblheader: yes; page-break-inside: avoid; break-inside: avoid;">
@@ -240,6 +241,7 @@
         @endforelse
     </tbody>
 </table>
+</div>
 @endif
 
 <!-- Seksi III: Lampiran Foto Dokumentasi Kegiatan (Annex Resmi) -->

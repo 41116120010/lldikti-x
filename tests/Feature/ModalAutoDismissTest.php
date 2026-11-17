@@ -132,4 +132,23 @@ class ModalAutoDismissTest extends TestCase
         $response->assertSee('data-auto-close="true"', false);
         $response->assertSee('Kata sandi berhasil diperbarui.', false);
     }
+
+    public function test_login_redirect_does_not_flash_welcome_modal(): void
+    {
+        $user = $this->superadmin;
+        $user->forceFill(['password' => bcrypt('LoginClean123!')])->save();
+
+        $loginResponse = $this->post('/login', [
+            'login' => $user->username,
+            'password' => 'LoginClean123!',
+        ]);
+
+        $loginResponse->assertRedirect('/dashboard');
+        $loginResponse->assertSessionMissing('success');
+
+        $dashboardResponse = $this->get('/dashboard');
+        $dashboardResponse->assertOk();
+        $dashboardResponse->assertDontSee('id="flash-modal-data"', false);
+        $dashboardResponse->assertDontSee('Selamat datang kembali');
+    }
 }

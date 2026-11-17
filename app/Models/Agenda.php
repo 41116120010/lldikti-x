@@ -356,13 +356,18 @@ class Agenda extends Model
             return true;
         }
 
-        // Jika sasaran adalah ASN tertentu
-        if ($this->target_type === 'selected_users') {
-            if ($this->relationLoaded('invitedUsers')) {
-                return $this->invitedUsers->contains('id', $user->id);
-            }
+        // Sasaran explicit ASN (baik pada mode selected_users maupun peserta tambahan pada selected_units)
+        $isExplicitlyInvited = $this->relationLoaded('invitedUsers')
+            ? $this->invitedUsers->contains('id', $user->id)
+            : ($this->exists ? $this->invitedUsers()->where('users.id', $user->id)->exists() : false);
 
-            return $this->invitedUsers()->where('users.id', $user->id)->exists();
+        if ($isExplicitlyInvited) {
+            return true;
+        }
+
+        // Jika sasaran eksklusif adalah ASN tertentu
+        if ($this->target_type === 'selected_users') {
+            return false;
         }
 
         if (! $user->unit_id) {
@@ -1013,13 +1018,35 @@ class Agenda extends Model
         if ($selectedUnitAgendas !== []) {
             $selectedUnitAgendaIds = array_map(fn (self $agenda) => $agenda->id, $selectedUnitAgendas);
 
-            $selectedUnitCounts = DB::table('agenda_units')
+            $unitUsersSub = DB::table('agenda_units')
                 ->join('users', 'users.unit_id', '=', 'agenda_units.unit_id')
                 ->where('users.is_active', true)
                 ->whereIn('agenda_units.agenda_id', $selectedUnitAgendaIds)
-                ->groupBy('agenda_units.agenda_id')
-                ->selectRaw('agenda_units.agenda_id, COUNT(DISTINCT users.id) AS invited_count')
-                ->pluck('invited_count', 'agenda_units.agenda_id');
+                ->selectRaw('agenda_units.agenda_id, users.id AS user_id');
+
+            $adHocSub = DB::table('agenda_users')
+                ->whereIn('agenda_id', $selectedUnitAgendaIds)
+                ->select('agenda_id', 'user_id');
+
+            $pimpinanUnitSub = DB::table('agendas')
+                ->whereIn('id', $selectedUnitAgendaIds)
+                ->whereNotNull('pimpinan_id')
+                ->selectRaw('id AS agenda_id, pimpinan_id AS user_id');
+
+            $notulisUnitSub = DB::table('agendas')
+                ->whereIn('id', $selectedUnitAgendaIds)
+                ->whereNotNull('notulis_id')
+                ->selectRaw('id AS agenda_id, notulis_id AS user_id');
+
+            $unitUnionQuery = $unitUsersSub->union($adHocSub)->union($pimpinanUnitSub)->union($notulisUnitSub);
+
+            $selectedUnitCounts = DB::query()
+                ->fromSub($unitUnionQuery, 'invited')
+                ->join('users', 'users.id', '=', 'invited.user_id')
+                ->where('users.is_active', true)
+                ->groupBy('invited.agenda_id')
+                ->selectRaw('invited.agenda_id, COUNT(DISTINCT users.id) AS invited_count')
+                ->pluck('invited_count', 'invited.agenda_id');
 
             foreach ($selectedUnitAgendas as $agenda) {
                 $agenda->setPreloadedTotalInvited((int) ($selectedUnitCounts[$agenda->id] ?? 0));
@@ -1057,13 +1084,38 @@ class Agenda extends Model
             return empty($uniqueIds) ? 0 : User::where('is_active', true)->whereIn('id', $uniqueIds)->count();
         }
 
-        if ($this->relationLoaded('units')) {
-            $unitIds = $this->units->pluck('id');
-        } else {
-            $unitIds = $this->units()->pluck('units.id');
+        $unitIds = $this->relationLoaded('units')
+            ? $this->units->pluck('id')->all()
+            : $this->units()->pluck('units.id')->all();
+
+        $extraUserIds = $this->relationLoaded('invitedUsers')
+            ? $this->invitedUsers->pluck('id')->all()
+            : $this->invitedUsers()->pluck('users.id')->all();
+
+        if ($this->pimpinan_id) {
+            $extraUserIds[] = (int) $this->pimpinan_id;
+        }
+        if ($this->notulis_id) {
+            $extraUserIds[] = (int) $this->notulis_id;
         }
 
-        return User::where('is_active', true)->whereIn('unit_id', $unitIds)->count();
+        $uniqueExtraIds = array_values(array_unique(array_filter($extraUserIds)));
+
+        if (empty($unitIds) && empty($uniqueExtraIds)) {
+            return 0;
+        }
+
+        return User::where('is_active', true)
+            ->where(function (Builder $q) use ($unitIds, $uniqueExtraIds) {
+                if (! empty($unitIds)) {
+                    $q->whereIn('unit_id', $unitIds);
+                }
+                if (! empty($uniqueExtraIds)) {
+                    $method = empty($unitIds) ? 'whereIn' : 'orWhereIn';
+                    $q->{$method}('id', $uniqueExtraIds);
+                }
+            })
+            ->count();
     }
 
     /**
