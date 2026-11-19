@@ -281,35 +281,52 @@ class ReportController extends Controller
     }
 
     /**
-     * Export Official Meeting Minutes & Attendance to Microsoft Word (.doc).
+     * Export Official Meeting Minutes & Attendance to Microsoft Word (.docx with .doc fallback).
      */
-    public function exportWord(Request $request, Agenda $agenda, DocxExportService $docxService): Response|RedirectResponse
-    {
+    public function exportWord(
+        Request $request,
+        Agenda $agenda,
+        DocxExportService $docxService,
+        WordExportService $wordExportService
+    ): Response|RedirectResponse {
         Gate::authorize('view', $agenda);
 
         $config = $this->extractReportConfig($request, $agenda);
 
-        ActivityLogger::log(
-            type: 'EXPORT_WORD',
-            description: "Mengekspor Berita Acara & Daftar Hadir Microsoft Word (.doc) untuk agenda: {$agenda->judul_rapat}",
-            targetModel: Agenda::class,
-            targetId: $agenda->id,
-            properties: ['custom_config' => !empty($request->all())]
-        );
+        try {
+            ActivityLogger::log(
+                type: 'EXPORT_WORD',
+                description: "Mengekspor Berita Acara & Daftar Hadir Microsoft Word (.doc) untuk agenda: {$agenda->judul_rapat}",
+                targetModel: Agenda::class,
+                targetId: $agenda->id,
+                properties: ['custom_config' => !empty($request->all())]
+            );
+        } catch (\Throwable $logEx) {
+            Log::warning('Gagal mencatat log aktivitas ekspor Word: ' . $logEx->getMessage());
+        }
 
         try {
             return $docxService->exportBeritaAcara($agenda, $config);
         } catch (\Throwable $e) {
-            Log::error('Gagal mengekspor dokumen Microsoft Word (.doc): ' . $e->getMessage(), [
+            Log::warning('Gagal mengekspor OpenXML Word (.docx), mencoba fallback format Word (.doc): ' . $e->getMessage(), [
                 'agenda_id' => $agenda->id,
                 'exception' => $e,
             ]);
 
-            return $this->redirectExportFailure(
-                $request,
-                $agenda,
-                'Terjadi kesalahan saat mengekspor dokumen Word. Silakan coba kembali atau gunakan format Pratinjau Dokumen.'
-            );
+            try {
+                return $wordExportService->exportBeritaAcara($agenda, $config);
+            } catch (\Throwable $fallbackException) {
+                Log::error('Gagal mengekspor dokumen Word fallback (.doc): ' . $fallbackException->getMessage(), [
+                    'agenda_id' => $agenda->id,
+                    'exception' => $fallbackException,
+                ]);
+
+                return $this->redirectExportFailure(
+                    $request,
+                    $agenda,
+                    'Terjadi kesalahan saat mengekspor dokumen Word. Silakan coba kembali atau gunakan format Pratinjau Dokumen.'
+                );
+            }
         }
     }
 

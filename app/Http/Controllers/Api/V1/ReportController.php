@@ -14,10 +14,12 @@ use App\Services\AttendanceMetricsService;
 use App\Services\DocxExportService;
 use App\Services\PdfExportService;
 use App\Services\ReportConfigService;
+use App\Services\WordExportService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -273,23 +275,52 @@ class ReportController extends Controller
     }
 
     /**
-     * Download or stream protected Microsoft Word (.doc) meeting document (supports custom ReportConfigService parameters).
+     * Download or stream protected Microsoft Word meeting document (.docx with .doc fallback).
      */
-    public function exportWord(Request $request, Agenda $agenda, DocxExportService $docxService): SymfonyResponse
-    {
+    public function exportWord(
+        Request $request,
+        Agenda $agenda,
+        DocxExportService $docxService,
+        WordExportService $wordExportService
+    ): SymfonyResponse {
         Gate::authorize('view', $agenda);
 
         $config = $this->extractReportConfig($request, $agenda);
 
-        ActivityLogger::log(
-            type: 'EXPORT_WORD_API',
-            description: "Mengekspor Berita Acara & Daftar Hadir Word via API Mobile untuk agenda: {$agenda->judul_rapat}",
-            targetModel: Agenda::class,
-            targetId: $agenda->id,
-            properties: ['custom_config' => ! empty($request->all())]
-        );
+        try {
+            ActivityLogger::log(
+                type: 'EXPORT_WORD_API',
+                description: "Mengekspor Berita Acara & Daftar Hadir Word via API Mobile untuk agenda: {$agenda->judul_rapat}",
+                targetModel: Agenda::class,
+                targetId: $agenda->id,
+                properties: ['custom_config' => ! empty($request->all())]
+            );
+        } catch (\Throwable $logEx) {
+            Log::warning('Gagal mencatat log aktivitas ekspor Word API: ' . $logEx->getMessage());
+        }
 
-        return $docxService->exportBeritaAcara($agenda, $config);
+        try {
+            return $docxService->exportBeritaAcara($agenda, $config);
+        } catch (\Throwable $e) {
+            Log::warning('Gagal mengekspor OpenXML Word (.docx) API Mobile, beralih ke fallback format Word (.doc): ' . $e->getMessage(), [
+                'agenda_id' => $agenda->id,
+                'exception' => $e,
+            ]);
+
+            try {
+                return $wordExportService->exportBeritaAcara($agenda, $config);
+            } catch (\Throwable $fallbackEx) {
+                Log::error('Gagal mengekspor dokumen Word fallback (.doc) API Mobile: ' . $fallbackEx->getMessage(), [
+                    'agenda_id' => $agenda->id,
+                    'exception' => $fallbackEx,
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gagal mengekspor dokumen Word Berita Acara. Silakan coba kembali atau gunakan format PDF.',
+                ], 500);
+            }
+        }
     }
 
     /**

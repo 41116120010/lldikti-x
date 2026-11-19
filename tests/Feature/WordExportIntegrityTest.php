@@ -172,16 +172,38 @@ class WordExportIntegrityTest extends TestCase
         $this->assertGreaterThan(1000, strlen($pdf), 'PDF hasil render terlalu kecil untuk berisi dokumen.');
     }
 
+    public function test_word_export_seamlessly_falls_back_to_doc_when_docx_fails(): void
+    {
+        $superadmin = User::where('role', 'administrator')->first();
+        $agenda = Agenda::first();
+
+        $mockDocx = $this->createMock(DocxExportService::class);
+        $mockDocx->method('exportBeritaAcara')
+            ->willThrowException(new \RuntimeException('Simulated DOCX failure'));
+
+        $this->app->instance(DocxExportService::class, $mockDocx);
+
+        $response = $this->actingAs($superadmin)->get("/admin/reports/{$agenda->id}/export/word");
+        $response->assertStatus(200);
+        $this->assertStringContainsString('ms-word', (string) $response->headers->get('Content-Type'));
+        $this->assertStringContainsString('Berita_Acara_', (string) $response->headers->get('Content-Disposition'));
+    }
+
     public function test_word_export_error_handling_gracefully_redirects_on_controller_failure(): void
     {
         $superadmin = User::where('role', 'administrator')->first();
         $agenda = Agenda::first();
 
-        $mock = $this->createMock(DocxExportService::class);
-        $mock->method('exportBeritaAcara')
-            ->willThrowException(new \RuntimeException('Simulated Word export failure'));
+        $mockDocx = $this->createMock(DocxExportService::class);
+        $mockDocx->method('exportBeritaAcara')
+            ->willThrowException(new \RuntimeException('Simulated DOCX failure'));
 
-        $this->app->instance(DocxExportService::class, $mock);
+        $mockWord = $this->createMock(WordExportService::class);
+        $mockWord->method('exportBeritaAcara')
+            ->willThrowException(new \RuntimeException('Simulated Word fallback failure'));
+
+        $this->app->instance(DocxExportService::class, $mockDocx);
+        $this->app->instance(WordExportService::class, $mockWord);
 
         $response = $this->actingAs($superadmin)->get("/admin/reports/{$agenda->id}/export/word");
         $response->assertRedirect(route('admin.reports.show', $agenda));

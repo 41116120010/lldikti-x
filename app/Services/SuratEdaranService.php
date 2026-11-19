@@ -290,6 +290,9 @@ class SuratEdaranService
             'headerHeight' => 142,
         ]);
 
+        $oldReporting = error_reporting();
+        error_reporting($oldReporting & ~E_DEPRECATED & ~E_USER_DEPRECATED);
+
         try {
             // 1. Kop Surat Dinas Resmi (Header Halaman 1 — titlePg aktif) & Running Page Number Halaman 2+
             if (! empty($config['show_kop'])) {
@@ -548,6 +551,7 @@ class SuratEdaranService
 
             return $bytes;
         } finally {
+            error_reporting($oldReporting);
             foreach ($tempFiles as $tmp) {
                 if (is_string($tmp) && file_exists($tmp)) {
                     @unlink($tmp);

@@ -45,7 +45,7 @@ class DashboardAndReportApiTest extends TestCase
 
     public function test_staff_can_access_dashboard_summary_with_personal_attendance_rate(): void
     {
-        $staff = User::where('role', 'staff')->first();
+        $staff = User::where('role', 'staff')->where('is_active', true)->first();
         $this->assertNotNull($staff);
 
         $response = $this->actingAs($staff, 'sanctum')
@@ -75,9 +75,9 @@ class DashboardAndReportApiTest extends TestCase
 
     public function test_admin_unit_can_access_dashboard_summary_with_unit_scoped_stats(): void
     {
-        $adminUnit = User::where('role', 'admin')->first();
+        $adminUnit = User::where('role', 'admin')->where('is_active', true)->first();
         if (! $adminUnit) {
-            $staff = User::where('role', 'staff')->first();
+            $staff = User::where('role', 'staff')->where('is_active', true)->first();
             $this->assertNotNull($staff);
             $staff->update(['role' => 'admin']);
             $adminUnit = $staff->fresh();
@@ -108,7 +108,7 @@ class DashboardAndReportApiTest extends TestCase
 
     public function test_dashboard_category_tabs_endpoints_respond_with_correct_status_filters(): void
     {
-        $staff = User::where('role', 'staff')->first();
+        $staff = User::where('role', 'staff')->where('is_active', true)->first();
         $this->assertNotNull($staff);
 
         foreach (['scheduled', 'ongoing', 'completed'] as $status) {
@@ -199,7 +199,7 @@ class DashboardAndReportApiTest extends TestCase
 
     public function test_user_can_view_profile_and_logs(): void
     {
-        $staff = User::where('role', 'staff')->first();
+        $staff = User::where('role', 'staff')->where('is_active', true)->first();
         $this->assertNotNull($staff);
 
         $response = $this->actingAs($staff, 'sanctum')
@@ -294,6 +294,28 @@ class DashboardAndReportApiTest extends TestCase
         );
     }
 
+    public function test_api_word_export_seamlessly_falls_back_to_doc_when_docx_fails(): void
+    {
+        $admin = User::where('role', 'administrator')->first();
+        $agenda = Agenda::first();
+        $this->assertNotNull($agenda);
+
+        $mockDocx = $this->createMock(\App\Services\DocxExportService::class);
+        $mockDocx->method('exportBeritaAcara')
+            ->willThrowException(new \RuntimeException('Simulated API DOCX failure'));
+
+        $this->app->instance(\App\Services\DocxExportService::class, $mockDocx);
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->get("/api/v1/reports/agendas/{$agenda->id}/export/word");
+
+        $response->assertOk();
+        $this->assertTrue(
+            str_contains((string) $response->headers->get('Content-Type'), 'ms-word') ||
+            str_contains((string) $response->headers->get('Content-Type'), 'msword')
+        );
+    }
+
     public function test_user_can_download_agenda_csv_report_via_api(): void
     {
         $admin = User::where('role', 'administrator')->first();
@@ -317,7 +339,7 @@ class DashboardAndReportApiTest extends TestCase
 
     public function test_staff_cannot_access_report_summary_agendas_or_summary_csv_via_api(): void
     {
-        $staff = User::where('role', 'staff')->firstOrFail();
+        $staff = User::where('role', 'staff')->where('is_active', true)->firstOrFail();
 
         $this->actingAs($staff, 'sanctum')
             ->getJson('/api/v1/reports/summary')

@@ -56,9 +56,13 @@ class DocxExportService
     {
         $data = $this->wordExportService->prepareViewData($agenda, $config);
 
+        $oldReporting = error_reporting();
+        error_reporting($oldReporting & ~E_DEPRECATED & ~E_USER_DEPRECATED);
+
         try {
             $bytes = $this->build($data);
         } finally {
+            error_reporting($oldReporting);
             $this->cleanTemporaryFiles();
         }
 
@@ -128,6 +132,9 @@ class DocxExportService
         $this->addPhotoAnnex($section, $data);
 
         $file = tempnam(sys_get_temp_dir(), 'siperapat_docx_');
+        if ($file === false) {
+            throw new RuntimeException('Tidak dapat membuat berkas sementara untuk ekspor Word Berita Acara.');
+        }
         $this->temporaryFiles[] = $file;
 
         IOFactory::createWriter($document, 'Word2007')->save($file);
@@ -788,12 +795,13 @@ class DocxExportService
         ];
 
         foreach ($documentations->chunk(2) as $chunk) {
+            $chunkItems = $chunk->values();
             $table = $section->addTable($this->tableStyle());
             $row = $table->addRow(null, $this->rowStyle());
 
             foreach ([0, 1] as $position) {
                 $columnTwips = $colTwipsList[$position];
-                if (! isset($chunk[$position])) {
+                if (! isset($chunkItems[$position])) {
                     $row->addCell($columnTwips, ['vAlign' => 'top']);
 
                     continue;
@@ -803,13 +811,13 @@ class DocxExportService
 
                 $this->embedImage(
                     $cell,
-                    $chunk[$position]['base64'] ?? null,
+                    $chunkItems[$position]['base64'] ?? null,
                     'jpeg',
                     DocumentLayout::pxToPt(DocumentLayout::PHOTO_WIDTH_PX),
                     DocumentLayout::pxToPt(DocumentLayout::PHOTO_HEIGHT_PX)
                 );
 
-                $caption = $chunk[$position]['model']->caption ?? null;
+                $caption = $chunkItems[$position]['model']->caption ?? null;
 
                 if (is_string($caption) && trim($caption) !== '') {
                     $cell->addText(
