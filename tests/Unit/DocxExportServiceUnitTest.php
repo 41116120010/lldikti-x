@@ -221,4 +221,15 @@ class DocxExportServiceUnitTest extends BaseTestCase
 
         $this->assertEmpty($newLeakedFiles, 'Tidak boleh ada file sementara siperapat_* yang tertinggal di /tmp');
     }
+
+    public function test_docx_html_renderer_splits_tables_from_prose_segments(): void
+    {
+        $html = '<p>Pembuka</p><div><table><tr><th>Kolom</th></tr><tr><td>Isi</td></tr></table></div><p>Penutup</p>';
+        $segments = \App\Support\DocxHtmlRenderer::segmentBlocks($html);
+
+        $this->assertCount(3, $segments);
+        $this->assertSame('prose', $segments[0]['type']);
+        $this->assertSame('table', $segments[1]['type']);
+        $this->assertSame('prose', $segments[2]['type']);
+    }
 }

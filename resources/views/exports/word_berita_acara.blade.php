@@ -139,6 +139,92 @@
             page-break-before: always;
             break-before: page;
         }
+
+        /* Rich-text print rules (.prose-gov) for Dompdf / Word */
+        .prose-gov {
+            font-family: 'Times New Roman', Times, serif;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        .prose-gov p {
+            margin: 0pt 0pt 5pt 0pt;
+        }
+        .prose-gov p:last-child {
+            margin-bottom: 0pt;
+        }
+        .prose-gov h2 {
+            font-size: 14pt;
+            line-height: 19pt;
+            font-weight: bold;
+            margin: 6pt 0pt 3pt 0pt;
+        }
+        .prose-gov h3 {
+            font-size: 13pt;
+            line-height: 18pt;
+            font-weight: bold;
+            margin: 5pt 0pt 2pt 0pt;
+        }
+        .prose-gov h4 {
+            font-size: 12pt;
+            line-height: 18pt;
+            font-weight: bold;
+            margin: 4pt 0pt 2pt 0pt;
+        }
+        .prose-gov ul,
+        .prose-gov ol {
+            margin: 3pt 0pt 5pt 18pt;
+            padding: 0pt;
+        }
+        .prose-gov ul {
+            list-style-type: disc;
+        }
+        .prose-gov ol {
+            list-style-type: decimal;
+        }
+        .prose-gov li {
+            margin: 0pt 0pt 2pt 0pt;
+        }
+        .prose-gov blockquote {
+            margin: 4pt 0pt 6pt 0pt;
+            padding: 3pt 0pt 3pt 8pt;
+            border-left: 2pt solid #64748b;
+            font-style: italic;
+            color: #334155;
+        }
+        .prose-gov hr {
+            border: none;
+            border-top: 0.75pt solid #94a3b8;
+            margin: 6pt 0pt;
+        }
+        .prose-gov a {
+            color: #1d4ed8;
+            text-decoration: underline;
+        }
+        .prose-gov font[size="1"] { font-size: 8pt; }
+        .prose-gov font[size="2"] { font-size: 10pt; }
+        .prose-gov font[size="3"] { font-size: 12pt; }
+        .prose-gov font[size="4"] { font-size: 14pt; }
+        .prose-gov font[size="5"] { font-size: 18pt; }
+        .prose-gov font[size="6"],
+        .prose-gov font[size="7"] { font-size: 24pt; }
+        .prose-gov table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 5pt 0pt;
+            font-size: 11pt;
+            line-height: 15pt;
+        }
+        .prose-gov th,
+        .prose-gov td {
+            border: 0.75pt solid #000000;
+            padding: 4pt 6pt;
+            vertical-align: top;
+            text-align: left;
+        }
+        .prose-gov th {
+            background-color: #f1f5f9;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>

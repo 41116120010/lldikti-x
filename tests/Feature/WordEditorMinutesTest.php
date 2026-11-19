@@ -558,4 +558,105 @@ class WordEditorMinutesTest extends TestCase
         $this->assertStringContainsString('Notulensi hasil revisi ketiga (final)', $this->agenda->notulensi);
         $this->assertStringContainsString('Kesimpulan hasil revisi ketiga (final)', $this->agenda->kesimpulan);
     }
+
+    public function test_rich_text_html_with_tables_lists_links_blockquote_renders_natively_in_docx_and_pdf(): void
+    {
+        $richHtml = '<h2>Pokok Pembahasan</h2>'
+            .'<p>Arahan dengan <b>tebal</b>, <i>miring</i>, <u>garis</u>, <s>coret</s>, dan <a href="https://lldikti10.kemdiktisaintek.go.id">Laman Resmi</a>.</p>'
+            .'<blockquote>Catatan penting pimpinan rapat.</blockquote>'
+            .'<ul><li>Butir Pertama<ul><li>Sub-butir A</li></ul></li></ul>'
+            .'<table><thead><tr><th>No</th><th>Uraian Tindak Lanjut</th></tr></thead><tbody><tr><td>1</td><td>Integrasi Data</td></tr></tbody></table>'
+            .'<p>Paragraf penutup sesudah tabel.</p>';
+
+        $this->agenda->update([
+            'notulensi' => $richHtml,
+            'kesimpulan' => '<ol><li>Keputusan Satu</li><li>Keputusan Dua</li></ol>',
+        ]);
+
+        // 1. PDF HTML preserves sanitized rich-text & print .prose-gov table rules
+        $pdfHtml = app(\App\Services\WordExportService::class)->generateDocumentContent($this->agenda->fresh(), [], 'plain');
+        $this->assertStringContainsString('.prose-gov table', $pdfHtml);
+        $this->assertStringContainsString('<h2>Pokok Pembahasan</h2>', $pdfHtml);
+        $this->assertStringContainsString('<blockquote>Catatan penting pimpinan rapat.</blockquote>', $pdfHtml);
+        $this->assertStringContainsString('https://lldikti10.kemdiktisaintek.go.id', $pdfHtml);
+        $this->assertStringContainsString('<table>', $pdfHtml);
+
+        // 2. DOCX XML renders formatting natively without stripping HTML or nesting <w:tbl>
+        $docxBytes = app(\App\Services\DocxExportService::class)->exportBeritaAcara($this->agenda->fresh())->getContent();
+        $xml = $this->docxXml($docxBytes);
+        $plainDocxText = html_entity_decode(strip_tags($xml), ENT_XML1 | ENT_QUOTES, 'UTF-8');
+
+        foreach ([
+            'Pokok Pembahasan',
+            'tebal',
+            'miring',
+            'Laman Resmi',
+            'Catatan penting pimpinan rapat.',
+            'Butir Pertama',
+            'Sub-butir A',
+            'Uraian Tindak Lanjut',
+            'Integrasi Data',
+            'Paragraf penutup sesudah tabel.',
+            '1. Keputusan Satu',
+        ] as $expectedText) {
+            $this->assertStringContainsString($expectedText, $plainDocxText);
+        }
+
+        $this->assertStringContainsString('<w:strike', $xml);
+        $this->assertStringContainsString('<w:u ', $xml);
+        $this->assertStringContainsString('<w:hyperlink', $xml);
+
+        // Ensure no adjacent tables or nested tables in word/document.xml
+        $this->assertSame(0, preg_match_all('#</w:tbl>\s*<w:tbl>#', $xml));
+        foreach ($this->docxTables($docxBytes) as $tableXml) {
+            $this->assertSame(1, substr_count($tableXml, '<w:tbl>'), 'Tidak boleh ada <w:tbl> bersarang di DOCX.');
+            $expectedWidth = \App\Support\DocumentLayout::cmToTwips(\App\Support\DocumentLayout::contentWidthCm());
+            $this->assertStringContainsString('<w:tblW w:w="'.$expectedWidth.'" w:type="dxa"/>', $tableXml);
+        }
+    }
+
+    public function test_ajax_notulen_save_and_optimistic_concurrency_conflict_409(): void
+    {
+        $initialUpdatedAt = $this->agenda->fresh()->updated_at?->toIso8601String();
+        $this->assertNotNull($initialUpdatedAt);
+
+        // 1. Valid AJAX JSON save with matching X-Expected-Updated-At returns 200 JSON without redirect
+        $okResponse = $this->actingAs($this->admin)
+            ->withHeaders(['X-Expected-Updated-At' => $initialUpdatedAt])
+            ->putJson(route('admin.agendas.update-notulen', $this->agenda), [
+                'notulensi' => '<p>Draft tersimpan via AJAX pertama.</p>',
+                'kesimpulan' => '<p>Kesimpulan AJAX pertama.</p>',
+            ]);
+
+        $okResponse->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonStructure(['success', 'message', 'updated_at', 'saved_at_label']);
+
+        // 2. Stale X-Expected-Updated-At returns 409 Conflict and preserves existing DB content
+        $staleResponse = $this->actingAs($this->admin)
+            ->withHeaders(['X-Expected-Updated-At' => '2020-01-01T00:00:00+07:00'])
+            ->putJson(route('admin.agendas.update-notulen', $this->agenda), [
+                'notulensi' => '<p>Suntingan usang yang harus ditolak.</p>',
+            ]);
+
+        $staleResponse->assertStatus(409)
+            ->assertJsonPath('success', false)
+            ->assertJsonStructure(['success', 'message', 'current_updated_at']);
+
+        $this->assertStringContainsString('Draft tersimpan via AJAX pertama.', $this->agenda->fresh()->notulensi);
+
+        // 3. Stale X-Expected-Updated-At with X-Force-Overwrite: 1 succeeds
+        $forceResponse = $this->actingAs($this->admin)
+            ->withHeaders([
+                'X-Expected-Updated-At' => '2020-01-01T00:00:00+07:00',
+                'X-Force-Overwrite' => '1',
+            ])
+            ->putJson(route('admin.agendas.update-notulen', $this->agenda), [
+                'notulensi' => '<p>Suntingan paksa menimpa versi lama.</p>',
+            ]);
+
+        $forceResponse->assertOk()
+            ->assertJsonPath('success', true);
+        $this->assertStringContainsString('Suntingan paksa menimpa versi lama.', $this->agenda->fresh()->notulensi);
+    }
 }

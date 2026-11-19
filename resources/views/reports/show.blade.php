@@ -5,6 +5,13 @@
 @section('subtitle', 'Detail rekapitulasi kehadiran resmi, notulensi rapat, dokumen edaran, dan dokumentasi')
 
 @section('content')
+<style>
+    .prose-gov table { width: 100%; border-collapse: collapse; margin: 0.75em 0; font-size: 0.8125rem; }
+    .prose-gov th, .prose-gov td { border: 1px solid #cbd5e1; padding: 0.45rem 0.65rem; text-align: left; vertical-align: top; }
+    .prose-gov th { background-color: #f1f5f9; font-weight: 700; color: #0f172a; }
+    .prose-gov a { color: #1d4ed8; text-decoration: underline; }
+    .prose-gov s, .prose-gov del, .prose-gov strike { text-decoration: line-through; color: #64748b; }
+</style>
 <div class="space-y-6">
     <!-- Top Hero Banner (Deep Navy Gov-Tech Pattern) -->
     <div class="bg-slate-950 text-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-800 space-y-4">
@@ -261,7 +268,23 @@
                     @endcan
                 </div>
 
+                @php
+                    $config = $agenda->resolved_report_config;
+                @endphp
                 <div class="p-6 space-y-5">
+                    @if(($config['show_dasar_surat'] ?? false) && filled($config['dasar_surat'] ?? ''))
+                        <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-800">
+                            <span class="font-bold text-slate-900">Dasar Surat:</span>
+                            <span>{{ $config['dasar_surat'] }}</span>
+                        </div>
+                    @endif
+
+                    @if(($config['show_opening_ba'] ?? true) && filled($config['opening_ba'] ?? ''))
+                        <div class="rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-xs text-slate-800 leading-relaxed">
+                            {{ $config['opening_ba'] }}
+                        </div>
+                    @endif
+
                     <!-- Pembahasan -->
                     <div>
                         <h4 class="text-xs font-bold text-slate-900 mb-2 flex items-center gap-2">
@@ -300,36 +323,55 @@
                         @endif
                     </div>
 
-                    <div class="border-t border-slate-200"></div>
+                    @if(($config['show_closing_ba'] ?? true) && filled($config['penutup'] ?? ''))
+                        <div class="border-t border-slate-200"></div>
 
-                    <!-- Penutup -->
-                    <div>
-                        <h4 class="text-xs font-bold text-slate-900 mb-2 flex items-center gap-2">
-                            <span class="w-5 h-5 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-bold shrink-0">✓</span>
-                            Penutup
-                        </h4>
-                        <p class="text-xs text-slate-700 font-medium leading-relaxed pl-7">
-                            @if($agenda->waktu_selesai)
-                                Rapat ditutup pada pukul {{ $agenda->waktu_selesai->format('H:i') }} WIB.
-                            @else
-                                Rapat telah selesai diselenggarakan.
-                            @endif
-                            Rekapitulasi berita acara ini disusun dan diverifikasi sebagai bukti sah pelaksanaan kegiatan kedinasan.
-                        </p>
-                    </div>
+                        <!-- Penutup -->
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-900 mb-2 flex items-center gap-2">
+                                <span class="w-5 h-5 rounded-full bg-slate-900 text-white flex items-center justify-center shrink-0">
+                                    <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                </span>
+                                Penutup
+                            </h4>
+                            <p class="text-xs text-slate-700 font-medium leading-relaxed pl-7">
+                                {{ $config['penutup'] }}
+                            </p>
+                        </div>
+                    @endif
+
+                    @if(($config['show_tembusan'] ?? false) && filled($config['tembusan'] ?? ''))
+                        <div class="border-t border-slate-200 pt-4 pl-7 text-xs text-slate-700">
+                            <div class="font-bold text-slate-900 mb-1">Tembusan:</div>
+                            <div class="leading-relaxed">{!! nl2br(e(trim((string) $config['tembusan']))) !!}</div>
+                        </div>
+                    @endif
                 </div>
 
                 <!-- Signature Verification Section -->
                 @php
                     $pimpinanAtt = $agenda->pimpinan_attendance;
                     $notulisAtt = $agenda->notulis_attendance;
+                    $showSigner3 = (bool) ($config['show_signer3'] ?? false);
+                    $signer3Att = null;
+                    if ($showSigner3 && ($config['show_signer3_signature'] ?? false) && !empty($config['signer3_user_id'])) {
+                        $signer3Att = $attendances->getCollection()->firstWhere('user_id', (int) $config['signer3_user_id'])
+                            ?? $agenda->attendances()->with('user')->where('user_id', (int) $config['signer3_user_id'])->first();
+                    }
+                    $s1Prefix = trim((string) ($config['signer1_prefix'] ?? 'Mengetahui,'));
+                    $s3Prefix = trim((string) ($config['signer3_prefix'] ?? ''));
                 @endphp
                 <div class="border-t border-slate-200 px-6 py-6">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-8 max-w-2xl mx-auto">
+                    <div class="grid grid-cols-1 {{ $showSigner3 ? 'sm:grid-cols-3 max-w-4xl' : 'sm:grid-cols-2 max-w-2xl' }} gap-8 mx-auto">
                         <div class="text-center space-y-4">
-                            <div class="text-[10px] uppercase font-bold text-slate-500 tracking-wider font-mono">Pemimpin Rapat</div>
+                            <div>
+                                @if($s1Prefix !== '')
+                                    <div class="text-[11px] text-slate-600">{{ $s1Prefix }}</div>
+                                @endif
+                                <div class="text-[10px] uppercase font-bold text-slate-500 tracking-wider font-mono">{{ $config['signer1_role'] ?? 'Pemimpin Rapat' }}</div>
+                            </div>
                             <div class="h-16 flex items-center justify-center">
-                                @if($pimpinanAtt && $pimpinanAtt->signature_path)
+                                @if(($config['show_signer1_signature'] ?? true) && $pimpinanAtt && $pimpinanAtt->signature_path)
                                     @can('view', $pimpinanAtt)
                                         <img src="{{ route('attendances.signature', $pimpinanAtt) }}" alt="Tanda Tangan Pimpinan" class="h-14 max-w-[140px] object-contain">
                                     @else
@@ -346,9 +388,10 @@
                                     <tr>
                                         <td style="border: none; padding: 0; text-align: left;">
                                             <div class="inline-block text-left space-y-0.5" style="display: block; text-align: left;">
-                                                <div class="text-xs font-bold text-slate-900">{{ $agenda->nama_pimpinan }}</div>
-                                                @if($agenda->nip_pimpinan && $agenda->nip_pimpinan !== '-')
-                                                    <div class="text-[10px] text-slate-500 font-mono">NIP {{ $agenda->nip_pimpinan }}</div>
+                                                <div class="text-xs font-bold text-slate-900">{{ $config['signer1_name'] ?? $agenda->nama_pimpinan }}</div>
+                                                @php $s1Nip = $config['signer1_nip'] ?? $agenda->nip_pimpinan; @endphp
+                                                @if($s1Nip && $s1Nip !== '-')
+                                                    <div class="text-[10px] text-slate-500 font-mono">NIP {{ $s1Nip }}</div>
                                                 @endif
                                             </div>
                                         </td>
@@ -363,10 +406,52 @@
                             </div>
                         </div>
 
+                        @if($showSigner3)
                         <div class="text-center space-y-4">
-                            <div class="text-[10px] uppercase font-bold text-slate-500 tracking-wider font-mono">Notulis Rapat</div>
+                            <div>
+                                @if($s3Prefix !== '')
+                                    <div class="text-[11px] text-slate-600">{{ $s3Prefix }}</div>
+                                @endif
+                                <div class="text-[10px] uppercase font-bold text-slate-500 tracking-wider font-mono">{{ $config['signer3_role'] ?? 'Kepala Lembaga Layanan Pendidikan Tinggi Wilayah X' }}</div>
+                            </div>
                             <div class="h-16 flex items-center justify-center">
-                                @if($notulisAtt && $notulisAtt->signature_path)
+                                @if(($config['show_signer3_signature'] ?? false) && $signer3Att && $signer3Att->signature_path)
+                                    @can('view', $signer3Att)
+                                        <img src="{{ route('attendances.signature', $signer3Att) }}" alt="Tanda Tangan Penandatangan 3" class="h-14 max-w-[140px] object-contain">
+                                    @else
+                                        <x-biometric-privacy-badge variant="signature" label="Dilindungi Privasi" />
+                                    @endcan
+                                @else
+                                    <div class="px-3 py-2 border border-dashed border-slate-300 rounded-lg bg-slate-50 text-[11px] text-slate-400 italic">
+                                        Pengesahan Eksekutif
+                                    </div>
+                                @endif
+                            </div>
+                            <div class="border-t border-slate-300 pt-2 flex flex-col items-center text-center">
+                                <table align="center" border="0" cellspacing="0" cellpadding="0" style="margin: 0 auto; border-collapse: collapse; border: none; text-align: left; display: inline-table;">
+                                    <tr>
+                                        <td style="border: none; padding: 0; text-align: left;">
+                                            <div class="inline-block text-left space-y-0.5" style="display: block; text-align: left;">
+                                                <div class="text-xs font-bold text-slate-900">{{ $config['signer3_name'] ?: '-' }}</div>
+                                                @php $s3Nip = $config['signer3_nip'] ?? '-'; @endphp
+                                                @if($s3Nip && $s3Nip !== '-')
+                                                    <div class="text-[10px] text-slate-500 font-mono">NIP {{ $s3Nip }}</div>
+                                                @endif
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                        @endif
+
+                        <div class="text-center space-y-4">
+                            <div>
+                                <div class="text-[11px] text-slate-600">{{ $config['signing_city'] ?? 'Padang' }}, {{ $config['signing_date'] ?? now()->translatedFormat('d F Y') }}</div>
+                                <div class="text-[10px] uppercase font-bold text-slate-500 tracking-wider font-mono">{{ $config['signer2_role'] ?? 'Notulis Rapat' }}</div>
+                            </div>
+                            <div class="h-16 flex items-center justify-center">
+                                @if(($config['show_signer2_signature'] ?? true) && $notulisAtt && $notulisAtt->signature_path)
                                     @can('view', $notulisAtt)
                                         <img src="{{ route('attendances.signature', $notulisAtt) }}" alt="Tanda Tangan Notulis" class="h-14 max-w-[140px] object-contain">
                                     @else
@@ -383,9 +468,10 @@
                                     <tr>
                                         <td style="border: none; padding: 0; text-align: left;">
                                             <div class="inline-block text-left space-y-0.5" style="display: block; text-align: left;">
-                                                <div class="text-xs font-bold text-slate-900">{{ $agenda->nama_notulis }}</div>
-                                                @if($agenda->nip_notulis && $agenda->nip_notulis !== '-')
-                                                    <div class="text-[10px] text-slate-500 font-mono">NIP {{ $agenda->nip_notulis }}</div>
+                                                <div class="text-xs font-bold text-slate-900">{{ $config['signer2_name'] ?? $agenda->nama_notulis }}</div>
+                                                @php $s2Nip = $config['signer2_nip'] ?? $agenda->nip_notulis; @endphp
+                                                @if($s2Nip && $s2Nip !== '-')
+                                                    <div class="text-[10px] text-slate-500 font-mono">NIP {{ $s2Nip }}</div>
                                                 @endif
                                             </div>
                                         </td>

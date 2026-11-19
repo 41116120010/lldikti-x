@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Agenda;
 use App\Support\DocumentLayout;
+use App\Support\DocxHtmlRenderer;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 use PhpOffice\PhpWord\IOFactory;
@@ -109,9 +110,12 @@ class DocxExportService
         $this->addLetterhead($section, $data);
         $this->addTitle($section, $data);
         $this->addDetailTable($section, $data);
+        $this->addOpeningParagraphs($section, $data);
         $this->addMinutes($section, $data);
+        $this->addClosingParagraph($section, $data);
         $this->addSignatures($section, $data);
         $this->addFooterNote($section, $data);
+        $this->addTembusan($section, $data);
         $this->addAttendance($section, $data);
         $this->addPhotoAnnex($section, $data);
 
@@ -255,6 +259,39 @@ class DocxExportService
     }
 
     // -----------------------------------------------------------------
+    // Dasar Surat & Opening Paragraph
+    // -----------------------------------------------------------------
+
+    /**
+     * @param  array<string,mixed>  $data
+     */
+    private function addOpeningParagraphs(mixed $section, array $data): void
+    {
+        $config = $data['config'];
+
+        $dasarText = trim((string) ($config['dasar_surat'] ?? ''));
+        if (($config['show_dasar_surat'] ?? false) && $dasarText !== '') {
+            [$runStyle, $paraStyle] = $this->style(
+                DocumentLayout::BODY_SIZE_PT, false, DocumentLayout::BODY_LINE_PT, 'both', false, 4
+            );
+            $boldRunStyle = $runStyle;
+            $boldRunStyle['bold'] = true;
+
+            $run = $section->addTextRun($paraStyle);
+            $run->addText($this->plain('Dasar: '), $boldRunStyle);
+            $run->addText($this->plain($dasarText), $runStyle);
+        }
+
+        $openingText = trim((string) ($config['opening_ba'] ?? ''));
+        if (($config['show_opening_ba'] ?? true) && $openingText !== '') {
+            $section->addText(
+                $this->plain($openingText),
+                ...$this->style(DocumentLayout::BODY_SIZE_PT, false, DocumentLayout::BODY_LINE_PT, 'both', false, 4)
+            );
+        }
+    }
+
+    // -----------------------------------------------------------------
     // Minutes
     // -----------------------------------------------------------------
 
@@ -277,13 +314,46 @@ class DocxExportService
 
         if ($notes) {
             $section->addText($this->plain('A. Catatan Jalannya Rapat (Notulensi):'), ...$this->style(DocumentLayout::BODY_SIZE_PT, true, null, null, false, 8));
-            $this->boxedProse($section, $this->plain($agenda->formatted_notulensi ?: ''));
+            $this->boxedProse(
+                $section,
+                $agenda->formatted_notulensi,
+                'Tidak ada catatan notulensi khusus yang dicatat.'
+            );
         }
 
         if ($conclusion) {
             $section->addText($this->plain('B. Kesimpulan & Rencana Tindak Lanjut (RTL):'), ...$this->style(DocumentLayout::BODY_SIZE_PT, true, null, null, false, 8));
-            $this->boxedProse($section, $this->plain($agenda->formatted_kesimpulan ?: ''));
+            $this->boxedProse(
+                $section,
+                $agenda->formatted_kesimpulan,
+                'Tidak ada catatan kesimpulan khusus yang dicatat.'
+            );
         }
+    }
+
+    /**
+     * @param  array<string,mixed>  $data
+     */
+    private function addClosingParagraph(mixed $section, array $data): void
+    {
+        $config = $data['config'];
+        $closingText = trim((string) ($config['penutup'] ?? ''));
+
+        if (! ($config['show_closing_ba'] ?? true) || $closingText === '') {
+            return;
+        }
+
+        $section->addText(
+            $this->plain($closingText),
+            ...$this->style(
+                DocumentLayout::BODY_SIZE_PT,
+                false,
+                DocumentLayout::BODY_LINE_PT,
+                'both',
+                false,
+                DocumentLayout::BLOCK_GAP_BOTTOM_PT
+            )
+        );
     }
 
     // -----------------------------------------------------------------
@@ -487,7 +557,7 @@ class DocxExportService
         $this->spacer($section, DocumentLayout::TTD_GAP_PT);
 
         $signers = [[
-            'label' => 'Mengetahui,',
+            'label' => trim((string) ($config['signer1_prefix'] ?? 'Mengetahui,')),
             'role' => $config['signer1_role'] ?? 'Pemimpin Rapat',
             'name' => $config['signer1_name'] ?? $agenda->nama_pimpinan,
             'nip' => $config['signer1_nip'] ?? $agenda->nip_pimpinan,
@@ -503,12 +573,13 @@ class DocxExportService
         ]];
 
         if ($config['show_signer3'] ?? false) {
+            $showSigner3Sig = ($config['show_signer3_signature'] ?? false) && ! empty($config['signer3_user_id']);
             $signers[] = [
-                'label' => 'Menyetujui,',
+                'label' => trim((string) ($config['signer3_prefix'] ?? '')),
                 'role' => $config['signer3_role'] ?? 'Kepala LLDIKTI',
                 'name' => $config['signer3_name'] ?? '-',
                 'nip' => $config['signer3_nip'] ?? '-',
-                'image' => null,
+                'image' => $showSigner3Sig ? ($data['signer3SigBase64'] ?? null) : null,
             ];
         }
 
@@ -628,6 +699,37 @@ class DocxExportService
         )->addText($text, ...$this->style(
             DocumentLayout::FOOTER_NOTE_SIZE_PT, false, null, 'center'
         ));
+    }
+
+    /**
+     * Optional Tembusan block after the signature / footer note.
+     *
+     * @param  array<string,mixed>  $data
+     */
+    private function addTembusan(mixed $section, array $data): void
+    {
+        $config = $data['config'];
+        $raw = trim((string) ($config['tembusan'] ?? ''));
+
+        if (! ($config['show_tembusan'] ?? false) || $raw === '') {
+            return;
+        }
+
+        $section->addText(
+            $this->plain('Tembusan:'),
+            ...$this->style(DocumentLayout::BODY_SIZE_PT - 1, true, null, 'left', false, 8)
+        );
+
+        $lines = preg_split('/\r\n|\r|\n/', $raw) ?: [];
+        foreach ($lines as $line) {
+            $cleanLine = trim($line);
+            if ($cleanLine !== '') {
+                $section->addText(
+                    $this->plain($cleanLine),
+                    ...$this->style(DocumentLayout::BODY_SIZE_PT - 1, false, 15.0, 'left', false, 0)
+                );
+            }
+        }
     }
 
     // -----------------------------------------------------------------
@@ -780,12 +882,63 @@ class DocxExportService
     }
 
     /**
-     * A paragraph of prose inside a bordered, lightly filled box.
+     * Render rich-text HTML inside a bordered, lightly filled box.
      *
-     * The PDF wraps the minutes in a one cell table purely for its frame. Word
-     * needs the same construct, or the block loses its outline entirely.
+     * Top-level <table> elements inside minutes/conclusions are split out as
+     * full-width sibling tables separated by spacer paragraphs so OOXML never
+     * produces nested <w:tbl> or adjacent </w:tbl><w:tbl> boundaries.
      */
-    private function boxedProse(mixed $section, string $text): void
+    private function boxedProse(mixed $section, ?string $html, string $emptyFallback = ''): void
+    {
+        $segments = DocxHtmlRenderer::segmentBlocks($html);
+
+        if ($segments === []) {
+            $cell = $this->createProseBoxCell($section);
+            if ($emptyFallback !== '') {
+                [$runStyle, $paraStyle] = $this->style(
+                    DocumentLayout::BODY_SIZE_PT, false, DocumentLayout::BODY_LINE_PT, 'left', false, 0, null, true
+                );
+                $runStyle['color'] = '64748B';
+                $cell->addText($this->plain($emptyFallback), $runStyle, $paraStyle);
+            } else {
+                $cell->addText('', ...$this->style(
+                    DocumentLayout::BODY_SIZE_PT, false, DocumentLayout::BODY_LINE_PT, 'both'
+                ));
+            }
+
+            return;
+        }
+
+        $renderOptions = [
+            'fontName' => 'Times New Roman',
+            'fontSizePt' => DocumentLayout::BODY_SIZE_PT,
+            'linePt' => DocumentLayout::BODY_LINE_PT,
+            'defaultAlign' => 'both',
+            'spaceAfterPt' => 4.0,
+            'requireParagraph' => true,
+        ];
+
+        $lastIndex = count($segments) - 1;
+        foreach ($segments as $index => $segment) {
+            if ($segment['type'] === 'table' && isset($segment['node'])) {
+                DocxHtmlRenderer::renderTable(
+                    $section,
+                    $segment['node'],
+                    DocumentLayout::contentWidthCm(),
+                    $renderOptions
+                );
+            } else {
+                $cell = $this->createProseBoxCell($section);
+                DocxHtmlRenderer::renderNodes($cell, $segment['nodes'] ?? [], $renderOptions);
+            }
+
+            if ($index < $lastIndex) {
+                $this->spacer($section, 4);
+            }
+        }
+    }
+
+    private function createProseBoxCell(mixed $section): mixed
     {
         $table = $section->addTable(array_merge($this->tableStyle(), [
             'borderSize' => DocumentLayout::ptToBorderEighths(DocumentLayout::BORDER_PT),
@@ -797,12 +950,10 @@ class DocxExportService
         ]));
 
         $row = $table->addRow(null, $this->rowStyle());
-        $cell = $row->addCell(DocumentLayout::ptToTwips(DocumentLayout::contentWidthPt()), [
+
+        return $row->addCell(DocumentLayout::ptToTwips(DocumentLayout::contentWidthPt()), [
             'shading' => ['fill' => DocumentLayout::PROSE_BOX_FILL],
         ]);
-        $cell->addText($text, ...$this->style(
-            DocumentLayout::BODY_SIZE_PT, false, DocumentLayout::BODY_LINE_PT, 'both'
-        ));
     }
 
     /**

@@ -48,6 +48,18 @@
 </table>
 @endif
 
+@if(($config['show_dasar_surat'] ?? false) && trim((string) ($config['dasar_surat'] ?? '')) !== '')
+<p style="margin: 4pt 0; text-align: justify; font-size: {{ DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ DocumentLayout::BODY_LINE_PT }}pt; mso-line-height-rule: exactly; font-family: 'Times New Roman', Times, serif;">
+    <strong>Dasar:</strong> {{ $config['dasar_surat'] }}
+</p>
+@endif
+
+@if(($config['show_opening_ba'] ?? true) && trim((string) ($config['opening_ba'] ?? '')) !== '')
+<p style="margin: 4pt 0 6pt 0; text-align: justify; font-size: {{ DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ DocumentLayout::BODY_LINE_PT }}pt; mso-line-height-rule: exactly; font-family: 'Times New Roman', Times, serif;">
+    {{ $config['opening_ba'] }}
+</p>
+@endif
+
 <!-- Seksi I: Notulensi & Kesimpulan Rapat -->
 @if(($config['show_notulensi'] ?? true) || ($config['show_kesimpulan'] ?? true))
 <div style="margin-top: {{ DocumentLayout::SECTION_GAP_TOP_PT }}pt;">
@@ -56,7 +68,7 @@
     @if($config['show_notulensi'] ?? true)
     <div style="margin-bottom: {{ DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt;">
         <div style="font-weight: bold; font-size: {{ DocumentLayout::SUBHEADING_SIZE_PT }}pt; margin-bottom: {{ DocumentLayout::SUBHEADING_GAP_BOTTOM_PT }}pt; font-family: 'Times New Roman', Times, serif; page-break-after: avoid; break-after: avoid;">A. Catatan Jalannya Rapat (Notulensi):</div>
-        <div style="border: {{ DocumentLayout::BORDER_PT }}pt solid #{{ DocumentLayout::BORDER_COLOR }}; padding: {{ DocumentLayout::PROSE_PAD_TOP_PT }}pt {{ DocumentLayout::PROSE_PAD_SIDE_PT }}pt; text-align: justify; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; font-size: {{ DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ DocumentLayout::BODY_LINE_PT }}pt; mso-line-height-rule: exactly; background: #{{ DocumentLayout::PROSE_BOX_FILL }}; font-family: 'Times New Roman', Times, serif;">
+        <div class="prose-gov" style="border: {{ DocumentLayout::BORDER_PT }}pt solid #{{ DocumentLayout::BORDER_COLOR }}; padding: {{ DocumentLayout::PROSE_PAD_TOP_PT }}pt {{ DocumentLayout::PROSE_PAD_SIDE_PT }}pt; text-align: justify; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; font-size: {{ DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ DocumentLayout::BODY_LINE_PT }}pt; mso-line-height-rule: exactly; background: #{{ DocumentLayout::PROSE_BOX_FILL }}; font-family: 'Times New Roman', Times, serif;">
             {!! $agenda->formatted_notulensi ?: '<span style="color: #64748b; font-style: italic;">Tidak ada catatan notulensi khusus yang dicatat.</span>' !!}
         </div>
     </div>
@@ -65,12 +77,18 @@
     @if($config['show_kesimpulan'] ?? true)
     <div>
         <div style="font-weight: bold; font-size: {{ DocumentLayout::SUBHEADING_SIZE_PT }}pt; margin-bottom: {{ DocumentLayout::SUBHEADING_GAP_BOTTOM_PT }}pt; font-family: 'Times New Roman', Times, serif; page-break-after: avoid; break-after: avoid;">B. Kesimpulan &amp; Rencana Tindak Lanjut (RTL):</div>
-        <div style="border: {{ DocumentLayout::BORDER_PT }}pt solid #{{ DocumentLayout::BORDER_COLOR }}; padding: {{ DocumentLayout::PROSE_PAD_TOP_PT }}pt {{ DocumentLayout::PROSE_PAD_SIDE_PT }}pt; text-align: justify; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; font-size: {{ DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ DocumentLayout::BODY_LINE_PT }}pt; mso-line-height-rule: exactly; background: #{{ DocumentLayout::PROSE_BOX_FILL }}; font-family: 'Times New Roman', Times, serif;">
+        <div class="prose-gov" style="border: {{ DocumentLayout::BORDER_PT }}pt solid #{{ DocumentLayout::BORDER_COLOR }}; padding: {{ DocumentLayout::PROSE_PAD_TOP_PT }}pt {{ DocumentLayout::PROSE_PAD_SIDE_PT }}pt; text-align: justify; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; font-size: {{ DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ DocumentLayout::BODY_LINE_PT }}pt; mso-line-height-rule: exactly; background: #{{ DocumentLayout::PROSE_BOX_FILL }}; font-family: 'Times New Roman', Times, serif;">
             {!! $agenda->formatted_kesimpulan ?: '<span style="color: #64748b; font-style: italic;">Tidak ada catatan kesimpulan khusus yang dicatat.</span>' !!}
         </div>
     </div>
     @endif
 </div>
+@endif
+
+@if(($config['show_closing_ba'] ?? true) && trim((string) ($config['penutup'] ?? '')) !== '')
+<p style="margin: {{ DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt 0 0 0; text-align: justify; font-size: {{ DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ DocumentLayout::BODY_LINE_PT }}pt; mso-line-height-rule: exactly; font-family: 'Times New Roman', Times, serif;">
+    {{ $config['penutup'] }}
+</p>
 @endif
 
 <!-- Tanda Tangan Pengesahan: kiri (Pimpinan) - tengah (Kepala LLDIKTI, hanya bila
@@ -93,14 +111,16 @@
         <tr style="page-break-inside: avoid; break-inside: avoid; mso-yfti-row: cantSplit;">
             <td width="{{ $ttdCell }}" style="width: {{ $ttdCell }}; text-align: center; vertical-align: top; border: none; padding: 0 4pt; font-size: 12pt; font-family: 'Times New Roman', Times, serif;">
                 <div style="display: inline-block; width: {{ $ttdInner }}; text-align: left;">
-                    Mengetahui,<br>
+                    @php $signer1Prefix = trim((string) ($config['signer1_prefix'] ?? 'Mengetahui,')); @endphp
+                    @if($signer1Prefix !== ''){{ $signer1Prefix }}<br>@else&nbsp;<br>@endif
                     <strong>{{ $config['signer1_role'] ?? 'Pemimpin Rapat' }}</strong>
                 </div>
             </td>
             @if($ttdThird)
             <td width="{{ $ttdCellMid }}" style="width: {{ $ttdCellMid }}; text-align: center; vertical-align: top; border: none; padding: 0 4pt; font-size: 12pt; font-family: 'Times New Roman', Times, serif;">
                 <div style="display: inline-block; width: {{ $ttdInner }}; text-align: left;">
-                    Menyetujui,<br>
+                    @php $signer3Prefix = trim((string) ($config['signer3_prefix'] ?? '')); @endphp
+                    @if($signer3Prefix !== ''){{ $signer3Prefix }}<br>@else&nbsp;<br>@endif
                     <strong>{{ $config['signer3_role'] ?? 'Kepala LLDIKTI' }}</strong>
                 </div>
             </td>
@@ -123,6 +143,9 @@
             @if($ttdThird)
             <td width="{{ $ttdCellMid }}" style="width: {{ $ttdCellMid }}; height: 36pt; text-align: center; vertical-align: middle; border: none; padding: 1pt 0;">
                 <div style="display: inline-block; width: {{ $ttdInner }}; text-align: left;">
+                    @if(($config['show_signer3_signature'] ?? false) && !empty($config['signer3_user_id']) && isset($signer3SigBase64) && $signer3SigBase64)
+                        <img src="{{ $signer3SigBase64 }}" alt="TTD Penandatangan 3" width="95" height="32" style="width: 95px; height: 32px; max-height: 34px; max-width: 100px; object-fit: contain; display: block; border: none;">
+                    @endif
                 </div>
             </td>
             @endif
@@ -167,6 +190,13 @@
 @if(($config['show_footer_note'] ?? false) && trim((string) ($config['footer_note'] ?? '')) !== '')
 <div class="document-footer-note" style="margin: {{ DocumentLayout::FOOTER_NOTE_GAP_PT }}pt 0 0 0; padding-top: {{ DocumentLayout::FOOTER_NOTE_PAD_TOP_PT }}pt; border-top: {{ DocumentLayout::FOOTER_NOTE_RULE_PT }}pt solid #{{ DocumentLayout::FOOTER_NOTE_RULE_COLOR }}; font-size: {{ DocumentLayout::FOOTER_NOTE_SIZE_PT }}pt; color: #{{ DocumentLayout::FOOTER_NOTE_COLOR }}; text-align: center; font-family: 'Times New Roman', Times, serif; page-break-inside: avoid; break-inside: avoid;">
     <span id="sheet-footer-note">{{ $config['footer_note'] ?? '' }}</span>
+</div>
+@endif
+
+@if(($config['show_tembusan'] ?? false) && trim((string) ($config['tembusan'] ?? '')) !== '')
+<div style="margin-top: 8pt; font-size: {{ DocumentLayout::BODY_SIZE_PT - 1 }}pt; line-height: 15pt; font-family: 'Times New Roman', Times, serif; text-align: left; page-break-inside: avoid; break-inside: avoid;">
+    <strong>Tembusan:</strong><br>
+    {!! nl2br(e(trim((string) $config['tembusan']))) !!}
 </div>
 @endif
 

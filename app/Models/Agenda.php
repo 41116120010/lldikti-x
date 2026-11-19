@@ -698,6 +698,26 @@ class Agenda extends Model
         return $this->attendances()->where('user_id', $notulisId)->first();
     }
 
+    public const DEFAULT_REPORT_ALAMAT_KONTAK = 'Jalan Khatib Sulaiman Padang 25137 • Telepon (0751) 70567376 • Laman: lldikti10.kemdiktisaintek.go.id • Pos-el: info.lldikti10@kemdiktisaintek.go.id';
+
+    public const DEFAULT_REPORT_PENUTUP = 'Demikian Berita Acara ini dibuat dengan sesungguhnya untuk dapat dipergunakan sebagaimana mestinya.';
+
+    /**
+     * Build the default formal opening paragraph for Berita Acara.
+     */
+    public function buildDefaultOpeningBa(): string
+    {
+        $hariTanggal = $this->waktu_mulai
+            ? $this->waktu_mulai->translatedFormat('l, d F Y')
+            : now()->translatedFormat('l, d F Y');
+        $waktu = $this->waktu_mulai
+            ? $this->waktu_mulai->format('H:i').($this->waktu_selesai ? ' s.d. '.$this->waktu_selesai->format('H:i').' WIB' : ' WIB s.d. Selesai')
+            : '-';
+        $tempat = $this->lokasi_ruang ?: 'Daring (Online Meeting)';
+
+        return "Pada hari ini {$hariTanggal}, pukul {$waktu}, bertempat di {$tempat}, telah dilaksanakan rapat {$this->judul_rapat} yang dihadiri oleh peserta sebagaimana tercantum pada Daftar Hadir terlampir.";
+    }
+
     /**
      * Get system default report configuration for this agenda.
      *
@@ -705,6 +725,8 @@ class Agenda extends Model
      */
     public function getDefaultReportConfig(): array
     {
+        $defaultDasarSurat = trim((string) ($this->surat_edaran_config['nomor_surat'] ?? ''));
+
         return [
             // Header
             'show_kop' => true,
@@ -712,7 +734,7 @@ class Agenda extends Model
             'custom_logo_path' => null,
             'instansi_induk' => 'KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI',
             'instansi_pelaksana' => 'LEMBAGA LAYANAN PENDIDIKAN TINGGI (LLDIKTI) WILAYAH X',
-            'alamat_kontak' => 'Jalan Khatib Sulaiman, Padang, Sumatera Barat • Laman: lldikti10.kemdikbud.go.id',
+            'alamat_kontak' => self::DEFAULT_REPORT_ALAMAT_KONTAK,
             'document_title' => 'BERITA ACARA DAN DAFTAR HADIR RAPAT',
             'show_document_number' => true,
             'document_number' => 'BA-RAPAT/'.($this->waktu_mulai ? $this->waktu_mulai->format('Y') : date('Y')).'/'.str_pad($this->id, 4, '0', STR_PAD_LEFT),
@@ -721,6 +743,10 @@ class Agenda extends Model
             'show_meeting_info' => true,
             'custom_agenda_title' => $this->judul_rapat,
             'custom_location' => $this->lokasi_ruang ?? 'Daring (Online Meeting)',
+            'show_dasar_surat' => false,
+            'dasar_surat' => $defaultDasarSurat,
+            'show_opening_ba' => true,
+            'opening_ba' => $this->buildDefaultOpeningBa(),
             'show_attendees' => true,
             'show_nip' => true,
             'show_unit' => true,
@@ -729,11 +755,14 @@ class Agenda extends Model
             'show_attendee_signatures' => true,
             'show_notulensi' => true,
             'show_kesimpulan' => true,
+            'show_closing_ba' => true,
+            'penutup' => self::DEFAULT_REPORT_PENUTUP,
             'show_documentation' => true,
 
             // Footer
             'signing_city' => 'Padang',
             'signing_date' => $this->waktu_mulai ? $this->waktu_mulai->translatedFormat('d F Y') : now()->translatedFormat('d F Y'),
+            'signer1_prefix' => 'Mengetahui,',
             'signer1_role' => 'Pemimpin Rapat',
             'signer1_name' => $this->nama_pimpinan,
             'signer1_nip' => ($this->nip_pimpinan && $this->nip_pimpinan !== '-') ? $this->nip_pimpinan : '-',
@@ -743,9 +772,14 @@ class Agenda extends Model
             'signer2_nip' => ($this->nip_notulis && $this->nip_notulis !== '-') ? $this->nip_notulis : '-',
             'show_signer2_signature' => true,
             'show_signer3' => false,
+            'signer3_prefix' => '',
             'signer3_role' => 'Kepala Lembaga Layanan Pendidikan Tinggi Wilayah X',
             'signer3_name' => '',
             'signer3_nip' => '-',
+            'signer3_user_id' => null,
+            'show_signer3_signature' => false,
+            'show_tembusan' => false,
+            'tembusan' => '',
             'show_footer_note' => false,
             // Kosong secara sengaja. Dokumen ini tidak lagi mencantumkan
             // kalimat resmi SIPERAPAT maupun stempel waktu cetak;-petugas
@@ -763,6 +797,10 @@ class Agenda extends Model
         $stored = is_array($this->report_config) ? $this->report_config : [];
 
         $resolved = array_replace($defaults, $stored);
+
+        if (str_contains((string) ($resolved['alamat_kontak'] ?? ''), 'lldikti10.kemdikbud.go.id')) {
+            $resolved['alamat_kontak'] = $defaults['alamat_kontak'];
+        }
 
         // Dynamically track active assigned leader and minute taker if roles were assigned
         if ($this->pimpinan_id && isset($stored['signer1_name'])) {

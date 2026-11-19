@@ -876,12 +876,12 @@
     }
     .office-document-ruler .ruler-margin-left {
         left: 0;
-        width: 18mm;
+        width: 20mm;
         border-right: 1.5px solid #0f172a;
     }
     .office-document-ruler .ruler-margin-right {
         right: 0;
-        width: 18mm;
+        width: 20mm;
         border-left: 1.5px solid #0f172a;
     }
 
@@ -891,7 +891,7 @@
         border: 1px solid #94a3b8;
         box-sizing: border-box;
         margin: 0 auto;
-        padding: 16mm 18mm 24mm 18mm;
+        padding: 15mm 20mm 15mm 20mm;
         font-family: 'Times New Roman', Times, serif;
         color: #000000;
         position: relative;
@@ -971,13 +971,25 @@
         border-top: 0.75pt solid #cbd5e1;
         padding-top: 4pt;
         position: absolute !important;
-        bottom: 12mm !important;
-        left: 18mm !important;
-        right: 18mm !important;
+        bottom: 6mm !important;
+        left: 20mm !important;
+        right: 20mm !important;
         height: 20px;
         margin: 0 !important;
         background: #ffffff;
         z-index: 10;
+    }
+
+    .office-paper-sheet.is-sheet-overflow .doc-running-footer {
+        position: static !important;
+        margin-top: 12pt !important;
+    }
+
+    .office-paper-sheet.is-sheet-overflow::after {
+        content: "";
+        display: block;
+        border-top: 1px dashed #cbd5e1;
+        margin-top: 4pt;
     }
 
     /* Authentic Word Page Break & Gap */
@@ -1086,6 +1098,111 @@
 
     .office-editable-box p:last-child {
         margin-bottom: 0;
+    }
+
+    .office-editable-box h2 {
+        font-size: 11.5pt;
+        font-weight: 700;
+        margin: 8pt 0 4pt 0;
+        color: #000000;
+    }
+
+    .office-editable-box h3 {
+        font-size: 10.5pt;
+        font-weight: 700;
+        margin: 7pt 0 3pt 0;
+        color: #000000;
+    }
+
+    .office-editable-box h4 {
+        font-size: 9.5pt;
+        font-weight: 700;
+        margin: 6pt 0 3pt 0;
+        color: #0f172a;
+    }
+
+    .office-editable-box ul {
+        list-style-type: disc;
+        padding-left: 16pt;
+        margin: 4pt 0 6pt 0;
+    }
+
+    .office-editable-box ol {
+        list-style-type: decimal;
+        padding-left: 16pt;
+        margin: 4pt 0 6pt 0;
+    }
+
+    .office-editable-box li {
+        margin: 1.5pt 0;
+    }
+
+    .office-editable-box ul ul,
+    .office-editable-box ol ul {
+        list-style-type: circle;
+        margin: 2pt 0;
+    }
+
+    .office-editable-box ol ol,
+    .office-editable-box ul ol {
+        list-style-type: lower-alpha;
+        margin: 2pt 0;
+    }
+
+    .office-editable-box blockquote {
+        border-left: 2.5pt solid #475569;
+        margin: 6pt 0;
+        padding: 3pt 0 3pt 10pt;
+        color: #1e293b;
+        font-style: italic;
+        background: #f8fafc;
+    }
+
+    .office-editable-box hr {
+        border: none;
+        border-top: 0.75pt solid #64748b;
+        margin: 8pt 0;
+    }
+
+    .office-editable-box a {
+        color: #1d4ed8;
+        text-decoration: underline;
+    }
+
+    .office-editable-box font[size="1"] { font-size: 8pt; }
+    .office-editable-box font[size="2"] { font-size: 10pt; }
+    .office-editable-box font[size="3"] { font-size: 12pt; }
+    .office-editable-box font[size="4"] { font-size: 14pt; }
+    .office-editable-box font[size="5"] { font-size: 18pt; }
+    .office-editable-box font[size="6"] { font-size: 24pt; }
+
+    .office-editable-box table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        margin: 6pt 0 !important;
+        table-layout: fixed !important;
+    }
+
+    .office-editable-box th,
+    .office-editable-box td {
+        border: 0.75pt solid #000000 !important;
+        padding: 4pt 6pt !important;
+        vertical-align: top;
+        text-align: left;
+        font-size: 9pt;
+        line-height: 1.3;
+    }
+
+    .office-editable-box th {
+        background-color: #f1f5f9;
+        font-weight: 700;
+    }
+
+    .word-btn.is-disabled,
+    .word-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+        pointer-events: none;
     }
 
     .office-editable-box:focus,

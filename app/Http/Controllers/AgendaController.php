@@ -617,14 +617,51 @@ class AgendaController extends Controller
             ->orderBy('id')
             ->get();
 
-        return view('agendas.notulen', compact('agenda', 'documentations', 'config', 'attendances'));
+        $signerCandidates = User::where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'nip']);
+
+        $signer3SigUrl = null;
+        if (! empty($config['signer3_user_id'])) {
+            $signer3Att = $attendances->firstWhere('user_id', (int) $config['signer3_user_id']);
+            if ($signer3Att && $signer3Att->signature_path) {
+                $signer3SigUrl = route('attendances.signature', $signer3Att);
+            }
+        }
+
+        return view('agendas.notulen', compact(
+            'agenda',
+            'documentations',
+            'config',
+            'attendances',
+            'signerCandidates',
+            'signer3SigUrl',
+        ));
     }
 
     /**
      * Update Notulensi, Kesimpulan, and Upload Documentation Photos & Sync Document Configuration (Single Action).
      */
-    public function updateNotulen(UpdateMinutesRequest $request, Agenda $agenda, AgendaService $agendaService): RedirectResponse
+    public function updateNotulen(UpdateMinutesRequest $request, Agenda $agenda, AgendaService $agendaService): RedirectResponse|JsonResponse
     {
+        $expectedUpdatedAt = $request->header('X-Expected-Updated-At');
+        $forceOverwrite = $request->boolean('force_overwrite') || $request->header('X-Force-Overwrite') === '1';
+        $currentUpdatedAt = $agenda->updated_at?->toIso8601String();
+
+        if (is_string($expectedUpdatedAt) && $expectedUpdatedAt !== '' && ! $forceOverwrite && $currentUpdatedAt !== null && $expectedUpdatedAt !== $currentUpdatedAt) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Notulensi atau pengaturan dokumen telah diperbarui oleh pengguna lain. Muat ulang versi terbaru atau pilih Timpa Paksa.',
+                    'current_updated_at' => $currentUpdatedAt,
+                ], 409);
+            }
+
+            return back()
+                ->withInput()
+                ->with('error', 'Notulensi atau pengaturan dokumen telah diperbarui oleh pengguna lain sebelum Anda menyimpan.');
+        }
+
         $validated = $request->validated();
 
         $agendaService->updateNotulen(
@@ -638,6 +675,17 @@ class AgendaController extends Controller
             ],
             request: $request,
         );
+
+        if ($request->expectsJson()) {
+            $agenda->refresh();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Notulensi dan pengaturan dokumen rapat berhasil disimpan.',
+                'updated_at' => $agenda->updated_at?->toIso8601String(),
+                'saved_at_label' => now()->format('H:i'),
+            ]);
+        }
 
         $redirectRoute = Auth::user()?->isStaff()
             ? route('agendas.show', $agenda)

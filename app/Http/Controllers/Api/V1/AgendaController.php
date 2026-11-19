@@ -498,6 +498,18 @@ class AgendaController extends Controller
      */
     public function updateNotulen(UpdateMinutesRequest $request, Agenda $agenda, AgendaService $agendaService): JsonResponse
     {
+        $expectedUpdatedAt = $request->header('X-Expected-Updated-At');
+        $forceOverwrite = $request->boolean('force_overwrite') || $request->header('X-Force-Overwrite') === '1';
+        $currentUpdatedAt = $agenda->updated_at?->toIso8601String();
+
+        if (is_string($expectedUpdatedAt) && $expectedUpdatedAt !== '' && ! $forceOverwrite && $currentUpdatedAt !== null && $expectedUpdatedAt !== $currentUpdatedAt) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Notulensi atau pengaturan dokumen telah diperbarui oleh pengguna lain. Muat ulang versi terbaru atau pilih Timpa Paksa.',
+                'current_updated_at' => $currentUpdatedAt,
+            ], 409);
+        }
+
         $validated = $request->validated();
 
         $agendaService->updateNotulen(

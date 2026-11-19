@@ -253,4 +253,65 @@ class ReportExportConfigurationTest extends TestCase
         // Check resolved config has gone back to default title
         $this->assertSame('BERITA ACARA DAN DAFTAR HADIR RAPAT', $agenda->resolved_report_config['document_title']);
     }
+
+    public function test_legacy_kemdikbud_alamat_kontak_is_normalized_and_new_tata_naskah_options_reach_pdf_and_docx(): void
+    {
+        $superadmin = User::where('role', 'administrator')->firstOrFail();
+        $agenda = Agenda::firstOrFail();
+
+        $agenda->update([
+            'report_config' => [
+                'alamat_kontak' => 'Jalan Khatib Sulaiman, Padang • Laman: lldikti10.kemdikbud.go.id',
+            ],
+        ]);
+
+        $resolved = $agenda->fresh()->resolved_report_config;
+        $this->assertStringContainsString('lldikti10.kemdiktisaintek.go.id', $resolved['alamat_kontak']);
+        $this->assertSame('KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI', $resolved['instansi_induk']);
+        $this->assertSame('LEMBAGA LAYANAN PENDIDIKAN TINGGI (LLDIKTI) WILAYAH X', $resolved['instansi_pelaksana']);
+        $this->assertSame('Mengetahui,', $resolved['signer1_prefix']);
+
+        $override = [
+            'show_dasar_surat' => true,
+            'dasar_surat' => 'ZZDASARSURAT123',
+            'show_opening_ba' => true,
+            'opening_ba' => 'ZZOPENINGBA456',
+            'show_closing_ba' => true,
+            'penutup' => 'ZZPENUTUPBA789',
+            'show_tembusan' => true,
+            'tembusan' => "1. ZZTEMBUSANPERTAMA\n2. Pertinggal",
+            'signer1_prefix' => 'ZZPREFIXSATU',
+            'show_signer3' => true,
+            'signer3_prefix' => 'ZZPREFIXTIGA',
+            'signer3_role' => 'Kepala Bagian Umum',
+            'signer3_name' => 'ZZKEPALATIGA',
+            'signer3_nip' => '198001012005011099',
+        ];
+
+        $pdfHtml = app(\App\Services\WordExportService::class)->generateDocumentContent($agenda, $override, 'plain');
+        $docxXml = $this->docxXml(app(\App\Services\DocxExportService::class)->exportBeritaAcara($agenda, $override)->getContent());
+
+        foreach ([
+            'ZZDASARSURAT123',
+            'ZZOPENINGBA456',
+            'ZZPENUTUPBA789',
+            'ZZTEMBUSANPERTAMA',
+            'ZZPREFIXSATU',
+            'ZZPREFIXTIGA',
+            'ZZKEPALATIGA',
+        ] as $needle) {
+            $this->assertStringContainsString($needle, $pdfHtml, "PDF harus memuat {$needle}");
+            $this->assertStringContainsString($needle, $docxXml, "DOCX harus memuat {$needle}");
+        }
+
+        // Persist and check reports/show.blade.php also renders updated tata naskah fields
+        $agenda->update(['report_config' => array_merge($resolved, $override)]);
+        $showResponse = $this->actingAs($superadmin)->get(route('admin.reports.show', $agenda));
+        $showResponse->assertOk();
+        $showResponse->assertSee('ZZDASARSURAT123');
+        $showResponse->assertSee('ZZOPENINGBA456');
+        $showResponse->assertSee('ZZPENUTUPBA789');
+        $showResponse->assertSee('ZZTEMBUSANPERTAMA');
+        $showResponse->assertSee('ZZKEPALATIGA');
+    }
 }

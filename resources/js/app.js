@@ -1248,30 +1248,77 @@ const OfficeWorkstation = {
         const kesimpulanBox = workstation.querySelector('#kesimpulan-content');
         const notulensiHidden = workstation.querySelector('#notulensi-hidden');
         const kesimpulanHidden = workstation.querySelector('#kesimpulan-hidden');
+        const form = workstation.querySelector('#notulen-form') || workstation.querySelector('form');
+
+        const agendaId = workstation.dataset.agendaId || '';
+        const draftStorageKey = agendaId ? `siperapat_notulen_draft_${agendaId}` : null;
+        const escapeOfficeHtml = (str) => String(str ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
 
         let activeBox = notulensiBox;
         let activeHidden = notulensiHidden;
         let savedRange = null;
         let isSubmittingForm = false;
+        let localBackupTimer = null;
         window.__officeDirtyState = false;
 
         const statusWordsEl = workstation.querySelector('#office-status-words');
         const statusSaveStateEl = workstation.querySelector('#office-status-save-state');
         const statusSaveDotEl = workstation.querySelector('#office-status-save-dot');
         const statusSaveLabelEl = workstation.querySelector('#office-status-save-label');
+        const topSaveStatusEl = workstation.querySelector('#office-top-save-status');
 
-        const updateSaveStateUI = (dirty) => {
+        const updateSaveStateUI = (dirty, savedTimeLabel = null) => {
             window.__officeDirtyState = Boolean(dirty);
-            if (!statusSaveStateEl || !statusSaveDotEl || !statusSaveLabelEl) return;
-            if (window.__officeDirtyState) {
-                statusSaveStateEl.className = 'inline-flex items-center gap-1.5 text-amber-400 font-semibold';
-                statusSaveDotEl.className = 'w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse';
-                statusSaveLabelEl.textContent = 'Perubahan Belum Disimpan';
-            } else {
-                statusSaveStateEl.className = 'inline-flex items-center gap-1.5 text-emerald-400 font-semibold';
-                statusSaveDotEl.className = 'w-1.5 h-1.5 rounded-full bg-emerald-400';
-                statusSaveLabelEl.textContent = 'Tersimpan';
+            if (statusSaveStateEl && statusSaveDotEl && statusSaveLabelEl) {
+                if (window.__officeDirtyState) {
+                    statusSaveStateEl.className = 'inline-flex items-center gap-1.5 text-amber-400 font-semibold';
+                    statusSaveDotEl.className = 'w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse';
+                    statusSaveLabelEl.textContent = 'Perubahan Belum Disimpan';
+                } else {
+                    statusSaveStateEl.className = 'inline-flex items-center gap-1.5 text-emerald-400 font-semibold';
+                    statusSaveDotEl.className = 'w-1.5 h-1.5 rounded-full bg-emerald-400';
+                    statusSaveLabelEl.textContent = savedTimeLabel ? `Tersimpan pada ${savedTimeLabel}` : 'Tersimpan';
+                }
             }
+            if (topSaveStatusEl) {
+                if (window.__officeDirtyState) {
+                    topSaveStatusEl.className = 'hidden sm:inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-700 px-2';
+                    topSaveStatusEl.textContent = 'Belum disimpan';
+                } else if (savedTimeLabel) {
+                    topSaveStatusEl.className = 'hidden sm:inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 px-2';
+                    topSaveStatusEl.textContent = `Tersimpan pada ${savedTimeLabel}`;
+                } else {
+                    topSaveStatusEl.className = 'hidden sm:inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 px-2';
+                    topSaveStatusEl.textContent = '';
+                }
+            }
+        };
+
+        const scheduleLocalDraftBackup = (nHtml, kHtml) => {
+            if (!draftStorageKey) return;
+            clearTimeout(localBackupTimer);
+            localBackupTimer = setTimeout(() => {
+                try {
+                    localStorage.setItem(draftStorageKey, JSON.stringify({
+                        notulensi: nHtml,
+                        kesimpulan: kHtml,
+                        savedAt: new Date().toISOString(),
+                    }));
+                } catch (e) {}
+            }, 800);
+        };
+
+        const clearLocalDraftBackup = () => {
+            clearTimeout(localBackupTimer);
+            if (!draftStorageKey) return;
+            try {
+                localStorage.removeItem(draftStorageKey);
+            } catch (e) {}
         };
 
         window.addEventListener('office:dirty-change', (e) => {
@@ -1312,7 +1359,23 @@ const OfficeWorkstation = {
             updateWordCounter();
             if (markDirty) {
                 updateSaveStateUI(true);
+                scheduleLocalDraftBackup(joinedN, joinedK);
             }
+        };
+
+        const getSelectionElement = () => {
+            const sel = window.getSelection();
+            if (!sel || sel.rangeCount === 0) return null;
+            const node = sel.anchorNode;
+            if (!node) return null;
+            return node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+        };
+
+        const getActiveTableCell = () => {
+            const el = getSelectionElement();
+            if (!el || !activeBox || !activeBox.contains(el)) return null;
+            const cell = el.closest('td, th');
+            return cell && activeBox.contains(cell) ? cell : null;
         };
 
         const updateActiveStates = () => {
@@ -1327,25 +1390,60 @@ const OfficeWorkstation = {
                 const btn = ribbon.querySelector(`button[data-command="${cmd}"]`);
                 if (btn) {
                     try {
-                        if (document.queryCommandState(cmd)) {
-                            btn.classList.add('is-active');
-                        } else {
-                            btn.classList.remove('is-active');
-                        }
+                        btn.classList.toggle('is-active', Boolean(document.queryCommandState(cmd)));
                     } catch (e) {}
                 }
             });
 
+            const selEl = getSelectionElement();
+            const inActiveBox = Boolean(selEl && activeBox && activeBox.contains(selEl));
+
             const formatSelect = ribbon.querySelector('select[data-command="formatBlock"]');
+            let currentBlock = '';
+            try {
+                currentBlock = (document.queryCommandValue('formatBlock') || '').toLowerCase();
+            } catch (e) {}
+            if (!currentBlock && inActiveBox) {
+                const blockAncestor = selEl.closest('h2, h3, h4, blockquote, p');
+                if (blockAncestor && activeBox.contains(blockAncestor)) {
+                    currentBlock = blockAncestor.tagName.toLowerCase();
+                }
+            }
             if (formatSelect) {
+                formatSelect.value = ['h2', 'h3', 'h4', 'p', 'blockquote'].includes(currentBlock) ? currentBlock : 'p';
+            }
+
+            const blockquoteBtn = ribbon.querySelector('button[data-command="blockquote"]');
+            if (blockquoteBtn) {
+                const inBlockquote = currentBlock === 'blockquote' || Boolean(inActiveBox && selEl.closest('blockquote'));
+                blockquoteBtn.classList.toggle('is-active', inBlockquote);
+            }
+
+            const fontSizeSelect = ribbon.querySelector('select[data-action="fontSize"]');
+            if (fontSizeSelect) {
+                let fontSizeVal = '';
                 try {
-                    const block = (document.queryCommandValue('formatBlock') || '').toLowerCase();
-                    if (['h2', 'h3', 'h4', 'p', 'blockquote'].includes(block)) {
-                        formatSelect.value = block;
-                    } else {
-                        formatSelect.value = 'p';
-                    }
+                    fontSizeVal = String(document.queryCommandValue('fontSize') || '').trim();
                 } catch (e) {}
+                if (!fontSizeVal && inActiveBox) {
+                    const fontAncestor = selEl.closest('font[size]');
+                    if (fontAncestor && activeBox.contains(fontAncestor)) {
+                        fontSizeVal = fontAncestor.getAttribute('size') || '';
+                    }
+                }
+                fontSizeSelect.value = ['1', '2', '3', '4', '5', '6'].includes(fontSizeVal) ? fontSizeVal : '';
+            }
+
+            const linkBtn = ribbon.querySelector('button[data-action="insertLink"]');
+            if (linkBtn) {
+                const inLink = Boolean(inActiveBox && selEl.closest('a[href]'));
+                linkBtn.classList.toggle('is-active', inLink);
+            }
+
+            const tableContextGroup = ribbon.querySelector('#word-table-context-group');
+            if (tableContextGroup) {
+                const activeCell = getActiveTableCell();
+                tableContextGroup.classList.toggle('hidden', !activeCell);
             }
         };
 
@@ -1683,7 +1781,7 @@ const OfficeWorkstation = {
                         const allowedTags = [
                             'p', 'br', 'b', 'strong', 'i', 'em', 'u', 's', 'strike',
                             'h2', 'h3', 'h4', 'ul', 'ol', 'li', 'blockquote', 'hr',
-                            'table', 'thead', 'tbody', 'tr', 'th', 'td', 'sup', 'sub'
+                            'a', 'font', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'sup', 'sub'
                         ];
 
                         Array.from(doc.body.querySelectorAll('*')).forEach(el => {
@@ -1692,7 +1790,29 @@ const OfficeWorkstation = {
                                 el.replaceWith(...el.childNodes);
                             } else {
                                 Array.from(el.attributes).forEach(attr => {
-                                    if (['colspan', 'rowspan'].includes(attr.name)) return;
+                                    const attrName = attr.name.toLowerCase();
+                                    if (tag === 'td' || tag === 'th') {
+                                        if (['colspan', 'rowspan'].includes(attrName)) return;
+                                    }
+                                    if (tag === 'a' && attrName === 'href') {
+                                        const hrefVal = attr.value.trim();
+                                        if (/^https?:\/\//i.test(hrefVal)) {
+                                            el.setAttribute('href', hrefVal);
+                                            el.setAttribute('rel', 'noopener noreferrer');
+                                            return;
+                                        }
+                                    }
+                                    if (tag === 'font') {
+                                        if (attrName === 'color' && (/^#[0-9a-f]{3,6}$/i.test(attr.value.trim()) || /^[a-z]+$/i.test(attr.value.trim()))) return;
+                                        if (attrName === 'size' && /^[1-7]$/.test(attr.value.trim())) return;
+                                    }
+                                    if (attrName === 'style') {
+                                        const alignMatch = attr.value.match(/text-align\s*:\s*(left|center|right|justify)/i);
+                                        if (alignMatch) {
+                                            el.setAttribute('style', `text-align: ${alignMatch[1].toLowerCase()};`);
+                                            return;
+                                        }
+                                    }
                                     el.removeAttribute(attr.name);
                                 });
                             }
@@ -1712,7 +1832,7 @@ const OfficeWorkstation = {
                         .split(/\r?\n\r?\n/)
                         .map(p => p.trim())
                         .filter(Boolean)
-                        .map(p => `<p>${p.replace(/\r?\n/g, '<br>')}</p>`)
+                        .map(p => `<p>${escapeOfficeHtml(p).replace(/\r?\n/g, '<br>')}</p>`)
                         .join('');
 
                     if (paragraphs) {
@@ -1886,22 +2006,20 @@ const OfficeWorkstation = {
                         }
                     }
 
-                    // 5. Flow Section II (#sheet-seksi-2-wrapper: Daftar Kehadiran Peserta) after Signature Block
+                    // 5. Flow Section II (#sheet-seksi-2-wrapper: Daftar Kehadiran Peserta) ALWAYS on separate annex sheet (+1 page after signature)
                     if (seksi2Wrapper) {
-                        const targetSheet = getLastSheet();
-                        appendToSheet(targetSheet, seksi2Wrapper);
-
-                        if (seksi2Wrapper.style.display !== 'none' && isExceedingMargin(targetSheet, seksi2Wrapper) && sheetHasPriorContent(targetSheet) && continuationContainer) {
-                            if (seksi2Wrapper.parentNode) seksi2Wrapper.parentNode.removeChild(seksi2Wrapper);
-
+                        if (seksi2Wrapper.style.display !== 'none' && continuationContainer) {
                             if (continuationContainer.querySelectorAll('.office-paper-sheet').length > 0) {
-                                continuationContainer.appendChild(createPageSeparator(`Halaman ${curPage}`));
+                                continuationContainer.appendChild(createPageSeparator('Lampiran Daftar Kehadiran'));
                             }
 
                             const s2Sheet = createContinuationSheet(curPage);
                             continuationContainer.appendChild(s2Sheet);
                             appendToSheet(s2Sheet, seksi2Wrapper);
                             curPage++;
+                        } else {
+                            const targetSheet = getLastSheet();
+                            appendToSheet(targetSheet, seksi2Wrapper);
                         }
                     }
 
@@ -1924,13 +2042,15 @@ const OfficeWorkstation = {
                         }
                     }
 
-                    // 7. Update all sheets page numbers and running headers/footers
+                    // 7. Update all sheets page numbers, overflow footer guard, and running headers/footers
                     const allSheets = workstation.querySelectorAll('.office-paper-sheet');
                     const totPages = allSheets.length;
 
                     allSheets.forEach((sh, idx) => {
                         const pNum = idx + 1;
                         sh.dataset.page = String(pNum);
+                        const pageMaxHeight = sh.offsetWidth > 0 ? sh.offsetWidth * (297 / 210) : 1122;
+                        sh.classList.toggle('is-sheet-overflow', sh.scrollHeight > pageMaxHeight + 8);
                         const rh = sh.querySelector('.doc-running-header .doc-page-number');
                         if (rh) rh.textContent = `Halaman ${pNum} dari ${totPages}`;
                         const rf = sh.querySelector('.doc-running-footer .doc-page-number');
@@ -1998,7 +2118,7 @@ const OfficeWorkstation = {
 
             const saveSelection = () => {
                 const sel = window.getSelection();
-                if (sel.rangeCount > 0) savedRange = sel.getRangeAt(0);
+                if (sel && sel.rangeCount > 0) savedRange = sel.getRangeAt(0);
             };
 
             const restoreSelection = () => {
@@ -2009,6 +2129,18 @@ const OfficeWorkstation = {
                     sel.addRange(savedRange);
                 }
             };
+
+            // Preserve editor selection on toolbar buttons & selects (matches SuratEdaranWorkstation)
+            ribbon.querySelectorAll('.word-btn').forEach(btn => {
+                btn.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    saveSelection();
+                });
+            });
+            ribbon.querySelectorAll('select.word-select').forEach(sel => {
+                sel.addEventListener('mousedown', saveSelection);
+                sel.addEventListener('focus', saveSelection);
+            });
 
             // Formatting Buttons
             ribbon.querySelectorAll('button[data-command]').forEach(btn => {
@@ -2051,10 +2183,171 @@ const OfficeWorkstation = {
                     if (val) {
                         document.execCommand('fontSize', false, val);
                         syncContent(true);
+                        updateActiveStates();
                         debouncedReflow(200);
                     }
                 });
             }
+
+            // Link Popover (Safe http/https link insertion & removal)
+            const linkBtn = ribbon.querySelector('button[data-action="insertLink"]');
+            const linkPopover = ribbon.querySelector('#word-link-popover');
+            const linkUrlInput = ribbon.querySelector('#word-link-url-input');
+            const linkErrorEl = ribbon.querySelector('#word-link-error');
+            const linkApplyBtn = ribbon.querySelector('#word-link-apply-btn');
+            const linkUnlinkBtn = ribbon.querySelector('#word-link-unlink-btn');
+            const linkCancelBtn = ribbon.querySelector('#word-link-cancel-btn');
+
+            if (linkBtn && linkPopover && linkUrlInput) {
+                const closeLinkPopover = () => {
+                    linkPopover.classList.add('hidden');
+                    if (linkErrorEl) linkErrorEl.classList.add('hidden');
+                };
+
+                linkBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    saveSelection();
+                    const selEl = getSelectionElement();
+                    const existingLink = selEl && activeBox && activeBox.contains(selEl) ? selEl.closest('a[href]') : null;
+                    linkUrlInput.value = existingLink ? existingLink.getAttribute('href') || '' : '';
+                    if (linkErrorEl) linkErrorEl.classList.add('hidden');
+                    linkPopover.classList.toggle('hidden');
+                    if (!linkPopover.classList.contains('hidden')) {
+                        setTimeout(() => linkUrlInput.focus(), 20);
+                    }
+                });
+
+                if (linkApplyBtn) {
+                    linkApplyBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const rawUrl = linkUrlInput.value.trim();
+                        if (!/^https?:\/\//i.test(rawUrl)) {
+                            if (linkErrorEl) linkErrorEl.classList.remove('hidden');
+                            linkUrlInput.focus();
+                            return;
+                        }
+                        closeLinkPopover();
+                        restoreSelection();
+                        const sel = window.getSelection();
+                        if (sel && sel.isCollapsed) {
+                            const safeHref = escapeOfficeHtml(rawUrl);
+                            document.execCommand('insertHTML', false, `<a href="${safeHref}" rel="noopener noreferrer">${safeHref}</a>`);
+                        } else {
+                            document.execCommand('createLink', false, rawUrl);
+                        }
+                        syncContent(true);
+                        updateActiveStates();
+                        debouncedReflow(200);
+                    });
+                }
+
+                if (linkUnlinkBtn) {
+                    linkUnlinkBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        closeLinkPopover();
+                        restoreSelection();
+                        document.execCommand('unlink', false, null);
+                        syncContent(true);
+                        updateActiveStates();
+                        debouncedReflow(200);
+                    });
+                }
+
+                if (linkCancelBtn) {
+                    linkCancelBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        closeLinkPopover();
+                    });
+                }
+
+                document.addEventListener('click', (e) => {
+                    if (!linkPopover.contains(e.target) && e.target !== linkBtn && !linkBtn.contains(e.target)) {
+                        closeLinkPopover();
+                    }
+                }, { signal: pageAc.signal });
+            }
+
+            // Quick Notulensi Structure Template
+            const templateBtn = ribbon.querySelector('button[data-action="insertTemplate"]');
+            if (templateBtn) {
+                templateBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    restoreSelection();
+                    if (!activeBox) return;
+                    const templateHtml = `<h3>I. Pokok Pembahasan</h3><ul><li>...</li></ul><h3>II. Arahan Pimpinan</h3><p>...</p><h3>III. Rencana Tindak Lanjut (RTL)</h3><table style="width: 100%; border-collapse: collapse;" border="1"><thead><tr><th style="border: 0.75pt solid #000000; padding: 4pt 6pt;">No</th><th style="border: 0.75pt solid #000000; padding: 4pt 6pt;">Uraian Tindak Lanjut</th><th style="border: 0.75pt solid #000000; padding: 4pt 6pt;">Penanggung Jawab</th><th style="border: 0.75pt solid #000000; padding: 4pt 6pt;">Batas Waktu</th></tr></thead><tbody><tr><td style="border: 0.75pt solid #000000; padding: 4pt 6pt;">1</td><td style="border: 0.75pt solid #000000; padding: 4pt 6pt;">&nbsp;</td><td style="border: 0.75pt solid #000000; padding: 4pt 6pt;">&nbsp;</td><td style="border: 0.75pt solid #000000; padding: 4pt 6pt;">&nbsp;</td></tr></tbody></table><p><br></p>`;
+                    document.execCommand('insertHTML', false, templateHtml);
+                    syncContent(true);
+                    updateActiveStates();
+                    paginationEngine.reflow();
+                });
+            }
+
+            // Contextual Table Row & Column Manipulation
+            const handleTableAction = (action) => {
+                restoreSelection();
+                const cell = getActiveTableCell();
+                if (!cell) return;
+                const row = cell.closest('tr');
+                const table = cell.closest('table');
+                if (!row || !table) return;
+                const colIdx = Array.from(row.children).indexOf(cell);
+
+                if (action === 'tableAddRow') {
+                    const newRow = document.createElement('tr');
+                    const colCount = row.children.length;
+                    for (let i = 0; i < colCount; i++) {
+                        const td = document.createElement('td');
+                        td.setAttribute('style', 'border: 0.75pt solid #000000; padding: 4pt 6pt;');
+                        td.innerHTML = '&nbsp;';
+                        newRow.appendChild(td);
+                    }
+                    if (row.parentElement && row.parentElement.tagName.toLowerCase() === 'thead') {
+                        const tbody = table.querySelector('tbody') || table;
+                        tbody.insertBefore(newRow, tbody.firstChild);
+                    } else {
+                        row.parentElement.insertBefore(newRow, row.nextSibling);
+                    }
+                } else if (action === 'tableRemoveRow') {
+                    const allRows = table.querySelectorAll('tr');
+                    if (allRows.length <= 1) {
+                        table.remove();
+                    } else {
+                        row.remove();
+                    }
+                } else if (action === 'tableAddCol') {
+                    table.querySelectorAll('tr').forEach(tr => {
+                        const isHeader = tr.parentElement && tr.parentElement.tagName.toLowerCase() === 'thead';
+                        const newCell = document.createElement(isHeader ? 'th' : 'td');
+                        newCell.setAttribute('style', 'border: 0.75pt solid #000000; padding: 4pt 6pt;');
+                        newCell.innerHTML = isHeader ? 'Kolom' : '&nbsp;';
+                        const ref = tr.children[colIdx] || null;
+                        tr.insertBefore(newCell, ref ? ref.nextSibling : null);
+                    });
+                } else if (action === 'tableRemoveCol') {
+                    const maxCols = row.children.length;
+                    if (maxCols <= 1) {
+                        table.remove();
+                    } else {
+                        table.querySelectorAll('tr').forEach(tr => {
+                            if (tr.children[colIdx]) tr.children[colIdx].remove();
+                        });
+                    }
+                }
+                syncContent(true);
+                updateActiveStates();
+                paginationEngine.reflow();
+            };
+
+            ['tableAddRow', 'tableRemoveRow', 'tableAddCol', 'tableRemoveCol'].forEach(action => {
+                const actionBtn = ribbon.querySelector(`button[data-action="${action}"]`);
+                if (actionBtn) {
+                    actionBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        handleTableAction(action);
+                    });
+                }
+            });
 
             // Text Color & Highlight Pickers
             ribbon.querySelectorAll('.word-color-btn').forEach(colorBtn => {
@@ -2137,15 +2430,15 @@ const OfficeWorkstation = {
                         const r = parseInt(cell.dataset.row, 10);
                         const c = parseInt(cell.dataset.col, 10);
 
-                        let tableHtml = '<table class="w-full my-2 border-collapse border border-black" border="1"><thead><tr>';
+                        let tableHtml = '<table style="width: 100%; border-collapse: collapse;" border="1"><thead><tr>';
                         for (let colIdx = 1; colIdx <= c; colIdx++) {
-                            tableHtml += `<th class="border border-black p-1 bg-slate-100 text-xs">Kolom ${colIdx}</th>`;
+                            tableHtml += `<th style="border: 0.75pt solid #000000; padding: 4pt 6pt;">Kolom ${colIdx}</th>`;
                         }
                         tableHtml += '</tr></thead><tbody>';
                         for (let rowIdx = 1; rowIdx < r; rowIdx++) {
                             tableHtml += '<tr>';
                             for (let colIdx = 1; colIdx <= c; colIdx++) {
-                                tableHtml += '<td class="border border-black p-1 text-xs">&nbsp;</td>';
+                                tableHtml += '<td style="border: 0.75pt solid #000000; padding: 4pt 6pt;">&nbsp;</td>';
                             }
                             tableHtml += '</tr>';
                         }
@@ -2210,6 +2503,137 @@ const OfficeWorkstation = {
             }
         }
 
+        // Local Draft Recovery Banner
+        const localDraftBanner = workstation.querySelector('#office-local-draft-banner');
+        const conflictBanner = workstation.querySelector('#office-conflict-banner');
+        const conflictMsgEl = workstation.querySelector('#office-conflict-message');
+        const btnRestoreLocalDraft = workstation.querySelector('#btn-restore-local-draft');
+        const btnDiscardLocalDraft = workstation.querySelector('#btn-discard-local-draft');
+        const btnSaveDraftAjax = workstation.querySelector('#btn-save-draft-ajax');
+        const btnConflictReload = workstation.querySelector('#btn-conflict-reload');
+        const btnConflictForceSave = workstation.querySelector('#btn-conflict-force-save');
+
+        if (draftStorageKey && localDraftBanner) {
+            try {
+                const rawBackup = localStorage.getItem(draftStorageKey);
+                if (rawBackup) {
+                    const parsedBackup = JSON.parse(rawBackup);
+                    const serverN = (notulensiHidden?.value || '').trim();
+                    const serverK = (kesimpulanHidden?.value || '').trim();
+                    if (
+                        parsedBackup &&
+                        ((parsedBackup.notulensi || '').trim() !== serverN ||
+                            (parsedBackup.kesimpulan || '').trim() !== serverK)
+                    ) {
+                        localDraftBanner.classList.remove('hidden');
+                        if (btnRestoreLocalDraft) {
+                            btnRestoreLocalDraft.addEventListener('click', () => {
+                                if (notulensiBox) notulensiBox.innerHTML = parsedBackup.notulensi || '';
+                                if (kesimpulanBox) kesimpulanBox.innerHTML = parsedBackup.kesimpulan || '';
+                                localDraftBanner.classList.add('hidden');
+                                syncContent(true);
+                                updateActiveStates();
+                                paginationEngine.reflow();
+                            });
+                        }
+                        if (btnDiscardLocalDraft) {
+                            btnDiscardLocalDraft.addEventListener('click', () => {
+                                clearLocalDraftBackup();
+                                localDraftBanner.classList.add('hidden');
+                            });
+                        }
+                    } else {
+                        clearLocalDraftBackup();
+                    }
+                }
+            } catch (e) {}
+        }
+
+        const saveDraftAjax = async (forceOverwrite = false) => {
+            if (!form || !btnSaveDraftAjax) return;
+            syncContent(false);
+            const originalHtml = btnSaveDraftAjax.innerHTML;
+            btnSaveDraftAjax.disabled = true;
+            btnSaveDraftAjax.innerHTML = '<span>Menyimpan...</span>';
+
+            try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
+                    || form.querySelector('input[name="_token"]')?.value
+                    || '';
+                const headers = {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-Expected-Updated-At': workstation.dataset.updatedAt || '',
+                };
+                if (forceOverwrite) {
+                    headers['X-Force-Overwrite'] = '1';
+                }
+
+                const res = await fetch(form.action, {
+                    method: 'POST',
+                    headers,
+                    body: new FormData(form),
+                });
+
+                const payload = await res.json().catch(() => ({}));
+
+                if (res.status === 409) {
+                    if (conflictBanner) {
+                        conflictBanner.classList.remove('hidden');
+                    }
+                    if (conflictMsgEl && payload.message) {
+                        conflictMsgEl.textContent = payload.message;
+                    }
+                    return;
+                }
+
+                if (!res.ok) {
+                    throw new Error(payload.message || 'Gagal menyimpan draf notulensi.');
+                }
+
+                if (payload.updated_at) {
+                    workstation.dataset.updatedAt = payload.updated_at;
+                }
+                if (conflictBanner) conflictBanner.classList.add('hidden');
+                if (localDraftBanner) localDraftBanner.classList.add('hidden');
+                clearLocalDraftBackup();
+
+                const now = new Date();
+                const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                updateSaveStateUI(false, hhmm);
+            } catch (err) {
+                if (topSaveStatusEl) {
+                    topSaveStatusEl.className = 'hidden sm:inline-flex items-center gap-1.5 text-[11px] font-semibold text-rose-700 px-2';
+                    topSaveStatusEl.textContent = err instanceof Error ? err.message : 'Gagal menyimpan draf';
+                }
+            } finally {
+                btnSaveDraftAjax.disabled = false;
+                btnSaveDraftAjax.innerHTML = originalHtml;
+            }
+        };
+
+        if (btnSaveDraftAjax) {
+            btnSaveDraftAjax.addEventListener('click', (e) => {
+                e.preventDefault();
+                void saveDraftAjax(false);
+            });
+        }
+        if (btnConflictForceSave) {
+            btnConflictForceSave.addEventListener('click', (e) => {
+                e.preventDefault();
+                void saveDraftAjax(true);
+            });
+        }
+        if (btnConflictReload) {
+            btnConflictReload.addEventListener('click', (e) => {
+                e.preventDefault();
+                isSubmittingForm = true;
+                clearLocalDraftBackup();
+                window.location.reload();
+            });
+        }
+
         // 4. Keyboard Shortcuts: Ctrl+S / Cmd+S to Save
         document.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
@@ -2217,6 +2641,7 @@ const OfficeWorkstation = {
                 if (saveForm) {
                     e.preventDefault();
                     isSubmittingForm = true;
+                    clearLocalDraftBackup();
                     updateSaveStateUI(false);
                     syncContent(false);
                     saveForm.requestSubmit ? saveForm.requestSubmit() : saveForm.submit();
@@ -2233,10 +2658,10 @@ const OfficeWorkstation = {
         }, { signal: pageAc.signal });
 
         // Form Submit: Ensure latest sync before submission
-        const form = workstation.querySelector('#notulen-form') || workstation.querySelector('form');
         if (form) {
             form.addEventListener('submit', () => {
                 isSubmittingForm = true;
+                clearLocalDraftBackup();
                 updateSaveStateUI(false);
                 syncContent(false);
             });
@@ -2244,6 +2669,7 @@ const OfficeWorkstation = {
         workstation.querySelectorAll('button[form="notulen-form"]').forEach(btn => {
             btn.addEventListener('click', () => {
                 isSubmittingForm = true;
+                clearLocalDraftBackup();
                 updateSaveStateUI(false);
                 syncContent(false);
             });

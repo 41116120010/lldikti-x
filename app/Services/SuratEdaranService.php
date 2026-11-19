@@ -3,10 +3,8 @@
 namespace App\Services;
 
 use App\Models\Agenda;
+use App\Support\DocxHtmlRenderer;
 use App\Support\Html;
-use DOMDocument;
-use DOMElement;
-use DOMNode;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
@@ -695,108 +693,12 @@ class SuratEdaranService
 
     private function appendHtmlBlocksToSection($section, string $html): void
     {
-        $clean = trim($html);
-        if ($clean === '') {
-            return;
-        }
-
-        $dom = new DOMDocument('1.0', 'UTF-8');
-        $wrapped = '<?xml encoding="utf-8" ?><div>'.$clean.'</div>';
-        @$dom->loadHTML($wrapped, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
-
-        $root = $dom->getElementsByTagName('div')->item(0);
-        if (! $root instanceof DOMElement) {
-            $this->addMultilineText($section, strip_tags($clean), ['name' => 'Arial', 'size' => 12], [
-                'alignment' => Jc::BOTH,
-                'spaceBefore' => 0,
-                'spaceAfter' => 120,
-            ]);
-
-            return;
-        }
-
-        foreach ($root->childNodes as $node) {
-            if ($node->nodeType === XML_TEXT_NODE) {
-                $text = trim($node->textContent);
-                if ($text !== '') {
-                    $section->addText($this->xmlSafe($text), ['name' => 'Arial', 'size' => 12], [
-                        'alignment' => Jc::BOTH,
-                        'spaceBefore' => 0,
-                        'spaceAfter' => 120,
-                    ]);
-                }
-
-                continue;
-            }
-
-            if (! $node instanceof DOMElement) {
-                continue;
-            }
-
-            $tag = strtolower($node->tagName);
-            if ($tag === 'ul' || $tag === 'ol') {
-                $idx = 1;
-                foreach ($node->childNodes as $li) {
-                    if ($li instanceof DOMElement && strtolower($li->tagName) === 'li') {
-                        $prefix = $tag === 'ol' ? ($idx.'. ') : '• ';
-                        $liText = trim(preg_replace('/\s+/u', ' ', $li->textContent) ?? '');
-                        if ($liText !== '') {
-                            $section->addText(
-                                $this->xmlSafe($prefix.$liText),
-                                ['name' => 'Arial', 'size' => 12],
-                                ['alignment' => Jc::BOTH, 'spaceBefore' => 0, 'spaceAfter' => 40, 'indentation' => ['left' => 360, 'hanging' => 360]]
-                            );
-                            $idx++;
-                        }
-                    }
-                }
-
-                continue;
-            }
-
-            $run = $section->addTextRun([
-                'alignment' => Jc::BOTH,
-                'spaceBefore' => 0,
-                'spaceAfter' => 120,
-            ]);
-            $this->appendInlineNodesToRun($run, $node, ['name' => 'Arial', 'size' => 12]);
-        }
-    }
-
-    private function appendInlineNodesToRun($run, DOMNode $parent, array $style): void
-    {
-        foreach ($parent->childNodes as $child) {
-            if ($child->nodeType === XML_TEXT_NODE) {
-                $text = preg_replace('/[ \t]+/u', ' ', $child->nodeValue ?? '') ?? '';
-                if ($text !== '') {
-                    $run->addText($this->xmlSafe($text), $style);
-                }
-
-                continue;
-            }
-
-            if (! $child instanceof DOMElement) {
-                continue;
-            }
-
-            $tag = strtolower($child->tagName);
-            if ($tag === 'br') {
-                $run->addTextBreak();
-
-                continue;
-            }
-
-            $nextStyle = $style;
-            if (in_array($tag, ['b', 'strong'], true)) {
-                $nextStyle['bold'] = true;
-            } elseif (in_array($tag, ['i', 'em'], true)) {
-                $nextStyle['italic'] = true;
-            } elseif ($tag === 'u') {
-                $nextStyle['underline'] = 'single';
-            }
-
-            $this->appendInlineNodesToRun($run, $child, $nextStyle);
-        }
+        DocxHtmlRenderer::renderHtml($section, $html, [
+            'fontName' => 'Arial',
+            'fontSizePt' => 12.0,
+            'defaultAlign' => 'both',
+            'spaceAfterPt' => 6.0,
+        ]);
     }
 
     private function addMultilineText($section, string $text, array $fontStyle, array $paraStyle): void

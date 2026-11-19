@@ -35,6 +35,7 @@ class DocumentOptionEffectivenessTest extends TestCase
      * @var array<string,string>
      */
     private const NON_OPTIONS = [
+        '_token' => 'token CSRF Laravel, bukan opsi tampilan',
         'notulensi' => 'isi notulen, bukan opsi tampilan',
         'kesimpulan' => 'isi kesimpulan, bukan opsi tampilan',
         'has_document_config' => 'penanda bahwa konfigurasi disimpan',

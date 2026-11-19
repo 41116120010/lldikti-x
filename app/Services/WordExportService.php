@@ -94,6 +94,15 @@ class WordExportService
         $notulisAtt = $agenda->notulis_attendance;
         $notulisSigBase64 = $this->encodeBiometricSignature($notulisAtt?->signature_path, 'minute taker signature');
 
+        // Third signer digital signature base64 (if assigned to an attended ASN and enabled)
+        $signer3SigBase64 = null;
+        if (($resolvedConfig['show_signer3'] ?? false) && ($resolvedConfig['show_signer3_signature'] ?? false) && ! empty($resolvedConfig['signer3_user_id'])) {
+            $signer3Entry = $attendancesWithMedia->first(
+                fn (array $entry): bool => (int) $entry['model']->user_id === (int) $resolvedConfig['signer3_user_id']
+            );
+            $signer3SigBase64 = $signer3Entry['sig_base64'] ?? null;
+        }
+
         // Documentation photos with optimized base64 for Word/PDF
         $documentationsWithMedia = $agenda->documentations->map(function ($doc) {
             $base64 = null;
@@ -122,6 +131,7 @@ class WordExportService
             'documentations' => $documentationsWithMedia,
             'pimpinanSigBase64' => $pimpinanSigBase64,
             'notulisSigBase64' => $notulisSigBase64,
+            'signer3SigBase64' => $signer3SigBase64,
             'generatedAt' => now(),
         ];
     }

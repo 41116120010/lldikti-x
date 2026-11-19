@@ -54,6 +54,8 @@
 <div
     id="office-workstation"
     class="space-y-4"
+    data-agenda-id="{{ $agenda->id }}"
+    data-updated-at="{{ $agenda->updated_at?->toIso8601String() ?? '' }}"
     data-agenda-title="{{ $agenda->judul_rapat }}"
     data-default-logo-src="{{ $defaultBundledLogoUrl }}"
     data-current-logo-src="{{ $currentSavedLogoUrl }}"
@@ -197,16 +199,57 @@
                 </div>
             </div>
 
+            <!-- Inline AJAX Save Status & Draft Action -->
+            <span id="office-top-save-status" class="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 px-2"></span>
+            <button
+                type="button"
+                id="btn-save-draft-ajax"
+                class="button secondary flex items-center gap-1.5 text-xs font-bold shadow-2xs cursor-pointer border-slate-300 hover:bg-slate-100 text-slate-800 min-h-[40px]"
+                title="Simpan perubahan sementara ke server tanpa keluar dari editor"
+            >
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                <span>Simpan Draf</span>
+            </button>
+
             <!-- Primary Save Action -->
             <button
                 type="submit"
                 form="notulen-form"
-                class="button flex items-center gap-2 text-xs font-bold shadow-xs cursor-pointer bg-slate-900 hover:bg-slate-800 text-white"
+                class="button flex items-center gap-2 text-xs font-bold shadow-xs cursor-pointer bg-slate-900 hover:bg-slate-800 text-white min-h-[40px]"
                 title="Simpan seluruh notulensi, kesimpulan, berkas foto dokumentasi, dan penyesuaian dokumen (Shortcut: Ctrl+S)"
             >
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                <span>Simpan Notulensi</span>
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>Simpan &amp; Selesai</span>
             </button>
+        </div>
+    </div>
+
+    <!-- Inline Recovery / Concurrency Conflict Banners (Non-intrusive, zero browser alert/confirm) -->
+    <div id="office-local-draft-banner" class="hidden p-3.5 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-950 flex flex-wrap items-center justify-between gap-3 shadow-2xs" role="status">
+        <div class="flex items-start gap-2.5 min-w-0 flex-1">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-700 shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <div>
+                <div class="font-bold">Draf Lokal Tersimpan Ditemukan</div>
+                <p id="office-local-draft-meta" class="text-[11px] text-amber-800 mt-0.5">Terdapat suntingan notulensi yang belum tersimpan ke server pada perangkat ini.</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+            <button type="button" id="btn-discard-local-draft" class="px-3 py-2 rounded-lg text-[11px] font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 transition cursor-pointer min-h-[38px]">Abaikan</button>
+            <button type="button" id="btn-restore-local-draft" class="px-3 py-2 rounded-lg text-[11px] font-bold text-white bg-slate-900 hover:bg-slate-800 transition cursor-pointer min-h-[38px]">Pulihkan Draf Lokal</button>
+        </div>
+    </div>
+
+    <div id="office-conflict-banner" class="hidden p-3.5 bg-rose-50 border border-rose-300 rounded-xl text-xs text-rose-950 flex flex-wrap items-center justify-between gap-3 shadow-2xs" role="alert">
+        <div class="flex items-start gap-2.5 min-w-0 flex-1">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" class="text-rose-700 shrink-0 mt-0.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <div>
+                <div class="font-bold">Konflik Pembaruan Dokumen Terdeteksi</div>
+                <p id="office-conflict-message" class="text-[11px] text-rose-800 mt-0.5">Notulensi ini baru saja diperbarui oleh petugas lain atau tab lain. Pilih tindakan untuk melanjutkan.</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+            <button type="button" id="btn-conflict-reload" class="px-3 py-2 rounded-lg text-[11px] font-bold text-rose-900 bg-rose-100 hover:bg-rose-200 transition cursor-pointer min-h-[38px]">Muat Ulang Versi Server</button>
+            <button type="button" id="btn-conflict-force-save" class="px-3 py-2 rounded-lg text-[11px] font-bold text-white bg-rose-700 hover:bg-rose-800 transition cursor-pointer min-h-[38px]">Paksa Timpa Perubahan Saya</button>
         </div>
     </div>
 
@@ -221,14 +264,14 @@
                 <option value="h4">Heading 4</option>
                 <option value="blockquote">Kutipan</option>
             </select>
-            <select class="word-select" data-action="fontSize" title="Ukuran Font">
+            <select class="word-select" data-action="fontSize" title="Ukuran Font (pt)">
                 <option value="">Ukuran</option>
-                <option value="1">10px</option>
-                <option value="2">12px</option>
-                <option value="3">14px</option>
-                <option value="4">16px</option>
-                <option value="5">20px</option>
-                <option value="6">24px</option>
+                <option value="1">8pt</option>
+                <option value="2">10pt</option>
+                <option value="3">12pt</option>
+                <option value="4">14pt</option>
+                <option value="5">18pt</option>
+                <option value="6">24pt</option>
             </select>
         </div>
 
@@ -308,7 +351,7 @@
             </button>
         </div>
 
-        <!-- Insert Table & Utilities -->
+        <!-- Insert Table, Link & Structure Utilities -->
         <div class="word-btn-group relative">
             <button type="button" class="word-btn" data-command="blockquote" title="Kutipan">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/></svg>
@@ -316,10 +359,49 @@
             <button type="button" class="word-btn" data-command="insertHorizontalRule" title="Garis Pemisah">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="2" x2="22" y1="12" y2="12"/></svg>
             </button>
+            <button type="button" class="word-btn" data-action="insertLink" title="Sisipkan atau Edit Tautan (URL)">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            </button>
+            <div id="word-link-popover" class="hidden absolute top-full left-0 mt-1.5 z-50 w-72 bg-white border border-slate-300 rounded-xl shadow-lg p-3 space-y-2">
+                <div class="text-[11px] font-bold text-slate-900">Sisipkan Tautan Resmi</div>
+                <input type="url" id="word-link-url-input" placeholder="https://contoh.go.id" class="w-full text-xs rounded-lg border-slate-300 focus:border-slate-900 focus:ring-slate-900 py-1.5 px-2.5">
+                <div id="word-link-error" class="hidden text-[10px] font-semibold text-rose-700">Gunakan tautan diawali http:// atau https://</div>
+                <div class="flex items-center justify-between gap-1.5 pt-1">
+                    <button type="button" id="word-link-unlink-btn" class="px-2.5 py-1.5 text-[11px] font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg cursor-pointer">Hapus Tautan</button>
+                    <div class="flex items-center gap-1.5">
+                        <button type="button" id="word-link-cancel-btn" class="px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer">Batal</button>
+                        <button type="button" id="word-link-apply-btn" class="px-3 py-1.5 text-[11px] font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-lg cursor-pointer">Terapkan</button>
+                    </div>
+                </div>
+            </div>
             <button type="button" class="word-btn" data-action="insertTable" title="Sisipkan Tabel">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" x2="21" y1="9" y2="9"/><line x1="3" x2="21" y1="15" y2="15"/><line x1="9" x2="9" y1="3" y2="21"/><line x1="15" x2="15" y1="3" y2="21"/></svg>
             </button>
             <div class="word-table-picker"></div>
+            <button type="button" class="word-btn !w-auto px-2 gap-1 text-[11px] font-bold text-slate-700" data-action="insertTemplate" title="Sisipkan Kerangka Cepat Notulensi Resmi">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                <span class="hidden md:inline">Kerangka Cepat</span>
+            </button>
+        </div>
+
+        <!-- Contextual Table Row/Column Controls (active when cursor inside a table cell) -->
+        <div id="word-table-context-group" class="word-btn-group hidden">
+            <button type="button" class="word-btn !w-auto px-1.5 gap-1 text-[10px] font-bold" data-action="tableAddRow" title="Tambah Baris di Bawah">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span>Baris</span>
+            </button>
+            <button type="button" class="word-btn !w-auto px-1.5 gap-1 text-[10px] font-bold text-rose-700" data-action="tableRemoveRow" title="Hapus Baris Aktif">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span>Baris</span>
+            </button>
+            <button type="button" class="word-btn !w-auto px-1.5 gap-1 text-[10px] font-bold" data-action="tableAddCol" title="Tambah Kolom di Kanan">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span>Kolom</span>
+            </button>
+            <button type="button" class="word-btn !w-auto px-1.5 gap-1 text-[10px] font-bold text-rose-700" data-action="tableRemoveCol" title="Hapus Kolom Aktif">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span>Kolom</span>
+            </button>
         </div>
 
         <div class="h-5 w-px bg-slate-300 mx-0.5 hidden sm:block"></div>
@@ -414,6 +496,16 @@
                         </div>
                     </div>
 
+                    <!-- Dasar / Rujukan Surat Undangan -->
+                    <div id="sheet-dasar-surat-block" style="font-size: {{ \App\Support\DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ \App\Support\DocumentLayout::BODY_LINE_PT }}pt; font-family: 'Times New Roman', Times, serif; margin-bottom: {{ \App\Support\DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt; text-align: justify; {{ (($config['show_dasar_surat'] ?? false) && trim((string) ($config['dasar_surat'] ?? '')) !== '') ? '' : 'display: none;' }}">
+                        <strong>Dasar:</strong> <span id="sheet-dasar-surat-text">{{ $config['dasar_surat'] ?? '' }}</span>
+                    </div>
+
+                    <!-- Alinea Pembuka Berita Acara -->
+                    <div id="sheet-opening-ba-block" style="font-size: {{ \App\Support\DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ \App\Support\DocumentLayout::BODY_LINE_PT }}pt; font-family: 'Times New Roman', Times, serif; margin-bottom: {{ \App\Support\DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt; text-align: justify; {{ ($config['show_opening_ba'] ?? false) ? '' : 'display: none;' }}">
+                        <p id="sheet-opening-ba-text" style="margin: 0; text-indent: 24pt;">{{ $config['opening_ba'] ?? '' }}</p>
+                    </div>
+
                     <!-- Informasi Pelaksanaan Rapat -->
                     <table id="sheet-meeting-info" class="info-table" width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; margin-bottom: {{ \App\Support\DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt; border-collapse: collapse; font-size: {{ \App\Support\DocumentLayout::INFO_SIZE_PT }}pt; border: none; font-family: 'Times New Roman', Times, serif; {{ ($config['show_meeting_info'] ?? true) ? '' : 'display: none;' }}">
                         <tr>
@@ -496,6 +588,11 @@
 
                     <!-- Blok Pengesahan & Tanda Tangan (Dynamic Word Signature Flow) -->
                     <div id="sheet-pengesahan-final" class="sheet-signature-wrapper" style="margin-top: {{ \App\Support\DocumentLayout::TTD_GAP_PT }}pt;">
+                        <!-- Alinea Penutup Berita Acara -->
+                        <div id="sheet-closing-ba-block" style="font-size: {{ \App\Support\DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ \App\Support\DocumentLayout::BODY_LINE_PT }}pt; font-family: 'Times New Roman', Times, serif; margin-bottom: {{ \App\Support\DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt; text-align: justify; {{ ($config['show_closing_ba'] ?? true) ? '' : 'display: none;' }}">
+                            <p id="sheet-closing-ba-text" style="margin: 0; text-indent: 24pt;">{{ $config['penutup'] ?? 'Demikian Berita Acara rapat ini dibuat dengan sebenarnya untuk dapat dipergunakan sebagaimana mestinya.' }}</p>
+                        </div>
+
                         <!-- Header if on standalone page -->
                         <div id="sheet-signature-standalone-header" style="display: none; text-align: center; margin-bottom: 8pt; padding-bottom: 4pt; border-bottom: 1.5pt solid #000;">
                             <h2 style="font-size: 11pt; font-weight: bold; text-transform: uppercase; margin: 0; font-family: 'Times New Roman', Times, serif;">
@@ -515,7 +612,7 @@
 
                             $signatureSigners = [
                                 [
-                                    'label' => 'Mengetahui,',
+                                    'label' => '<span id="sheet-signer1-prefix">'.e($config['signer1_prefix'] ?? 'Mengetahui,').'</span>',
                                     'role' => $config['signer1_role'] ?? 'Pemimpin Rapat',
                                     'roleId' => 'sheet-signer1-role',
                                     'name' => $config['signer1_name'] ?? $agenda->nama_pimpinan,
@@ -524,12 +621,13 @@
                                     'nipId' => 'sheet-signer1-nip',
                                     'mark' => $pimpinanAtt?->signature_path,
                                     'att' => $pimpinanAtt,
+                                    'customSigUrl' => null,
                                     'markId' => 'sheet-signer1-mark',
                                     'showMark' => $config['show_signer1_signature'] ?? true,
                                     'isSigner3' => false,
                                 ],
                                 [
-                                    'label' => 'Menyetujui,',
+                                    'label' => '<span id="sheet-signer3-prefix">'.e($config['signer3_prefix'] ?? '').'</span>',
                                     'role' => $config['signer3_role'] ?? 'Kepala LLDIKTI Wilayah X',
                                     'roleId' => 'sheet-signer3-role',
                                     'name' => ($config['signer3_name'] ?? '') !== '' ? $config['signer3_name'] : '-',
@@ -538,8 +636,9 @@
                                     'nipId' => 'sheet-signer3-nip',
                                     'mark' => null,
                                     'att' => null,
+                                    'customSigUrl' => $signer3SigUrl ?? null,
                                     'markId' => 'sheet-signer3-mark',
-                                    'showMark' => false,
+                                    'showMark' => $config['show_signer3_signature'] ?? false,
                                     'isSigner3' => true,
                                 ],
                                 [
@@ -556,6 +655,7 @@
                                     'nipId' => 'sheet-signer2-nip',
                                     'mark' => $notulisAtt?->signature_path,
                                     'att' => $notulisAtt,
+                                    'customSigUrl' => null,
                                     'markId' => 'sheet-signer2-mark',
                                     'showMark' => $config['show_signer2_signature'] ?? true,
                                     'isSigner3' => false,
@@ -590,7 +690,9 @@
                                     @foreach($signatureSigners as $signatureSigner)
                                         <td @if($signatureSigner['isSigner3']) data-signer3-col @endif data-signer-col style="width: {{ $signatureColWidth }}; text-align: center; vertical-align: middle; border: none; padding: 1pt 0; height: {{ \App\Support\DocumentLayout::TTD_ROW_HEIGHT_PT }}pt; {{ ($signatureSigner['isSigner3'] && !$showSigner3Initial) ? 'display: none;' : '' }}">
                                             <div id="{{ $signatureSigner['markId'] }}" data-signer-inner style="display: inline-block; width: {{ $signatureInner }}; text-align: left; {{ $signatureSigner['showMark'] ? '' : 'display: none;' }}">
-                                                @if($signatureSigner['mark'] && $signatureSigner['att'])
+                                                @if(!empty($signatureSigner['customSigUrl']))
+                                                    <img src="{{ $signatureSigner['customSigUrl'] }}" alt="TTD" width="95" height="32" style="width: 95px; height: 32px; max-height: 34px; max-width: 100px; object-fit: contain; display: block; border: none;">
+                                                @elseif($signatureSigner['mark'] && $signatureSigner['att'])
                                                     @can('view', $signatureSigner['att'])
                                                         <img src="{{ route('attendances.signature', $signatureSigner['att']) }}" alt="TTD" width="95" height="32" style="width: 95px; height: 32px; max-height: 34px; max-width: 100px; object-fit: contain; display: block; border: none;">
                                                     @else
@@ -612,6 +714,18 @@
                                     @endforeach
                                 </tr>
                             </table>
+                        </div>
+
+                        <!-- Tembusan (Opsional di bawah blok pengesahan) -->
+                        <div id="sheet-tembusan-block" style="margin-top: 10pt; font-size: {{ \App\Support\DocumentLayout::BODY_SIZE_PT - 0.5 }}pt; line-height: 1.3; font-family: 'Times New Roman', Times, serif; {{ (($config['show_tembusan'] ?? false) && trim((string) ($config['tembusan'] ?? '')) !== '') ? '' : 'display: none;' }}">
+                            <div style="font-weight: bold; margin-bottom: 2pt;">Tembusan:</div>
+                            <div id="sheet-tembusan-list">
+                                @foreach(preg_split('/\r\n|\r|\n/', trim((string) ($config['tembusan'] ?? ''))) as $tembusanLine)
+                                    @if(trim($tembusanLine) !== '')
+                                        <div>{{ trim($tembusanLine) }}</div>
+                                    @endif
+                                @endforeach
+                            </div>
                         </div>
 
                         <!-- Catatan Kaki Dokumen Resmi (Selalu ada di DOM agar live toggle berfungsi) -->
@@ -1135,7 +1249,7 @@
 
                         <div class="space-y-1.5">
                             <label class="font-bold text-slate-800 block">Alamat, Kontak &amp; Laman Resmi</label>
-                            <input type="text" name="alamat_kontak" value="{{ old('alamat_kontak', $config['alamat_kontak'] ?? 'Jalan Khatib Sulaiman, Padang, Sumatera Barat • Laman: lldikti10.kemdikbud.go.id') }}" class="w-full text-xs rounded-xl border-slate-300 focus:border-slate-900 focus:ring-slate-900 py-2.5 px-3">
+                            <input type="text" name="alamat_kontak" value="{{ old('alamat_kontak', $config['alamat_kontak'] ?? 'Jalan Khatib Sulaiman Padang 25137 • Telepon (0751) 70567376 • Laman: lldikti10.kemdiktisaintek.go.id • Pos-el: info.lldikti10@kemdiktisaintek.go.id') }}" class="w-full text-xs rounded-xl border-slate-300 focus:border-slate-900 focus:ring-slate-900 py-2.5 px-3">
                         </div>
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
@@ -1181,6 +1295,54 @@
                                 <label class="font-bold text-slate-800 block">Override Format &amp; Tempat</label>
                                 <input type="text" name="custom_location" value="{{ old('custom_location', $config['custom_location'] ?? ($agenda->lokasi_ruang ?? 'Daring (Online Meeting)')) }}" class="w-full text-xs rounded-xl border-slate-300 focus:border-slate-900 focus:ring-slate-900 py-2.5 px-3">
                             </div>
+                        </div>
+
+                        <!-- Dasar / Rujukan Surat Undangan -->
+                        <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                            <div class="flex items-center justify-between gap-2">
+                                <div>
+                                    <div class="font-bold text-slate-900">Dasar / Rujukan Surat Undangan</div>
+                                    <div class="text-[11px] text-slate-500">Menampilkan rujukan surat undangan resmi di atas informasi rapat</div>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="hidden" name="show_dasar_surat" value="0">
+                                    <input type="checkbox" name="show_dasar_surat" value="1" class="sr-only peer" @checked($config['show_dasar_surat'] ?? false)>
+                                    <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-slate-900"></div>
+                                </label>
+                            </div>
+                            <textarea name="dasar_surat" rows="2" placeholder="Contoh: Surat Undangan Kepala LLDIKTI Wilayah X Nomor ... tanggal ..." class="w-full text-xs rounded-xl border-slate-300 focus:border-slate-900 focus:ring-slate-900 py-2 px-3">{{ old('dasar_surat', $config['dasar_surat'] ?? '') }}</textarea>
+                        </div>
+
+                        <!-- Alinea Pembuka Berita Acara -->
+                        <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                            <div class="flex items-center justify-between gap-2">
+                                <div>
+                                    <div class="font-bold text-slate-900">Alinea Pembuka Resmi Berita Acara</div>
+                                    <div class="text-[11px] text-slate-500">Kalimat pembuka formal yang menjelaskan waktu, tempat, dan penyelenggaraan rapat</div>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="hidden" name="show_opening_ba" value="0">
+                                    <input type="checkbox" name="show_opening_ba" value="1" class="sr-only peer" @checked($config['show_opening_ba'] ?? false)>
+                                    <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-slate-900"></div>
+                                </label>
+                            </div>
+                            <textarea name="opening_ba" rows="2" placeholder="Pada hari ini ... telah dilaksanakan rapat ..." class="w-full text-xs rounded-xl border-slate-300 focus:border-slate-900 focus:ring-slate-900 py-2 px-3">{{ old('opening_ba', $config['opening_ba'] ?? '') }}</textarea>
+                        </div>
+
+                        <!-- Alinea Penutup Berita Acara -->
+                        <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                            <div class="flex items-center justify-between gap-2">
+                                <div>
+                                    <div class="font-bold text-slate-900">Alinea Penutup Pengesahan Berita Acara</div>
+                                    <div class="text-[11px] text-slate-500">Kalimat penutup resmi tepat sebelum blok tanda tangan pengesahan</div>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="hidden" name="show_closing_ba" value="0">
+                                    <input type="checkbox" name="show_closing_ba" value="1" class="sr-only peer" @checked($config['show_closing_ba'] ?? true)>
+                                    <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-slate-900"></div>
+                                </label>
+                            </div>
+                            <textarea name="penutup" rows="2" placeholder="Demikian Berita Acara rapat ini dibuat dengan sebenarnya untuk dapat dipergunakan sebagaimana mestinya." class="w-full text-xs rounded-xl border-slate-300 focus:border-slate-900 focus:ring-slate-900 py-2 px-3">{{ old('penutup', $config['penutup'] ?? 'Demikian Berita Acara rapat ini dibuat dengan sebenarnya untuk dapat dipergunakan sebagaimana mestinya.') }}</textarea>
                         </div>
 
                         <div class="space-y-2">
@@ -1308,7 +1470,11 @@
                                     <span>Sertakan Gambar TTD</span>
                                 </label>
                             </div>
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                                <div>
+                                    <label class="text-[11px] font-semibold text-slate-600 block mb-1">Frasa Pengantar</label>
+                                    <input type="text" name="signer1_prefix" value="{{ old('signer1_prefix', $config['signer1_prefix'] ?? 'Mengetahui,') }}" placeholder="Mengetahui," class="w-full text-xs rounded-lg border-slate-300 bg-white py-2 px-2.5">
+                                </div>
                                 <div>
                                     <label class="text-[11px] font-semibold text-slate-600 block mb-1">Jabatan</label>
                                     <input type="text" name="signer1_role" value="{{ old('signer1_role', $config['signer1_role'] ?? 'Pemimpin Rapat') }}" class="w-full text-xs rounded-lg border-slate-300 bg-white py-2 px-2.5">
@@ -1359,18 +1525,46 @@
 
                         <!-- Signer 3 (Optional Middle / Mengetahui Kepala Lembaga) -->
                         <div class="p-4 border border-slate-200 rounded-xl space-y-3 bg-white">
-                            <div class="flex items-center justify-between">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
                                 <div>
                                     <span class="font-bold text-slate-900">Penandatangan 3 (Opsional: Mengetahui Pimpinan Tinggi)</span>
                                     <p class="text-[11px] text-slate-500">Mencantumkan kolom pengesahan ketiga di tengah (misal Kepala Lembaga/PPK)</p>
                                 </div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="hidden" name="show_signer3" value="0">
-                                    <input type="checkbox" name="show_signer3" value="1" class="sr-only peer" @checked($config['show_signer3'] ?? false)>
-                                    <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-slate-900"></div>
-                                </label>
+                                <div class="flex items-center gap-3">
+                                    <label class="flex items-center gap-1 text-[11px] text-slate-600 cursor-pointer">
+                                        <input type="hidden" name="show_signer3_signature" value="0">
+                                        <input type="checkbox" name="show_signer3_signature" value="1" class="rounded border-slate-300 text-slate-900" @checked($config['show_signer3_signature'] ?? false)>
+                                        <span>Sertakan Gambar TTD</span>
+                                    </label>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="hidden" name="show_signer3" value="0">
+                                        <input type="checkbox" name="show_signer3" value="1" class="sr-only peer" @checked($config['show_signer3'] ?? false)>
+                                        <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-slate-900"></div>
+                                    </label>
+                                </div>
                             </div>
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+
+                            <div class="space-y-1.5 pt-1">
+                                <label for="signer3-asn-picker" class="text-[11px] font-semibold text-slate-600 block">Pilih Cepat dari Daftar ASN Aktif (Opsional)</label>
+                                <select id="signer3-asn-picker" class="w-full text-xs rounded-lg border-slate-300 bg-slate-50 py-2 px-2.5">
+                                    <option value="">-- Pilih Pejabat ASN atau Isi Manual di Bawah --</option>
+                                    @foreach(($signerCandidates ?? collect()) as $candidate)
+                                        <option
+                                            value="{{ $candidate->id }}"
+                                            data-name="{{ $candidate->name }}"
+                                            data-nip="{{ $candidate->nip ?? '-' }}"
+                                            @selected((string) old('signer3_user_id', $config['signer3_user_id'] ?? '') === (string) $candidate->id)
+                                        >{{ $candidate->name }} ({{ $candidate->nip ?? '-' }})</option>
+                                    @endforeach
+                                </select>
+                                <input type="hidden" name="signer3_user_id" id="signer3_user_id_input" value="{{ old('signer3_user_id', $config['signer3_user_id'] ?? '') }}">
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 pt-1">
+                                <div>
+                                    <label class="text-[11px] font-semibold text-slate-600 block mb-1">Frasa Pengantar</label>
+                                    <input type="text" name="signer3_prefix" value="{{ old('signer3_prefix', $config['signer3_prefix'] ?? '') }}" placeholder="Menyetujui," class="w-full text-xs rounded-lg border-slate-300 bg-white py-2 px-2.5">
+                                </div>
                                 <div>
                                     <label class="text-[11px] font-semibold text-slate-600 block mb-1">Jabatan Pengesah</label>
                                     <input type="text" name="signer3_role" value="{{ old('signer3_role', $config['signer3_role'] ?? 'Kepala LLDIKTI Wilayah X') }}" class="w-full text-xs rounded-lg border-slate-300 bg-white py-2 px-2.5">
@@ -1384,6 +1578,19 @@
                                     <input type="text" name="signer3_nip" value="{{ old('signer3_nip', $config['signer3_nip'] ?? '-') }}" placeholder="18 digit NIP" class="w-full text-xs rounded-lg border-slate-300 bg-white py-2 px-2.5 font-mono">
                                 </div>
                             </div>
+                        </div>
+
+                        <!-- Tembusan -->
+                        <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                            <div class="flex items-center justify-between">
+                                <label class="font-bold text-slate-900 block">Daftar Tembusan (Opsional)</label>
+                                <label class="flex items-center gap-1 text-[11px] text-slate-500 cursor-pointer">
+                                    <input type="hidden" name="show_tembusan" value="0">
+                                    <input type="checkbox" name="show_tembusan" value="1" class="rounded border-slate-300 text-slate-900" @checked($config['show_tembusan'] ?? false)>
+                                    <span>Tampilkan</span>
+                                </label>
+                            </div>
+                            <textarea name="tembusan" rows="2" placeholder="1. Kepala LLDIKTI Wilayah X&#10;2. Arsip" class="w-full text-xs rounded-xl border-slate-300 focus:border-slate-900 focus:ring-slate-900 py-2 px-3">{{ old('tembusan', $config['tembusan'] ?? '') }}</textarea>
                         </div>
 
                         <!-- Footer Note -->
@@ -1645,6 +1852,35 @@
         const footerNoteVal = val('footer_note').trim();
         setVisible('sheet-footer-note-block', isChecked('show_footer_note') && footerNoteVal !== '');
 
+        const dasarSuratVal = val('dasar_surat').trim();
+        setVisible('sheet-dasar-surat-block', isChecked('show_dasar_surat') && dasarSuratVal !== '');
+        const dasarSuratTextEl = document.getElementById('sheet-dasar-surat-text');
+        if (dasarSuratTextEl) dasarSuratTextEl.textContent = dasarSuratVal;
+
+        const openingBaVal = val('opening_ba').trim();
+        setVisible('sheet-opening-ba-block', isChecked('show_opening_ba') && openingBaVal !== '');
+        const openingBaTextEl = document.getElementById('sheet-opening-ba-text');
+        if (openingBaTextEl) openingBaTextEl.textContent = openingBaVal;
+
+        const closingBaVal = val('penutup').trim();
+        setVisible('sheet-closing-ba-block', isChecked('show_closing_ba'));
+        const closingBaTextEl = document.getElementById('sheet-closing-ba-text');
+        if (closingBaTextEl) {
+            closingBaTextEl.textContent = closingBaVal || 'Demikian Berita Acara rapat ini dibuat dengan sebenarnya untuk dapat dipergunakan sebagaimana mestinya.';
+        }
+
+        const tembusanVal = val('tembusan').trim();
+        setVisible('sheet-tembusan-block', isChecked('show_tembusan') && tembusanVal !== '');
+        const tembusanListEl = document.getElementById('sheet-tembusan-list');
+        if (tembusanListEl) {
+            tembusanListEl.innerHTML = tembusanVal
+                .split(/\r?\n/)
+                .map(line => line.trim())
+                .filter(Boolean)
+                .map(line => `<div>${escapeHtml(line)}</div>`)
+                .join('');
+        }
+
         // Header Kop & Logo
         const kopEl = document.getElementById('sheet-header-kop');
         if (kopEl) kopEl.style.display = isChecked('show_kop') ? 'block' : 'none';
@@ -1772,14 +2008,22 @@
         }
 
         // Blok Tanda Tangan & Penandatangan 3
-        for (const markId of ['sheet-signer1-mark', 'sheet-signer2-mark']) {
+        for (const [markId, fieldName] of [
+            ['sheet-signer1-mark', 'show_signer1_signature'],
+            ['sheet-signer2-mark', 'show_signer2_signature'],
+            ['sheet-signer3-mark', 'show_signer3_signature'],
+        ]) {
             const mark = document.getElementById(markId);
             if (mark) {
-                mark.style.display = markId === 'sheet-signer1-mark'
-                    ? (isChecked('show_signer1_signature') ? 'inline-block' : 'none')
-                    : (isChecked('show_signer2_signature') ? 'inline-block' : 'none');
+                mark.style.display = isChecked(fieldName) ? 'inline-block' : 'none';
             }
         }
+
+        const prefix1El = document.getElementById('sheet-signer1-prefix');
+        if (prefix1El) prefix1El.textContent = val('signer1_prefix') || 'Mengetahui,';
+
+        const prefix3El = document.getElementById('sheet-signer3-prefix');
+        if (prefix3El) prefix3El.textContent = val('signer3_prefix') || '';
 
         const showSigner3 = isChecked('show_signer3');
         const sigTable = document.getElementById('sheet-signature-table');
@@ -1864,6 +2108,23 @@
     document.addEventListener('DOMContentLoaded', function() {
         const modal = document.getElementById('modal-notulen-document-config');
         if (modal) {
+            const signer3Picker = document.getElementById('signer3-asn-picker');
+            if (signer3Picker) {
+                signer3Picker.addEventListener('change', () => {
+                    const selectedOption = signer3Picker.options[signer3Picker.selectedIndex];
+                    const userIdInput = modal.querySelector('input[name="signer3_user_id"]');
+                    const nameInput = modal.querySelector('input[name="signer3_name"]');
+                    const nipInput = modal.querySelector('input[name="signer3_nip"]');
+                    if (userIdInput) userIdInput.value = signer3Picker.value || '';
+                    if (signer3Picker.value && selectedOption) {
+                        if (nameInput) nameInput.value = selectedOption.dataset.name || '';
+                        if (nipInput) nipInput.value = selectedOption.dataset.nip || '-';
+                    }
+                    markWorkstationDirty();
+                    applyDocConfigToWorkstation();
+                });
+            }
+
             modal.querySelectorAll('input, select, textarea').forEach(input => {
                 input.addEventListener('input', () => {
                     markWorkstationDirty();

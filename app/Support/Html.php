@@ -34,7 +34,7 @@ final class Html
      * dropped wholesale (see isSafeHref()).
      */
     private const ALLOWED_TAGS = [
-        'p', 'br', 'b', 'strong', 'i', 'em', 'u', 's', 'strike',
+        'p', 'br', 'b', 'strong', 'i', 'em', 'u', 's', 'del', 'strike',
         'ul', 'ol', 'li', 'h2', 'h3', 'h4', 'blockquote', 'hr',
         'div', 'span', 'font', 'a', 'table', 'thead', 'tbody', 'tr', 'th', 'td',
         'sup', 'sub',
@@ -69,7 +69,7 @@ final class Html
      * Attributes kept only on <a>. `href` is scheme-checked before it survives.
      */
     private const ANCHOR_ATTRIBUTES = [
-        'href', 'target', 'title',
+        'href', 'target', 'title', 'rel',
     ];
 
     /**
