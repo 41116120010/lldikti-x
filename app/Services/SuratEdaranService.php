@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Agenda;
+use App\Support\DocumentLayout;
 use App\Support\DocxHtmlRenderer;
 use App\Support\Html;
 use Illuminate\Http\Request;
@@ -14,8 +15,9 @@ use PhpOffice\PhpWord\ComplexType\TblWidth as ComplexTblWidth;
 use PhpOffice\PhpWord\Element\Header;
 use PhpOffice\PhpWord\IOFactory;
 use PhpOffice\PhpWord\PhpWord;
+use PhpOffice\PhpWord\Settings;
 use PhpOffice\PhpWord\SimpleType\Jc;
-use PhpOffice\PhpWord\SimpleType\JcTable;
+use PhpOffice\PhpWord\SimpleType\LineSpacingRule;
 use PhpOffice\PhpWord\SimpleType\TblWidth;
 use RuntimeException;
 
@@ -117,15 +119,24 @@ class SuratEdaranService
         $config = $agenda->resolved_surat_edaran_config;
 
         $logoDataUri = null;
+        $kopLogoSize = null;
         if (! empty($config['show_logo'])) {
             $customLogo = $config['custom_logo_path'] ?? null;
             if ($customLogo && Storage::disk('public')->exists($customLogo)) {
                 $fullPath = Storage::disk('public')->path($customLogo);
                 $logoDataUri = $this->fileToDataUri($fullPath);
+                $dims = is_file($fullPath) ? @getimagesize($fullPath) : false;
+                if (is_array($dims) && ($dims[0] ?? 0) > 0 && ($dims[1] ?? 0) > 0) {
+                    $kopLogoSize = [(int) $dims[0], (int) $dims[1]];
+                }
             } else {
                 $bundled = public_path('images/tut-wuri-handayani-kop.png');
                 if (is_file($bundled)) {
                     $logoDataUri = $this->fileToDataUri($bundled);
+                    $dims = @getimagesize($bundled);
+                    $kopLogoSize = (is_array($dims) && ($dims[0] ?? 0) > 0 && ($dims[1] ?? 0) > 0)
+                        ? [(int) $dims[0], (int) $dims[1]]
+                        : [520, 556];
                 }
             }
         }
@@ -134,6 +145,7 @@ class SuratEdaranService
             'agenda' => $agenda,
             'config' => $config,
             'logoDataUri' => $logoDataUri,
+            'kopLogoSize' => $kopLogoSize,
             'eventDetails' => $this->resolveEventDetails($agenda, $config),
         ])->render();
     }
@@ -248,6 +260,13 @@ class SuratEdaranService
     public function renderDocx(Agenda $agenda): string
     {
         $config = $agenda->resolved_surat_edaran_config;
+        $tempFiles = [];
+
+        Settings::setZipClass(
+            extension_loaded('zip')
+                ? Settings::ZIPARCHIVE
+                : Settings::PCLZIP
+        );
 
         $word = new PhpWord;
         $word->setDefaultFontName('Arial');
@@ -271,13 +290,14 @@ class SuratEdaranService
             'headerHeight' => 142,
         ]);
 
-        // 1. Kop Surat Dinas Resmi (Header Halaman 1 — titlePg aktif) & Running Page Number Halaman 2+
-        if (! empty($config['show_kop'])) {
-            $this->addDocxKopSurat($section, $config);
-        } else {
-            // Ensure titlePg stays enabled so Page 1 omits the "-{PAGE}-" running header
-            $section->addHeader(Header::FIRST);
-        }
+        try {
+            // 1. Kop Surat Dinas Resmi (Header Halaman 1 — titlePg aktif) & Running Page Number Halaman 2+
+            if (! empty($config['show_kop'])) {
+                $this->addDocxKopSurat($section, $config, $tempFiles);
+            } else {
+                // Ensure titlePg stays enabled so Page 1 omits the "-{PAGE}-" running header
+                $section->addHeader(Header::FIRST);
+            }
 
         $runningHeader = $section->addHeader(Header::AUTO);
         $runningHeader->addPreserveText(
@@ -345,7 +365,6 @@ class SuratEdaranService
                 'cellMarginBottom' => 20,
                 'cellMarginLeft' => 0,
                 'cellMarginRight' => 0,
-                'alignment' => JcTable::START,
                 'width' => $metaWidth,
                 'unit' => TblWidth::TWIP,
                 'layout' => 'fixed',
@@ -411,7 +430,6 @@ class SuratEdaranService
                 'cellMarginBottom' => 30,
                 'cellMarginLeft' => 0,
                 'cellMarginRight' => 0,
-                'alignment' => JcTable::START,
                 'width' => $detailWidth,
                 'unit' => TblWidth::TWIP,
                 'layout' => 'fixed',
@@ -482,7 +500,6 @@ class SuratEdaranService
                 'cellMarginBottom' => 20,
                 'cellMarginLeft' => 0,
                 'cellMarginRight' => 0,
-                'alignment' => JcTable::START,
                 'width' => $lampiranWidth,
                 'unit' => TblWidth::TWIP,
                 'layout' => 'fixed',
@@ -517,12 +534,12 @@ class SuratEdaranService
             $this->appendHtmlBlocksToSection($section, (string) $config['lampiran_content']);
         }
 
-        $tempDocx = tempnam(sys_get_temp_dir(), 'siperapat_surat_docx_');
-        if ($tempDocx === false) {
-            throw new RuntimeException('Tidak dapat membuat berkas sementara untuk ekspor Word Surat Dinas.');
-        }
+            $tempDocx = tempnam(sys_get_temp_dir(), 'siperapat_surat_docx_');
+            if ($tempDocx === false) {
+                throw new RuntimeException('Tidak dapat membuat berkas sementara untuk ekspor Word Surat Dinas.');
+            }
+            $tempFiles[] = $tempDocx;
 
-        try {
             IOFactory::createWriter($word, 'Word2007')->save($tempDocx);
             $bytes = file_get_contents($tempDocx);
             if ($bytes === false) {
@@ -531,7 +548,11 @@ class SuratEdaranService
 
             return $bytes;
         } finally {
-            @unlink($tempDocx);
+            foreach ($tempFiles as $tmp) {
+                if (is_string($tmp) && file_exists($tmp)) {
+                    @unlink($tmp);
+                }
+            }
         }
     }
 
@@ -552,7 +573,10 @@ class SuratEdaranService
         ]);
     }
 
-    private function addDocxKopSurat($section, array $config): void
+    /**
+     * @param  array<int, string>  $tempFiles
+     */
+    private function addDocxKopSurat($section, array $config, array &$tempFiles): void
     {
         $instansiIndukRaw = trim((string) ($config['instansi_induk'] ?? "KEMENTERIAN PENDIDIKAN TINGGI,\nSAINS, DAN TEKNOLOGI"));
         if ($instansiIndukRaw === 'KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI') {
@@ -562,7 +586,10 @@ class SuratEdaranService
         }
 
         $instansiPelaksana = trim((string) ($config['instansi_pelaksana'] ?? 'LEMBAGA LAYANAN PENDIDIKAN TINGGI WILAYAH X'));
-        $alamatRaw = trim((string) ($config['alamat_kontak'] ?? "Jalan Khatib Sulaiman Padang 25137\nTelepon (0751) 70567376\nLaman lldikti10.kemdiktisaintek.go.id  Pos-el info.lldikti10@kemdiktisaintek.go.id"));
+        if ($instansiPelaksana === 'LEMBAGA LAYANAN PENDIDIKAN TINGGI (LLDIKTI) WILAYAH X') {
+            $instansiPelaksana = 'LEMBAGA LAYANAN PENDIDIKAN TINGGI WILAYAH X';
+        }
+        $alamatRaw = trim((string) ($config['alamat_kontak'] ?? Agenda::DEFAULT_REPORT_ALAMAT_KONTAK));
         $alamatLines = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $alamatRaw))));
 
         $logoPath = null;
@@ -582,36 +609,71 @@ class SuratEdaranService
             }
         }
 
+        $logoInfo = null;
+        if ($logoPath !== null) {
+            $detected = @getimagesize($logoPath);
+            $imageType = is_array($detected) ? ($detected[2] ?? null) : null;
+            $mime = is_array($detected) ? ($detected['mime'] ?? '') : '';
+
+            if (
+                $imageType === IMAGETYPE_WEBP
+                || $mime === 'image/webp'
+                || str_ends_with(strtolower($logoPath), '.webp')
+            ) {
+                $converted = $this->convertImageToTempPng($logoPath, $tempFiles);
+                if ($converted !== null) {
+                    $logoPath = $converted;
+                    $detected = @getimagesize($logoPath);
+                } else {
+                    $logoPath = null;
+                    $detected = false;
+                }
+            }
+
+            if (is_array($detected) && ($detected[0] ?? 0) > 0 && ($detected[1] ?? 0) > 0) {
+                $logoInfo = $detected;
+            } else {
+                $logoPath = null;
+            }
+        }
+
         // Lebar total Kop 18.25 cm (10348 dxa) di Header Halaman 1, menjorok -1.26 cm (-714 dxa) dari margin isi
-        $kopWidthTwips = 10348;
+        $kopWidthTwips = DocumentLayout::KOP_WIDTH_TWIPS;
         $header = $section->addHeader(Header::FIRST);
         $kopTable = $header->addTable([
             'cellMarginTop' => 0,
             'cellMarginBottom' => 60,
             'cellMarginLeft' => 108,
             'cellMarginRight' => 108,
-            'alignment' => JcTable::START,
             'width' => $kopWidthTwips,
             'unit' => TblWidth::TWIP,
             'layout' => 'fixed',
         ]);
-        $kopTable->getStyle()->setIndent(new ComplexTblWidth(-714, TblWidth::TWIP));
+        $kopTable->getStyle()->setIndent(new ComplexTblWidth(DocumentLayout::KOP_BLEED_LEFT_TWIPS, TblWidth::TWIP));
 
         $row = $kopTable->addRow();
         $bottomRuleCell = [
-            'borderBottomSize' => 18, // 2.25pt solid black rule
+            'borderBottomSize' => (int) round(DocumentLayout::RULE_WEIGHT_PT * 8), // 2.25pt solid black rule
             'borderBottomColor' => '000000',
             'valign' => 'center',
         ];
 
-        if ($logoPath !== null) {
-            $logoColTwips = 2043;
-            $textColTwips = 8305;
+        if ($logoPath !== null && $logoInfo !== null) {
+            $logoColTwips = DocumentLayout::KOP_LOGO_COL_TWIPS;
+            $textColTwips = DocumentLayout::KOP_TEXT_COL_TWIPS;
+
+            $logoScale = min(
+                1.0,
+                DocumentLayout::KOP_LOGO_WIDTH_PT / $logoInfo[0],
+                DocumentLayout::KOP_LOGO_HEIGHT_PT / $logoInfo[1]
+            );
+            $logoWidthPt = round($logoInfo[0] * $logoScale, 1);
+            $logoHeightPt = round($logoInfo[1] * $logoScale, 1);
 
             $logoCell = $row->addCell($logoColTwips, $bottomRuleCell);
             $logoCell->addImage($logoPath, [
-                'width' => 104,
-                'height' => 111,
+                'width' => $logoWidthPt,
+                'height' => $logoHeightPt,
                 'alignment' => Jc::CENTER,
             ]);
             $textCell = $row->addCell($textColTwips, $bottomRuleCell);
@@ -622,22 +684,46 @@ class SuratEdaranService
         foreach ($instansiIndukLines as $line) {
             $textCell->addText(
                 $this->xmlSafe(mb_strtoupper($line)),
-                ['name' => 'Times New Roman', 'size' => 16, 'bold' => false],
-                ['alignment' => Jc::CENTER, 'spaceBefore' => 0, 'spaceAfter' => 0]
+                ['name' => DocumentLayout::KOP_FONT, 'size' => DocumentLayout::MINISTRY_SIZE_PT, 'bold' => false],
+                [
+                    'alignment' => Jc::CENTER,
+                    'space' => [
+                        'before' => 0,
+                        'after' => 0,
+                        'line' => DocumentLayout::ptToTwips(DocumentLayout::MINISTRY_LINE_PT),
+                        'lineRule' => LineSpacingRule::EXACT,
+                    ],
+                ]
             );
         }
 
         $textCell->addText(
             $this->xmlSafe(mb_strtoupper($instansiPelaksana)),
-            ['name' => 'Times New Roman', 'size' => 14, 'bold' => true],
-            ['alignment' => Jc::CENTER, 'spaceBefore' => 20, 'spaceAfter' => 20]
+            ['name' => DocumentLayout::KOP_FONT, 'size' => DocumentLayout::AGENCY_SIZE_PT, 'bold' => true],
+            [
+                'alignment' => Jc::CENTER,
+                'space' => [
+                    'before' => 20,
+                    'after' => 20,
+                    'line' => DocumentLayout::ptToTwips(DocumentLayout::AGENCY_LINE_PT),
+                    'lineRule' => LineSpacingRule::EXACT,
+                ],
+            ]
         );
 
         foreach ($alamatLines as $addrLine) {
             $textCell->addText(
-                $this->xmlSafe($addrLine),
-                ['name' => 'Times New Roman', 'size' => 12, 'bold' => false],
-                ['alignment' => Jc::CENTER, 'spaceBefore' => 0, 'spaceAfter' => 0]
+                $this->xmlSafeKeepSpaces($addrLine),
+                ['name' => DocumentLayout::KOP_FONT, 'size' => DocumentLayout::ADDRESS_SIZE_PT, 'bold' => false],
+                [
+                    'alignment' => Jc::CENTER,
+                    'space' => [
+                        'before' => 0,
+                        'after' => 0,
+                        'line' => DocumentLayout::ptToTwips(DocumentLayout::ADDRESS_LINE_PT),
+                        'lineRule' => LineSpacingRule::EXACT,
+                    ],
+                ]
             );
         }
 
@@ -665,7 +751,6 @@ class SuratEdaranService
             'cellMarginBottom' => 20,
             'cellMarginLeft' => 0,
             'cellMarginRight' => 0,
-            'alignment' => JcTable::START,
             'width' => $printableTwips,
             'unit' => TblWidth::TWIP,
             'layout' => 'fixed',
@@ -821,6 +906,60 @@ class SuratEdaranService
     private function xmlSafe(string $text): string
     {
         return htmlspecialchars($text, ENT_XML1 | ENT_COMPAT, 'UTF-8');
+    }
+
+    private function xmlSafeKeepSpaces(string $text): string
+    {
+        $normalized = preg_replace('/[\r\n\t]+/u', ' ', trim($text)) ?? trim($text);
+
+        return $this->xmlSafe($normalized);
+    }
+
+    /**
+     * Convert non-PhpWord image formats (e.g. WebP) to a temporary PNG file via GD.
+     *
+     * @param  array<int, string>  $tempFiles
+     */
+    private function convertImageToTempPng(string $sourcePath, array &$tempFiles): ?string
+    {
+        if (! extension_loaded('gd') || ! is_file($sourcePath)) {
+            return null;
+        }
+
+        $raw = @file_get_contents($sourcePath);
+        if ($raw === false || $raw === '') {
+            return null;
+        }
+
+        $gdImg = @imagecreatefromstring($raw);
+        if (! $gdImg && function_exists('imagecreatefromwebp')) {
+            $gdImg = @imagecreatefromwebp($sourcePath);
+        }
+        if (! $gdImg) {
+            return null;
+        }
+
+        imagealphablending($gdImg, false);
+        imagesavealpha($gdImg, true);
+
+        $base = tempnam(sys_get_temp_dir(), 'siperapat_kop_');
+        if ($base === false) {
+            imagedestroy($gdImg);
+
+            return null;
+        }
+        $tempFiles[] = $base;
+
+        $pngPath = $base.'.png';
+        $saved = @imagepng($gdImg, $pngPath);
+        imagedestroy($gdImg);
+
+        if (! $saved || ! is_file($pngPath)) {
+            return null;
+        }
+        $tempFiles[] = $pngPath;
+
+        return $pngPath;
     }
 
     /**

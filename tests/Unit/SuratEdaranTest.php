@@ -10,6 +10,7 @@ use App\Services\DompdfRenderer;
 use App\Services\SuratEdaranService;
 use App\Support\Html;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Support\Facades\Storage;
 
 class SuratEdaranTest extends BaseTestCase
 {
@@ -478,5 +479,110 @@ class SuratEdaranTest extends BaseTestCase
         $this->assertStringContainsString('<w:gridCol w:w="1140"', $docXml, 'Kolom label Tanggal pada lampiranMeta harus cukup 1140 twips agar tidak terpotong');
         $this->assertStringNotContainsString('<w:tblInd w:w="-76"', $docXml);
         $this->assertStringNotContainsString('<w:tblInd w:w="-142"', $docXml);
+        $this->assertDoesNotMatchRegularExpression('#<w:tblPr>(?:(?!</w:tblPr>).)*?<w:jc w:val="start"/>.*?</w:tblPr>#s', $docXml);
+        $this->assertDoesNotMatchRegularExpression('#<w:tblPr>(?:(?!</w:tblPr>).)*?<w:jc w:val="start"/>.*?</w:tblPr>#s', $headersXml);
+    }
+
+    public function test_render_docx_converts_webp_custom_logo_and_preserves_unified_kop_typography(): void
+    {
+        if (! extension_loaded('gd') || ! function_exists('imagewebp')) {
+            $this->markTestSkipped('Ekstensi GD WebP tidak tersedia.');
+        }
+
+        $relativePath = 'surat_edaran_logos/test_unit_kop_logo_'.uniqid().'.webp';
+        $fullPath = Storage::disk('public')->path($relativePath);
+        @mkdir(dirname($fullPath), 0755, true);
+
+        $img = imagecreatetruecolor(520, 556);
+        $bg = imagecolorallocate($img, 30, 58, 138);
+        imagefilledrectangle($img, 0, 0, 519, 555, $bg);
+        $this->assertTrue(imagewebp($img, $fullPath));
+        imagedestroy($img);
+
+        $tmpDocx = null;
+
+        try {
+            $agenda = new Agenda([
+                'judul_rapat' => 'Rapat Verifikasi Logo WebP Surat Dinas',
+                'lokasi_ruang' => 'Ruang Rapat Utama',
+                'tipe_rapat' => 'offline',
+                'surat_edaran_type' => 'digital',
+                'surat_edaran_config' => [
+                    'template_type' => 'undangan',
+                    'show_kop' => true,
+                    'show_logo' => true,
+                    'custom_logo_path' => $relativePath,
+                    'nomor_surat' => '0999/LL10/AL.01/2026',
+                    'tanggal_surat' => '20 April 2026',
+                ],
+            ]);
+            $agenda->id = 89;
+
+            $docxBytes = (new SuratEdaranService(new DompdfRenderer))->renderDocx($agenda);
+            $this->assertStringStartsWith('PK', $docxBytes);
+
+            $tmpDocx = tempnam(sys_get_temp_dir(), 'surat_webp_ooxml_');
+            file_put_contents($tmpDocx, $docxBytes);
+
+            $zip = new \ZipArchive;
+            $this->assertTrue($zip->open($tmpDocx) === true);
+
+            $docXml = (string) $zip->getFromName('word/document.xml');
+            $headersXml = '';
+            $hasEmbeddedPng = false;
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $name = (string) $zip->getNameIndex($i);
+                if (preg_match('#^word/header\d+\.xml$#', $name)) {
+                    $headersXml .= (string) $zip->getFromName($name);
+                }
+                if (preg_match('#^word/media/.*\.png$#i', $name)) {
+                    $hasEmbeddedPng = true;
+                }
+            }
+            $zip->close();
+
+            $this->assertTrue($hasEmbeddedPng, 'Logo .webp harus dikonversi otomatis menjadi PNG tersemat pada paket .docx.');
+            $this->assertStringContainsString('w:line="350" w:lineRule="exact"', $headersXml);
+            $this->assertStringContainsString('w:line="320" w:lineRule="exact"', $headersXml);
+            $this->assertStringContainsString('w:line="270" w:lineRule="exact"', $headersXml);
+            $this->assertStringContainsString('w:before="20" w:after="20"', $headersXml);
+            $this->assertStringContainsString('Laman lldikti10.kemdiktisaintek.go.id  Pos-el info.lldikti10@kemdiktisaintek.go.id', $headersXml);
+            $this->assertDoesNotMatchRegularExpression('#<w:tblPr>(?:(?!</w:tblPr>).)*?<w:jc w:val="start"/>.*?</w:tblPr>#s', $docXml);
+            $this->assertDoesNotMatchRegularExpression('#<w:tblPr>(?:(?!</w:tblPr>).)*?<w:jc w:val="start"/>.*?</w:tblPr>#s', $headersXml);
+        } finally {
+            if ($tmpDocx && file_exists($tmpDocx)) {
+                @unlink($tmpDocx);
+            }
+            Storage::disk('public')->delete($relativePath);
+        }
+    }
+
+    public function test_render_html_uses_unified_kop_partial_and_preserves_double_space(): void
+    {
+        $agenda = new Agenda([
+            'judul_rapat' => 'Rapat Paritas Kop Surat PDF',
+            'lokasi_ruang' => 'Ruang Sidang',
+            'tipe_rapat' => 'offline',
+            'surat_edaran_type' => 'digital',
+            'surat_edaran_config' => [
+                'template_type' => 'undangan',
+                'show_kop' => true,
+                'show_logo' => true,
+            ],
+        ]);
+        $agenda->id = 90;
+
+        $html = (new SuratEdaranService(new DompdfRenderer))->renderHtml($agenda);
+
+        $this->assertStringContainsString('id="sheet-header-kop"', $html);
+        $this->assertStringContainsString('font-size: 16pt; line-height: 17.5pt;', $html);
+        $this->assertStringContainsString('font-size: 14pt; line-height: 16pt;', $html);
+        $this->assertStringContainsString('font-size: 12pt; line-height: 13.5pt;', $html);
+        $this->assertMatchesRegularExpression('/id="sheet-instansi-induk"[^>]*text-align:\s*center;/', $html);
+        $this->assertMatchesRegularExpression('/id="sheet-instansi-pelaksana"[^>]*text-align:\s*center;/', $html);
+        $this->assertMatchesRegularExpression('/id="sheet-alamat-kontak"[^>]*text-align:\s*center;/', $html);
+        $this->assertStringContainsString('Laman lldikti10.kemdiktisaintek.go.id&nbsp; Pos-el info.lldikti10@kemdiktisaintek.go.id', $html);
+        $this->assertStringNotContainsString('class="kop-wrapper"', $html);
+        $this->assertStringNotContainsString('class="kop-ministry-line"', $html);
     }
 }

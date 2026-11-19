@@ -3925,6 +3925,8 @@ const SuratEdaranWorkstation = {
         const modalLogoPreviewImg = document.getElementById('modal-logo-preview-img');
         const modalCustomLogoFilename = document.getElementById('modal-custom-logo-filename');
         const defaultLogoSrc = workstation.dataset.defaultLogoSrc || '/images/tut-wuri-handayani-kop.png';
+        const currentSavedLogoSrc = workstation.dataset.currentLogoSrc || defaultLogoSrc;
+        let customLogoPreviewDataUrl = null;
 
         if (btnChooseCustomLogo && formCustomLogoInput) {
             btnChooseCustomLogo.addEventListener('click', (e) => {
@@ -3970,9 +3972,14 @@ const SuratEdaranWorkstation = {
                 reader.onload = (ev) => {
                     const dataUrl = ev.target?.result;
                     if (typeof dataUrl === 'string') {
+                        customLogoPreviewDataUrl = dataUrl;
                         if (modalLogoPreviewImg) modalLogoPreviewImg.src = dataUrl;
-                        const sheetLogoImg = document.getElementById('sheet-logo-img');
-                        if (sheetLogoImg) sheetLogoImg.src = dataUrl;
+                        if (typeof syncModalConfigToFormAndSheet === 'function') {
+                            syncModalConfigToFormAndSheet();
+                        } else {
+                            const sheetLogoImg = document.getElementById('sheet-logo-img');
+                            if (sheetLogoImg) sheetLogoImg.src = dataUrl;
+                        }
                     }
                 };
                 reader.readAsDataURL(file);
@@ -3983,6 +3990,7 @@ const SuratEdaranWorkstation = {
         if (btnResetCustomLogo) {
             btnResetCustomLogo.addEventListener('click', (e) => {
                 e.preventDefault();
+                customLogoPreviewDataUrl = null;
                 if (formCustomLogoInput) {
                     formCustomLogoInput.value = '';
                 }
@@ -4018,6 +4026,22 @@ const SuratEdaranWorkstation = {
                 modal.classList.add('hidden');
                 document.body.style.overflow = '';
             }
+        };
+
+        const renderKopMultiline = (targetEl, rawText) => {
+            if (!targetEl) return;
+            const lines = String(rawText ?? '')
+                .split(/\r?\n/)
+                .map((line) => line.trim())
+                .filter(Boolean);
+            targetEl.textContent = '';
+            lines.forEach((line, idx) => {
+                if (idx > 0) {
+                    targetEl.appendChild(document.createElement('br'));
+                }
+                const preservedLine = line.replace(/ {2,}/g, (spaces) => '\u00A0'.repeat(spaces.length - 1) + ' ');
+                targetEl.appendChild(document.createTextNode(preservedLine));
+            });
         };
 
         syncModalConfigToFormAndSheet = () => {
@@ -4064,25 +4088,50 @@ const SuratEdaranWorkstation = {
             if (headerKop) headerKop.style.display = showKop ? 'block' : 'none';
 
             const logoCell = document.getElementById('sheet-logo-cell');
-            const logoImg = document.getElementById('sheet-logo-img');
+            let logoImg = document.getElementById('sheet-logo-img');
             const textCell = document.getElementById('sheet-kop-text-cell') || (logoCell ? logoCell.nextElementSibling : null);
+
+            const isResetLogo = formResetCustomLogoInput?.value === '1';
+            const activeLogoSrc = customLogoPreviewDataUrl
+                || (isResetLogo ? defaultLogoSrc : currentSavedLogoSrc);
+
+            if (showLogo && logoCell && !logoImg) {
+                logoImg = document.createElement('img');
+                logoImg.id = 'sheet-logo-img';
+                logoImg.alt = 'Logo Instansi';
+                logoImg.width = 138;
+                logoImg.height = 148;
+                logoImg.style.cssText = 'width: 103.8pt; height: 111pt; max-width: 104pt; max-height: 111pt; object-fit: contain; display: block; margin: 0 auto; border: none;';
+                logoImg.src = activeLogoSrc;
+                logoCell.appendChild(logoImg);
+            }
+
             if (logoCell) {
-                logoCell.style.width = showLogo ? '19.74%' : '0%';
+                const logoWidth = showLogo ? '19.74%' : '0%';
+                logoCell.style.width = logoWidth;
+                logoCell.setAttribute('width', logoWidth);
                 logoCell.style.display = showLogo ? 'table-cell' : 'none';
+                logoCell.style.padding = showLogo ? '0 5pt 4pt 0' : '0';
             }
             if (textCell) {
-                textCell.style.width = showLogo ? '80.26%' : '100%';
+                const textWidth = showLogo ? '80.26%' : '100%';
+                textCell.style.width = textWidth;
+                textCell.setAttribute('width', textWidth);
+                textCell.style.padding = showLogo ? '0 0 4pt 5pt' : '0 0 4pt 0';
             }
             if (logoImg) {
+                if (activeLogoSrc && logoImg.src !== activeLogoSrc) {
+                    logoImg.src = activeLogoSrc;
+                }
                 logoImg.style.display = showLogo ? 'block' : 'none';
             }
 
             const sheetInstansiInduk = document.getElementById('sheet-instansi-induk');
             const sheetInstansiPelaksana = document.getElementById('sheet-instansi-pelaksana');
             const sheetAlamatKontak = document.getElementById('sheet-alamat-kontak');
-            if (sheetInstansiInduk) sheetInstansiInduk.innerHTML = escapeHtml(instansiInduk).replace(/\n/g, '<br>');
+            renderKopMultiline(sheetInstansiInduk, instansiInduk);
             if (sheetInstansiPelaksana) sheetInstansiPelaksana.textContent = instansiPelaksana;
-            if (sheetAlamatKontak) sheetAlamatKontak.innerHTML = escapeHtml(alamatKontak).replace(/\n/g, '<br>');
+            renderKopMultiline(sheetAlamatKontak, alamatKontak);
 
             // 3. Metadata fields
             const nomor = document.getElementById('modal_nomor_surat')?.value || '';

@@ -45,8 +45,9 @@
      dibaca oleh writer .docx. Nilai tidak boleh ditulis ulang di sini. --}}
 @php
     $kopShowLogo = (bool) ($config['show_logo'] ?? true);
-    $kopLogo = $kopLogo ?? null;
-    $kopHasLogo = $kopShowLogo && is_array($kopLogo) && $kopLogo[0] > 0 && $kopLogo[1] > 0;
+    $kopLogoSrc = $kopLogoSrc ?? ($logoDataUri ?? $logoUrl ?? null);
+    $kopLogo = $kopLogo ?? ($kopLogoSize ?? [520, 556]);
+    $kopHasLogo = $kopShowLogo && ! empty($kopLogoSrc) && is_array($kopLogo) && $kopLogo[0] > 0 && $kopLogo[1] > 0;
 
     $kopLogoWidthPt = 0;
     $kopLogoHeightPt = 0;
@@ -74,6 +75,14 @@
     }
 
     $alamatKontakDisplay = trim((string) ($config['alamat_kontak'] ?? \App\Models\Agenda::DEFAULT_REPORT_ALAMAT_KONTAK));
+    $alamatKontakHtml = nl2br(
+        preg_replace_callback(
+            '/ {2,}/',
+            static fn (array $matches): string => str_repeat('&nbsp;', strlen($matches[0]) - 1).' ',
+            e($alamatKontakDisplay)
+        ) ?? e($alamatKontakDisplay),
+        false
+    );
     $kopRuleBorder = 'border: none; border-bottom: ' . DocumentLayout::RULE_WEIGHT_PT . 'pt solid #000000; mso-border-bottom-alt: solid windowtext ' . DocumentLayout::RULE_WEIGHT_PT . 'pt;';
     $kopLogoPad = $kopHasLogo
         ? 'padding: 0 ' . DocumentLayout::KOP_CELL_GAP_PT . 'pt ' . DocumentLayout::KOP_CELL_PAD_BOTTOM_PT . 'pt 0;'
@@ -85,15 +94,15 @@
 <div class="header-kop" id="sheet-header-kop" style="display: {{ ($config['show_kop'] ?? true) ? 'block' : 'none' }}; width: {{ DocumentLayout::KOP_WIDTH_CM }}cm; margin: 0 {{ DocumentLayout::KOP_BLEED_RIGHT_CM }}cm {{ DocumentLayout::KOP_GAP_BOTTOM_PT }}pt {{ DocumentLayout::KOP_BLEED_LEFT_CM }}cm; padding: 0; text-align: center; font-family: {!! DocumentLayout::KOP_FONT_CSS !!};">
     <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; border-collapse: collapse; margin: 0; padding: 0; {{ $kopRuleBorder }}">
         <tr>
-            <td id="sheet-logo-cell" width="{{ $kopLogoCellWidth }}" align="center" valign="middle" style="width: {{ $kopLogoCellWidth }}; text-align: center; vertical-align: middle; {{ $kopRuleBorder }} {{ $kopLogoPad }}">
+            <td id="sheet-logo-cell" width="{{ $kopLogoCellWidth }}" align="center" valign="middle" style="width: {{ $kopLogoCellWidth }}; text-align: center; vertical-align: middle; border: none; {{ $kopLogoPad }}">
                 @if($kopHasLogo)
                     <img id="sheet-logo-img" src="{{ $kopLogoSrc }}" alt="Logo Instansi" width="{{ $kopLogoWidthPx }}" height="{{ $kopLogoHeightPx }}" style="width: {{ $kopLogoWidthPt }}pt; height: {{ $kopLogoHeightPt }}pt; display: block; margin: 0 auto; border: none;">
                 @endif
             </td>
-            <td width="{{ $kopTextCellWidth }}" align="center" valign="middle" style="width: {{ $kopTextCellWidth }}; text-align: center; vertical-align: middle; {{ $kopRuleBorder }} {{ $kopTextPad }} font-family: {!! DocumentLayout::KOP_FONT_CSS !!};">
-                <p id="sheet-instansi-induk" style="margin: 0; padding: 0; font-size: {{ DocumentLayout::MINISTRY_SIZE_PT }}pt; line-height: {{ DocumentLayout::MINISTRY_LINE_PT }}pt; mso-line-height-rule: exactly; font-weight: normal; text-transform: uppercase; font-family: {!! DocumentLayout::KOP_FONT_CSS !!};">{!! nl2br(e($instansiIndukDisplay)) !!}</p>
-                <p id="sheet-instansi-pelaksana" style="margin: 1pt 0; padding: 0; font-size: {{ DocumentLayout::AGENCY_SIZE_PT }}pt; line-height: {{ DocumentLayout::AGENCY_LINE_PT }}pt; mso-line-height-rule: exactly; font-weight: bold; text-transform: uppercase; font-family: {!! DocumentLayout::KOP_FONT_CSS !!};">{{ $instansiPelaksanaDisplay }}</p>
-                <p id="sheet-alamat-kontak" style="margin: 0; padding: 0; font-size: {{ DocumentLayout::ADDRESS_SIZE_PT }}pt; line-height: {{ DocumentLayout::ADDRESS_LINE_PT }}pt; mso-line-height-rule: exactly; font-weight: normal; font-style: normal; font-family: {!! DocumentLayout::KOP_FONT_CSS !!}; white-space: nowrap;">{!! nl2br(e($alamatKontakDisplay)) !!}</p>
+            <td width="{{ $kopTextCellWidth }}" align="center" valign="middle" style="width: {{ $kopTextCellWidth }}; text-align: center; vertical-align: middle; border: none; {{ $kopTextPad }} font-family: {!! DocumentLayout::KOP_FONT_CSS !!};">
+                <p id="sheet-instansi-induk" style="margin: 0; padding: 0; text-align: center; font-size: {{ DocumentLayout::MINISTRY_SIZE_PT }}pt; line-height: {{ DocumentLayout::MINISTRY_LINE_PT }}pt; mso-line-height-rule: exactly; font-weight: normal; text-transform: uppercase; font-family: {!! DocumentLayout::KOP_FONT_CSS !!};">{!! nl2br(e($instansiIndukDisplay), false) !!}</p>
+                <p id="sheet-instansi-pelaksana" style="margin: 1pt 0; padding: 0; text-align: center; font-size: {{ DocumentLayout::AGENCY_SIZE_PT }}pt; line-height: {{ DocumentLayout::AGENCY_LINE_PT }}pt; mso-line-height-rule: exactly; font-weight: bold; text-transform: uppercase; font-family: {!! DocumentLayout::KOP_FONT_CSS !!};">{{ $instansiPelaksanaDisplay }}</p>
+                <p id="sheet-alamat-kontak" style="margin: 0; padding: 0; text-align: center; font-size: {{ DocumentLayout::ADDRESS_SIZE_PT }}pt; line-height: {{ DocumentLayout::ADDRESS_LINE_PT }}pt; mso-line-height-rule: exactly; font-weight: normal; font-style: normal; font-family: {!! DocumentLayout::KOP_FONT_CSS !!}; white-space: nowrap;">{!! $alamatKontakHtml !!}</p>
             </td>
         </tr>
     </table>

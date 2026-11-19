@@ -817,7 +817,7 @@ class AgendaController extends Controller
     /**
      * Export digital circular letter / meeting invitation as Microsoft Word (.docx).
      */
-    public function exportSuratEdaranWord(Agenda $agenda, SuratEdaranService $suratEdaranService): Response
+    public function exportSuratEdaranWord(Agenda $agenda, SuratEdaranService $suratEdaranService): Response|RedirectResponse
     {
         if (Auth::user()?->isStaff()) {
             Gate::authorize('viewStaff', $agenda);
@@ -833,6 +833,15 @@ class AgendaController extends Controller
             'invitedUsers.unit',
         ]);
 
-        return $suratEdaranService->downloadWordResponse($agenda);
+        try {
+            return $suratEdaranService->downloadWordResponse($agenda);
+        } catch (\Throwable $e) {
+            Log::error('Gagal mengekspor Surat Dinas Word: '.$e->getMessage(), [
+                'agenda_id' => $agenda->id,
+                'exception' => $e,
+            ]);
+
+            return back()->with('error', 'Gagal mengekspor dokumen Word Surat Dinas. Silakan coba kembali atau gunakan format PDF.');
+        }
     }
 }

@@ -12,7 +12,6 @@ use PhpOffice\PhpWord\Element\Header;
 use PhpOffice\PhpWord\IOFactory;
 use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpWord\Settings;
-use PhpOffice\PhpWord\SimpleType\JcTable;
 use PhpOffice\PhpWord\SimpleType\LineSpacingRule;
 use PhpOffice\PhpWord\SimpleType\TblWidth;
 use RuntimeException;
@@ -165,7 +164,6 @@ class DocxExportService
             'unit' => TblWidth::TWIP,
             'width' => DocumentLayout::KOP_WIDTH_TWIPS,
             'layout' => 'fixed',
-            'alignment' => JcTable::START,
             'cellMarginTop' => 0,
             'cellMarginBottom' => 60,
             'cellMarginLeft' => 108,
@@ -209,13 +207,13 @@ class DocxExportService
 
         $instansiPelaksana = trim((string) ($config['instansi_pelaksana'] ?? 'LEMBAGA LAYANAN PENDIDIKAN TINGGI WILAYAH X'));
         $textCell->addText($this->plain(mb_strtoupper($instansiPelaksana)), ...$this->style(
-            DocumentLayout::AGENCY_SIZE_PT, true, DocumentLayout::AGENCY_LINE_PT, 'center', false, 1, null, false, DocumentLayout::KOP_FONT
+            DocumentLayout::AGENCY_SIZE_PT, true, DocumentLayout::AGENCY_LINE_PT, 'center', false, 1, null, false, DocumentLayout::KOP_FONT, 1
         ));
 
         $alamatRaw = trim((string) ($config['alamat_kontak'] ?? Agenda::DEFAULT_REPORT_ALAMAT_KONTAK));
         $alamatLines = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $alamatRaw) ?: [])));
         foreach ($alamatLines as $addrLine) {
-            $textCell->addText($this->plain($addrLine), ...$this->style(
+            $textCell->addText($this->plainKeepMultiSpaces($addrLine), ...$this->style(
                 DocumentLayout::ADDRESS_SIZE_PT, false, DocumentLayout::ADDRESS_LINE_PT, 'center', false, 0, null, false, DocumentLayout::KOP_FONT
             ));
         }
@@ -263,10 +261,10 @@ class DocxExportService
             return;
         }
 
-        $contentCm = DocumentLayout::contentWidthCm();
-        $labelCm = $contentCm * ((float) rtrim(DocumentLayout::DETAIL_LABEL_COLUMN, '%') / 100);
-        $colonCm = $contentCm * ((float) rtrim(DocumentLayout::DETAIL_COLON_COLUMN, '%') / 100);
-        $valueCm = $contentCm - $labelCm - $colonCm;
+        $totalTwips = DocumentLayout::cmToTwips(DocumentLayout::contentWidthCm());
+        $labelTwips = DocumentLayout::cmToTwips(DocumentLayout::contentWidthCm() * ((float) rtrim(DocumentLayout::DETAIL_LABEL_COLUMN, '%') / 100));
+        $colonTwips = DocumentLayout::cmToTwips(DocumentLayout::contentWidthCm() * ((float) rtrim(DocumentLayout::DETAIL_COLON_COLUMN, '%') / 100));
+        $valueTwips = $totalTwips - $labelTwips - $colonTwips;
 
         $rows = [
             ['Perihal / Agenda', $config['custom_agenda_title'] ?? $agenda->judul_rapat],
@@ -283,9 +281,9 @@ class DocxExportService
         foreach ($rows as [$caption, $text]) {
             $row = $table->addRow(null, $this->rowStyle());
 
-            $row->addCell(DocumentLayout::cmToTwips($labelCm))->addText($this->plain($caption), ...$this->style(DocumentLayout::BODY_SIZE_PT, true, DocumentLayout::BODY_LINE_PT, null, false, 2));
-            $row->addCell(DocumentLayout::cmToTwips($colonCm))->addText(':', ...$this->style(DocumentLayout::BODY_SIZE_PT, false, DocumentLayout::BODY_LINE_PT, null, false, 2));
-            $row->addCell(DocumentLayout::cmToTwips($valueCm))->addText($this->plain((string) $text), ...$this->style(DocumentLayout::BODY_SIZE_PT, false, DocumentLayout::BODY_LINE_PT, null, false, 2));
+            $row->addCell($labelTwips)->addText($this->plain($caption), ...$this->style(DocumentLayout::BODY_SIZE_PT, true, DocumentLayout::BODY_LINE_PT, null, false, 2));
+            $row->addCell($colonTwips)->addText(':', ...$this->style(DocumentLayout::BODY_SIZE_PT, false, DocumentLayout::BODY_LINE_PT, null, false, 2));
+            $row->addCell($valueTwips)->addText($this->plain((string) $text), ...$this->style(DocumentLayout::BODY_SIZE_PT, false, DocumentLayout::BODY_LINE_PT, null, false, 2));
         }
     }
 
@@ -411,49 +409,55 @@ class DocxExportService
         );
 
         $contentCm = DocumentLayout::contentWidthCm();
-        $widths = $this->attendanceWidths($config, $contentCm);
+        $totalTwips = DocumentLayout::cmToTwips($contentCm);
+        $twips = $this->attendanceWidthTwips($config, $contentCm, $totalTwips);
 
         // Ruled: the PDF draws a 1 pt black grid on this table only.
         $table = $section->addTable($this->tableStyle(true));
         $header = $table->addRow(null, $this->rowStyle(true));
 
-        $this->attendanceHeadCell($header, $widths, 'no', 'No', 'center');
-        $this->attendanceHeadCell($header, $widths, 'name', 'Nama Lengkap', 'left');
+        $activeCols = 3; // No, Nama Lengkap, Tanda Tangan
+        $this->attendanceHeadCell($header, $twips, 'no', 'No', 'center');
+        $this->attendanceHeadCell($header, $twips, 'name', 'Nama Lengkap', 'left');
         if ($config['show_nip'] ?? true) {
-            $this->attendanceHeadCell($header, $widths, 'nip', 'NIP', 'left');
+            $this->attendanceHeadCell($header, $twips, 'nip', 'NIP', 'left');
+            $activeCols++;
         }
         if ($config['show_unit'] ?? true) {
-            $this->attendanceHeadCell($header, $widths, 'unit', 'Unit Kerja / Pokja', 'left');
+            $this->attendanceHeadCell($header, $twips, 'unit', 'Unit Kerja / Pokja', 'left');
+            $activeCols++;
         }
         if ($config['show_attendance_time'] ?? true) {
-            $this->attendanceHeadCell($header, $widths, 'time', 'Waktu', 'center');
+            $this->attendanceHeadCell($header, $twips, 'time', 'Waktu', 'center');
+            $activeCols++;
         }
         if ($config['show_selfie_photos'] ?? true) {
-            $this->attendanceHeadCell($header, $widths, 'photo', 'Foto Kehadiran', 'center');
+            $this->attendanceHeadCell($header, $twips, 'photo', 'Foto Kehadiran', 'center');
+            $activeCols++;
         }
-        $this->attendanceHeadCell($header, $widths, 'sign', 'Tanda Tangan', 'center');
+        $this->attendanceHeadCell($header, $twips, 'sign', 'Tanda Tangan', 'center');
 
         foreach ($attendances as $index => $entry) {
             $user = $entry['model']->user;
             $row = $table->addRow(null, $this->rowStyle());
 
-            $this->attendanceBodyCell($row, $widths, 'no', (string) ($index + 1), 'center');
-            $this->attendanceBodyCell($row, $widths, 'name', $this->plain($user?->name ?? 'Peserta (Anonim)'), 'left', true);
+            $this->attendanceBodyCell($row, $twips, 'no', (string) ($index + 1), 'center');
+            $this->attendanceBodyCell($row, $twips, 'name', $this->plain($user?->name ?? 'Peserta (Anonim)'), 'left', true);
 
             if ($config['show_nip'] ?? true) {
-                $this->attendanceBodyCell($row, $widths, 'nip', $this->plain($user?->nip ?? '-'), 'left');
+                $this->attendanceBodyCell($row, $twips, 'nip', $this->plain($user?->nip ?? '-'), 'left');
             }
             if ($config['show_unit'] ?? true) {
-                $this->attendanceBodyCell($row, $widths, 'unit', $this->plain($user?->unit?->kode_unit ?? 'Pusat'), 'left');
+                $this->attendanceBodyCell($row, $twips, 'unit', $this->plain($user?->unit?->kode_unit ?? 'Pusat'), 'left');
             }
             if ($config['show_attendance_time'] ?? true) {
-                $this->attendanceBodyCell($row, $widths, 'time', $entry['model']->signed_at?->format('H:i') ?? '-', 'center');
+                $this->attendanceBodyCell($row, $twips, 'time', $entry['model']->signed_at?->format('H:i') ?? '-', 'center');
             }
             if ($config['show_selfie_photos'] ?? true) {
                 $selfie = DocumentLayout::ATTENDANCE_SELFIE_PX;
 
                 $this->embedImage(
-                    $row->addCell(DocumentLayout::cmToTwips($widths['photo']), ['vAlign' => 'center']),
+                    $row->addCell($twips['photo'], ['vAlign' => 'center']),
                     $entry['selfie_base64'] ?? null,
                     'jpeg',
                     DocumentLayout::pxToPt($selfie),
@@ -461,13 +465,13 @@ class DocxExportService
                 );
             }
 
-            $this->attendanceSignature($row, $widths['sign'], $config, $entry['sig_base64'] ?? null);
+            $this->attendanceSignature($row, $twips['sign'], $config, $entry['sig_base64'] ?? null);
         }
 
         if ($attendances->isEmpty()) {
             $row = $table->addRow(null, $this->rowStyle());
 
-            $row->addCell(DocumentLayout::cmToTwips($contentCm), ['gridSpan' => count($widths) - 2])
+            $row->addCell($totalTwips, ['gridSpan' => $activeCols])
                 ->addText(
                     $this->plain('Tidak ada data kehadiran peserta yang tercatat.'),
                     ...$this->style(DocumentLayout::ATTENDANCE_SIZE_PT, false, null, 'center')
@@ -478,17 +482,12 @@ class DocxExportService
     /**
      * One header cell of the attendance table.
      *
-     * The centre and left split is copied from the PDF template and is not
-     * cosmetic: it is what keeps the 4 % "No" and 9 % "Waktu" columns from
-     * reading as ragged left text, and stops the 30 % name and NIP columns
-     * looking stranded in the middle of a wide cell.
-     *
-     * @param  array<string,float>  $widths
+     * @param  array<string,int>  $twips
      */
-    private function attendanceHeadCell(mixed $row, array $widths, string $key, string $caption, string $align): void
+    private function attendanceHeadCell(mixed $row, array $twips, string $key, string $caption, string $align): void
     {
         $row->addCell(
-            DocumentLayout::cmToTwips($widths[$key]),
+            $twips[$key],
             ['shading' => ['fill' => DocumentLayout::ATTENDANCE_HEADER_FILL]]
         )->addText($caption, ...$this->style(DocumentLayout::ATTENDANCE_SIZE_PT, true, null, $align));
     }
@@ -496,58 +495,54 @@ class DocxExportService
     /**
      * One body cell of the attendance table.
      *
-     * @param  array<string,float>  $widths
+     * @param  array<string,int>  $twips
      */
-    private function attendanceBodyCell(mixed $row, array $widths, string $key, string $text, string $align, bool $bold = false): void
+    private function attendanceBodyCell(mixed $row, array $twips, string $key, string $text, string $align, bool $bold = false): void
     {
-        $row->addCell(DocumentLayout::cmToTwips($widths[$key]), ['vAlign' => 'center'])
+        $row->addCell($twips[$key], ['vAlign' => 'center'])
             ->addText($text, ...$this->style(DocumentLayout::ATTENDANCE_SIZE_PT, $bold, null, $align));
     }
 
     /**
+     * Compute exact twip widths for active attendance columns summing cleanly to $totalTwips.
+     *
      * @param  array<string,mixed>  $config
-     * @return array<string,float>
+     * @return array<string,int>
      */
-    private function attendanceWidths(array $config, float $contentCm): array
+    private function attendanceWidthTwips(array $config, float $contentCm, int $totalTwips): array
     {
         $columns = DocumentLayout::attendanceColumns();
-        $share = static fn (string $w): float => $contentCm * ((float) rtrim($w, '%')) / 100;
+        $shareTwips = static fn (string $w): int => (int) round($contentCm * ((float) rtrim($w, '%')) / 100 * 566.929);
 
-        $widths = [
-            'no' => $share($columns[0]),
-            'nip' => $share($columns[1]),
-            'unit' => $share($columns[2]),
-            'time' => $share($columns[3]),
-            'photo' => $share($columns[4]),
-            'sign' => $share($columns[5]),
+        $twips = [
+            'no' => $shareTwips($columns[0]),
+            'nip' => $shareTwips($columns[1]),
+            'unit' => $shareTwips($columns[2]),
+            'time' => $shareTwips($columns[3]),
+            'photo' => $shareTwips($columns[4]),
+            'sign' => $shareTwips($columns[5]),
         ];
 
-        $used = $widths['no'] + $widths['sign'];
+        $used = $twips['no'] + $twips['sign'];
         foreach (['nip' => 'show_nip', 'unit' => 'show_unit', 'time' => 'show_attendance_time', 'photo' => 'show_selfie_photos'] as $key => $option) {
             if ($config[$option] ?? true) {
-                $used += $widths[$key];
+                $used += $twips[$key];
             }
         }
 
-        $widths['name'] = max(0.0, $contentCm - $used);
+        $twips['name'] = max(0, $totalTwips - $used);
 
-        return $widths;
+        return $twips;
     }
 
     /**
      * The Tanda Tangan cell of an attendance row.
      *
-     * The PDF writes "(HADIR)" in green whenever the signature is switched off
-     * or the participant never signed. The .docx used to embed whatever base64 it
-     * was handed, so a row whose signature the officer chose not to draw came out
-     * as an empty bordered cell: a silent gap in a document that is meant to be
-     * the proof of attendance.
-     *
      * @param  array<string,mixed>  $config
      */
-    private function attendanceSignature(mixed $row, float $widthCm, array $config, ?string $sigBase64): void
+    private function attendanceSignature(mixed $row, int $widthTwips, array $config, ?string $sigBase64): void
     {
-        $cell = $row->addCell(DocumentLayout::cmToTwips($widthCm), ['vAlign' => 'center']);
+        $cell = $row->addCell($widthTwips, ['vAlign' => 'center']);
 
         $show = ($config['show_attendee_signatures'] ?? true)
             && is_string($sigBase64)
@@ -625,32 +620,26 @@ class DocxExportService
                 : null,
         ];
 
-        $contentCm = DocumentLayout::contentWidthCm();
+        $totalTwips = DocumentLayout::cmToTwips(DocumentLayout::contentWidthCm());
         $count = count($signers);
-        $columnCm = $contentCm / $count;
-        $columnTwips = DocumentLayout::cmToTwips($columnCm);
+        $baseColTwips = (int) floor($totalTwips / $count);
+        $colTwipsList = array_fill(0, $count, $baseColTwips);
+        $colTwipsList[$count - 1] += $totalTwips - ($baseColTwips * $count);
 
-        // The PDF centres a narrow block inside each column and lets the text sit
-        // against that block's left edge, so the block is 68 % of the column with
-        // two signers and 76 % with three. Word has no inline-block, but a
-        // symmetric paragraph indent reproduces the same geometry exactly: the
-        // text starts where the PDF starts it and wraps where the PDF wraps it.
         $innerPercent = $count >= 3
             ? DocumentLayout::TTD_INNER_WIDTH_THREE_COLUMN
             : DocumentLayout::TTD_INNER_WIDTH_TWO_COLUMN;
-        $indentTwips = (int) round($columnTwips * (100 - (float) rtrim($innerPercent, '%')) / 200);
 
         $table = $section->addTable($this->tableStyle());
 
-        // THREE rows, one cell per signer per row. Building a row per signer, as
-        // this used to, stacks the three signers into a single column of nine
-        // lines: each signer got its own label row, image row and name row, and
-        // each of those rows held exactly one cell of the full column width.
         $caption = $table->addRow(null, $this->rowStyle());
         $marks = $table->addRow(DocumentLayout::ptToTwips(DocumentLayout::TTD_ROW_HEIGHT_PT), $this->rowStyle());
         $names = $table->addRow(null, $this->rowStyle());
 
-        foreach ($signers as $signer) {
+        foreach ($signers as $idx => $signer) {
+            $columnTwips = $colTwipsList[$idx];
+            $indentTwips = (int) round($columnTwips * (100 - (float) rtrim($innerPercent, '%')) / 200);
+
             $captionCell = $caption->addCell($columnTwips, ['vAlign' => 'top']);
             $captionCell->addText($this->plain($signer['label']), ...$this->style(
                 DocumentLayout::BODY_SIZE_PT, false, DocumentLayout::BODY_LINE_PT, 'left', false, 0, $indentTwips
@@ -659,10 +648,6 @@ class DocxExportService
                 DocumentLayout::BODY_SIZE_PT, true, DocumentLayout::BODY_LINE_PT, 'left', false, 0, $indentTwips
             ));
 
-            // Centred, not bottom aligned. A signature is a mark on a line: with
-            // bottom alignment two squiggles of different heights sit at different
-            // heights, which reads as one signer having signed further down. The
-            // PDF centres the cell, so the centres are what must line up.
             $markCell = $marks->addCell($columnTwips, ['vAlign' => 'center']);
             $this->embedImage(
                 $markCell,
@@ -790,16 +775,12 @@ class DocxExportService
         $heading[1]['pageBreakBefore'] = true;
         $section->addText($this->plain('III. LAMPIRAN FOTO DOKUMENTASI KEGIATAN'), ...$heading);
 
-        $contentCm = DocumentLayout::contentWidthCm();
-        $columnTwips = DocumentLayout::cmToTwips($contentCm / 2);
+        $totalTwips = DocumentLayout::cmToTwips(DocumentLayout::contentWidthCm());
+        $colTwipsList = [
+            (int) floor($totalTwips / 2),
+            $totalTwips - (int) floor($totalTwips / 2),
+        ];
 
-        // The PDF frames each photo in a light slate box with the caption
-        // underneath in italic. Without the border and the caption the annex read
-        // as a loose grid of bare images, which is not what the officer signs off
-        // on. The frame lives on the cell rather than on the table: a table border
-        // would also draw the divider between the two columns, which the PDF does
-        // not have. A cell with no photo in it is left plain, for the same reason
-        // the PDF leaves its placeholder cell borderless.
         $frame = [
             'vAlign' => 'top',
             'borderSize' => DocumentLayout::ptToBorderEighths(DocumentLayout::BORDER_PT),
@@ -811,6 +792,7 @@ class DocxExportService
             $row = $table->addRow(null, $this->rowStyle());
 
             foreach ([0, 1] as $position) {
+                $columnTwips = $colTwipsList[$position];
                 if (! isset($chunk[$position])) {
                     $row->addCell($columnTwips, ['vAlign' => 'top']);
 
@@ -869,6 +851,7 @@ class DocxExportService
         ?int $indentTwips = null,
         bool $italic = false,
         ?string $fontName = null,
+        float $spaceAfterPt = 0,
     ): array {
         $run = [
             'name' => $fontName ?? DocumentLayout::BODY_FONT,
@@ -886,13 +869,13 @@ class DocxExportService
 
         $paragraph = [
             'spaceBefore' => DocumentLayout::ptToTwips($spaceBeforePt),
-            'spaceAfter' => 0,
+            'spaceAfter' => DocumentLayout::ptToTwips($spaceAfterPt),
         ];
 
         if ($linePt !== null) {
-            $paragraph['spacing'] = [
+            $paragraph['space'] = [
                 'before' => DocumentLayout::ptToTwips($spaceBeforePt),
-                'after' => 0,
+                'after' => DocumentLayout::ptToTwips($spaceAfterPt),
                 'line' => DocumentLayout::ptToTwips($linePt),
                 'lineRule' => LineSpacingRule::EXACT,
             ];
@@ -1123,6 +1106,18 @@ class DocxExportService
         $text = preg_replace('/<[^>]+>/', ' ', (string) $html) ?? '';
         $text = html_entity_decode($text, ENT_QUOTES, 'UTF-8');
         $text = preg_replace('/\s+/u', ' ', $text) ?? '';
+
+        return htmlspecialchars(trim($text), ENT_XML1 | ENT_QUOTES, 'UTF-8');
+    }
+
+    /**
+     * Strip HTML and decode entities while preserving consecutive spaces (e.g. Laman ...  Pos-el ...).
+     */
+    private function plainKeepMultiSpaces(?string $html): string
+    {
+        $text = preg_replace('/<[^>]+>/', ' ', (string) $html) ?? '';
+        $text = html_entity_decode($text, ENT_QUOTES, 'UTF-8');
+        $text = preg_replace('/[\r\n\t]+/u', ' ', $text) ?? '';
 
         return htmlspecialchars(trim($text), ENT_XML1 | ENT_QUOTES, 'UTF-8');
     }

@@ -716,7 +716,7 @@ final class DocxHtmlRenderer
         ];
 
         if (isset($options['linePt']) && $options['linePt'] !== null) {
-            $para['spacing'] = [
+            $para['space'] = [
                 'before' => $beforeTwips,
                 'after' => $afterTwips,
                 'line' => DocumentLayout::ptToTwips((float) $options['linePt']),

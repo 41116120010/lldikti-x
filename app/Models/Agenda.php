@@ -806,8 +806,11 @@ class Agenda extends Model
             $resolved['instansi_pelaksana'] = $defaults['instansi_pelaksana'];
         }
 
-        $alamatStored = (string) ($resolved['alamat_kontak'] ?? '');
-        if (str_contains($alamatStored, 'lldikti10.kemdikbud.go.id') || (str_contains($alamatStored, '•') && str_contains($alamatStored, 'Jalan Khatib Sulaiman Padang 25137'))) {
+        $alamatStored = trim((string) ($resolved['alamat_kontak'] ?? ''));
+        if (
+            str_contains($alamatStored, 'lldikti10.kemdikbud.go.id')
+            || (str_contains($alamatStored, 'Jalan Khatib Sulaiman') && ! str_contains($alamatStored, 'Laman') && ! str_contains($alamatStored, 'Pos-el'))
+        ) {
             $resolved['alamat_kontak'] = $defaults['alamat_kontak'];
         }
 
@@ -958,7 +961,11 @@ class Agenda extends Model
         if (($resolved['instansi_pelaksana'] ?? '') === 'LEMBAGA LAYANAN PENDIDIKAN TINGGI (LLDIKTI) WILAYAH X') {
             $resolved['instansi_pelaksana'] = $defaults['instansi_pelaksana'];
         }
-        if (str_contains((string) ($resolved['alamat_kontak'] ?? ''), 'lldikti10.kemdikbud.go.id')) {
+        $alamatSuratStored = trim((string) ($resolved['alamat_kontak'] ?? ''));
+        if (
+            str_contains($alamatSuratStored, 'lldikti10.kemdikbud.go.id')
+            || (str_contains($alamatSuratStored, 'Jalan Khatib Sulaiman') && ! str_contains($alamatSuratStored, 'Laman') && ! str_contains($alamatSuratStored, 'Pos-el'))
+        ) {
             $resolved['alamat_kontak'] = $defaults['alamat_kontak'];
         }
         if (($resolved['signer_role'] ?? '') === 'Kepala Lembaga Layanan Pendidikan Tinggi Wilayah X') {

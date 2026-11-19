@@ -1893,7 +1893,8 @@
                 if (idx > 0) {
                     targetEl.appendChild(document.createElement('br'));
                 }
-                targetEl.appendChild(document.createTextNode(line));
+                const preservedLine = line.replace(/ {2,}/g, (spaces) => '\u00A0'.repeat(spaces.length - 1) + ' ');
+                targetEl.appendChild(document.createTextNode(preservedLine));
             });
         };
 
@@ -1909,9 +1910,9 @@
             logoEl = document.createElement('img');
             logoEl.id = 'sheet-logo-img';
             logoEl.alt = 'Logo Instansi';
-            logoEl.width = 139;
+            logoEl.width = 138;
             logoEl.height = 148;
-            logoEl.style.cssText = 'width: 104pt; height: 111pt; display: block; margin: 0 auto; border: none;';
+            logoEl.style.cssText = 'width: 103.8pt; height: 111pt; max-width: 104pt; max-height: 111pt; object-fit: contain; display: block; margin: 0 auto; border: none;';
             logoEl.src = workstation ? (workstation.dataset.currentLogoSrc || workstation.dataset.defaultLogoSrc || '') : '';
             logoCell.appendChild(logoEl);
         }
@@ -1939,9 +1940,12 @@
             const textWidth = showLogo ? '80.26%' : '100%';
             logoCell.style.width = logoWidth;
             logoCell.setAttribute('width', logoWidth);
+            logoCell.style.display = showLogo ? 'table-cell' : 'none';
+            logoCell.style.padding = showLogo ? '0 5pt 4pt 0' : '0';
             if (logoCell.nextElementSibling) {
                 logoCell.nextElementSibling.style.width = textWidth;
                 logoCell.nextElementSibling.setAttribute('width', textWidth);
+                logoCell.nextElementSibling.style.padding = showLogo ? '0 0 4pt 5pt' : '0 0 4pt 0';
             }
         }
 

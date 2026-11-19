@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\Agenda;
+use App\Models\User;
 use App\Services\DocxExportService;
+use App\Services\SuratEdaranService;
 use App\Support\DocumentLayout;
 use Tests\Support\InspectsDocx;
 use Tests\TestCase;
@@ -244,5 +246,165 @@ class DocxLayoutParityTest extends TestCase
             'Warna bingkai lampiran harus sama dengan PDF.'
         );
         $this->assertStringNotContainsString('<w:tblBorders>', $annex, 'Lampiran tidak punya garis pemisah kolom.');
+    }
+
+    public function test_docx_tables_avoid_legacy_start_alignment_and_sum_grid_columns_exactly(): void
+    {
+        $body = $this->docxFor(Agenda::first());
+        $expectedBodyTwips = DocumentLayout::cmToTwips(DocumentLayout::contentWidthCm());
+
+        foreach ($this->docxHeaderTables($body) as $index => $table) {
+            $this->assertStringNotContainsString(
+                '<w:jc w:val="start"/>',
+                $table,
+                "Header table #{$index} tidak boleh memakai w:jc start."
+            );
+            $this->assertSame(
+                DocumentLayout::KOP_WIDTH_TWIPS,
+                array_sum($this->docxGridColumns($table)),
+                "Jumlah gridCol header table #{$index} harus sama persis dengan lebar Kop."
+            );
+        }
+
+        foreach ($this->docxTables($body) as $index => $table) {
+            $this->assertDoesNotMatchRegularExpression(
+                '#<w:tblPr>(?:(?!</w:tblPr>).)*?<w:jc w:val="start"/>.*?</w:tblPr>#s',
+                $table,
+                "Body table #{$index} tidak boleh memakai w:jc start pada tblPr."
+            );
+            $this->assertSame(
+                $expectedBodyTwips,
+                array_sum($this->docxGridColumns($table)),
+                "Jumlah gridCol body table #{$index} harus sama persis dengan tblW ({$expectedBodyTwips} dxa)."
+            );
+        }
+    }
+
+    public function test_empty_attendance_grid_span_matches_active_columns_for_default_and_minimal_configs(): void
+    {
+        $creator = User::where('role', 'administrator')->where('is_active', true)->firstOrFail();
+
+        $emptyAgenda = Agenda::create([
+            'judul_rapat' => 'Uji Presensi Kosong GridSpan OOXML',
+            'kode_rapat' => 'EMPTY-GRID-'.uniqid(),
+            'waktu_mulai' => now()->addDay(),
+            'waktu_selesai' => now()->addDay()->addHour(),
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Ruang Sidang Uji',
+            'status' => 'scheduled',
+            'created_by' => $creator->id,
+            'pimpinan_id' => $creator->id,
+            'notulis_id' => $creator->id,
+            'report_config' => [
+                'show_attendance_table' => true,
+                'show_nip' => true,
+                'show_unit' => true,
+                'show_attendance_time' => true,
+                'show_selfie_photos' => true,
+            ],
+        ]);
+
+        try {
+            $defaultDocx = $this->docxFor($emptyAgenda);
+            $defaultTable = $this->docxTableContaining($defaultDocx, 'Tidak ada data kehadiran peserta yang tercatat.');
+            $defaultGrid = $this->docxGridColumns($defaultTable);
+
+            $this->assertCount(7, $defaultGrid);
+            $this->assertSame(DocumentLayout::cmToTwips(DocumentLayout::contentWidthCm()), array_sum($defaultGrid));
+            $this->assertStringContainsString('<w:gridSpan w:val="7"/>', $defaultTable);
+            $this->assertAllTablesOoxmlGridConsistent($defaultDocx);
+
+            $emptyAgenda->update([
+                'report_config' => [
+                    'show_attendance_table' => true,
+                    'show_nip' => false,
+                    'show_unit' => false,
+                    'show_attendance_time' => false,
+                    'show_selfie_photos' => false,
+                ],
+            ]);
+            $emptyAgenda->refresh();
+
+            $minimalDocx = $this->docxFor($emptyAgenda);
+            $minimalTable = $this->docxTableContaining($minimalDocx, 'Tidak ada data kehadiran peserta yang tercatat.');
+            $minimalGrid = $this->docxGridColumns($minimalTable);
+
+            $this->assertCount(3, $minimalGrid);
+            $this->assertSame(DocumentLayout::cmToTwips(DocumentLayout::contentWidthCm()), array_sum($minimalGrid));
+            $this->assertStringContainsString('<w:gridSpan w:val="3"/>', $minimalTable);
+            $this->assertAllTablesOoxmlGridConsistent($minimalDocx);
+        } finally {
+            $emptyAgenda->forceDelete();
+        }
+    }
+
+    private function assertAllTablesOoxmlGridConsistent(string $docxBytes): void
+    {
+        $allTables = array_merge($this->docxHeaderTables($docxBytes), $this->docxTables($docxBytes));
+        $this->assertNotEmpty($allTables);
+
+        foreach ($allTables as $index => $tableXml) {
+            $this->assertDoesNotMatchRegularExpression(
+                '#<w:tblPr>(?:(?!</w:tblPr>).)*?<w:jc w:val="start"/>.*?</w:tblPr>#s',
+                $tableXml,
+                "Tabel #{$index} tidak boleh memiliki w:jc start di tblPr."
+            );
+
+            $gridCols = $this->docxGridColumns($tableXml);
+            $colCount = count($gridCols);
+            $this->assertGreaterThan(0, $colCount, "Tabel #{$index} harus memiliki w:tblGrid.");
+
+            if (preg_match('#<w:tblW w:w="(\d+)" w:type="dxa"/>#', $tableXml, $tblWMatch)) {
+                $this->assertSame(
+                    (int) $tblWMatch[1],
+                    array_sum($gridCols),
+                    "Tabel #{$index}: sum(w:gridCol/@w:w) harus sama persis dengan w:tblW/@w:w."
+                );
+            }
+
+            foreach ($this->docxRows($tableXml) as $rowIndex => $cells) {
+                $rowSpanSum = 0;
+                foreach ($cells as $cellXml) {
+                    if (preg_match('#<w:gridSpan w:val="(\d+)"/>#', $cellXml, $spanMatch)) {
+                        $rowSpanSum += (int) $spanMatch[1];
+                    } else {
+                        $rowSpanSum += 1;
+                    }
+                }
+                $this->assertSame(
+                    $colCount,
+                    $rowSpanSum,
+                    "Tabel #{$index} baris #{$rowIndex}: sum(gridSpan)={$rowSpanSum} tidak sama dengan count(tblGrid)={$colCount}."
+                );
+            }
+        }
+    }
+
+    public function test_berita_acara_and_surat_dinas_docx_letterheads_share_exact_spacing_and_double_space(): void
+    {
+        $agenda = Agenda::firstOrFail();
+
+        $beritaAcaraDocx = $this->docxFor($agenda);
+        $suratDinasDocx = app(SuratEdaranService::class)->renderDocx($agenda);
+
+        $baKop = $this->docxHeaderTables($beritaAcaraDocx)[0] ?? '';
+        $sdKop = $this->docxHeaderTables($suratDinasDocx)[0] ?? '';
+
+        foreach (['Berita Acara' => $baKop, 'Surat Dinas' => $sdKop] as $label => $kopXml) {
+            $this->assertNotSame('', $kopXml, "Kop surat {$label} tidak ditemukan di Header::FIRST.");
+            $this->assertStringContainsString('<w:tblW w:w="10348" w:type="dxa"/>', $kopXml, $label);
+            $this->assertStringContainsString('<w:tblInd w:w="-714" w:type="dxa"/>', $kopXml, $label);
+            $this->assertStringContainsString('w:line="350" w:lineRule="exact"', $kopXml, $label);
+            $this->assertStringContainsString('w:line="320" w:lineRule="exact"', $kopXml, $label);
+            $this->assertStringContainsString('w:line="270" w:lineRule="exact"', $kopXml, $label);
+            $this->assertStringContainsString('w:before="20" w:after="20"', $kopXml, $label);
+            $this->assertStringContainsString(
+                'Laman lldikti10.kemdiktisaintek.go.id  Pos-el info.lldikti10@kemdiktisaintek.go.id',
+                $kopXml,
+                "Spasi ganda Laman/Pos-el harus dipertahankan pada Kop {$label}."
+            );
+            $this->assertStringContainsString('width:103.8pt', $kopXml, "Proporsi lebar logo Kop {$label} harus 103.8pt.");
+            $this->assertStringContainsString('height:111pt', $kopXml, "Proporsi tinggi logo Kop {$label} harus 111pt.");
+        }
     }
 }

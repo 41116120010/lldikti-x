@@ -155,6 +155,48 @@ class KopSuratStandardTest extends TestCase
         );
     }
 
+    public function test_letterhead_preserves_double_space_and_avoids_duplicate_cell_bottom_rules(): void
+    {
+        $exportHtml = $this->exportHtml();
+        $kop = $this->extractKop($exportHtml);
+
+        $this->assertStringContainsString(
+            'Laman lldikti10.kemdiktisaintek.go.id&nbsp; Pos-el info.lldikti10@kemdiktisaintek.go.id',
+            $kop,
+            'Spasi ganda antara Laman dan Pos-el harus dipertahankan dalam HTML agar tidak kolaps.'
+        );
+        $this->assertSame(
+            1,
+            substr_count($kop, 'border-bottom: 2.25pt solid #000000'),
+            'Garis bawah kop hanya boleh dideklarasikan pada <table>, tidak diduplikasi pada <td>.'
+        );
+
+        $suratPdfHtml = app(\App\Services\SuratEdaranService::class)->renderHtml($this->agenda);
+        $this->assertStringContainsString('id="sheet-header-kop"', $suratPdfHtml);
+        $this->assertStringContainsString(
+            'Laman lldikti10.kemdiktisaintek.go.id&nbsp; Pos-el info.lldikti10@kemdiktisaintek.go.id',
+            $suratPdfHtml
+        );
+        $this->assertStringContainsString('font-size: 16pt; line-height: 17.5pt;', $suratPdfHtml);
+        $this->assertStringContainsString('font-size: 14pt; line-height: 16pt;', $suratPdfHtml);
+        $this->assertStringContainsString('font-size: 12pt; line-height: 13.5pt;', $suratPdfHtml);
+        $this->assertMatchesRegularExpression(
+            '/id="sheet-instansi-induk"[^>]*text-align:\s*center;/',
+            $suratPdfHtml,
+            'Paragraf instansi induk Kop harus memakai inline text-align: center agar tidak tertimpa CSS p { text-align: justify }.'
+        );
+        $this->assertMatchesRegularExpression(
+            '/id="sheet-instansi-pelaksana"[^>]*text-align:\s*center;/',
+            $suratPdfHtml,
+            'Paragraf instansi pelaksana Kop harus memakai inline text-align: center.'
+        );
+        $this->assertMatchesRegularExpression(
+            '/id="sheet-alamat-kontak"[^>]*text-align:\s*center;/',
+            $suratPdfHtml,
+            'Paragraf alamat kontak Kop harus memakai inline text-align: center.'
+        );
+    }
+
     /**
      * The rendered word/PDF export document.
      */

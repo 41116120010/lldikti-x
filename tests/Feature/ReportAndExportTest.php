@@ -23,7 +23,7 @@ class ReportAndExportTest extends TestCase
 
     public function test_admin_unit_can_view_reports_dashboard(): void
     {
-        $adminAkm = User::whereHas('unit', fn($q) => $q->where('kode_unit', 'POKJA-AKM'))->firstOrFail();
+        $adminAkm = User::where('is_active', true)->whereHas('unit', fn($q) => $q->where('kode_unit', 'POKJA-AKM'))->firstOrFail();
         $adminAkm->update(['role' => 'admin']);
 
         $response = $this->actingAs($adminAkm)->get('/admin/reports');
@@ -293,7 +293,7 @@ class ReportAndExportTest extends TestCase
 
     public function test_staff_cannot_access_reports_index_or_summary_csv(): void
     {
-        $staff = User::where('role', 'staff')->firstOrFail();
+        $staff = User::where('is_active', true)->where('role', 'staff')->firstOrFail();
 
         $this->actingAs($staff)->get('/admin/reports')->assertStatus(403);
         $this->actingAs($staff)->get('/admin/reports/summary/csv')->assertStatus(403);

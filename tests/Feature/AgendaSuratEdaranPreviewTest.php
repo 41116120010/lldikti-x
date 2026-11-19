@@ -510,4 +510,86 @@ class AgendaSuratEdaranPreviewTest extends TestCase
         $this->assertStringContainsString('197012051992032002', $xml);
         $this->assertStringContainsString('Daftar Undangan', $xml);
     }
+
+    public function test_surat_edaran_workstation_shares_unified_kop_and_handles_webp_logo_word_export(): void
+    {
+        if (! extension_loaded('gd') || ! function_exists('imagewebp')) {
+            $this->markTestSkipped('Ekstensi GD WebP tidak tersedia.');
+        }
+
+        $superadmin = $this->getOrCreateSuperadmin();
+        $relativePath = 'surat_edaran_logos/test_feature_kop_'.uniqid().'.webp';
+        $fullPath = \Illuminate\Support\Facades\Storage::disk('public')->path($relativePath);
+        @mkdir(dirname($fullPath), 0755, true);
+
+        $img = imagecreatetruecolor(520, 556);
+        $bg = imagecolorallocate($img, 15, 23, 42);
+        imagefilledrectangle($img, 0, 0, 519, 555, $bg);
+        $this->assertTrue(imagewebp($img, $fullPath));
+        imagedestroy($img);
+
+        $tempZip = null;
+
+        try {
+            $agenda = Agenda::create([
+                'judul_rapat' => 'Rapat Paritas Kop & Logo WebP Surat Dinas',
+                'tanggal_rapat' => now()->toDateString(),
+                'waktu_mulai' => now()->addHour(),
+                'waktu_selesai' => now()->addHours(2),
+                'lokasi_ruang' => 'Ruang Rapat Utama',
+                'status' => 'scheduled',
+                'created_by' => $superadmin->id,
+                'is_all_units' => true,
+                'surat_edaran_type' => 'digital',
+                'surat_edaran_config' => [
+                    'template_type' => 'undangan',
+                    'show_kop' => true,
+                    'show_logo' => true,
+                    'custom_logo_path' => $relativePath,
+                    'nomor_surat' => '0777/LL10/UND/2026',
+                    'tanggal_surat' => '20 November 2026',
+                ],
+            ]);
+
+            $workstation = $this->actingAs($superadmin)->get(route('admin.agendas.surat-edaran', $agenda));
+            $workstation->assertStatus(200);
+            $workstation->assertSee('id="sheet-header-kop"', false);
+            $workstation->assertSee('Laman lldikti10.kemdiktisaintek.go.id&nbsp; Pos-el info.lldikti10@kemdiktisaintek.go.id', false);
+            $workstation->assertSee('font-size: 16pt; line-height: 17.5pt;', false);
+            $workstation->assertSee('font-size: 14pt; line-height: 16pt;', false);
+            $workstation->assertSee('font-size: 12pt; line-height: 13.5pt;', false);
+
+            $wordResponse = $this->actingAs($superadmin)->get(route('admin.agendas.export-surat-edaran-word', $agenda));
+            $wordResponse->assertStatus(200);
+            $docxBytes = $wordResponse->getContent();
+            $this->assertStringStartsWith('PK', $docxBytes);
+
+            $tempZip = tempnam(sys_get_temp_dir(), 'test_surat_webp_');
+            file_put_contents($tempZip, $docxBytes);
+            $zip = new \ZipArchive;
+            $this->assertTrue($zip->open($tempZip) === true);
+
+            $hasEmbeddedPng = false;
+            $headersXml = '';
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $name = (string) $zip->getNameIndex($i);
+                if (preg_match('#^word/media/.*\.png$#i', $name)) {
+                    $hasEmbeddedPng = true;
+                }
+                if (preg_match('#^word/header\d+\.xml$#', $name)) {
+                    $headersXml .= (string) $zip->getFromName($name);
+                }
+            }
+            $zip->close();
+
+            $this->assertTrue($hasEmbeddedPng, 'Custom logo .webp harus terkonversi menjadi PNG pada ZIP .docx.');
+            $this->assertStringContainsString('Laman lldikti10.kemdiktisaintek.go.id  Pos-el info.lldikti10@kemdiktisaintek.go.id', $headersXml);
+            $this->assertDoesNotMatchRegularExpression('#<w:tblPr>(?:(?!</w:tblPr>).)*?<w:jc w:val="start"/>.*?</w:tblPr>#s', $headersXml);
+        } finally {
+            if ($tempZip && file_exists($tempZip)) {
+                @unlink($tempZip);
+            }
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($relativePath);
+        }
+    }
 }

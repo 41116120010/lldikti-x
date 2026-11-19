@@ -42,70 +42,6 @@
          * - Kolom Logo Kiri: ~3.60 cm (2043 dxa = 19.74%), Teks Kanan: ~14.65 cm (8305 dxa = 80.26%)
          * - Logo: 3.67 cm × 3.92 cm (104pt × 111pt)
          * - Baris Kementerian: 16pt, Regular (Tidak Bold), 2 baris
-         * - Baris Unit Pelaksana: 14pt, BOLD
-         * - Baris Alamat / Telepon / Laman & Pos-el: 12pt, Regular (1 baris utuh)
-         * - Garis Penutup Kop: Garis lurus tunggal tebal 2.25pt solid #000000
-         */
-        .kop-wrapper {
-            width: 18.25cm;
-            margin: 0 -0.99cm 12pt -1.26cm;
-            padding: 0;
-            font-family: 'Times New Roman', Times, serif;
-        }
-        .kop-table {
-            width: 100%;
-            table-layout: fixed;
-            border-collapse: collapse;
-            border-bottom: 2.25pt solid #000000;
-            padding-bottom: 4pt;
-        }
-        .kop-logo-cell {
-            width: 19.74%;
-            text-align: center;
-            vertical-align: middle;
-            padding: 0 5pt 4pt 0;
-        }
-        .kop-logo-cell img {
-            width: 104pt;
-            height: 111pt;
-            max-width: 104pt;
-            max-height: 111pt;
-        }
-        .kop-text-cell {
-            width: 80.26%;
-            text-align: center;
-            vertical-align: middle;
-            padding: 0 0 4pt 5pt;
-            font-family: 'Times New Roman', Times, serif;
-        }
-        .kop-ministry-line {
-            font-family: 'Times New Roman', Times, serif;
-            font-size: 16pt;
-            font-weight: normal;
-            line-height: 1.08;
-            margin: 0;
-            padding: 0;
-            text-transform: uppercase;
-        }
-        .kop-agency-line {
-            font-family: 'Times New Roman', Times, serif;
-            font-size: 14pt;
-            font-weight: bold;
-            line-height: 1.12;
-            margin: 1pt 0;
-            padding: 0;
-            text-transform: uppercase;
-        }
-        .kop-address-line {
-            font-family: 'Times New Roman', Times, serif;
-            font-size: 12pt;
-            font-weight: normal;
-            line-height: 1.12;
-            margin: 0;
-            padding: 0;
-            white-space: nowrap;
-        }
-
         /*
          * TABEL KEPALA SURAT (TBL#0 — 4 Kolom Tanpa Border, 3 Baris Tanpa "Sifat")
          * Total Lebar Area Cetak = 16.0 cm (9064 dxa):
@@ -298,18 +234,6 @@
 </head>
 <body>
 @php
-    $instansiIndukRaw = trim((string) ($config['instansi_induk'] ?? "KEMENTERIAN PENDIDIKAN TINGGI,\nSAINS, DAN TEKNOLOGI"));
-    if ($instansiIndukRaw === 'KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI') {
-        $instansiIndukLines = ['KEMENTERIAN PENDIDIKAN TINGGI,', 'SAINS, DAN TEKNOLOGI'];
-    } else {
-        $instansiIndukLines = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $instansiIndukRaw))));
-    }
-
-    $instansiPelaksana = trim((string) ($config['instansi_pelaksana'] ?? 'LEMBAGA LAYANAN PENDIDIKAN TINGGI WILAYAH X'));
-
-    $alamatRaw = trim((string) ($config['alamat_kontak'] ?? "Jalan Khatib Sulaiman Padang 25137\nTelepon (0751) 70567376\nLaman lldikti10.kemdiktisaintek.go.id  Pos-el info.lldikti10@kemdiktisaintek.go.id"));
-    $alamatLines = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $alamatRaw))));
-
     $tujuanRaw = trim((string) ($config['tujuan_surat'] ?? ''));
     $tujuanFormatted = preg_replace('/^Yth\.?\s*/i', '', $tujuanRaw);
 
@@ -338,30 +262,13 @@
     $hasLampiranPage = !empty($config['show_lampiran']) || (!empty($config['lampiran']) && trim((string) $config['lampiran']) !== '-');
 @endphp
 
-    {{-- KOP SURAT DINAS RESMI (Times New Roman 16pt Reguler / 14pt Bold / 12pt Reguler) --}}
+    {{-- KOP SURAT DINAS RESMI (Unified via partials/kop_surat + DocumentLayout) --}}
     @if(!empty($config['show_kop']))
-        <div class="kop-wrapper">
-            <table class="kop-table">
-                <tr>
-                    @if(!empty($config['show_logo']) && !empty($logoDataUri))
-                        <td class="kop-logo-cell">
-                            <img src="{{ $logoDataUri }}" alt="Logo Instansi">
-                        </td>
-                        <td class="kop-text-cell">
-                    @else
-                        <td class="kop-text-cell" style="width: 100%;" colspan="2">
-                    @endif
-                            @foreach($instansiIndukLines as $line)
-                                <div class="kop-ministry-line">{{ $line }}</div>
-                            @endforeach
-                            <div class="kop-agency-line">{{ $instansiPelaksana }}</div>
-                            @foreach($alamatLines as $addrLine)
-                                <div class="kop-address-line">{{ $addrLine }}</div>
-                            @endforeach
-                        </td>
-                </tr>
-            </table>
-        </div>
+        @include('partials.kop_surat', [
+            'config' => $config,
+            'kopLogoSrc' => $logoDataUri,
+            'kopLogo' => $kopLogoSize ?? [520, 556],
+        ])
     @endif
 
     @if(($config['template_type'] ?? 'undangan') === 'edaran')

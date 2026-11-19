@@ -12,6 +12,17 @@
         ? Storage::disk('public')->url($config['custom_logo_path'])
         : $defaultBundledLogoUrl;
 
+    $kopSourceFile = $hasCustomLogo
+        ? Storage::disk('public')->path($config['custom_logo_path'])
+        : public_path('images/tut-wuri-handayani-kop.png');
+    $kopLogoSize = [520, 556];
+    if ($kopSourceFile && is_file($kopSourceFile)) {
+        $kopInfo = @getimagesize($kopSourceFile);
+        if (!empty($kopInfo) && $kopInfo[0] > 0 && $kopInfo[1] > 0) {
+            $kopLogoSize = [$kopInfo[0], $kopInfo[1]];
+        }
+    }
+
     $activeTemplateType = old('template_type', $config['template_type'] ?? 'undangan');
     $activeShowKop = (bool) old('show_kop', ($config['show_kop'] ?? true) ? '1' : '0');
     $activeShowLogo = (bool) old('show_logo', ($config['show_logo'] ?? true) ? '1' : '0');
@@ -22,16 +33,16 @@
     $activeShowSignature = $activeSignatureMode !== 'blank';
 
     $instansiIndukRaw = trim((string) old('instansi_induk', $config['instansi_induk'] ?? "KEMENTERIAN PENDIDIKAN TINGGI,\nSAINS, DAN TEKNOLOGI"));
-    if ($instansiIndukRaw === 'KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI') {
-        $instansiIndukLines = ['KEMENTERIAN PENDIDIKAN TINGGI,', 'SAINS, DAN TEKNOLOGI'];
-    } else {
-        $instansiIndukLines = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $instansiIndukRaw))));
-    }
-
     $instansiPelaksana = trim((string) old('instansi_pelaksana', $config['instansi_pelaksana'] ?? 'LEMBAGA LAYANAN PENDIDIKAN TINGGI WILAYAH X'));
-
     $alamatRaw = trim((string) old('alamat_kontak', $config['alamat_kontak'] ?? "Jalan Khatib Sulaiman Padang 25137\nTelepon (0751) 70567376\nLaman lldikti10.kemdiktisaintek.go.id  Pos-el info.lldikti10@kemdiktisaintek.go.id"));
-    $alamatLines = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $alamatRaw))));
+
+    $kopConfig = array_merge($config ?? [], [
+        'show_kop' => $activeShowKop,
+        'show_logo' => $activeShowLogo,
+        'instansi_induk' => $instansiIndukRaw,
+        'instansi_pelaksana' => $instansiPelaksana,
+        'alamat_kontak' => $alamatRaw,
+    ]);
 
     $nomorSuratVal = (string) old('nomor_surat', $config['nomor_surat'] ?? '');
     $sifatVal = (string) old('sifat', $config['sifat'] ?? 'Biasa');
@@ -473,30 +484,13 @@
             <div id="surat-sheet-page-1" class="office-paper-sheet paper-a4" data-paper-format="a4" data-page-number="1">
                 <div class="office-paper-margin-guide">
 
-                    {{-- KOP SURAT RESMI (word/header3.xml: 182.5mm lebar penuh, logo monokrom 36.67mm x 39.19mm, Times New Roman 16/14/12pt + Garis 2.25pt) --}}
-                    <div id="sheet-kop-container" class="surat-kop-bleed" style="{{ $activeShowKop ? '' : 'display: none;' }}">
-                        <div class="header-kop" id="sheet-header-kop" style="display: {{ $activeShowKop ? 'block' : 'none' }}; margin: 0; padding: 0; text-align: center; width: 100%; font-family: 'Times New Roman', Times, serif;">
-                            <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; border-collapse: collapse; border-bottom: 2.25pt solid #000000; margin: 0; padding: 0;">
-                                <tr>
-                                    <td id="sheet-logo-cell" width="{{ $activeShowLogo ? '19.74%' : '0%' }}" align="center" valign="middle" style="width: {{ $activeShowLogo ? '19.74%' : '0%' }}; display: {{ $activeShowLogo ? 'table-cell' : 'none' }}; text-align: center; vertical-align: middle; border: none; padding: 0 5pt 4pt 0;">
-                                        <img id="sheet-logo-img" src="{{ $currentSavedLogoUrl }}" alt="Logo Instansi" onerror="this.onerror=null;this.src='{{ asset('images/tut-wuri-handayani.png') }}';" style="width: 36.67mm; height: 39.19mm; object-fit: contain; display: {{ $activeShowLogo ? 'block' : 'none' }}; margin: 0 auto; border: none;">
-                                    </td>
-                                    <td id="sheet-kop-text-cell" width="{{ $activeShowLogo ? '80.26%' : '100%' }}" align="center" valign="middle" style="width: {{ $activeShowLogo ? '80.26%' : '100%' }}; text-align: center; vertical-align: middle; border: none; padding: 0 0 4pt 5pt; font-family: 'Times New Roman', Times, serif;">
-                                        <div id="sheet-instansi-induk" style="margin: 0; padding: 0; font-size: 16pt; line-height: 1.08; font-weight: normal; text-transform: uppercase; font-family: 'Times New Roman', Times, serif;">
-                                            @foreach($instansiIndukLines as $idx => $line)
-                                                @if($idx > 0)<br>@endif{{ $line }}
-                                            @endforeach
-                                        </div>
-                                        <div id="sheet-instansi-pelaksana" style="margin: 1pt 0; padding: 0; font-size: 14pt; line-height: 1.12; font-weight: bold; text-transform: uppercase; font-family: 'Times New Roman', Times, serif;">{{ $instansiPelaksana }}</div>
-                                        <div id="sheet-alamat-kontak" style="margin: 0; padding: 0; font-size: 12pt; line-height: 1.12; font-weight: normal; font-style: normal; font-family: 'Times New Roman', Times, serif;">
-                                            @foreach($alamatLines as $idx => $addrLine)
-                                                @if($idx > 0)<br>@endif{{ $addrLine }}
-                                            @endforeach
-                                        </div>
-                                    </td>
-                                </tr>
-                            </table>
-                        </div>
+                    {{-- Kop Surat Resmi Instansi - definisi tunggal bersama Notulensi dan Ekspor Word/PDF --}}
+                    <div id="sheet-kop-container" style="margin: 0; padding: 0;{{ $activeShowKop ? '' : ' display: none;' }}">
+                        @include('partials.kop_surat', [
+                            'config' => $kopConfig,
+                            'kopLogoSrc' => $currentSavedLogoUrl,
+                            'kopLogo' => $kopLogoSize,
+                        ])
                     </div>
 
                     {{-- VARIANT A: SURAT UNDANGAN RAPAT KEDINASAN (Template_Surat_Undangan.docx — Arial 12pt, Spasi 1.15) --}}

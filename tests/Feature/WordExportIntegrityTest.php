@@ -193,4 +193,23 @@ class WordExportIntegrityTest extends TestCase
         $agendaRefererResponse->assertRedirect(route('admin.agendas.show', $agenda));
         $agendaRefererResponse->assertSessionHas('error');
     }
+
+    public function test_surat_edaran_word_export_error_handling_gracefully_redirects_on_controller_failure(): void
+    {
+        $superadmin = User::where('role', 'administrator')->first();
+        $agenda = Agenda::first();
+
+        $mock = $this->createMock(\App\Services\SuratEdaranService::class);
+        $mock->method('downloadWordResponse')
+            ->willThrowException(new \RuntimeException('Simulated Surat Dinas Word export failure'));
+
+        $this->app->instance(\App\Services\SuratEdaranService::class, $mock);
+
+        $response = $this->actingAs($superadmin)
+            ->from(route('admin.agendas.surat-edaran', $agenda))
+            ->get(route('admin.agendas.export-surat-edaran-word', $agenda));
+
+        $response->assertRedirect(route('admin.agendas.surat-edaran', $agenda));
+        $response->assertSessionHas('error');
+    }
 }

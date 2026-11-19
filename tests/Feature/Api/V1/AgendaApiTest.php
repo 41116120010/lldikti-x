@@ -161,6 +161,7 @@ class AgendaApiTest extends TestCase
         $admin = User::where('role', 'administrator')->first();
         $agenda = Agenda::first();
         $this->assertNotNull($agenda);
+        $initialDocCount = $agenda->documentations()->count();
 
         $photo = UploadedFile::fake()->image('dokumentasi_rapat.jpg', 800, 600);
 
@@ -179,7 +180,7 @@ class AgendaApiTest extends TestCase
         $agenda->refresh();
         $this->assertStringContainsString('Rapat koordinasi membahas target kinerja', $agenda->notulensi);
         $this->assertStringContainsString('Seluruh unit wajib menyelesaikan laporan', $agenda->kesimpulan);
-        $this->assertCount(2, $agenda->documentations); // 1 from fixture + 1 from upload
+        $this->assertCount($initialDocCount + 1, $agenda->documentations);
     }
 
     public function test_authorized_user_can_delete_documentation_photo_via_api(): void
