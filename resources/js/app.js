@@ -2991,6 +2991,10 @@ const SuratEdaranWorkstation = {
         const statusSaveStateEl = workstation.querySelector('#office-status-save-state');
         const statusSaveDotEl = workstation.querySelector('#office-status-save-dot');
         const statusSaveLabelEl = workstation.querySelector('#office-status-save-label');
+        const topSaveStatusEl = workstation.querySelector('#surat-top-save-status');
+
+        const agendaId = workstation.dataset.agendaId || '';
+        const draftStorageKey = agendaId ? `siperapat_surat_draft_${agendaId}` : null;
 
         const initialTemplate = document.querySelector('#form-template-type')?.value || 'undangan';
         let activeBox = initialTemplate === 'edaran'
@@ -2998,22 +3002,65 @@ const SuratEdaranWorkstation = {
             : (bodyBox || pembukaBox || editableBoxes[0]);
         let savedRange = null;
         let isSubmittingForm = false;
+        let localBackupTimer = null;
         let currentZoomVal = 100;
         let updateActiveStates = () => {};
         let syncModalConfigToFormAndSheet = null;
         window.__suratDirtyState = false;
 
-        const updateSaveStateUI = (dirty) => {
+        const scheduleLocalDraftBackup = () => {
+            if (!draftStorageKey) return;
+            clearTimeout(localBackupTimer);
+            localBackupTimer = setTimeout(() => {
+                try {
+                    localStorage.setItem(draftStorageKey, JSON.stringify({
+                        pembuka: pembukaBox ? pembukaBox.innerHTML.trim() : '',
+                        body: bodyBox ? bodyBox.innerHTML.trim() : '',
+                        catatan: catatanBox ? catatanBox.innerHTML.trim() : '',
+                        penutup: penutupBox ? penutupBox.innerHTML.trim() : '',
+                        edaranBody: altEdaranBox ? altEdaranBox.innerHTML.trim() : '',
+                        lampiran: lampiranBox ? lampiranBox.innerHTML.trim() : '',
+                        savedAt: new Date().toISOString(),
+                    }));
+                } catch (e) {}
+            }, 800);
+        };
+
+        const clearLocalDraftBackup = () => {
+            clearTimeout(localBackupTimer);
+            if (!draftStorageKey) return;
+            try {
+                localStorage.removeItem(draftStorageKey);
+            } catch (e) {}
+        };
+
+        const updateSaveStateUI = (dirty, savedTimeLabel = null) => {
             window.__suratDirtyState = Boolean(dirty);
-            if (!statusSaveStateEl || !statusSaveDotEl || !statusSaveLabelEl) return;
+            if (statusSaveStateEl && statusSaveDotEl && statusSaveLabelEl) {
+                if (window.__suratDirtyState) {
+                    statusSaveStateEl.className = 'inline-flex items-center gap-1.5 text-amber-400 font-semibold';
+                    statusSaveDotEl.className = 'w-1.5 h-1.5 rounded-full bg-amber-400';
+                    statusSaveLabelEl.textContent = 'Perubahan Belum Disimpan';
+                } else {
+                    statusSaveStateEl.className = 'inline-flex items-center gap-1.5 text-emerald-400 font-semibold';
+                    statusSaveDotEl.className = 'w-1.5 h-1.5 rounded-full bg-emerald-400';
+                    statusSaveLabelEl.textContent = savedTimeLabel ? `Tersimpan pada ${savedTimeLabel}` : 'Tersimpan';
+                }
+            }
+            if (topSaveStatusEl) {
+                if (window.__suratDirtyState) {
+                    topSaveStatusEl.className = 'hidden sm:inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-700 px-2';
+                    topSaveStatusEl.textContent = 'Belum disimpan';
+                } else if (savedTimeLabel) {
+                    topSaveStatusEl.className = 'hidden sm:inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 px-2';
+                    topSaveStatusEl.textContent = `Tersimpan pada ${savedTimeLabel}`;
+                } else {
+                    topSaveStatusEl.className = 'hidden sm:inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 px-2';
+                    topSaveStatusEl.textContent = '';
+                }
+            }
             if (window.__suratDirtyState) {
-                statusSaveStateEl.className = 'inline-flex items-center gap-1.5 text-amber-400 font-semibold';
-                statusSaveDotEl.className = 'w-1.5 h-1.5 rounded-full bg-amber-400';
-                statusSaveLabelEl.textContent = 'Perubahan Belum Disimpan';
-            } else {
-                statusSaveStateEl.className = 'inline-flex items-center gap-1.5 text-emerald-400 font-semibold';
-                statusSaveDotEl.className = 'w-1.5 h-1.5 rounded-full bg-emerald-400';
-                statusSaveLabelEl.textContent = 'Tersimpan';
+                scheduleLocalDraftBackup();
             }
         };
 
@@ -3221,7 +3268,7 @@ const SuratEdaranWorkstation = {
                         const allowedTags = [
                             'p', 'br', 'b', 'strong', 'i', 'em', 'u', 's', 'strike',
                             'h2', 'h3', 'h4', 'ul', 'ol', 'li', 'blockquote', 'hr',
-                            'table', 'thead', 'tbody', 'tr', 'th', 'td', 'sup', 'sub'
+                            'a', 'font', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'sup', 'sub'
                         ];
 
                         Array.from(doc.body.querySelectorAll('*')).forEach(el => {
@@ -3230,7 +3277,30 @@ const SuratEdaranWorkstation = {
                                 el.replaceWith(...el.childNodes);
                             } else {
                                 Array.from(el.attributes).forEach(attr => {
-                                    if (['colspan', 'rowspan'].includes(attr.name)) return;
+                                    const attrName = attr.name.toLowerCase();
+                                    if (tag === 'td' || tag === 'th') {
+                                        if (['colspan', 'rowspan'].includes(attrName)) return;
+                                    }
+                                    if (tag === 'a' && attrName === 'href') {
+                                        const hrefVal = attr.value.trim();
+                                        if (/^https?:\/\//i.test(hrefVal)) {
+                                            el.setAttribute('href', hrefVal);
+                                            el.setAttribute('rel', 'noopener noreferrer');
+                                            return;
+                                        }
+                                    }
+                                    if (tag === 'font') {
+                                        if (attrName === 'color' && (/^#[0-9a-f]{3,6}$/i.test(attr.value.trim()) || /^[a-z]+$/i.test(attr.value.trim()))) return;
+                                        if (attrName === 'size' && /^[1-7]$/.test(attr.value.trim())) return;
+                                        if (attrName === 'face' && /^[a-zA-Z0-9\s,'-]+$/.test(attr.value.trim())) return;
+                                    }
+                                    if (attrName === 'style') {
+                                        const alignMatch = attr.value.match(/text-align\s*:\s*(left|center|right|justify)/i);
+                                        if (alignMatch) {
+                                            el.setAttribute('style', `text-align: ${alignMatch[1].toLowerCase()};`);
+                                            return;
+                                        }
+                                    }
                                     el.removeAttribute(attr.name);
                                 });
                             }
@@ -3405,6 +3475,23 @@ const SuratEdaranWorkstation = {
                         }
                     } catch (e) {}
                 }
+
+                const getSelectionEl = () => {
+                    const sel = window.getSelection();
+                    if (!sel || sel.rangeCount === 0 || !sel.anchorNode) return null;
+                    return sel.anchorNode.nodeType === Node.ELEMENT_NODE ? sel.anchorNode : sel.anchorNode.parentElement;
+                };
+                const selEl = getSelectionEl();
+                const ownerBox = selEl ? isNodeInsideEditableBox(selEl) : null;
+                const activeCell = ownerBox ? selEl.closest('td, th') : null;
+                const tableContextGroup = ribbon.querySelector('#surat-table-context-group');
+                if (tableContextGroup) {
+                    tableContextGroup.classList.toggle('hidden', !(activeCell && ownerBox.contains(activeCell)));
+                }
+                const linkBtn = ribbon.querySelector('.word-btn[data-action="insertLink"]');
+                if (linkBtn) {
+                    linkBtn.classList.toggle('is-active', Boolean(ownerBox && selEl.closest('a[href]')));
+                }
             };
 
             // Prevent focus loss and collapse of selection on ribbon button click
@@ -3424,6 +3511,112 @@ const SuratEdaranWorkstation = {
                 lampiran: 'Lampiran Daftar Undangan (Halaman 2)',
             };
 
+            // Link Popover & Contextual Table Controls
+            const linkBtn = ribbon.querySelector('.word-btn[data-action="insertLink"]');
+            const linkPopover = ribbon.querySelector('#surat-link-popover');
+            const linkUrlInput = ribbon.querySelector('#surat-link-url-input');
+            const linkErrorEl = ribbon.querySelector('#surat-link-error');
+            const linkApplyBtn = ribbon.querySelector('#surat-link-apply-btn');
+            const linkUnlinkBtn = ribbon.querySelector('#surat-link-unlink-btn');
+            const linkCancelBtn = ribbon.querySelector('#surat-link-cancel-btn');
+
+            const closeSuratLinkPopover = () => {
+                if (linkPopover) linkPopover.classList.add('hidden');
+                if (linkErrorEl) linkErrorEl.classList.add('hidden');
+            };
+
+            if (linkApplyBtn && linkUrlInput) {
+                linkApplyBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const rawUrl = linkUrlInput.value.trim();
+                    if (!/^https?:\/\//i.test(rawUrl)) {
+                        if (linkErrorEl) linkErrorEl.classList.remove('hidden');
+                        linkUrlInput.focus();
+                        return;
+                    }
+                    closeSuratLinkPopover();
+                    restoreSelection();
+                    const sel = window.getSelection();
+                    if (sel && sel.isCollapsed) {
+                        const safeHref = escapeHtml(rawUrl);
+                        exec('insertHTML', `<a href="${safeHref}" rel="noopener noreferrer">${safeHref}</a>`);
+                    } else {
+                        exec('createLink', rawUrl);
+                    }
+                });
+            }
+            if (linkUnlinkBtn) {
+                linkUnlinkBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    closeSuratLinkPopover();
+                    exec('unlink');
+                });
+            }
+            if (linkCancelBtn) {
+                linkCancelBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    closeSuratLinkPopover();
+                });
+            }
+            if (linkPopover) {
+                document.addEventListener('click', (e) => {
+                    if (!linkPopover.contains(e.target) && (!linkBtn || (e.target !== linkBtn && !linkBtn.contains(e.target)))) {
+                        closeSuratLinkPopover();
+                    }
+                }, { signal: pageAc.signal });
+            }
+
+            const handleSuratTableAction = (action) => {
+                restoreSelection();
+                const sel = window.getSelection();
+                const node = sel && sel.rangeCount > 0 ? sel.anchorNode : null;
+                const el = node ? (node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement) : null;
+                const ownerBox = el ? isNodeInsideEditableBox(el) : null;
+                const cell = ownerBox ? el.closest('td, th') : null;
+                if (!cell || !ownerBox.contains(cell)) return;
+                const row = cell.closest('tr');
+                const table = cell.closest('table');
+                if (!row || !table) return;
+                const colIdx = Array.from(row.children).indexOf(cell);
+
+                if (action === 'tableAddRow') {
+                    const newRow = document.createElement('tr');
+                    for (let i = 0; i < row.children.length; i++) {
+                        const td = document.createElement('td');
+                        td.setAttribute('style', 'border: 0.75pt solid #000000; padding: 4pt 6pt;');
+                        td.innerHTML = '&nbsp;';
+                        newRow.appendChild(td);
+                    }
+                    if (row.parentElement && row.parentElement.tagName.toLowerCase() === 'thead') {
+                        const tbody = table.querySelector('tbody') || table;
+                        tbody.insertBefore(newRow, tbody.firstChild);
+                    } else {
+                        row.parentElement.insertBefore(newRow, row.nextSibling);
+                    }
+                } else if (action === 'tableRemoveRow') {
+                    if (table.querySelectorAll('tr').length <= 1) table.remove();
+                    else row.remove();
+                } else if (action === 'tableAddCol') {
+                    table.querySelectorAll('tr').forEach(tr => {
+                        const isHeader = tr.parentElement && tr.parentElement.tagName.toLowerCase() === 'thead';
+                        const newCell = document.createElement(isHeader ? 'th' : 'td');
+                        newCell.setAttribute('style', 'border: 0.75pt solid #000000; padding: 4pt 6pt;');
+                        newCell.innerHTML = isHeader ? 'Kolom' : '&nbsp;';
+                        const ref = tr.children[colIdx] || null;
+                        tr.insertBefore(newCell, ref ? ref.nextSibling : null);
+                    });
+                } else if (action === 'tableRemoveCol') {
+                    if (row.children.length <= 1) table.remove();
+                    else table.querySelectorAll('tr').forEach(tr => { if (tr.children[colIdx]) tr.children[colIdx].remove(); });
+                }
+
+                saveSelection();
+                syncToHiddenInputs();
+                updateWordCounter();
+                updateSaveStateUI(true);
+                updateActiveStates();
+            };
+
             ribbon.addEventListener('click', (e) => {
                 const btn = e.target.closest('.word-btn');
                 if (!btn) return;
@@ -3435,6 +3628,22 @@ const SuratEdaranWorkstation = {
                     saveSelection();
                     const input = ribbon.querySelector(`input[data-color-for="${btn.dataset.action}"]`);
                     if (input) input.click();
+                } else if (btn.dataset.action === 'insertLink') {
+                    saveSelection();
+                    if (linkPopover && linkUrlInput) {
+                        const sel = window.getSelection();
+                        const node = sel && sel.rangeCount > 0 ? sel.anchorNode : null;
+                        const el = node ? (node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement) : null;
+                        const existingLink = el ? el.closest('a[href]') : null;
+                        linkUrlInput.value = existingLink ? existingLink.getAttribute('href') || '' : '';
+                        if (linkErrorEl) linkErrorEl.classList.add('hidden');
+                        linkPopover.classList.toggle('hidden');
+                        if (!linkPopover.classList.contains('hidden')) {
+                            setTimeout(() => linkUrlInput.focus(), 20);
+                        }
+                    }
+                } else if (['tableAddRow', 'tableRemoveRow', 'tableAddCol', 'tableRemoveCol'].includes(btn.dataset.action)) {
+                    handleSuratTableAction(btn.dataset.action);
                 } else if (btn.dataset.action === 'openTablePicker' || btn.dataset.action === 'insertTable') {
                     saveSelection();
                     const picker = workstation.querySelector('#surat-table-picker');
@@ -3570,7 +3779,7 @@ const SuratEdaranWorkstation = {
                     for (let r = 0; r < rows; r++) {
                         tableHtml += '<tr>';
                         for (let c = 0; c < cols; c++) {
-                            tableHtml += '<td style="border:1px solid #cbd5e1; padding:6px 10px;">&nbsp;</td>';
+                            tableHtml += '<td style="border: 0.75pt solid #000000; padding: 4pt 6pt;">&nbsp;</td>';
                         }
                         tableHtml += '</tr>';
                     }
@@ -3715,7 +3924,7 @@ const SuratEdaranWorkstation = {
         const formResetCustomLogoInput = document.getElementById('form-reset-custom-logo');
         const modalLogoPreviewImg = document.getElementById('modal-logo-preview-img');
         const modalCustomLogoFilename = document.getElementById('modal-custom-logo-filename');
-        const defaultLogoSrc = workstation.dataset.defaultLogoSrc || '/images/tut-wuri-handayani.png';
+        const defaultLogoSrc = workstation.dataset.defaultLogoSrc || '/images/tut-wuri-handayani-kop.png';
 
         if (btnChooseCustomLogo && formCustomLogoInput) {
             btnChooseCustomLogo.addEventListener('click', (e) => {
@@ -3732,8 +3941,9 @@ const SuratEdaranWorkstation = {
                 if (file.size > 512 * 1024) {
                     if (typeof ModalManager !== 'undefined' && typeof ModalManager.alert === 'function') {
                         ModalManager.alert('Ukuran berkas logo kop surat maksimal 512 KB.', 'Ukuran Berkas Terlalu Besar', 'error');
-                    } else {
-                        alert('Ukuran berkas logo kop surat maksimal 512 KB.');
+                    } else if (modalCustomLogoFilename) {
+                        modalCustomLogoFilename.textContent = 'Ukuran berkas melebihi batas maksimal 512 KB.';
+                        modalCustomLogoFilename.className = 'text-[11px] text-rose-700 font-semibold';
                     }
                     formCustomLogoInput.value = '';
                     return;
@@ -3857,11 +4067,11 @@ const SuratEdaranWorkstation = {
             const logoImg = document.getElementById('sheet-logo-img');
             const textCell = document.getElementById('sheet-kop-text-cell') || (logoCell ? logoCell.nextElementSibling : null);
             if (logoCell) {
-                logoCell.style.width = showLogo ? '19.7%' : '0%';
+                logoCell.style.width = showLogo ? '19.74%' : '0%';
                 logoCell.style.display = showLogo ? 'table-cell' : 'none';
             }
             if (textCell) {
-                textCell.style.width = showLogo ? '80.3%' : '100%';
+                textCell.style.width = showLogo ? '80.26%' : '100%';
             }
             if (logoImg) {
                 logoImg.style.display = showLogo ? 'block' : 'none';
@@ -3885,6 +4095,11 @@ const SuratEdaranWorkstation = {
             const tujuanClean = tujuanRaw.replace(/^Yth\.?\s*/i, '');
             const showLampiranModal = document.getElementById('modal_show_lampiran')?.checked ?? false;
             const effectiveShowLampiran = showLampiranModal || (lampiran.trim() !== '' && lampiran.trim() !== '-');
+            const lampiranTitle = document.getElementById('modal_lampiran_title')?.value?.trim() || 'Daftar Undangan';
+            const hariTanggalText = document.getElementById('modal_hari_tanggal_text')?.value || '';
+            const pukulText = document.getElementById('modal_pukul_text')?.value || '';
+            const tempatText = document.getElementById('modal_tempat_text')?.value || '';
+            const acaraText = document.getElementById('modal_acara_text')?.value || '';
 
             const fNomor = document.getElementById('form-nomor-surat');
             const fSifat = document.getElementById('form-sifat');
@@ -3894,6 +4109,11 @@ const SuratEdaranWorkstation = {
             const fTanggal = document.getElementById('form-tanggal-surat');
             const fTujuan = document.getElementById('form-tujuan-surat');
             const fShowLampiran = document.getElementById('form-show-lampiran');
+            const fLampiranTitle = document.getElementById('form-lampiran-title');
+            const fHariTanggal = document.getElementById('form-hari-tanggal-text');
+            const fPukul = document.getElementById('form-pukul-text');
+            const fTempatAcara = document.getElementById('form-tempat-text');
+            const fAcara = document.getElementById('form-acara-text');
 
             if (fNomor) fNomor.value = nomor;
             if (fSifat) fSifat.value = sifat;
@@ -3903,6 +4123,11 @@ const SuratEdaranWorkstation = {
             if (fTanggal) fTanggal.value = tanggal;
             if (fTujuan) fTujuan.value = tujuanClean;
             if (fShowLampiran) fShowLampiran.value = effectiveShowLampiran ? '1' : '0';
+            if (fLampiranTitle) fLampiranTitle.value = lampiranTitle;
+            if (fHariTanggal) fHariTanggal.value = hariTanggalText;
+            if (fPukul) fPukul.value = pukulText;
+            if (fTempatAcara) fTempatAcara.value = tempatText;
+            if (fAcara) fAcara.value = acaraText;
 
             const sheetNomor = document.getElementById('sheet-nomor-surat');
             const sheetSifat = document.getElementById('sheet-sifat');
@@ -3915,43 +4140,61 @@ const SuratEdaranWorkstation = {
             if (sheetNomor) sheetNomor.textContent = nomor || '-';
             if (sheetSifat) sheetSifat.textContent = sifat || 'Biasa';
             if (sheetLampiran) sheetLampiran.textContent = lampiran || '-';
-            if (sheetPerihal) sheetPerihal.textContent = perihal;
+            if (sheetPerihal) sheetPerihal.innerHTML = escapeHtml(perihal).replace(/\n/g, '<br>');
             if (sheetTempat) sheetTempat.textContent = tempat;
             if (sheetTanggal) sheetTanggal.textContent = tanggal;
             if (sheetTujuan) sheetTujuan.innerHTML = escapeHtml(tujuanClean).replace(/\n/g, '<br>');
+
+            [
+                ['sheet-detail-hari-tanggal', hariTanggalText],
+                ['sheet-detail-pukul', pukulText],
+                ['sheet-detail-tempat', tempatText],
+                ['sheet-detail-acara', acaraText],
+            ].forEach(([elId, customVal]) => {
+                const detailEl = document.getElementById(elId);
+                if (detailEl) {
+                    const trimmed = customVal.trim();
+                    detailEl.textContent = trimmed !== '' ? trimmed : (detailEl.dataset.default || '-');
+                }
+            });
 
             const sheetEdaranNomor = document.getElementById('sheet-edaran-nomor');
             const sheetEdaranPerihal = document.getElementById('sheet-edaran-perihal');
             const sheetEdaranTujuan = document.getElementById('sheet-edaran-tujuan');
             if (sheetEdaranNomor) sheetEdaranNomor.textContent = nomor || '-';
-            if (sheetEdaranPerihal) sheetEdaranPerihal.textContent = perihal;
+            if (sheetEdaranPerihal) sheetEdaranPerihal.innerHTML = escapeHtml(perihal).replace(/\n/g, '<br>');
             if (sheetEdaranTujuan) sheetEdaranTujuan.innerHTML = escapeHtml(tujuanClean).replace(/\n/g, '<br>');
 
             // Sync Halaman 2 Lampiran Daftar Undangan
             const lampiranPageWrapper = document.getElementById('surat-lampiran-page-wrapper');
             const sheetLampiranNomor = document.getElementById('sheet-lampiran-nomor');
             const sheetLampiranTanggal = document.getElementById('sheet-lampiran-tanggal');
+            const sheetLampiranTitle = document.getElementById('sheet-lampiran-title');
             if (lampiranPageWrapper) lampiranPageWrapper.style.display = effectiveShowLampiran ? 'flex' : 'none';
             if (sheetLampiranNomor) sheetLampiranNomor.textContent = nomor || '-';
             if (sheetLampiranTanggal) sheetLampiranTanggal.textContent = tanggal;
+            if (sheetLampiranTitle) sheetLampiranTitle.textContent = lampiranTitle;
 
             // 4. Penandatangan & Tembusan
             const roleRaw = document.getElementById('modal_signer_role')?.value || 'Kepala';
             const roleClean = roleRaw.replace(/,+\s*$/, '');
             const name = document.getElementById('modal_signer_name')?.value || 'Afdalisma';
             const nip = document.getElementById('modal_signer_nip')?.value || '197012051992032002';
-            const showSig = document.getElementById('modal_show_signature')?.checked ?? true;
+            const signatureMode = document.querySelector('input[name="modal_signature_mode"]:checked')?.value || 'blank';
+            const showSig = signatureMode !== 'blank';
             const tembusan = document.getElementById('modal_tembusan')?.value || '';
 
             const fRole = document.getElementById('form-signer-role');
             const fName = document.getElementById('form-signer-name');
             const fNip = document.getElementById('form-signer-nip');
+            const fSignatureMode = document.getElementById('form-signature-mode');
             const fShowSig = document.getElementById('form-show-signature');
             const fTembusan = document.getElementById('form-tembusan');
 
             if (fRole) fRole.value = roleClean;
             if (fName) fName.value = name;
             if (fNip) fNip.value = nip;
+            if (fSignatureMode) fSignatureMode.value = signatureMode;
             if (fShowSig) fShowSig.value = showSig ? '1' : '0';
             if (fTembusan) fTembusan.value = tembusan;
 
@@ -3959,6 +4202,7 @@ const SuratEdaranWorkstation = {
             const sheetName = document.getElementById('sheet-signer-name');
             const sheetNip = document.getElementById('sheet-signer-nip');
             const sheetBadge = document.getElementById('sheet-signature-badge');
+            const sheetTte = document.getElementById('sheet-signature-tte');
             const sheetTembusanLabel = document.getElementById('sheet-tembusan-label');
             const sheetTembusanBlock = document.getElementById('sheet-tembusan-block');
             const sheetTembusanText = document.getElementById('sheet-tembusan-text');
@@ -3966,7 +4210,8 @@ const SuratEdaranWorkstation = {
             if (sheetRole) sheetRole.textContent = roleClean;
             if (sheetName) sheetName.textContent = name;
             if (sheetNip) sheetNip.textContent = nip || '-';
-            if (sheetBadge) sheetBadge.style.display = showSig ? 'inline-block' : 'none';
+            if (sheetBadge) sheetBadge.style.display = signatureMode === 'stamp' ? 'inline-block' : 'none';
+            if (sheetTte) sheetTte.style.display = signatureMode === 'tte_placeholder' ? 'inline' : 'none';
             if (sheetTembusanLabel) sheetTembusanLabel.style.display = tembusan.trim() ? 'block' : 'none';
             if (sheetTembusanBlock) sheetTembusanBlock.style.display = tembusan.trim() ? 'table-row' : 'none';
             if (sheetTembusanText) sheetTembusanText.innerHTML = escapeHtml(tembusan).replace(/\n/g, '<br>');
@@ -4005,6 +4250,99 @@ const SuratEdaranWorkstation = {
                 }
             }
         }, { signal: pageAc.signal });
+
+        // Local Draft Backup Recovery & AJAX Draft Save
+        const suratLocalBanner = workstation.querySelector('#surat-local-draft-banner');
+        const btnSuratRestoreLocal = workstation.querySelector('#btn-surat-restore-local-draft');
+        const btnSuratDiscardLocal = workstation.querySelector('#btn-surat-discard-local-draft');
+        const btnSuratSaveDraftAjax = workstation.querySelector('#btn-surat-save-draft-ajax');
+
+        if (draftStorageKey && suratLocalBanner) {
+            try {
+                const rawBackup = localStorage.getItem(draftStorageKey);
+                if (rawBackup) {
+                    const parsed = JSON.parse(rawBackup);
+                    const hasDiff = parsed && (
+                        (pembukaBox && (parsed.pembuka || '').trim() !== pembukaBox.innerHTML.trim()) ||
+                        (bodyBox && (parsed.body || '').trim() !== bodyBox.innerHTML.trim()) ||
+                        (catatanBox && (parsed.catatan || '').trim() !== catatanBox.innerHTML.trim()) ||
+                        (penutupBox && (parsed.penutup || '').trim() !== penutupBox.innerHTML.trim()) ||
+                        (altEdaranBox && (parsed.edaranBody || '').trim() !== altEdaranBox.innerHTML.trim()) ||
+                        (lampiranBox && (parsed.lampiran || '').trim() !== lampiranBox.innerHTML.trim())
+                    );
+                    if (hasDiff) {
+                        suratLocalBanner.classList.remove('hidden');
+                        if (btnSuratRestoreLocal) {
+                            btnSuratRestoreLocal.addEventListener('click', () => {
+                                if (pembukaBox && typeof parsed.pembuka === 'string') pembukaBox.innerHTML = parsed.pembuka;
+                                if (bodyBox && typeof parsed.body === 'string') bodyBox.innerHTML = parsed.body;
+                                if (catatanBox && typeof parsed.catatan === 'string') catatanBox.innerHTML = parsed.catatan;
+                                if (penutupBox && typeof parsed.penutup === 'string') penutupBox.innerHTML = parsed.penutup;
+                                if (altEdaranBox && typeof parsed.edaranBody === 'string') altEdaranBox.innerHTML = parsed.edaranBody;
+                                if (lampiranBox && typeof parsed.lampiran === 'string') lampiranBox.innerHTML = parsed.lampiran;
+                                suratLocalBanner.classList.add('hidden');
+                                syncToHiddenInputs();
+                                updateWordCounter();
+                                updateSaveStateUI(true);
+                            });
+                        }
+                        if (btnSuratDiscardLocal) {
+                            btnSuratDiscardLocal.addEventListener('click', () => {
+                                clearLocalDraftBackup();
+                                suratLocalBanner.classList.add('hidden');
+                            });
+                        }
+                    } else {
+                        clearLocalDraftBackup();
+                    }
+                }
+            } catch (e) {}
+        }
+
+        if (btnSuratSaveDraftAjax && form) {
+            btnSuratSaveDraftAjax.addEventListener('click', async (e) => {
+                e.preventDefault();
+                syncToHiddenInputs(true);
+                const originalHtml = btnSuratSaveDraftAjax.innerHTML;
+                btnSuratSaveDraftAjax.disabled = true;
+                btnSuratSaveDraftAjax.innerHTML = '<span>Menyimpan...</span>';
+
+                try {
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
+                        || form.querySelector('input[name="_token"]')?.value
+                        || '';
+                    const res = await fetch(form.action, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': csrfToken,
+                        },
+                        body: new FormData(form),
+                    });
+                    const payload = await res.json().catch(() => ({}));
+                    if (!res.ok) {
+                        throw new Error(payload.message || 'Gagal menyimpan draf surat dinas.');
+                    }
+                    if (payload.updated_at) {
+                        workstation.dataset.updatedAt = payload.updated_at;
+                    }
+                    if (suratLocalBanner) suratLocalBanner.classList.add('hidden');
+                    clearLocalDraftBackup();
+                    const now = new Date();
+                    const hhmm = payload.saved_at_label || `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                    updateSaveStateUI(false, hhmm);
+                } catch (err) {
+                    if (topSaveStatusEl) {
+                        topSaveStatusEl.className = 'hidden sm:inline-flex items-center gap-1.5 text-[11px] font-semibold text-rose-700 px-2';
+                        topSaveStatusEl.textContent = err instanceof Error ? err.message : 'Gagal menyimpan draf';
+                    }
+                } finally {
+                    btnSuratSaveDraftAjax.disabled = false;
+                    btnSuratSaveDraftAjax.innerHTML = originalHtml;
+                }
+            });
+        }
 
         // Save button pre-sync click handler
         const saveBtn = workstation.querySelector('button[form="surat-edaran-form"]');
@@ -4062,6 +4400,7 @@ const SuratEdaranWorkstation = {
                 syncToHiddenInputs(true);
                 if (form.dataset.confirmed === 'true') {
                     isSubmittingForm = true;
+                    clearLocalDraftBackup();
                     window.__suratDirtyState = false;
                 }
             });

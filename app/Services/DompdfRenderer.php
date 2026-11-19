@@ -28,15 +28,32 @@ class DompdfRenderer
     /**
      * Convert an exported document into a PDF and return the raw bytes.
      *
+     * @param  array<string,mixed>  $options
+     *
      * @throws RuntimeException when the document cannot be rendered
      */
-    public function render(string $html): string
+    public function render(string $html, array $options = []): string
     {
         try {
             $dompdf = new Dompdf($this->options());
             $dompdf->loadHtml($html);
             $dompdf->setPaper('A4', 'portrait');
             $dompdf->render();
+
+            if (! empty($options['page_number_header'])) {
+                $canvas = $dompdf->getCanvas();
+                $canvas->page_script(function (int $pageNumber, int $pageCount, $canvas, $fontMetrics): void {
+                    if ($pageNumber < 2) {
+                        return;
+                    }
+                    $font = $fontMetrics->getFont('Helvetica', 'normal');
+                    $text = '-'.$pageNumber.'-';
+                    $size = 12;
+                    $width = $fontMetrics->getTextWidth($text, $font, $size);
+                    $x = ($canvas->get_width() - $width) / 2;
+                    $canvas->text($x, 14, $text, $font, $size, [0, 0, 0]);
+                });
+            }
 
             $pdf = $dompdf->output();
         } catch (Throwable $e) {

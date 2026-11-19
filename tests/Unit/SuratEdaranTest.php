@@ -57,6 +57,13 @@ class SuratEdaranTest extends TestCase
         $this->assertSame('Afdalisma', $defaultConfig['signer_name']);
         $this->assertArrayHasKey('signer_nip', $defaultConfig);
         $this->assertSame('197012051992032002', $defaultConfig['signer_nip']);
+        $this->assertSame('blank', $defaultConfig['signature_mode']);
+        $this->assertFalse($defaultConfig['show_signature']);
+        $this->assertSame('', $defaultConfig['hari_tanggal_text']);
+        $this->assertSame('', $defaultConfig['pukul_text']);
+        $this->assertSame('', $defaultConfig['tempat_text']);
+        $this->assertSame('', $defaultConfig['acara_text']);
+        $this->assertSame('Daftar Undangan', $defaultConfig['lampiran_title']);
         $this->assertArrayHasKey('tembusan', $defaultConfig);
         $this->assertArrayHasKey('show_lampiran', $defaultConfig);
         $this->assertArrayHasKey('lampiran_content', $defaultConfig);
@@ -104,6 +111,12 @@ class SuratEdaranTest extends TestCase
         $this->assertArrayHasKey('signer_role', $rules);
         $this->assertArrayHasKey('signer_name', $rules);
         $this->assertArrayHasKey('signer_nip', $rules);
+        $this->assertArrayHasKey('signature_mode', $rules);
+        $this->assertArrayHasKey('hari_tanggal_text', $rules);
+        $this->assertArrayHasKey('pukul_text', $rules);
+        $this->assertArrayHasKey('tempat_text', $rules);
+        $this->assertArrayHasKey('acara_text', $rules);
+        $this->assertArrayHasKey('lampiran_title', $rules);
         $this->assertArrayHasKey('custom_logo', $rules);
     }
 
@@ -321,5 +334,75 @@ class SuratEdaranTest extends TestCase
         $this->assertStringContainsString('type="submit"', $formContent);
         $this->assertStringContainsString("route('admin.agendas.show', \$agenda)", $formContent);
         $this->assertStringContainsString('name="open_surat_edaran_after_save"', $formContent);
+    }
+
+    public function test_official_surat_dinas_parity_and_event_details_resolution(): void
+    {
+        $agenda = new Agenda([
+            'id' => 77,
+            'judul_rapat' => 'Rapat Pleno Koordinasi Kurikulum',
+            'tipe_rapat' => 'hybrid',
+            'lokasi_ruang' => 'Ruang Sidang Utama',
+            'waktu_mulai' => now()->setTime(9, 0),
+            'waktu_selesai' => now()->setTime(12, 0),
+            'surat_edaran_type' => 'digital',
+            'surat_edaran_config' => [
+                'signature_mode' => 'blank',
+                'hari_tanggal_text' => 'Kamis, 20 November 2026',
+                'pukul_text' => '09.00 s.d. 12.00 WIB',
+                'tempat_text' => 'Ruang Sidang Senat Lantai 2',
+                'acara_text' => 'Evaluasi Dokumen Kurikulum',
+                'lampiran_title' => 'Daftar Nama Peserta Pleno',
+            ],
+        ]);
+
+        $service = new SuratEdaranService(new DompdfRenderer());
+        $details = $service->resolveEventDetails($agenda, $agenda->resolved_surat_edaran_config);
+
+        $this->assertSame('Kamis, 20 November 2026', $details['hari_tanggal']);
+        $this->assertSame('09.00 s.d. 12.00 WIB', $details['pukul']);
+        $this->assertSame('Ruang Sidang Senat Lantai 2', $details['tempat']);
+        $this->assertSame('Evaluasi Dokumen Kurikulum', $details['acara']);
+
+        $config = $agenda->resolved_surat_edaran_config;
+        $this->assertSame('blank', $config['signature_mode']);
+        $this->assertFalse($config['show_signature']);
+        $this->assertSame('Daftar Nama Peserta Pleno', $config['lampiran_title']);
+
+        // Verify monochrome Kop logo exists in public path
+        $this->assertFileExists(dirname(__DIR__, 2) . '/public/images/tut-wuri-handayani-kop.png');
+    }
+
+    public function test_surat_edaran_signature_modes_backward_compatibility(): void
+    {
+        // Legacy agenda with show_signature = true and no signature_mode
+        $legacyAgenda = new Agenda([
+            'surat_edaran_config' => [
+                'show_signature' => true,
+            ],
+        ]);
+        $legacyConfig = $legacyAgenda->resolved_surat_edaran_config;
+        $this->assertSame('stamp', $legacyConfig['signature_mode']);
+        $this->assertTrue($legacyConfig['show_signature']);
+
+        // Legacy agenda with show_signature = false and no signature_mode
+        $legacyAgendaOff = new Agenda([
+            'surat_edaran_config' => [
+                'show_signature' => false,
+            ],
+        ]);
+        $legacyConfigOff = $legacyAgendaOff->resolved_surat_edaran_config;
+        $this->assertSame('blank', $legacyConfigOff['signature_mode']);
+        $this->assertFalse($legacyConfigOff['show_signature']);
+
+        // TTE placeholder mode
+        $tteAgenda = new Agenda([
+            'surat_edaran_config' => [
+                'signature_mode' => 'tte_placeholder',
+            ],
+        ]);
+        $tteConfig = $tteAgenda->resolved_surat_edaran_config;
+        $this->assertSame('tte_placeholder', $tteConfig['signature_mode']);
+        $this->assertTrue($tteConfig['show_signature']);
     }
 }

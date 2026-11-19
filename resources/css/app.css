@@ -1244,6 +1244,18 @@
         font-size: 12pt;
         line-height: 1.15;
     }
+    #surat-edaran-workstation #sheet-kop-container,
+    #surat-edaran-workstation .surat-kop-bleed {
+        width: 182.5mm;
+        margin: 0 -9.9mm 12pt -12.6mm;
+    }
+    #surat-edaran-workstation #sheet-kop-container table {
+        width: 100% !important;
+        max-width: none !important;
+    }
+    #surat-edaran-workstation #sheet-alamat-kontak {
+        white-space: nowrap;
+    }
     #surat-edaran-workstation .office-editable-box {
         font-family: Arial, Helvetica, sans-serif;
         font-size: 12pt;
@@ -1256,8 +1268,8 @@
     }
     #surat-edaran-workstation .office-editable-box th,
     #surat-edaran-workstation .office-editable-box td {
-        border: 1px solid #cbd5e1;
-        padding: 4pt 6pt;
+        border: 0.75pt solid #000000 !important;
+        padding: 4pt 6pt !important;
     }
 }
 

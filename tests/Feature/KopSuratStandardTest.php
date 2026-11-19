@@ -37,7 +37,7 @@ class KopSuratStandardTest extends TestCase
     {
         parent::setUp();
 
-        $this->superadmin = User::where('role', 'administrator')->firstOrFail();
+        $this->superadmin = User::where('role', 'administrator')->where('is_active', true)->firstOrFail();
         $this->agenda = Agenda::firstOrFail();
     }
 

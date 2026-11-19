@@ -11,7 +11,7 @@ class AgendaSuratEdaranPreviewTest extends TestCase
 {
     private function getOrCreateSuperadmin(): User
     {
-        return User::where('role', 'administrator')->first() ?? User::create([
+        return User::where('role', 'administrator')->where('is_active', true)->first() ?? User::create([
             'name' => 'Super Administrator',
             'nip' => '197001011990011001',
             'username' => 'superadmin_test',

@@ -38,15 +38,17 @@
         /*
          * KOP SURAT DINAS (word/header3.xml)
          * - Font: Times New Roman
-         * - Kolom Logo Kiri: ~3.60 cm (2043 dxa), Teks Kanan: ~14.65 cm (8305 dxa)
+         * - Lebar Kop: 18.25 cm (10348 dxa), menjorok kiri -1.26 cm (-714 dxa) & kanan -0.99 cm
+         * - Kolom Logo Kiri: ~3.60 cm (2043 dxa = 19.74%), Teks Kanan: ~14.65 cm (8305 dxa = 80.26%)
+         * - Logo: 3.67 cm × 3.92 cm (104pt × 111pt)
          * - Baris Kementerian: 16pt, Regular (Tidak Bold), 2 baris
          * - Baris Unit Pelaksana: 14pt, BOLD
-         * - Baris Alamat / Telepon / Laman & Pos-el: 12pt, Regular
+         * - Baris Alamat / Telepon / Laman & Pos-el: 12pt, Regular (1 baris utuh)
          * - Garis Penutup Kop: Garis lurus tunggal tebal 2.25pt solid #000000
          */
         .kop-wrapper {
-            width: 100%;
-            margin: 0 0 14pt 0;
+            width: 18.25cm;
+            margin: 0 -0.99cm 12pt -1.26cm;
             padding: 0;
             font-family: 'Times New Roman', Times, serif;
         }
@@ -58,18 +60,19 @@
             padding-bottom: 4pt;
         }
         .kop-logo-cell {
-            width: 19.7%;
+            width: 19.74%;
             text-align: center;
             vertical-align: middle;
             padding: 0 4pt 4pt 0;
         }
         .kop-logo-cell img {
-            width: 98px;
-            height: auto;
-            max-height: 105px;
+            width: 104pt;
+            height: 111pt;
+            max-width: 104pt;
+            max-height: 111pt;
         }
         .kop-text-cell {
-            width: 80.3%;
+            width: 80.26%;
             text-align: center;
             vertical-align: middle;
             padding: 0 0 4pt 0;
@@ -100,6 +103,7 @@
             line-height: 1.12;
             margin: 0;
             padding: 0;
+            white-space: nowrap;
         }
 
         /*
@@ -141,7 +145,7 @@
         }
         .detail-table td {
             vertical-align: top;
-            padding: 1.5pt 0;
+            padding: 4.5pt 0;
             font-family: Arial, Helvetica, sans-serif;
             font-size: 12pt;
             line-height: 1.15;
@@ -196,7 +200,7 @@
             width: 100%;
             table-layout: fixed;
             border-collapse: collapse;
-            margin-top: 14pt;
+            margin-top: 20pt;
             page-break-inside: avoid;
             font-family: Arial, Helvetica, sans-serif;
             font-size: 12pt;
@@ -211,8 +215,14 @@
             padding: 0;
         }
         .signature-space {
-            height: 48pt;
+            height: 56pt;
             vertical-align: middle;
+        }
+        .tte-placeholder {
+            line-height: 56pt;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12pt;
+            font-weight: normal;
         }
         .stamp-mark {
             display: inline-block;
@@ -306,6 +316,24 @@
     $signerRoleClean = rtrim(trim((string) ($config['signer_role'] ?? 'Kepala')), ',');
     $signerNameClean = trim((string) ($config['signer_name'] ?? 'Afdalisma'));
     $signerNipClean = trim((string) ($config['signer_nip'] ?? '197012051992032002'));
+    $signatureMode = $config['signature_mode'] ?? (!empty($config['show_signature']) ? 'stamp' : 'blank');
+
+    $defaultHariTanggal = $agenda->waktu_mulai ? $agenda->waktu_mulai->translatedFormat('l, d F Y') : '-';
+    $defaultPukul = ($agenda->waktu_mulai ? $agenda->waktu_mulai->format('H.i') : '-')
+        . ' '
+        . ($agenda->waktu_selesai ? 's.d. ' . $agenda->waktu_selesai->format('H.i') . ' WIB' : 'WIB s.d. selesai');
+    $defaultTempat = match ($agenda->tipe_rapat) {
+        'online' => 'Daring (Online Meeting) — ' . ($agenda->link_meeting ?? 'Tautan rapat dibagikan melalui grup koordinasi'),
+        'hybrid' => ($agenda->lokasi_ruang ?? 'Ruang Rapat LLDIKTI Wilayah X') . ' (Hybrid / Luring & Daring)',
+        default => $agenda->lokasi_ruang ?? 'Ruang Rapat Utama LLDIKTI Wilayah X',
+    };
+    $resolvedDetails = $eventDetails ?? [
+        'hari_tanggal' => trim((string) ($config['hari_tanggal_text'] ?? '')) !== '' ? trim((string) $config['hari_tanggal_text']) : $defaultHariTanggal,
+        'pukul' => trim((string) ($config['pukul_text'] ?? '')) !== '' ? trim((string) $config['pukul_text']) : $defaultPukul,
+        'tempat' => trim((string) ($config['tempat_text'] ?? '')) !== '' ? trim((string) $config['tempat_text']) : $defaultTempat,
+        'acara' => trim((string) ($config['acara_text'] ?? '')) !== '' ? trim((string) $config['acara_text']) : (string) $agenda->judul_rapat,
+    ];
+    $lampiranTitle = trim((string) ($config['lampiran_title'] ?? 'Daftar Undangan')) ?: 'Daftar Undangan';
 
     $hasLampiranPage = !empty($config['show_lampiran']) || (!empty($config['lampiran']) && trim((string) $config['lampiran']) !== '-');
 @endphp
@@ -341,10 +369,10 @@
         <div class="edaran-title">
             <h2>SURAT EDARAN</h2>
             <div class="edaran-nomor">NOMOR {{ $config['nomor_surat'] }}</div>
-            <div class="edaran-tentang">TENTANG<br>{{ $config['perihal'] }}</div>
+            <div class="edaran-tentang">TENTANG<br>{!! nl2br(e($config['perihal'])) !!}</div>
         </div>
 
-        <div style="margin-bottom: 10pt;">
+        <div style="margin: 10pt 0 22pt 0;">
             <div>Yth. {!! nl2br(e($tujuanFormatted)) !!}</div>
         </div>
 
@@ -374,8 +402,10 @@
                     <div>pada tanggal {{ $config['tanggal_surat'] ?? now()->translatedFormat('d F Y') }}</div>
                     <div style="margin-top: 4pt;">{{ $signerRoleClean }},</div>
                     <div class="signature-space">
-                        @if(!empty($config['show_signature']))
+                        @if($signatureMode === 'stamp')
                             <div class="stamp-mark">Tanda Tangan Digital Tersertifikasi SIPERAPAT</div>
+                        @elseif($signatureMode === 'tte_placeholder')
+                            <div class="tte-placeholder">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${ttd_pengirim}</div>
                         @endif
                     </div>
                     <div>{{ $signerNameClean }}</div>
@@ -388,7 +418,7 @@
                     @endif
                 </td>
                 <td style="width: 44.5%;">
-                    <div>NIP <strong>{{ $signerNipClean }}</strong></div>
+                    <div style="font-weight: normal;">NIP {{ $signerNipClean }}</div>
                 </td>
             </tr>
             @if(!empty($config['tembusan']))
@@ -418,12 +448,12 @@
             <tr>
                 <td style="width: 13.5%;">Hal</td>
                 <td style="width: 3.1%;">:</td>
-                <td colspan="2" style="width: 83.4%; text-align: justify;">{{ $config['perihal'] }}</td>
+                <td colspan="2" style="width: 83.4%; text-align: justify;">{!! nl2br(e($config['perihal'])) !!}</td>
             </tr>
         </table>
 
-        {{-- Tujuan Surat (P#2: Yth. ......... rata kiri-kanan sejajar margin kiri) --}}
-        <div style="margin: 12pt 0 12pt 0; text-align: justify;">
+        {{-- Tujuan Surat (P#2: Yth. ......... rata kiri-kanan sejajar margin kiri, jeda 2 baris ke pembuka) --}}
+        <div style="margin: 10pt 0 22pt 0; text-align: justify;">
             <div>Yth. {!! nl2br(e($tujuanFormatted)) !!}</div>
         </div>
 
@@ -438,38 +468,27 @@
             </p>
         @endif
 
-        {{-- Tabel Rincian Acara (TBL#8: 3 kolom, label huruf kecil semua) --}}
+        {{-- Tabel Rincian Acara (TBL#8: 3 kolom 17.2% | 2.6% | 80.2%, label huruf kecil semua) --}}
         <table class="detail-table">
             <tr>
-                <td style="width: 17.6%;">hari, tanggal</td>
+                <td style="width: 17.2%;">hari, tanggal</td>
                 <td style="width: 2.6%;">:</td>
-                <td style="width: 79.8%;">{{ $agenda->waktu_mulai ? $agenda->waktu_mulai->translatedFormat('l, d F Y') : '-' }}</td>
+                <td style="width: 80.2%;">{{ $resolvedDetails['hari_tanggal'] }}</td>
             </tr>
             <tr>
-                <td style="width: 17.6%;">pukul</td>
+                <td style="width: 17.2%;">pukul</td>
                 <td style="width: 2.6%;">:</td>
-                <td style="width: 79.8%;">
-                    {{ $agenda->waktu_mulai ? $agenda->waktu_mulai->format('H.i') : '-' }}
-                    {{ $agenda->waktu_selesai ? 's.d. ' . $agenda->waktu_selesai->format('H.i') . ' WIB' : 'WIB s.d. selesai' }}
-                </td>
+                <td style="width: 80.2%;">{{ $resolvedDetails['pukul'] }}</td>
             </tr>
             <tr>
-                <td style="width: 17.6%;">tempat</td>
+                <td style="width: 17.2%;">tempat</td>
                 <td style="width: 2.6%;">:</td>
-                <td style="width: 79.8%;">
-                    @if($agenda->tipe_rapat === 'online')
-                        Daring (Online Meeting) &mdash; {{ $agenda->link_meeting ?? 'Tautan rapat dibagikan melalui grup koordinasi' }}
-                    @elseif($agenda->tipe_rapat === 'hybrid')
-                        {{ $agenda->lokasi_ruang ?? 'Ruang Rapat LLDIKTI Wilayah X' }} (Hybrid / Luring &amp; Daring)
-                    @else
-                        {{ $agenda->lokasi_ruang ?? 'Ruang Rapat Utama LLDIKTI Wilayah X' }}
-                    @endif
-                </td>
+                <td style="width: 80.2%;">{{ $resolvedDetails['tempat'] }}</td>
             </tr>
             <tr>
-                <td style="width: 17.6%;">acara</td>
+                <td style="width: 17.2%;">acara</td>
                 <td style="width: 2.6%;">:</td>
-                <td style="width: 79.8%;">{{ $agenda->judul_rapat }}</td>
+                <td style="width: 80.2%;">{{ $resolvedDetails['acara'] }}</td>
             </tr>
         </table>
 
@@ -503,8 +522,10 @@
                 <td style="width: 44.5%;">
                     <div>{{ $signerRoleClean }},</div>
                     <div class="signature-space">
-                        @if(!empty($config['show_signature']))
+                        @if($signatureMode === 'stamp')
                             <div class="stamp-mark">Tanda Tangan Digital Tersertifikasi SIPERAPAT</div>
+                        @elseif($signatureMode === 'tte_placeholder')
+                            <div class="tte-placeholder">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${ttd_pengirim}</div>
                         @endif
                     </div>
                     <div>{{ $signerNameClean }}</div>
@@ -517,7 +538,7 @@
                     @endif
                 </td>
                 <td style="width: 44.5%;">
-                    <div>NIP <strong>{{ $signerNipClean }}</strong></div>
+                    <div style="font-weight: normal;">NIP {{ $signerNipClean }}</div>
                 </td>
             </tr>
             @if(!empty($config['tembusan']))
@@ -533,9 +554,8 @@
     {{-- ================= HALAMAN 2: LAMPIRAN SURAT — DAFTAR UNDANGAN ================= --}}
     @if($hasLampiranPage && !empty($config['lampiran_content']))
         <div class="page-break"></div>
-        <div class="page-2-header">- 2 -</div>
 
-        <div style="font-family: Arial, Helvetica, sans-serif; font-size: 12pt; line-height: 1.15;">
+        <div style="font-family: Arial, Helvetica, sans-serif; font-size: 12pt; line-height: 1.15; margin-top: 14pt;">
             <div>Lampiran Surat</div>
             <table class="lampiran-meta-table">
                 <tr>
@@ -550,7 +570,7 @@
                 </tr>
             </table>
 
-            <div style="margin: 12pt 0 8pt 0;">Daftar Undangan</div>
+            <div style="margin: 16pt 0 10pt 0;">{{ $lampiranTitle }}</div>
 
             <div class="prose-content">
                 {!! $config['lampiran_content'] !!}

@@ -917,9 +917,15 @@ class Agenda extends Model
             'signer_role' => 'Kepala',
             'signer_name' => 'Afdalisma',
             'signer_nip' => '197012051992032002',
-            'show_signature' => true,
+            'signature_mode' => 'blank',
+            'show_signature' => false,
+            'hari_tanggal_text' => '',
+            'pukul_text' => '',
+            'tempat_text' => '',
+            'acara_text' => '',
             'tembusan' => "1. Sekretaris Direktorat Jenderal Pendidikan Tinggi, Sains, dan Teknologi\n2. Pertinggal",
             'show_lampiran' => false,
+            'lampiran_title' => 'Daftar Undangan',
             'lampiran_content' => $defaultLampiranList,
         ];
     }
@@ -954,6 +960,17 @@ class Agenda extends Model
         }
         if (($resolved['signer_nip'] ?? '') === '196909281994032001' || ($resolved['signer_nip'] ?? '') === '-') {
             $resolved['signer_nip'] = '197012051992032002';
+        }
+
+        if (! array_key_exists('signature_mode', $stored)) {
+            $resolved['signature_mode'] = ! empty($stored['show_signature']) ? 'stamp' : 'blank';
+        } elseif (! in_array($resolved['signature_mode'], ['blank', 'stamp', 'tte_placeholder'], true)) {
+            $resolved['signature_mode'] = 'blank';
+        }
+        $resolved['show_signature'] = $resolved['signature_mode'] !== 'blank';
+
+        if (trim((string) ($resolved['lampiran_title'] ?? '')) === '') {
+            $resolved['lampiran_title'] = 'Daftar Undangan';
         }
 
         return $resolved;

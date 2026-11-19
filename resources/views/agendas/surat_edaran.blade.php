@@ -6,7 +6,7 @@
 
 @section('content')
 @php
-    $defaultBundledLogoUrl = asset('images/tut-wuri-handayani.png');
+    $defaultBundledLogoUrl = asset('images/tut-wuri-handayani-kop.png');
     $hasCustomLogo = !empty($config['custom_logo_path']) && Storage::disk('public')->exists($config['custom_logo_path']);
     $currentSavedLogoUrl = $hasCustomLogo
         ? Storage::disk('public')->url($config['custom_logo_path'])
@@ -15,7 +15,11 @@
     $activeTemplateType = old('template_type', $config['template_type'] ?? 'undangan');
     $activeShowKop = (bool) old('show_kop', ($config['show_kop'] ?? true) ? '1' : '0');
     $activeShowLogo = (bool) old('show_logo', ($config['show_logo'] ?? true) ? '1' : '0');
-    $activeShowSignature = (bool) old('show_signature', ($config['show_signature'] ?? true) ? '1' : '0');
+    $activeSignatureMode = (string) old('signature_mode', $config['signature_mode'] ?? (!empty($config['show_signature']) ? 'stamp' : 'blank'));
+    if (!in_array($activeSignatureMode, ['blank', 'stamp', 'tte_placeholder'], true)) {
+        $activeSignatureMode = 'blank';
+    }
+    $activeShowSignature = $activeSignatureMode !== 'blank';
 
     $instansiIndukRaw = trim((string) old('instansi_induk', $config['instansi_induk'] ?? "KEMENTERIAN PENDIDIKAN TINGGI,\nSAINS, DAN TEKNOLOGI"));
     if ($instansiIndukRaw === 'KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI') {
@@ -39,6 +43,22 @@
     $tujuanRaw = trim((string) old('tujuan_surat', $config['tujuan_surat'] ?? ''));
     $tujuanFormatted = preg_replace('/^Yth\.?\s*/i', '', $tujuanRaw);
 
+    $defaultHariTanggalText = $agenda->waktu_mulai ? $agenda->waktu_mulai->translatedFormat('l, d F Y') : '-';
+    $defaultPukulText = $agenda->waktu_mulai
+        ? ($agenda->waktu_mulai->format('H.i') . ' ' . ($agenda->waktu_selesai ? 's.d. ' . $agenda->waktu_selesai->format('H.i') . ' WIB' : 'WIB s.d. selesai'))
+        : '-';
+    $defaultTempatText = $agenda->tipe_rapat === 'online'
+        ? ('Daring (Online Meeting) — ' . ($agenda->link_meeting ?? 'Tautan rapat dibagikan melalui grup koordinasi'))
+        : ($agenda->tipe_rapat === 'hybrid'
+            ? (($agenda->lokasi_ruang ?? 'Ruang Rapat LLDIKTI Wilayah X') . ' (Hybrid / Luring & Daring)')
+            : ($agenda->lokasi_ruang ?? 'Ruang Rapat Utama LLDIKTI Wilayah X'));
+    $defaultAcaraText = $agenda->judul_rapat;
+
+    $hariTanggalTextVal = (string) old('hari_tanggal_text', $config['hari_tanggal_text'] ?? '');
+    $pukulTextVal = (string) old('pukul_text', $config['pukul_text'] ?? '');
+    $tempatTextVal = (string) old('tempat_text', $config['tempat_text'] ?? '');
+    $acaraTextVal = (string) old('acara_text', $config['acara_text'] ?? '');
+
     $pembukaVal = (string) old('pembuka', $config['pembuka'] ?? '');
     $suratContentVal = (string) old('surat_edaran_content', $agenda->surat_edaran_content ?? '');
     $catatanVal = (string) old('catatan', $config['catatan'] ?? '');
@@ -50,11 +70,14 @@
     $tembusanVal = (string) old('tembusan', $config['tembusan'] ?? '');
 
     $showLampiranSheet = (bool) old('show_lampiran', (!empty($config['show_lampiran']) || (!empty($lampiranVal) && trim($lampiranVal) !== '-')) ? '1' : '0');
+    $lampiranTitleVal = (string) old('lampiran_title', $config['lampiran_title'] ?? 'Daftar Undangan');
     $lampiranContentVal = (string) old('lampiran_content', $config['lampiran_content'] ?? '');
 @endphp
 <div
     id="surat-edaran-workstation"
     class="space-y-4"
+    data-agenda-id="{{ $agenda->id }}"
+    data-updated-at="{{ $agenda->updated_at?->toIso8601String() ?? '' }}"
     data-agenda-title="{{ $agenda->judul_rapat }}"
     data-default-logo-src="{{ $defaultBundledLogoUrl }}"
     data-current-logo-src="{{ $currentSavedLogoUrl }}"
@@ -162,16 +185,43 @@
                 </div>
             </div>
 
+            <!-- Inline AJAX Save Status & Draft Action -->
+            <span id="surat-top-save-status" class="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 px-2"></span>
+            <button
+                type="button"
+                id="btn-surat-save-draft-ajax"
+                class="button secondary flex items-center gap-1.5 text-xs font-bold shadow-2xs cursor-pointer border-slate-300 hover:bg-slate-100 text-slate-800 min-h-[40px]"
+                title="Simpan naskah sementara ke server tanpa keluar dari editor"
+            >
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                <span>Simpan Draf</span>
+            </button>
+
             <!-- Primary Save Action -->
             <button
                 type="submit"
                 form="surat-edaran-form"
-                class="button flex items-center gap-2 text-xs font-bold shadow-xs cursor-pointer bg-slate-900 hover:bg-slate-800 text-white"
+                class="button flex items-center gap-2 text-xs font-bold shadow-xs cursor-pointer bg-slate-900 hover:bg-slate-800 text-white min-h-[40px]"
                 title="Simpan seluruh naskah surat dan pengaturan dokumen dinas (Shortcut: Ctrl+S)"
             >
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                 <span>Simpan Naskah</span>
             </button>
+        </div>
+    </div>
+
+    <!-- Inline Local Draft Recovery Banner (Non-intrusive, zero browser alert/confirm) -->
+    <div id="surat-local-draft-banner" class="hidden p-3.5 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-950 flex flex-wrap items-center justify-between gap-3 shadow-2xs" role="status">
+        <div class="flex items-start gap-2.5 min-w-0 flex-1">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-700 shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <div>
+                <div class="font-bold">Draf Lokal Naskah Dinas Ditemukan</div>
+                <p class="text-[11px] text-amber-800 mt-0.5">Terdapat suntingan naskah yang belum tersimpan ke server pada perangkat ini.</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+            <button type="button" id="btn-surat-discard-local-draft" class="px-3 py-2 rounded-lg text-[11px] font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 transition cursor-pointer min-h-[38px]">Abaikan</button>
+            <button type="button" id="btn-surat-restore-local-draft" class="px-3 py-2 rounded-lg text-[11px] font-bold text-white bg-slate-900 hover:bg-slate-800 transition cursor-pointer min-h-[38px]">Pulihkan Draf Lokal</button>
         </div>
     </div>
 
@@ -280,7 +330,7 @@
             </button>
         </div>
 
-        <!-- Insert Table & Utilities -->
+        <!-- Insert Table, Link & Contextual Table Controls -->
         <div class="word-btn-group relative">
             <button type="button" class="word-btn" data-command="blockquote" title="Kutipan">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/></svg>
@@ -288,6 +338,21 @@
             <button type="button" class="word-btn" data-command="insertHorizontalRule" title="Garis Batas Horizontal">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" x2="21" y1="12" y2="12"/></svg>
             </button>
+            <button type="button" class="word-btn" data-action="insertLink" title="Sisipkan atau Edit Tautan (URL)">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            </button>
+            <div id="surat-link-popover" class="hidden absolute top-full left-0 mt-1.5 z-50 w-72 bg-white border border-slate-300 rounded-xl shadow-lg p-3 space-y-2">
+                <div class="text-[11px] font-bold text-slate-900">Sisipkan Tautan Resmi</div>
+                <input type="url" id="surat-link-url-input" placeholder="https://contoh.go.id" class="w-full text-xs rounded-lg border-slate-300 focus:border-slate-900 focus:ring-slate-900 py-1.5 px-2.5">
+                <div id="surat-link-error" class="hidden text-[10px] font-semibold text-rose-700">Gunakan tautan diawali http:// atau https://</div>
+                <div class="flex items-center justify-between gap-1.5 pt-1">
+                    <button type="button" id="surat-link-unlink-btn" class="px-2.5 py-1.5 text-[11px] font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg cursor-pointer">Hapus Tautan</button>
+                    <div class="flex items-center gap-1.5">
+                        <button type="button" id="surat-link-cancel-btn" class="px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer">Batal</button>
+                        <button type="button" id="surat-link-apply-btn" class="px-3 py-1.5 text-[11px] font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-lg cursor-pointer">Terapkan</button>
+                    </div>
+                </div>
+            </div>
             <button type="button" class="word-btn" data-action="openTablePicker" title="Sisipkan Tabel">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><line x1="3" x2="21" y1="9" y2="9"/><line x1="3" x2="21" y1="15" y2="15"/><line x1="9" x2="9" y1="3" y2="21"/><line x1="15" x2="15" y1="3" y2="21"/></svg>
             </button>
@@ -295,6 +360,26 @@
                 <div class="word-table-grid" id="surat-table-grid"></div>
                 <div class="word-table-picker-label" id="surat-table-label">0 × 0 Tabel</div>
             </div>
+        </div>
+
+        <!-- Contextual Table Row/Column Controls -->
+        <div id="surat-table-context-group" class="word-btn-group hidden">
+            <button type="button" class="word-btn !w-auto px-1.5 gap-1 text-[10px] font-bold" data-action="tableAddRow" title="Tambah Baris di Bawah">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span>Baris</span>
+            </button>
+            <button type="button" class="word-btn !w-auto px-1.5 gap-1 text-[10px] font-bold text-rose-700" data-action="tableRemoveRow" title="Hapus Baris Aktif">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span>Baris</span>
+            </button>
+            <button type="button" class="word-btn !w-auto px-1.5 gap-1 text-[10px] font-bold" data-action="tableAddCol" title="Tambah Kolom di Kanan">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span>Kolom</span>
+            </button>
+            <button type="button" class="word-btn !w-auto px-1.5 gap-1 text-[10px] font-bold text-rose-700" data-action="tableRemoveCol" title="Hapus Kolom Aktif">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span>Kolom</span>
+            </button>
         </div>
 
         <div class="h-5 w-px bg-slate-300 mx-0.5 hidden sm:block"></div>
@@ -339,6 +424,10 @@
         <input type="hidden" name="tempat_surat" id="form-tempat-surat" value="{{ $tempatSuratVal }}">
         <input type="hidden" name="tanggal_surat" id="form-tanggal-surat" value="{{ $tanggalSuratVal }}">
         <input type="hidden" name="tujuan_surat" id="form-tujuan-surat" value="{{ $tujuanFormatted }}">
+        <input type="hidden" name="hari_tanggal_text" id="form-hari-tanggal-text" value="{{ $hariTanggalTextVal }}">
+        <input type="hidden" name="pukul_text" id="form-pukul-text" value="{{ $pukulTextVal }}">
+        <input type="hidden" name="tempat_text" id="form-tempat-text" value="{{ $tempatTextVal }}">
+        <input type="hidden" name="acara_text" id="form-acara-text" value="{{ $acaraTextVal }}">
 
         <input type="hidden" name="pembuka" id="form-pembuka" value="{{ $pembukaVal }}">
         <input type="hidden" name="surat_edaran_content" id="form-surat-content" value="{{ $suratContentVal }}">
@@ -348,11 +437,13 @@
         <input type="hidden" name="signer_role" id="form-signer-role" value="{{ $signerRoleClean }}">
         <input type="hidden" name="signer_name" id="form-signer-name" value="{{ $signerNameClean }}">
         <input type="hidden" name="signer_nip" id="form-signer-nip" value="{{ $signerNipClean }}">
+        <input type="hidden" name="signature_mode" id="form-signature-mode" value="{{ $activeSignatureMode }}">
         <input type="hidden" name="show_signature" id="form-show-signature" value="{{ $activeShowSignature ? '1' : '0' }}">
         <input type="hidden" name="tembusan" id="form-tembusan" value="{{ $tembusanVal }}">
 
         <!-- Lampiran Halaman 2 Settings -->
         <input type="hidden" name="show_lampiran" id="form-show-lampiran" value="{{ $showLampiranSheet ? '1' : '0' }}">
+        <input type="hidden" name="lampiran_title" id="form-lampiran-title" value="{{ $lampiranTitleVal }}">
         <input type="hidden" name="lampiran_content" id="form-lampiran-content" value="{{ $lampiranContentVal }}">
 
         <!-- Kop Settings -->
@@ -382,15 +473,15 @@
             <div id="surat-sheet-page-1" class="office-paper-sheet paper-a4" data-paper-format="a4" data-page-number="1">
                 <div class="office-paper-margin-guide">
 
-                    {{-- KOP SURAT RESMI (word/header3.xml: Times New Roman 16pt Reguler / 14pt Bold / 12pt Reguler + Garis Tunggal 2.25pt) --}}
-                    <div id="sheet-kop-container" style="{{ $activeShowKop ? '' : 'display: none;' }}; margin-bottom: 14pt;">
+                    {{-- KOP SURAT RESMI (word/header3.xml: 182.5mm lebar penuh, logo monokrom 36.67mm x 39.19mm, Times New Roman 16/14/12pt + Garis 2.25pt) --}}
+                    <div id="sheet-kop-container" class="surat-kop-bleed" style="{{ $activeShowKop ? '' : 'display: none;' }}">
                         <div class="header-kop" id="sheet-header-kop" style="display: {{ $activeShowKop ? 'block' : 'none' }}; margin: 0; padding: 0; text-align: center; width: 100%; font-family: 'Times New Roman', Times, serif;">
                             <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; border-collapse: collapse; border-bottom: 2.25pt solid #000000; margin: 0; padding: 0;">
                                 <tr>
-                                    <td id="sheet-logo-cell" width="{{ $activeShowLogo ? '19.7%' : '0%' }}" align="center" valign="middle" style="width: {{ $activeShowLogo ? '19.7%' : '0%' }}; display: {{ $activeShowLogo ? 'table-cell' : 'none' }}; text-align: center; vertical-align: middle; border: none; padding: 0 4pt 4pt 0;">
-                                        <img id="sheet-logo-img" src="{{ $currentSavedLogoUrl }}" alt="Logo Instansi" style="width: 98px; height: auto; max-height: 105px; display: {{ $activeShowLogo ? 'block' : 'none' }}; margin: 0 auto; border: none;">
+                                    <td id="sheet-logo-cell" width="{{ $activeShowLogo ? '19.74%' : '0%' }}" align="center" valign="middle" style="width: {{ $activeShowLogo ? '19.74%' : '0%' }}; display: {{ $activeShowLogo ? 'table-cell' : 'none' }}; text-align: center; vertical-align: middle; border: none; padding: 0 4pt 4pt 0;">
+                                        <img id="sheet-logo-img" src="{{ $currentSavedLogoUrl }}" alt="Logo Instansi" onerror="this.onerror=null;this.src='{{ asset('images/tut-wuri-handayani.png') }}';" style="width: 36.67mm; height: 39.19mm; object-fit: contain; display: {{ $activeShowLogo ? 'block' : 'none' }}; margin: 0 auto; border: none;">
                                     </td>
-                                    <td id="sheet-kop-text-cell" width="{{ $activeShowLogo ? '80.3%' : '100%' }}" align="center" valign="middle" style="width: {{ $activeShowLogo ? '80.3%' : '100%' }}; text-align: center; vertical-align: middle; border: none; padding: 0 0 4pt 0; font-family: 'Times New Roman', Times, serif;">
+                                    <td id="sheet-kop-text-cell" width="{{ $activeShowLogo ? '80.26%' : '100%' }}" align="center" valign="middle" style="width: {{ $activeShowLogo ? '80.26%' : '100%' }}; text-align: center; vertical-align: middle; border: none; padding: 0 0 4pt 0; font-family: 'Times New Roman', Times, serif;">
                                         <div id="sheet-instansi-induk" style="margin: 0; padding: 0; font-size: 16pt; line-height: 1.08; font-weight: normal; text-transform: uppercase; font-family: 'Times New Roman', Times, serif;">
                                             @foreach($instansiIndukLines as $idx => $line)
                                                 @if($idx > 0)<br>@endif{{ $line }}
@@ -428,12 +519,12 @@
                             <tr>
                                 <td style="width: 13.5%; vertical-align: top; border: none; padding: 1pt 0;">Hal</td>
                                 <td style="width: 3.1%; vertical-align: top; border: none; padding: 1pt 0;">:</td>
-                                <td colspan="2" style="width: 83.4%; vertical-align: top; border: none; padding: 1pt 0; text-align: justify;" id="sheet-perihal">{{ $perihalVal }}</td>
+                                <td colspan="2" style="width: 83.4%; vertical-align: top; border: none; padding: 1pt 0; text-align: justify;" id="sheet-perihal">{!! nl2br(e($perihalVal)) !!}</td>
                             </tr>
                         </table>
 
-                        <!-- Alamat Tujuan (P#2: Yth. ......... rata kiri-kanan sejajar margin kiri) -->
-                        <div style="margin: 12pt 0 12pt 0; font-family: Arial, Helvetica, sans-serif; font-size: 12pt; line-height: 1.15; text-align: justify;">
+                        <!-- Alamat Tujuan (P#2: Yth. ......... rata kiri-kanan sejajar margin kiri, jarak 2 baris kosong ke pembuka) -->
+                        <div style="margin: 10pt 0 22pt 0; font-family: Arial, Helvetica, sans-serif; font-size: 12pt; line-height: 1.15; text-align: justify;">
                             <span>Yth. </span><span id="sheet-tujuan-surat">{!! nl2br(e($tujuanFormatted)) !!}</span>
                         </div>
 
@@ -449,38 +540,27 @@
                             >{!! $pembukaVal !!}</div>
                         </div>
 
-                        <!-- Tabel Rincian Pelaksanaan Rapat (TBL#8: 3 kolom, label huruf kecil semua) -->
+                        <!-- Tabel Rincian Pelaksanaan Rapat (TBL#8: 17.2% | 2.6% | 80.2%, tinggi baris ~21pt) -->
                         <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 6pt 0 10pt 0; border: none; font-family: Arial, Helvetica, sans-serif; font-size: 12pt; line-height: 1.15;">
-                            <tr>
-                                <td style="width: 17.6%; vertical-align: top; border: none; padding: 1.5pt 0;">hari, tanggal</td>
-                                <td style="width: 2.6%; vertical-align: top; border: none; padding: 1.5pt 0;">:</td>
-                                <td style="width: 79.8%; vertical-align: top; border: none; padding: 1.5pt 0;">{{ $agenda->waktu_mulai ? $agenda->waktu_mulai->translatedFormat('l, d F Y') : '-' }}</td>
+                            <tr style="height: 21pt;">
+                                <td style="width: 17.2%; vertical-align: top; border: none; padding: 4pt 0;">hari, tanggal</td>
+                                <td style="width: 2.6%; vertical-align: top; border: none; padding: 4pt 0;">:</td>
+                                <td style="width: 80.2%; vertical-align: top; border: none; padding: 4pt 0;" id="sheet-detail-hari-tanggal" data-default="{{ $defaultHariTanggalText }}">{{ trim($hariTanggalTextVal) !== '' ? $hariTanggalTextVal : $defaultHariTanggalText }}</td>
                             </tr>
-                            <tr>
-                                <td style="width: 17.6%; vertical-align: top; border: none; padding: 1.5pt 0;">pukul</td>
-                                <td style="width: 2.6%; vertical-align: top; border: none; padding: 1.5pt 0;">:</td>
-                                <td style="width: 79.8%; vertical-align: top; border: none; padding: 1.5pt 0;">
-                                    {{ $agenda->waktu_mulai ? $agenda->waktu_mulai->format('H.i') : '-' }}
-                                    {{ $agenda->waktu_selesai ? 's.d. ' . $agenda->waktu_selesai->format('H.i') . ' WIB' : 'WIB s.d. selesai' }}
-                                </td>
+                            <tr style="height: 21pt;">
+                                <td style="width: 17.2%; vertical-align: top; border: none; padding: 4pt 0;">pukul</td>
+                                <td style="width: 2.6%; vertical-align: top; border: none; padding: 4pt 0;">:</td>
+                                <td style="width: 80.2%; vertical-align: top; border: none; padding: 4pt 0;" id="sheet-detail-pukul" data-default="{{ $defaultPukulText }}">{{ trim($pukulTextVal) !== '' ? $pukulTextVal : $defaultPukulText }}</td>
                             </tr>
-                            <tr>
-                                <td style="width: 17.6%; vertical-align: top; border: none; padding: 1.5pt 0;">tempat</td>
-                                <td style="width: 2.6%; vertical-align: top; border: none; padding: 1.5pt 0;">:</td>
-                                <td style="width: 79.8%; vertical-align: top; border: none; padding: 1.5pt 0;">
-                                    @if($agenda->tipe_rapat === 'online')
-                                        Daring (Online Meeting) &mdash; {{ $agenda->link_meeting ?? 'Tautan rapat dibagikan melalui grup koordinasi' }}
-                                    @elseif($agenda->tipe_rapat === 'hybrid')
-                                        {{ $agenda->lokasi_ruang ?? 'Ruang Rapat LLDIKTI Wilayah X' }} (Hybrid / Luring &amp; Daring)
-                                    @else
-                                        {{ $agenda->lokasi_ruang ?? 'Ruang Rapat Utama LLDIKTI Wilayah X' }}
-                                    @endif
-                                </td>
+                            <tr style="height: 21pt;">
+                                <td style="width: 17.2%; vertical-align: top; border: none; padding: 4pt 0;">tempat</td>
+                                <td style="width: 2.6%; vertical-align: top; border: none; padding: 4pt 0;">:</td>
+                                <td style="width: 80.2%; vertical-align: top; border: none; padding: 4pt 0;" id="sheet-detail-tempat" data-default="{{ $defaultTempatText }}">{{ trim($tempatTextVal) !== '' ? $tempatTextVal : $defaultTempatText }}</td>
                             </tr>
-                            <tr>
-                                <td style="width: 17.6%; vertical-align: top; border: none; padding: 1.5pt 0;">acara</td>
-                                <td style="width: 2.6%; vertical-align: top; border: none; padding: 1.5pt 0;">:</td>
-                                <td style="width: 79.8%; vertical-align: top; border: none; padding: 1.5pt 0;">{{ $agenda->judul_rapat }}</td>
+                            <tr style="height: 21pt;">
+                                <td style="width: 17.2%; vertical-align: top; border: none; padding: 4pt 0;">acara</td>
+                                <td style="width: 2.6%; vertical-align: top; border: none; padding: 4pt 0;">:</td>
+                                <td style="width: 80.2%; vertical-align: top; border: none; padding: 4pt 0;" id="sheet-detail-acara" data-default="{{ $defaultAcaraText }}">{{ trim($acaraTextVal) !== '' ? $acaraTextVal : $defaultAcaraText }}</td>
                             </tr>
                         </table>
 
@@ -546,16 +626,17 @@
                         </div>
                     </div>
 
-                    {{-- AREA PENGESAHAN & TEMBUSAN (P#14–22: Kepala, | TTD | Afdalisma | Tembusan: sejajar NIP <bold>197012051992032002</bold>) --}}
+                    {{-- AREA PENGESAHAN & TEMBUSAN (P#14-22: 55.5%, blank/stamp/tte_placeholder, NIP Normal non-bold sejajar Tembusan:) --}}
                     <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 14pt; border: none; font-family: Arial, Helvetica, sans-serif; font-size: 12pt; line-height: 1.15; page-break-inside: avoid;">
                         <tr>
                             <td style="width: 55.5%; vertical-align: top; border: none;"></td>
                             <td style="width: 44.5%; vertical-align: top; border: none;">
                                 <div><span id="sheet-signer-role">{{ $signerRoleClean }}</span>,</div>
-                                <div style="height: 48pt; display: flex; align-items: center;">
-                                    <div id="sheet-signature-badge" class="stamp-mark" style="border: 1.5px solid #1e3a8a; color: #1e3a8a; padding: 2px 8px; border-radius: 4px; font-size: 8pt; font-family: Arial, Helvetica, sans-serif; font-weight: bold; text-transform: uppercase; {{ $activeShowSignature ? '' : 'display: none;' }}">
+                                <div style="height: 56pt; display: flex; align-items: center;">
+                                    <div id="sheet-signature-badge" class="stamp-mark" style="border: 1.5px solid #1e3a8a; color: #1e3a8a; padding: 2px 8px; border-radius: 4px; font-size: 8pt; font-family: Arial, Helvetica, sans-serif; font-weight: bold; text-transform: uppercase; {{ $activeSignatureMode === 'stamp' ? '' : 'display: none;' }}">
                                         Tanda Tangan Digital Tersertifikasi SIPERAPAT
                                     </div>
+                                    <span id="sheet-signature-tte" style="font-size: 12pt; font-family: Arial, Helvetica, sans-serif; font-weight: normal; color: #000000; {{ $activeSignatureMode === 'tte_placeholder' ? '' : 'display: none;' }}">${ttd_pengirim}</span>
                                 </div>
                                 <div id="sheet-signer-name" style="font-weight: normal; text-decoration: none;">{{ $signerNameClean }}</div>
                             </td>
@@ -565,7 +646,7 @@
                                 <div id="sheet-tembusan-label" style="{{ trim($tembusanVal) !== '' ? '' : 'display: none;' }}; font-size: 12pt; font-weight: normal;">Tembusan:</div>
                             </td>
                             <td style="width: 44.5%; vertical-align: top; border: none;">
-                                <div>NIP <strong id="sheet-signer-nip" style="font-weight: bold;">{{ $signerNipClean }}</strong></div>
+                                <div style="font-weight: normal;">NIP <span id="sheet-signer-nip" style="font-weight: normal;">{{ $signerNipClean }}</span></div>
                             </td>
                         </tr>
                         <tr id="sheet-tembusan-block" style="{{ trim($tembusanVal) !== '' ? '' : 'display: none;' }}">
@@ -593,14 +674,14 @@
 
                 <div id="surat-sheet-page-2" class="office-paper-sheet paper-a4" data-paper-format="a4" data-page-number="2">
                     <div class="office-paper-margin-guide" style="font-family: Arial, Helvetica, sans-serif; font-size: 12pt; line-height: 1.15; color: #000000;">
-                        {{-- Running Header Halaman 2 (word/header1.xml: "- 2 -" Times New Roman 12pt Center) --}}
-                        <div style="text-align: center; font-family: 'Times New Roman', Times, serif; font-size: 12pt; font-weight: normal; margin: 0 0 18pt 0;">
-                            - 2 -
+                        {{-- Running Header Halaman 2 (word/header1.xml: "-2-" Arial 12pt Normal Center) --}}
+                        <div style="text-align: center; font-family: Arial, Helvetica, sans-serif; font-size: 12pt; font-weight: normal; margin: 0 0 18pt 0;">
+                            -2-
                         </div>
 
-                        {{-- Blok Lampiran Surat (P#32 & TBL#33) --}}
+                        {{-- Blok Lampiran Surat (P#32 & TBL#33: 11.1% | 3.1% | 85.8%) --}}
                         <div>Lampiran Surat</div>
-                        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 2pt 0 14pt 0; border: none; font-family: Arial, Helvetica, sans-serif; font-size: 12pt; line-height: 1.15;">
+                        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 2pt 0 18pt 0; border: none; font-family: Arial, Helvetica, sans-serif; font-size: 12pt; line-height: 1.15;">
                             <tr>
                                 <td style="width: 11.1%; vertical-align: top; border: none; padding: 1pt 0;">Nomor</td>
                                 <td style="width: 3.1%; vertical-align: top; border: none; padding: 1pt 0;">:</td>
@@ -613,7 +694,7 @@
                             </tr>
                         </table>
 
-                        <div style="margin: 12pt 0 8pt 0;">Daftar Undangan</div>
+                        <div id="sheet-lampiran-title" style="margin: 14pt 0 8pt 0;">{{ $lampiranTitleVal !== '' ? $lampiranTitleVal : 'Daftar Undangan' }}</div>
 
                         {{-- Isi Daftar Undangan (WYSIWYG Editable) --}}
                         <div>
@@ -796,22 +877,71 @@
                     </div>
                     <div>
                         <label class="text-[11px] font-semibold text-slate-600 block mb-1">Hal</label>
-                        <input type="text" id="modal_perihal" value="{{ $perihalVal }}" class="input text-xs font-medium w-full">
+                        <textarea id="modal_perihal" rows="2" class="input text-xs font-medium w-full">{{ $perihalVal }}</textarea>
                     </div>
                     <div>
                         <label class="text-[11px] font-semibold text-slate-600 block mb-1">Tujuan Surat (Otomatis diawali "Yth. ")</label>
                         <textarea id="modal_tujuan_surat" rows="2" class="input text-xs font-medium w-full">{{ $tujuanFormatted }}</textarea>
                     </div>
+                    <div>
+                        <label class="text-[11px] font-semibold text-slate-600 block mb-1">Judul Lampiran Halaman 2</label>
+                        <input type="text" id="modal_lampiran_title" value="{{ $lampiranTitleVal }}" class="input text-xs font-medium w-full" placeholder="Daftar Undangan">
+                    </div>
+
+                    <!-- Kustomisasi Rincian Jadwal & Acara (Opsional) -->
+                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5">
+                        <div>
+                            <div class="text-xs font-bold text-slate-900">Kustomisasi Rincian Jadwal &amp; Acara (Opsional)</div>
+                            <p class="text-[11px] text-slate-500">Kosongkan kolom di bawah untuk otomatis mengikuti jadwal dan ruang dari data Agenda rapat.</p>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <div>
+                                <label class="text-[11px] font-semibold text-slate-600 block mb-1">hari, tanggal</label>
+                                <input type="text" id="modal_hari_tanggal_text" value="{{ $hariTanggalTextVal }}" placeholder="{{ $defaultHariTanggalText }}" class="input text-xs font-medium w-full bg-white">
+                            </div>
+                            <div>
+                                <label class="text-[11px] font-semibold text-slate-600 block mb-1">pukul</label>
+                                <input type="text" id="modal_pukul_text" value="{{ $pukulTextVal }}" placeholder="{{ $defaultPukulText }}" class="input text-xs font-medium w-full bg-white">
+                            </div>
+                            <div>
+                                <label class="text-[11px] font-semibold text-slate-600 block mb-1">tempat</label>
+                                <input type="text" id="modal_tempat_text" value="{{ $tempatTextVal }}" placeholder="{{ $defaultTempatText }}" class="input text-xs font-medium w-full bg-white">
+                            </div>
+                            <div>
+                                <label class="text-[11px] font-semibold text-slate-600 block mb-1">acara</label>
+                                <input type="text" id="modal_acara_text" value="{{ $acaraTextVal }}" placeholder="{{ $defaultAcaraText }}" class="input text-xs font-medium w-full bg-white">
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- 4. Penandatangan & Tembusan -->
                 <div class="space-y-3 pt-3 border-t border-slate-200">
-                    <div class="flex items-center justify-between">
-                        <label class="text-xs font-bold text-slate-900">Pejabat Penandatangan &amp; Tembusan</label>
-                        <label class="flex items-center gap-1.5 cursor-pointer">
-                            <input type="checkbox" id="modal_show_signature" class="rounded border-slate-300 text-slate-900" {{ $activeShowSignature ? 'checked' : '' }}>
-                            <span class="text-[11px] font-semibold text-slate-700">Tampilkan Tanda Tangan Digital</span>
-                        </label>
+                    <div>
+                        <label class="text-xs font-bold text-slate-900 block mb-1.5">Mode Tanda Tangan Pengesahan</label>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <label class="p-2.5 border rounded-xl flex items-start gap-2 cursor-pointer transition hover:bg-slate-50 border-slate-300 has-checked:border-slate-950 has-checked:bg-slate-50">
+                                <input type="radio" name="modal_signature_mode" value="blank" class="mt-0.5 text-slate-900 focus:ring-slate-900" {{ $activeSignatureMode === 'blank' ? 'checked' : '' }}>
+                                <div>
+                                    <span class="block text-[11px] font-bold text-slate-900">Ruang Kosong TTD Basah</span>
+                                    <span class="block text-[10px] text-slate-500">Standar tanpa gambar/teks</span>
+                                </div>
+                            </label>
+                            <label class="p-2.5 border rounded-xl flex items-start gap-2 cursor-pointer transition hover:bg-slate-50 border-slate-300 has-checked:border-slate-950 has-checked:bg-slate-50">
+                                <input type="radio" name="modal_signature_mode" value="stamp" class="mt-0.5 text-slate-900 focus:ring-slate-900" {{ $activeSignatureMode === 'stamp' ? 'checked' : '' }}>
+                                <div>
+                                    <span class="block text-[11px] font-bold text-slate-900">Lencana Digital SIPERAPAT</span>
+                                    <span class="block text-[10px] text-slate-500">Stempel elektronik internal</span>
+                                </div>
+                            </label>
+                            <label class="p-2.5 border rounded-xl flex items-start gap-2 cursor-pointer transition hover:bg-slate-50 border-slate-300 has-checked:border-slate-950 has-checked:bg-slate-50">
+                                <input type="radio" name="modal_signature_mode" value="tte_placeholder" class="mt-0.5 text-slate-900 focus:ring-slate-900" {{ $activeSignatureMode === 'tte_placeholder' ? 'checked' : '' }}>
+                                <div>
+                                    <span class="block text-[11px] font-bold text-slate-900">Placeholder TTE</span>
+                                    <span class="block text-[10px] text-slate-500">Teks ${ttd_pengirim} Srikandi</span>
+                                </div>
+                            </label>
+                        </div>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
@@ -823,7 +953,7 @@
                             <input type="text" id="modal_signer_name" value="{{ $signerNameClean }}" class="input text-xs font-medium w-full" placeholder="Afdalisma">
                         </div>
                         <div>
-                            <label class="text-[11px] font-semibold text-slate-600 block mb-1">NIP (Dicetak Tebal / Bold)</label>
+                            <label class="text-[11px] font-semibold text-slate-600 block mb-1">NIP Pejabat</label>
                             <input type="text" id="modal_signer_nip" value="{{ $signerNipClean }}" class="input text-xs font-medium w-full" placeholder="197012051992032002">
                         </div>
                     </div>

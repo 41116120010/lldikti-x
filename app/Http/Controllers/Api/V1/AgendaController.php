@@ -249,19 +249,9 @@ class AgendaController extends Controller
             abort(403, 'Anda tidak memiliki hak akses untuk mengunduh surat edaran agenda rapat ini.');
         }
 
-        // Support digital circular fallback streaming
+        // Support digital circular fallback streaming (with automatic template freshness invalidation)
         if ($agenda->is_surat_edaran_digital) {
-            if ($agenda->surat_edaran_path && Storage::disk('public')->exists($agenda->surat_edaran_path)) {
-                return Storage::disk('public')->response(
-                    $agenda->surat_edaran_path,
-                    headers: [
-                        'Content-Type' => 'application/pdf',
-                        'Cache-Control' => 'private, no-cache, no-store, must-revalidate',
-                    ]
-                );
-            }
-
-            $pdfBinary = $suratEdaranService->generatePdf($agenda);
+            $pdfBinary = $suratEdaranService->resolveCachedOrFreshPdfBytes($agenda);
             $filename = 'surat_undangan_' . ($agenda->slug ?? $agenda->id) . '.pdf';
 
             return response($pdfBinary, 200, [

@@ -743,7 +743,7 @@ class AgendaController extends Controller
     /**
      * Update digital circular letter / meeting invitation.
      */
-    public function updateSuratEdaran(UpdateSuratEdaranRequest $request, Agenda $agenda, SuratEdaranService $suratEdaranService): RedirectResponse
+    public function updateSuratEdaran(UpdateSuratEdaranRequest $request, Agenda $agenda, SuratEdaranService $suratEdaranService): RedirectResponse|JsonResponse
     {
         try {
             $agenda->load([
@@ -762,7 +762,26 @@ class AgendaController extends Controller
                 'error' => $e->getMessage(),
             ]);
 
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Terjadi kendala saat menyimpan naskah surat dinas: '.$e->getMessage(),
+                ], 500);
+            }
+
             return back()->withInput()->with('error', 'Terjadi kendala saat menyimpan naskah surat dinas: '.$e->getMessage());
+        }
+
+        if ($request->expectsJson()) {
+            $agenda->refresh();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Naskah surat dinas resmi berhasil disimpan.',
+                'updated_at' => $agenda->updated_at?->toIso8601String(),
+                'saved_at_label' => now()->format('H:i'),
+                'config' => $agenda->resolved_surat_edaran_config,
+            ]);
         }
 
         $redirectRoute = Auth::user()?->isStaff()

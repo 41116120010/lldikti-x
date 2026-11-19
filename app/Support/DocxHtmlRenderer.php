@@ -459,15 +459,18 @@ final class DocxHtmlRenderer
             }
 
             $isVeryLast = $isLast && ($idx === $itemCount - 1) && $nestedLists === [];
+            $itemSpaceAfter = $isVeryLast ? 0.0 : (float) ($options['listSpaceAfterPt'] ?? 2.0);
             $pStyle = self::paragraphStyle(
                 $options,
                 align: self::extractAlignment($li, $options['defaultAlign'] ?? 'both'),
                 spaceBeforePt: 0.0,
-                spaceAfterPt: $isVeryLast ? 0.0 : 2.0
+                spaceAfterPt: $itemSpaceAfter
             );
+            $leftStep = (int) ($options['listLeftStepTwips'] ?? 360);
+            $hanging = (int) ($options['listHangingTwips'] ?? 220);
             $pStyle['indentation'] = [
-                'left' => 360 * ($level + 1),
-                'hanging' => 220,
+                'left' => $leftStep * ($level + 1),
+                'hanging' => $hanging,
             ];
 
             $font = self::applyElementStyles(self::baseFontStyle($options), $li);
