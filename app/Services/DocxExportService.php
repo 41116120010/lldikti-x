@@ -7,9 +7,12 @@ use App\Support\DocumentLayout;
 use App\Support\DocxHtmlRenderer;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
+use PhpOffice\PhpWord\ComplexType\TblWidth as ComplexTblWidth;
+use PhpOffice\PhpWord\Element\Header;
 use PhpOffice\PhpWord\IOFactory;
 use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpWord\Settings;
+use PhpOffice\PhpWord\SimpleType\JcTable;
 use PhpOffice\PhpWord\SimpleType\LineSpacingRule;
 use PhpOffice\PhpWord\SimpleType\TblWidth;
 use RuntimeException;
@@ -87,12 +90,15 @@ class DocxExportService
         );
 
         $document = new PhpWord;
+        $document->setDefaultFontName(DocumentLayout::BODY_FONT);
+        $document->setDefaultFontSize(DocumentLayout::BODY_SIZE_PT);
         $section = $document->addSection();
 
         [$top, $right, $bottom, $left] = array_map(
             DocumentLayout::cm(...),
             DocumentLayout::marginsCm()
         );
+        $hasKop = (bool) ($data['config']['show_kop'] ?? true);
 
         $section->setPageSize('A4');
         // Section::setMargins() is a no-op in this version: the rendered page
@@ -101,10 +107,13 @@ class DocxExportService
         $section->setStyle([
             'pageSizeW' => DocumentLayout::ptToTwips(DocumentLayout::A4_WIDTH_PT),
             'pageSizeH' => DocumentLayout::ptToTwips(DocumentLayout::A4_HEIGHT_PT),
-            'marginTop' => DocumentLayout::cmToTwips($top),
+            'marginTop' => $hasKop
+                ? DocumentLayout::DOCX_FIRST_HEADER_MARGIN_TOP_TWIPS
+                : DocumentLayout::cmToTwips($top),
             'marginRight' => DocumentLayout::cmToTwips($right),
             'marginBottom' => DocumentLayout::cmToTwips($bottom),
             'marginLeft' => DocumentLayout::cmToTwips($left),
+            'headerHeight' => DocumentLayout::DOCX_FIRST_HEADER_HEIGHT_TWIPS,
         ]);
 
         $this->addLetterhead($section, $data);
@@ -148,53 +157,75 @@ class DocxExportService
             return;
         }
 
-        $contentCm = DocumentLayout::contentWidthCm();
-        $logoWidth = $this->logoWidthPt($data);
-        $showLogo = ($config['show_logo'] ?? true) && $logoWidth !== null;
+        $logoDims = $this->logoDimensionsPt($data);
+        $showLogo = ($config['show_logo'] ?? true) && $logoDims !== null;
 
-        $leftCm = $showLogo ? $contentCm * 0.19 : 0.0;
-        $rightCm = $contentCm - $leftCm;
+        $header = $section->addHeader(Header::FIRST);
+        $table = $header->addTable([
+            'unit' => TblWidth::TWIP,
+            'width' => DocumentLayout::KOP_WIDTH_TWIPS,
+            'layout' => 'fixed',
+            'alignment' => JcTable::START,
+            'cellMarginTop' => 0,
+            'cellMarginBottom' => 60,
+            'cellMarginLeft' => 108,
+            'cellMarginRight' => 108,
+        ]);
+        $table->getStyle()->setIndent(new ComplexTblWidth(DocumentLayout::KOP_BLEED_LEFT_TWIPS, TblWidth::TWIP));
 
-        $table = $section->addTable($this->tableStyle());
         $row = $table->addRow(null, $this->rowStyle());
+        $bottomRuleCell = [
+            'borderBottomSize' => DocumentLayout::ptToBorderEighths(DocumentLayout::RULE_WEIGHT_PT),
+            'borderBottomColor' => DocumentLayout::BORDER_COLOR,
+            'vAlign' => 'center',
+        ];
 
-        $logoCell = $row->addCell(DocumentLayout::cmToTwips($leftCm), ['vAlign' => 'center']);
-
-        if ($showLogo && $logoWidth !== null) {
+        if ($showLogo && $logoDims !== null) {
+            $logoCell = $row->addCell(DocumentLayout::KOP_LOGO_COL_TWIPS, $bottomRuleCell);
             $this->embedImage(
                 $logoCell,
                 $data['logoBase64'] ?? null,
                 'png',
-                $logoWidth,
-                DocumentLayout::LOGO_BOX_PT
+                $logoDims['width'],
+                $logoDims['height']
             );
+            $textCell = $row->addCell(DocumentLayout::KOP_TEXT_COL_TWIPS, $bottomRuleCell);
+        } else {
+            $textCell = $row->addCell(DocumentLayout::KOP_WIDTH_TWIPS, $bottomRuleCell);
         }
 
-        $textCell = $row->addCell(DocumentLayout::cmToTwips($rightCm), ['vAlign' => 'center']);
+        $instansiIndukRaw = trim((string) ($config['instansi_induk'] ?? "KEMENTERIAN PENDIDIKAN TINGGI,\nSAINS, DAN TEKNOLOGI"));
+        if ($instansiIndukRaw === 'KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI') {
+            $instansiIndukLines = ['KEMENTERIAN PENDIDIKAN TINGGI,', 'SAINS, DAN TEKNOLOGI'];
+        } else {
+            $instansiIndukLines = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $instansiIndukRaw) ?: [])));
+        }
 
-        $textCell->addText($this->plain($config['instansi_induk'] ?? ''), ...$this->style(
-            DocumentLayout::MINISTRY_SIZE_PT, false, DocumentLayout::MINISTRY_LINE_PT, 'center'
-        ));
-        $textCell->addText($this->plain($config['instansi_pelaksana'] ?? ''), ...$this->style(
-            DocumentLayout::AGENCY_SIZE_PT, true, DocumentLayout::AGENCY_LINE_PT, 'center'
-        ));
-        $textCell->addText($this->plain($config['alamat_kontak'] ?? ''), ...$this->style(
-            DocumentLayout::ADDRESS_SIZE_PT, false, DocumentLayout::ADDRESS_LINE_PT, 'center', false, 4
+        foreach ($instansiIndukLines as $indukLine) {
+            $textCell->addText($this->plain(mb_strtoupper($indukLine)), ...$this->style(
+                DocumentLayout::MINISTRY_SIZE_PT, false, DocumentLayout::MINISTRY_LINE_PT, 'center', false, 0, null, false, DocumentLayout::KOP_FONT
+            ));
+        }
+
+        $instansiPelaksana = trim((string) ($config['instansi_pelaksana'] ?? 'LEMBAGA LAYANAN PENDIDIKAN TINGGI WILAYAH X'));
+        $textCell->addText($this->plain(mb_strtoupper($instansiPelaksana)), ...$this->style(
+            DocumentLayout::AGENCY_SIZE_PT, true, DocumentLayout::AGENCY_LINE_PT, 'center', false, 1, null, false, DocumentLayout::KOP_FONT
         ));
 
-        // The closing rule of the letterhead.
-        //
-        // A bare table cannot draw a line under itself, so the rule is a second
-        // row of one merged cell whose only property is a bottom border. The
-        // paragraph inside carries no text and one point of type: an empty
-        // paragraph in Word still reserves a full line box, and a taller one
-        // would push the document title away from the rule.
-        $ruleRow = $table->addRow(null, $this->rowStyle());
-        $ruleRow->addCell(DocumentLayout::cmToTwips($contentCm), [
-            'gridSpan' => $showLogo ? 2 : 1,
-            'borderBottomSize' => DocumentLayout::ptToBorderEighths(DocumentLayout::RULE_WEIGHT_PT),
-            'borderBottomColor' => DocumentLayout::BORDER_COLOR,
-        ])->addText('', ...$this->style(1, false, null, 'left', false, 0, null));
+        $alamatRaw = trim((string) ($config['alamat_kontak'] ?? Agenda::DEFAULT_REPORT_ALAMAT_KONTAK));
+        $alamatLines = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $alamatRaw) ?: [])));
+        foreach ($alamatLines as $addrLine) {
+            $textCell->addText($this->plain($addrLine), ...$this->style(
+                DocumentLayout::ADDRESS_SIZE_PT, false, DocumentLayout::ADDRESS_LINE_PT, 'center', false, 0, null, false, DocumentLayout::KOP_FONT
+            ));
+        }
+
+        // OOXML header table requires a trailing paragraph separator before document body
+        $header->addText('', ['name' => DocumentLayout::BODY_FONT, 'size' => 1], [
+            'spaceBefore' => 0,
+            'spaceAfter' => 140,
+            'lineHeight' => 1.0,
+        ]);
     }
 
     // -----------------------------------------------------------------
@@ -233,8 +264,8 @@ class DocxExportService
         }
 
         $contentCm = DocumentLayout::contentWidthCm();
-        $labelCm = $contentCm * 0.24;
-        $colonCm = $contentCm * 0.02;
+        $labelCm = $contentCm * ((float) rtrim(DocumentLayout::DETAIL_LABEL_COLUMN, '%') / 100);
+        $colonCm = $contentCm * ((float) rtrim(DocumentLayout::DETAIL_COLON_COLUMN, '%') / 100);
         $valueCm = $contentCm - $labelCm - $colonCm;
 
         $rows = [
@@ -252,9 +283,9 @@ class DocxExportService
         foreach ($rows as [$caption, $text]) {
             $row = $table->addRow(null, $this->rowStyle());
 
-            $row->addCell(DocumentLayout::cmToTwips($labelCm))->addText($this->plain($caption), ...$this->style(DocumentLayout::BODY_SIZE_PT, true, null, null, false, 8));
-            $row->addCell(DocumentLayout::cmToTwips($colonCm))->addText(':', ...$this->style(DocumentLayout::BODY_SIZE_PT));
-            $row->addCell(DocumentLayout::cmToTwips($valueCm))->addText($this->plain((string) $text), ...$this->style(DocumentLayout::BODY_SIZE_PT));
+            $row->addCell(DocumentLayout::cmToTwips($labelCm))->addText($this->plain($caption), ...$this->style(DocumentLayout::BODY_SIZE_PT, true, DocumentLayout::BODY_LINE_PT, null, false, 2));
+            $row->addCell(DocumentLayout::cmToTwips($colonCm))->addText(':', ...$this->style(DocumentLayout::BODY_SIZE_PT, false, DocumentLayout::BODY_LINE_PT, null, false, 2));
+            $row->addCell(DocumentLayout::cmToTwips($valueCm))->addText($this->plain((string) $text), ...$this->style(DocumentLayout::BODY_SIZE_PT, false, DocumentLayout::BODY_LINE_PT, null, false, 2));
         }
     }
 
@@ -837,9 +868,10 @@ class DocxExportService
         float $spaceBeforePt = 0,
         ?int $indentTwips = null,
         bool $italic = false,
+        ?string $fontName = null,
     ): array {
         $run = [
-            'name' => 'Times New Roman',
+            'name' => $fontName ?? DocumentLayout::BODY_FONT,
             'size' => $sizePt,
             'bold' => $bold,
         ];
@@ -910,7 +942,7 @@ class DocxExportService
         }
 
         $renderOptions = [
-            'fontName' => 'Times New Roman',
+            'fontName' => DocumentLayout::BODY_FONT,
             'fontSizePt' => DocumentLayout::BODY_SIZE_PT,
             'linePt' => DocumentLayout::BODY_LINE_PT,
             'defaultAlign' => 'both',
@@ -1117,8 +1149,9 @@ class DocxExportService
 
     /**
      * @param  array<string,mixed>  $data
+     * @return array{width: float, height: float}|null
      */
-    private function logoWidthPt(array $data): ?float
+    private function logoDimensionsPt(array $data): ?array
     {
         $size = $data['logoSize'] ?? null;
 
@@ -1126,9 +1159,16 @@ class DocxExportService
             return null;
         }
 
-        $scale = min(1.0, DocumentLayout::LOGO_BOX_PT / max($size[0], $size[1]));
+        $scale = min(
+            1.0,
+            DocumentLayout::KOP_LOGO_WIDTH_PT / $size[0],
+            DocumentLayout::KOP_LOGO_HEIGHT_PT / $size[1]
+        );
 
-        return round($size[0] * $scale, 1);
+        return [
+            'width' => round($size[0] * $scale, 1),
+            'height' => round($size[1] * $scale, 1),
+        ];
     }
 
     private function spill(?string $dataUri, string $extension): ?string

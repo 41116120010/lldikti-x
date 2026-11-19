@@ -327,8 +327,9 @@ class WordEditorMinutesTest extends TestCase
         // 5. Official Format Elements pre-rendered on sheets.
         // Urutan seksi mengikuti dokumen yang diekspor: Notulensi & Kesimpulan ->
         // Blok Tanda Tangan -> Daftar Kehadiran Peserta -> Lampiran Foto.
-        $response->assertSee('KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI');
-        $response->assertSee('(LLDIKTI) WILAYAH X');
+        $response->assertSee('KEMENTERIAN PENDIDIKAN TINGGI,');
+        $response->assertSee('SAINS, DAN TEKNOLOGI');
+        $response->assertSee('LEMBAGA LAYANAN PENDIDIKAN TINGGI WILAYAH X');
         $response->assertSee('BERITA ACARA');
         $response->assertSee('I. NOTULENSI &amp; KESIMPULAN RAPAT', false);
         $response->assertSee('II. DAFTAR KEHADIRAN PESERTA');

@@ -311,11 +311,15 @@ class NotulenPreviewParityTest extends TestCase
             'SUBHEADING_SIZE_PT' => 12.0,
             'INFO_SIZE_PT' => 12.0,
             'BODY_SIZE_PT' => 12.0,
-            'BODY_LINE_PT' => 18.0,
-            'ATTENDANCE_SIZE_PT' => 9.0,
-            'ATTENDANCE_LINE_PT' => 11.0,
+            'BODY_LINE_PT' => 13.8,
+            'ATTENDANCE_SIZE_PT' => 8.5,
+            'ATTENDANCE_LINE_PT' => 10.5,
             'INFO_CELL_PAD_PT' => 1.5,
             'BORDER_PT' => 1.0,
+            'RULE_WEIGHT_PT' => 2.25,
+            'KOP_WIDTH_CM' => 18.25,
+            'KOP_LOGO_WIDTH_PT' => 104.0,
+            'KOP_LOGO_HEIGHT_PT' => 111.0,
             'TTD_GAP_PT' => 18.0,
             'TTD_ROW_HEIGHT_PT' => 36.0,
             'DOC_TITLE_GAP_TOP_PT' => 12.0,
@@ -340,9 +344,16 @@ class NotulenPreviewParityTest extends TestCase
 
         $this->assertSame([], $drifted, 'Nilai tata letak yang sudah disetujui berubah: '.implode('; ', $drifted));
 
-        $this->assertSame('24%', DocumentLayout::DETAIL_LABEL_COLUMN);
+        $this->assertSame([1.0, 2.0, 2.5, 3.0], DocumentLayout::marginsCm());
+        $this->assertSame(16.0, DocumentLayout::contentWidthCm());
+        $this->assertSame('Arial', DocumentLayout::BODY_FONT);
+        $this->assertSame('Times New Roman', DocumentLayout::KOP_FONT);
+        $this->assertSame('19.74%', DocumentLayout::KOP_LOGO_COLUMN);
+        $this->assertSame('80.26%', DocumentLayout::KOP_TEXT_COLUMN);
+        $this->assertSame('98%', DocumentLayout::TTD_INNER_WIDTH_THREE_COLUMN);
+        $this->assertSame('28%', DocumentLayout::DETAIL_LABEL_COLUMN);
         $this->assertSame('2%', DocumentLayout::DETAIL_COLON_COLUMN);
-        $this->assertSame('74%', DocumentLayout::DETAIL_VALUE_COLUMN);
-        $this->assertSame(['4%', '21%', '11%', '7%', '11%', '15%'], DocumentLayout::attendanceColumns());
+        $this->assertSame('70%', DocumentLayout::DETAIL_VALUE_COLUMN);
+        $this->assertSame(['4%', '22%', '11%', '7%', '11%', '15%'], DocumentLayout::attendanceColumns());
     }
 }

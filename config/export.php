@@ -49,10 +49,10 @@ return [
 
     'page' => [
         'size' => 'A4',
-        'top' => env('PDF_EXPORT_MARGIN_TOP', '1.5cm'),
+        'top' => env('PDF_EXPORT_MARGIN_TOP', '1.0cm'),
         'right' => env('PDF_EXPORT_MARGIN_RIGHT', '2cm'),
-        'bottom' => env('PDF_EXPORT_MARGIN_BOTTOM', '1.5cm'),
-        'left' => env('PDF_EXPORT_MARGIN_LEFT', '2cm'),
+        'bottom' => env('PDF_EXPORT_MARGIN_BOTTOM', '2.5cm'),
+        'left' => env('PDF_EXPORT_MARGIN_LEFT', '3cm'),
     ],
 
     'dompdf' => [
@@ -62,16 +62,10 @@ return [
         'is_html5_parser_enabled' => true,
 
         /*
-        | Font memakai Times-Roman bawaan PDF (font standar ke-14), bukan
-        | Times New Roman yang di-embed. Alasannya: Times-Roman memiliki metrik
-        | yang sama dengan Times New Roman dan disertakan setiap penampil PDF,
-        | sehingga tampil sama di hampir semua sistem, sementara embedding TTF
-        | di Dompdf belum berhasil dan menambah 1,15 MB berkas font ke server.
-        |
-        | Berkas TNR tetap diletakkan di storage/app/fonts sehingga siap dipakai
-        | bila embedding someday berhasil tanpa perubahan kode lain.
+        | Font batang tubuh memakai sans-serif (Arial/Helvetica) agar seragam
+        | dengan template resmi instansi, sementara Kop Surat tetap Times New Roman.
         */
-        'default_font' => env('PDF_EXPORT_FONT', 'serif'),
+        'default_font' => env('PDF_EXPORT_FONT', 'sans-serif'),
 
         'font_dir' => 'app/fonts',
 

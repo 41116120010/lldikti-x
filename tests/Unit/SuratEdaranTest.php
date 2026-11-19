@@ -9,9 +9,9 @@ use App\Policies\AgendaPolicy;
 use App\Services\DompdfRenderer;
 use App\Services\SuratEdaranService;
 use App\Support\Html;
-use PHPUnit\Framework\TestCase;
+use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 
-class SuratEdaranTest extends TestCase
+class SuratEdaranTest extends BaseTestCase
 {
     private AgendaPolicy $policy;
 
@@ -404,5 +404,79 @@ class SuratEdaranTest extends TestCase
         $tteConfig = $tteAgenda->resolved_surat_edaran_config;
         $this->assertSame('tte_placeholder', $tteConfig['signature_mode']);
         $this->assertTrue($tteConfig['show_signature']);
+    }
+
+    public function test_surat_edaran_bug2_static_text_bold_regression_fixed(): void
+    {
+        $root = dirname(__DIR__, 2);
+        $blade = file_get_contents($root.'/resources/views/agendas/surat_edaran.blade.php');
+        $js = file_get_contents($root.'/resources/js/app.js');
+        $css = file_get_contents($root.'/resources/css/app.css');
+
+        $this->assertNotFalse($blade);
+        $this->assertNotFalse($js);
+        $this->assertNotFalse($css);
+
+        $this->assertMatchesRegularExpression('/<div[^>]*id="office-zoom-container"[^>]*data-current-zoom="100"/', $blade);
+        $this->assertDoesNotMatchRegularExpression('/<div[^>]*id="office-zoom-container"[^>]*\bdata-zoom=/', $blade);
+
+        $this->assertStringContainsString('zoomContainer.dataset.currentZoom = String(numericVal);', $js);
+        $this->assertStringNotContainsString('zoomContainer.dataset.zoom = numericVal;', $js);
+        $this->assertGreaterThanOrEqual(2, substr_count($js, "querySelectorAll('button[data-zoom]')"));
+
+        $this->assertMatchesRegularExpression('/\.office-paper-sheet\s*\{[^}]*font-weight:\s*400;/s', $css);
+    }
+
+    public function test_surat_dinas_docx_ooxml_alignment_and_zero_border_fix(): void
+    {
+        $agenda = new Agenda([
+            'id' => 88,
+            'judul_rapat' => 'Rapat Evaluasi Kinerja PTS',
+            'tipe_rapat' => 'offline',
+            'lokasi_ruang' => 'Aula Utama LLDIKTI Wilayah X',
+            'waktu_mulai' => now()->setDate(2026, 4, 15)->setTime(9, 0),
+            'waktu_selesai' => now()->setDate(2026, 4, 15)->setTime(12, 0),
+            'surat_edaran_type' => 'digital',
+            'surat_edaran_config' => [
+                'template_type' => 'undangan',
+                'show_kop' => true,
+                'show_logo' => true,
+                'show_lampiran' => true,
+                'nomor_surat' => '0834/LL10/AL.01/2026',
+                'tanggal_surat' => '15 April 2026',
+                'lampiran_content' => '<ol><li>Rektor Universitas Bung Hatta</li></ol>',
+            ],
+        ]);
+        $agenda->id = 88;
+
+        $docxBytes = (new SuratEdaranService(new DompdfRenderer))->renderDocx($agenda);
+        $tmp = tempnam(sys_get_temp_dir(), 'surat_ooxml_');
+        file_put_contents($tmp, $docxBytes);
+
+        $zip = new \ZipArchive;
+        $this->assertTrue($zip->open($tmp) === true);
+
+        $docXml = (string) $zip->getFromName('word/document.xml');
+        $headersXml = '';
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $name = (string) $zip->getNameIndex($i);
+            if (preg_match('#^word/header\d+\.xml$#', $name)) {
+                $headersXml .= (string) $zip->getFromName($name);
+            }
+        }
+        $zip->close();
+        @unlink($tmp);
+
+        $this->assertStringNotContainsString('w:sz="0"', $docXml, 'Tabel tanpa border tidak boleh menulis w:sz="0"');
+        $this->assertStringNotContainsString('w:sz="0"', $headersXml, 'Header Kop tidak boleh menulis w:sz="0"');
+
+        $this->assertStringContainsString('<w:tblW w:w="10348" w:type="dxa"/>', $headersXml);
+        $this->assertStringContainsString('<w:tblInd w:w="-714" w:type="dxa"/>', $headersXml);
+        $this->assertStringContainsString('<w:bottom w:val="single" w:sz="18"', $headersXml);
+        $this->assertStringContainsString('w:w="108" w:type="dxa"', $headersXml);
+
+        $this->assertStringContainsString('<w:gridCol w:w="1140"', $docXml, 'Kolom label Tanggal pada lampiranMeta harus cukup 1140 twips agar tidak terpotong');
+        $this->assertStringNotContainsString('<w:tblInd w:w="-76"', $docXml);
+        $this->assertStringNotContainsString('<w:tblInd w:w="-142"', $docXml);
     }
 }

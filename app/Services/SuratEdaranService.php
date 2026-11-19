@@ -341,8 +341,6 @@ class SuratEdaranService
             // Format Surat Undangan Rapat Kedinasan
             $metaWidth = 9064;
             $metaTable = $section->addTable([
-                'borderSize' => 0,
-                'borderColor' => 'none',
                 'cellMarginTop' => 20,
                 'cellMarginBottom' => 20,
                 'cellMarginLeft' => 0,
@@ -358,7 +356,7 @@ class SuratEdaranService
             $c3 = 3871;
             $c4 = 3682;
 
-            $noStyle = ['borderSize' => 0, 'borderColor' => 'none', 'valign' => 'top'];
+            $noStyle = ['valign' => 'top'];
             $fontMeta = ['name' => 'Arial', 'size' => 12];
             $paraLeft = ['alignment' => Jc::START, 'spaceBefore' => 0, 'spaceAfter' => 20];
             $paraRight = ['alignment' => Jc::END, 'spaceBefore' => 0, 'spaceAfter' => 20];
@@ -400,15 +398,15 @@ class SuratEdaranService
                 $section->addText(
                     $this->xmlSafe('Dalam rangka pelaksanaan program kerja dan koordinasi pelaksanaan tugas kedinasan, dengan hormat kami mengharapkan kehadiran Bapak/Ibu pada'),
                     $fontMeta,
-                    ['alignment' => Jc::BOTH, 'spaceBefore' => 0, 'spaceAfter' => 140]
+                    ['alignment' => Jc::BOTH, 'spaceBefore' => 0, 'spaceAfter' => 20]
                 );
             }
 
-            // Tabel Rincian Acara (TBL#8: 1596 | 240 | 7449 dxa, tblInd -76, trHeight >= 417)
-            $detailWidth = 9285;
+            $this->addTableSpacer($section, 100);
+
+            // Tabel Rincian Acara (1596 | 240 | 7228 dxa = 9064 dxa, sejajar kiri paragraf pembuka)
+            $detailWidth = 9064;
             $detailTable = $section->addTable([
-                'borderSize' => 0,
-                'borderColor' => 'none',
                 'cellMarginTop' => 30,
                 'cellMarginBottom' => 30,
                 'cellMarginLeft' => 0,
@@ -418,11 +416,10 @@ class SuratEdaranService
                 'unit' => TblWidth::TWIP,
                 'layout' => 'fixed',
             ]);
-            $detailTable->getStyle()->setIndent(new ComplexTblWidth(-76, TblWidth::TWIP));
 
             $d1 = 1596;
             $d2 = 240;
-            $d3 = 7449;
+            $d3 = $detailWidth - $d1 - $d2;
 
             $eventDetails = $this->resolveEventDetails($agenda, $config);
             $details = [
@@ -476,13 +473,11 @@ class SuratEdaranService
             $section->addText(
                 'Lampiran Surat',
                 ['name' => 'Arial', 'size' => 12],
-                ['alignment' => Jc::START, 'spaceBefore' => 0, 'spaceAfter' => 40]
+                ['alignment' => Jc::START, 'spaceBefore' => 160, 'spaceAfter' => 40]
             );
 
             $lampiranWidth = 9064;
             $lampiranMeta = $section->addTable([
-                'borderSize' => 0,
-                'borderColor' => 'none',
                 'cellMarginTop' => 20,
                 'cellMarginBottom' => 20,
                 'cellMarginLeft' => 0,
@@ -492,12 +487,11 @@ class SuratEdaranService
                 'unit' => TblWidth::TWIP,
                 'layout' => 'fixed',
             ]);
-            $lampiranMeta->getStyle()->setIndent(new ComplexTblWidth(-142, TblWidth::TWIP));
 
-            $l1 = 1003;
+            $l1 = 1140;
             $l2 = 283;
-            $l3 = 7778;
-            $noStyle = ['borderSize' => 0, 'borderColor' => 'none', 'valign' => 'top'];
+            $l3 = $lampiranWidth - $l1 - $l2;
+            $noStyle = ['valign' => 'top'];
             $fontMeta = ['name' => 'Arial', 'size' => 12];
             $paraLeft = ['alignment' => Jc::START, 'spaceBefore' => 0, 'spaceAfter' => 20];
 
@@ -592,12 +586,10 @@ class SuratEdaranService
         $kopWidthTwips = 10348;
         $header = $section->addHeader(Header::FIRST);
         $kopTable = $header->addTable([
-            'borderSize' => 0,
-            'borderColor' => 'none',
             'cellMarginTop' => 0,
             'cellMarginBottom' => 60,
-            'cellMarginLeft' => 0,
-            'cellMarginRight' => 0,
+            'cellMarginLeft' => 108,
+            'cellMarginRight' => 108,
             'alignment' => JcTable::START,
             'width' => $kopWidthTwips,
             'unit' => TblWidth::TWIP,
@@ -607,9 +599,6 @@ class SuratEdaranService
 
         $row = $kopTable->addRow();
         $bottomRuleCell = [
-            'borderTopSize' => 0,
-            'borderLeftSize' => 0,
-            'borderRightSize' => 0,
             'borderBottomSize' => 18, // 2.25pt solid black rule
             'borderBottomColor' => '000000',
             'valign' => 'center',
@@ -672,8 +661,6 @@ class SuratEdaranService
         $this->addTableSpacer($section, 200);
 
         $footerTable = $section->addTable([
-            'borderSize' => 0,
-            'borderColor' => 'none',
             'cellMarginTop' => 20,
             'cellMarginBottom' => 20,
             'cellMarginLeft' => 0,
@@ -686,7 +673,7 @@ class SuratEdaranService
 
         $leftTwips = 5040;
         $rightTwips = $printableTwips - $leftTwips;
-        $noBorder = ['borderSize' => 0, 'borderColor' => 'none', 'valign' => 'top'];
+        $noBorder = ['valign' => 'top'];
         $font = ['name' => 'Arial', 'size' => 12];
         $fontNormal = ['name' => 'Arial', 'size' => 12, 'bold' => false];
         $para = ['alignment' => Jc::START, 'spaceBefore' => 0, 'spaceAfter' => 20];

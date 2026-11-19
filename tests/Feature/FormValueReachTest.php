@@ -129,7 +129,7 @@ class FormValueReachTest extends TestCase
             $pdfText = (string) shell_exec('pdftotext -layout '.escapeshellarg($pdfPath).' - 2>/dev/null');
             @unlink($pdfPath);
 
-            $docxXml = $this->docxXml(
+            $docxXml = $this->docxAllXml(
                 app(DocxExportService::class)->exportBeritaAcara($agenda, $config)->getContent()
             );
 

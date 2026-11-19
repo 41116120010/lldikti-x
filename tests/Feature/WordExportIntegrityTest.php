@@ -86,10 +86,10 @@ class WordExportIntegrityTest extends TestCase
     public function test_word_export_contains_kop_info_attendance_and_signature_blocks(): void
     {
         $agenda = Agenda::first();
-        $xml = $this->docxXml($this->docxFor($agenda));
+        $xml = $this->docxAllXml($this->docxFor($agenda));
 
         // Kop surat
-        $this->assertStringContainsString('LEMBAGA LAYANAN PENDIDIKAN TINGGI (LLDIKTI) WILAYAH X', $xml);
+        $this->assertStringContainsString('LEMBAGA LAYANAN PENDIDIKAN TINGGI WILAYAH X', $xml);
 
         // Document title
         $this->assertStringContainsString('BERITA ACARA DAN DAFTAR HADIR RAPAT', $xml);
@@ -104,26 +104,24 @@ class WordExportIntegrityTest extends TestCase
         $this->assertStringContainsString('cantSplit', $xml);
         $this->assertStringContainsString('tblHeader', $xml);
 
-        // The letterhead rule follows the official solid 1 pt style. The shared
-        // body is the single source of truth for both renderers, so the rule is
-        // asserted there rather than on the package.
+        // The letterhead rule follows the official solid 2.25 pt style.
         $html = $this->documentBodyHtml($agenda);
-        $this->assertStringContainsString('border-bottom: 1pt solid #000000', $html);
-        $this->assertStringNotContainsString('2.25pt double', $html);
+        $this->assertStringContainsString('border-bottom: 2.25pt solid #000000', $html);
+        $this->assertStringNotContainsString('double', $html);
     }
 
     public function test_word_export_keeps_table_columns_and_images_at_their_intended_size(): void
     {
         $agenda = Agenda::first();
         $body = $this->docxFor($agenda);
-        $xml = $this->docxXml($body);
+        $headerXml = $this->docxHeaderXml($body);
 
-        // Column widths are written in twips. The 17 cm printable width must
-        // survive, otherwise the tables collapse.
         $this->assertGreaterThan(0, $this->docxMediaCount($body), 'Logo harus tertanam di paket.');
-        // The letterhead's logo column is 19% of the 17 cm printable width,
-        // which is 1831 twips. If this drifts the whole table collapses.
-        $this->assertStringContainsString('w:w="1831"', $xml, 'Kolom logo kop harus 1831 twip (3,23 cm).');
+        $this->assertStringContainsString(
+            'w:w="'.\App\Support\DocumentLayout::KOP_LOGO_COL_TWIPS.'"',
+            $headerXml,
+            'Kolom logo kop harus 2043 twip sesuai layout 18.25 cm.'
+        );
     }
 
     public function test_word_export_survives_missing_attendance_media(): void

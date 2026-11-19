@@ -48,51 +48,53 @@
     $kopLogo = $kopLogo ?? null;
     $kopHasLogo = $kopShowLogo && is_array($kopLogo) && $kopLogo[0] > 0 && $kopLogo[1] > 0;
 
-    // Logo muat di dalam kotak 2,8 cm pada kedua sisi, rasio asli terjaga.
-    // Ketiga nilai turunan hanya boleh dihitung ketika logo benar-benar ada:
-    // saat logo dimatikan, $kopLogo bernilai null dan setiap pembacaan indeksnya
-    // akan melempar galat.
-    $kopLogoBoxPt = DocumentLayout::LOGO_BOX_PT;
     $kopLogoWidthPt = 0;
     $kopLogoHeightPt = 0;
 
     if ($kopHasLogo) {
-        $kopLogoScale = min(1.0, $kopLogoBoxPt / max($kopLogo[0], $kopLogo[1]));
+        $kopLogoScale = min(1.0, DocumentLayout::KOP_LOGO_WIDTH_PT / $kopLogo[0], DocumentLayout::KOP_LOGO_HEIGHT_PT / $kopLogo[1]);
         $kopLogoWidthPt = round($kopLogo[0] * $kopLogoScale, 1);
         $kopLogoHeightPt = round($kopLogo[1] * $kopLogoScale, 1);
     }
 
-    // 1 px pada 96 dpi setara 0.75 pt. Atribut width/height dipakai importer
-    // Word, yang mengabaikan object-fit.
     $kopLogoWidthPx = (int) round($kopLogoWidthPt / 0.75);
     $kopLogoHeightPx = (int) round($kopLogoHeightPt / 0.75);
 
-    // Sel logo diberi lebar logo ditambah celah. Saat logo dimatikan sel ini
-    // menjadi nol lebar agar blok teks tepat di sumbu halaman.
-    //
-    // Kedua kolom memakai PERSENTASE, bukan lebar tetap. Dengan table-layout
-    // fixed, persentase dihitung terhadap lebar tabel sehingga blok teks
-    // selalu urging di ruang yang tersisa di sebelah logo, berapa pun nilai
-    // margin halaman. Angka tetap membuat kolom meluber begitu margin berubah.
     $kopLogoCellWidth = $kopHasLogo ? DocumentLayout::KOP_LOGO_COLUMN : '0%';
     $kopTextCellWidth = $kopHasLogo ? DocumentLayout::KOP_TEXT_COLUMN : '100%';
+
+    $instansiIndukDisplay = trim((string) ($config['instansi_induk'] ?? "KEMENTERIAN PENDIDIKAN TINGGI,\nSAINS, DAN TEKNOLOGI"));
+    if ($instansiIndukDisplay === 'KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI') {
+        $instansiIndukDisplay = "KEMENTERIAN PENDIDIKAN TINGGI,\nSAINS, DAN TEKNOLOGI";
+    }
+
+    $instansiPelaksanaDisplay = trim((string) ($config['instansi_pelaksana'] ?? 'LEMBAGA LAYANAN PENDIDIKAN TINGGI WILAYAH X'));
+    if ($instansiPelaksanaDisplay === 'LEMBAGA LAYANAN PENDIDIKAN TINGGI (LLDIKTI) WILAYAH X') {
+        $instansiPelaksanaDisplay = 'LEMBAGA LAYANAN PENDIDIKAN TINGGI WILAYAH X';
+    }
+
+    $alamatKontakDisplay = trim((string) ($config['alamat_kontak'] ?? \App\Models\Agenda::DEFAULT_REPORT_ALAMAT_KONTAK));
+    $kopRuleBorder = 'border: none; border-bottom: ' . DocumentLayout::RULE_WEIGHT_PT . 'pt solid #000000; mso-border-bottom-alt: solid windowtext ' . DocumentLayout::RULE_WEIGHT_PT . 'pt;';
+    $kopLogoPad = $kopHasLogo
+        ? 'padding: 0 ' . DocumentLayout::KOP_CELL_GAP_PT . 'pt ' . DocumentLayout::KOP_CELL_PAD_BOTTOM_PT . 'pt 0;'
+        : 'padding: 0;';
+    $kopTextPad = $kopHasLogo
+        ? 'padding: 0 0 ' . DocumentLayout::KOP_CELL_PAD_BOTTOM_PT . 'pt ' . DocumentLayout::KOP_CELL_GAP_PT . 'pt;'
+        : 'padding: 0 0 ' . DocumentLayout::KOP_CELL_PAD_BOTTOM_PT . 'pt 0;';
 @endphp
-<div class="header-kop" id="sheet-header-kop" style="display: {{ ($config['show_kop'] ?? true) ? 'block' : 'none' }}; margin: 0; padding: 0; text-align: center; width: 100%;">
-    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; border-collapse: collapse; margin: 0; padding: 0;">
+<div class="header-kop" id="sheet-header-kop" style="display: {{ ($config['show_kop'] ?? true) ? 'block' : 'none' }}; width: {{ DocumentLayout::KOP_WIDTH_CM }}cm; margin: 0 {{ DocumentLayout::KOP_BLEED_RIGHT_CM }}cm {{ DocumentLayout::KOP_GAP_BOTTOM_PT }}pt {{ DocumentLayout::KOP_BLEED_LEFT_CM }}cm; padding: 0; text-align: center; font-family: {!! DocumentLayout::KOP_FONT_CSS !!};">
+    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; border-collapse: collapse; margin: 0; padding: 0; {{ $kopRuleBorder }}">
         <tr>
-            <td id="sheet-logo-cell" width="{{ $kopLogoCellWidth }}" align="center" valign="middle" style="width: {{ $kopLogoCellWidth }}; text-align: center; vertical-align: middle; border: none; padding: 0;">
+            <td id="sheet-logo-cell" width="{{ $kopLogoCellWidth }}" align="center" valign="middle" style="width: {{ $kopLogoCellWidth }}; text-align: center; vertical-align: middle; {{ $kopRuleBorder }} {{ $kopLogoPad }}">
                 @if($kopHasLogo)
                     <img id="sheet-logo-img" src="{{ $kopLogoSrc }}" alt="Logo Instansi" width="{{ $kopLogoWidthPx }}" height="{{ $kopLogoHeightPx }}" style="width: {{ $kopLogoWidthPt }}pt; height: {{ $kopLogoHeightPt }}pt; display: block; margin: 0 auto; border: none;">
                 @endif
             </td>
-            <td width="{{ $kopTextCellWidth }}" align="center" valign="middle" style="width: {{ $kopTextCellWidth }}; text-align: center; vertical-align: middle; border: none; padding: 0;">
-                <p id="sheet-instansi-induk" style="margin: 0; padding: 0; font-size: {{ DocumentLayout::MINISTRY_SIZE_PT }}pt; line-height: {{ DocumentLayout::MINISTRY_LINE_PT }}pt; mso-line-height-rule: exactly; font-weight: normal; text-transform: uppercase; font-family: 'Times New Roman', Times, serif;">{{ $config['instansi_induk'] ?? 'KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI' }}</p>
-                <p id="sheet-instansi-pelaksana" style="margin: 0; padding: 0; font-size: {{ DocumentLayout::AGENCY_SIZE_PT }}pt; line-height: {{ DocumentLayout::AGENCY_LINE_PT }}pt; mso-line-height-rule: exactly; font-weight: bold; text-transform: uppercase; font-family: 'Times New Roman', Times, serif;">{{ $config['instansi_pelaksana'] ?? 'LEMBAGA LAYANAN PENDIDIKAN TINGGI (LLDIKTI) WILAYAH X' }}</p>
-                <p id="sheet-alamat-kontak" style="margin: 2pt 0 0 0; padding: 0; font-size: {{ DocumentLayout::ADDRESS_SIZE_PT }}pt; line-height: {{ DocumentLayout::ADDRESS_LINE_PT }}pt; mso-line-height-rule: exactly; font-weight: normal; font-style: normal; font-family: 'Times New Roman', Times, serif;">{{ $config['alamat_kontak'] ?? \App\Models\Agenda::DEFAULT_REPORT_ALAMAT_KONTAK }}</p>
+            <td width="{{ $kopTextCellWidth }}" align="center" valign="middle" style="width: {{ $kopTextCellWidth }}; text-align: center; vertical-align: middle; {{ $kopRuleBorder }} {{ $kopTextPad }} font-family: {!! DocumentLayout::KOP_FONT_CSS !!};">
+                <p id="sheet-instansi-induk" style="margin: 0; padding: 0; font-size: {{ DocumentLayout::MINISTRY_SIZE_PT }}pt; line-height: {{ DocumentLayout::MINISTRY_LINE_PT }}pt; mso-line-height-rule: exactly; font-weight: normal; text-transform: uppercase; font-family: {!! DocumentLayout::KOP_FONT_CSS !!};">{!! nl2br(e($instansiIndukDisplay)) !!}</p>
+                <p id="sheet-instansi-pelaksana" style="margin: 1pt 0; padding: 0; font-size: {{ DocumentLayout::AGENCY_SIZE_PT }}pt; line-height: {{ DocumentLayout::AGENCY_LINE_PT }}pt; mso-line-height-rule: exactly; font-weight: bold; text-transform: uppercase; font-family: {!! DocumentLayout::KOP_FONT_CSS !!};">{{ $instansiPelaksanaDisplay }}</p>
+                <p id="sheet-alamat-kontak" style="margin: 0; padding: 0; font-size: {{ DocumentLayout::ADDRESS_SIZE_PT }}pt; line-height: {{ DocumentLayout::ADDRESS_LINE_PT }}pt; mso-line-height-rule: exactly; font-weight: normal; font-style: normal; font-family: {!! DocumentLayout::KOP_FONT_CSS !!}; white-space: nowrap;">{!! nl2br(e($alamatKontakDisplay)) !!}</p>
             </td>
-        </tr>
-        <tr>
-            <td colspan="2" style="border: none; border-bottom: {{ DocumentLayout::RULE_WEIGHT_PT }}pt solid #000000; mso-border-bottom-alt: solid windowtext {{ DocumentLayout::RULE_WEIGHT_PT }}pt; height: 0; font-size: 1pt; line-height: 0; mso-line-height-rule: exactly; padding: 3pt 0 0 0;">&#8203;</td>
         </tr>
     </table>
 </div>

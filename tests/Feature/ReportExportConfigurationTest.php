@@ -28,8 +28,8 @@ class ReportExportConfigurationTest extends TestCase
         $this->assertArrayHasKey('show_selfie_photos', $config);
 
         $this->assertTrue($config['show_kop']);
-        $this->assertSame('KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI', $config['instansi_induk']);
-        $this->assertSame('LEMBAGA LAYANAN PENDIDIKAN TINGGI (LLDIKTI) WILAYAH X', $config['instansi_pelaksana']);
+        $this->assertSame("KEMENTERIAN PENDIDIKAN TINGGI,\nSAINS, DAN TEKNOLOGI", $config['instansi_induk']);
+        $this->assertSame('LEMBAGA LAYANAN PENDIDIKAN TINGGI WILAYAH X', $config['instansi_pelaksana']);
         $this->assertSame('BERITA ACARA DAN DAFTAR HADIR RAPAT', $config['document_title']);
         $this->assertTrue($config['show_notulensi']);
         $this->assertTrue($config['show_kesimpulan']);
@@ -54,7 +54,7 @@ class ReportExportConfigurationTest extends TestCase
             $this->assertStringStartsWith('%PDF-', $response->getContent());
         } else {
             $response->assertSee('BERITA ACARA DAN DAFTAR HADIR RAPAT');
-            $response->assertSee('LEMBAGA LAYANAN PENDIDIKAN TINGGI (LLDIKTI) WILAYAH X');
+            $response->assertSee('LEMBAGA LAYANAN PENDIDIKAN TINGGI WILAYAH X');
             $response->assertSee('Mengetahui,');
         }
     }
@@ -267,8 +267,9 @@ class ReportExportConfigurationTest extends TestCase
 
         $resolved = $agenda->fresh()->resolved_report_config;
         $this->assertStringContainsString('lldikti10.kemdiktisaintek.go.id', $resolved['alamat_kontak']);
-        $this->assertSame('KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI', $resolved['instansi_induk']);
-        $this->assertSame('LEMBAGA LAYANAN PENDIDIKAN TINGGI (LLDIKTI) WILAYAH X', $resolved['instansi_pelaksana']);
+        $this->assertStringNotContainsString('•', $resolved['alamat_kontak']);
+        $this->assertSame("KEMENTERIAN PENDIDIKAN TINGGI,\nSAINS, DAN TEKNOLOGI", $resolved['instansi_induk']);
+        $this->assertSame('LEMBAGA LAYANAN PENDIDIKAN TINGGI WILAYAH X', $resolved['instansi_pelaksana']);
         $this->assertSame('Mengetahui,', $resolved['signer1_prefix']);
 
         $override = [

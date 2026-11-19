@@ -876,7 +876,7 @@
     }
     .office-document-ruler .ruler-margin-left {
         left: 0;
-        width: 20mm;
+        width: 30mm;
         border-right: 1.5px solid #0f172a;
     }
     .office-document-ruler .ruler-margin-right {
@@ -891,8 +891,11 @@
         border: 1px solid #94a3b8;
         box-sizing: border-box;
         margin: 0 auto;
-        padding: 15mm 20mm 15mm 20mm;
-        font-family: 'Times New Roman', Times, serif;
+        padding: 10mm 20mm 25mm 30mm;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 12pt;
+        font-weight: 400;
+        line-height: 1.15;
         color: #000000;
         position: relative;
         transition: width 0.25s ease;
@@ -910,6 +913,25 @@
         transform: translateZ(0);
     }
 
+    /*
+     * Bleed Kop Surat Resmi (182.5mm lebar penuh di atas area isi 160mm dengan
+     * margin kiri 30mm / kanan 20mm) serta proteksi agar .office-paper-sheet table
+     * tidak memotong max-width tabel kop.
+     */
+    .office-paper-sheet #sheet-header-kop.header-kop {
+        width: 182.5mm !important;
+        max-width: none !important;
+        margin: 0 -9.9mm 12pt -12.6mm !important;
+        font-family: 'Times New Roman', Times, serif;
+    }
+    .office-paper-sheet #sheet-header-kop.header-kop table {
+        width: 100% !important;
+        max-width: none !important;
+    }
+    .office-paper-sheet #sheet-header-kop.header-kop #sheet-alamat-kontak {
+        white-space: nowrap;
+    }
+
     .office-paper-sheet.paper-a4 {
         width: 210mm;
         min-height: 297mm;
@@ -922,7 +944,7 @@
         width: 100% !important;
         border-collapse: collapse !important;
         table-layout: fixed !important;
-        font-family: 'Times New Roman', Times, serif;
+        font-family: Arial, Helvetica, sans-serif;
         font-size: 8.5pt;
         margin: 4pt 0 8pt 0 !important;
     }
@@ -951,7 +973,7 @@
 
     /* Word Running Header & Footer Lines */
     .doc-running-header {
-        font-family: 'Times New Roman', Times, serif;
+        font-family: Arial, Helvetica, sans-serif;
         font-size: 8pt;
         color: #64748b;
         display: flex;
@@ -962,7 +984,7 @@
         margin-bottom: 12pt;
     }
     .doc-running-footer {
-        font-family: 'Times New Roman', Times, serif;
+        font-family: Arial, Helvetica, sans-serif;
         font-size: 8pt;
         color: #64748b;
         display: flex;
@@ -971,8 +993,8 @@
         border-top: 0.75pt solid #cbd5e1;
         padding-top: 4pt;
         position: absolute !important;
-        bottom: 6mm !important;
-        left: 20mm !important;
+        bottom: 10mm !important;
+        left: 30mm !important;
         right: 20mm !important;
         height: 20px;
         margin: 0 !important;
@@ -1056,10 +1078,10 @@
         min-height: 50px;
         background: #ffffff;
         outline: none;
-        font-family: 'Times New Roman', Times, serif;
-        font-size: 9.5pt;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 12pt;
         font-weight: 400;
-        line-height: 1.35;
+        line-height: 1.15;
         color: #000000;
         user-select: text;
         -webkit-user-select: text;
@@ -1248,6 +1270,10 @@
     #surat-edaran-workstation .surat-kop-bleed {
         width: 182.5mm;
         margin: 0 -9.9mm 12pt -12.6mm;
+    }
+    #surat-edaran-workstation #sheet-header-kop.header-kop {
+        width: 100% !important;
+        margin: 0 !important;
     }
     #surat-edaran-workstation #sheet-kop-container table {
         width: 100% !important;

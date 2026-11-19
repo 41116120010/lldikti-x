@@ -80,12 +80,12 @@ class DocxLayoutParityTest extends TestCase
     public function test_only_the_ruled_tables_carry_a_border(): void
     {
         $body = $this->docxFor(Agenda::first());
-        $xml = $this->docxXml($body);
+        $xml = $this->docxAllXml($body);
 
         $ruled = 0;
         $borderless = 0;
 
-        foreach ($this->docxTables($body) as $table) {
+        foreach (array_merge($this->docxHeaderTables($body), $this->docxTables($body)) as $table) {
             if (str_contains($table, '<w:tblBorders>')) {
                 $ruled++;
             } else {
@@ -152,9 +152,9 @@ class DocxLayoutParityTest extends TestCase
 
         foreach ($header as $index => $cell) {
             $this->assertStringContainsString(
-                'Times New Roman',
+                DocumentLayout::BODY_FONT,
                 $cell,
-                "Sel header #{$index} harus memakai Times New Roman pada 9 pt."
+                "Sel header #{$index} harus memakai Arial pada 8.5 pt."
             );
             $this->assertMatchesRegularExpression(
                 '#<w:b w:val="1"/>#',
@@ -171,20 +171,27 @@ class DocxLayoutParityTest extends TestCase
     public function test_letterhead_rule_is_a_merged_cell_border(): void
     {
         $body = $this->docxFor(Agenda::first());
-        $kop = $this->docxTableContaining($body, 'KEMENTERIAN PENDIDIKAN');
+        $kopTables = array_values(array_filter(
+            $this->docxHeaderTables($body),
+            static fn (string $table): bool => str_contains($table, 'KEMENTERIAN PENDIDIKAN')
+        ));
+        $this->assertCount(1, $kopTables, 'Kop surat harus berada di Header::FIRST paket .docx.');
+        $kop = $kopTables[0];
         $eighths = DocumentLayout::ptToBorderEighths(DocumentLayout::RULE_WEIGHT_PT);
 
-        // The closing rule under the letterhead is a merged second row, not a
-        // table border: a table border would also box the logo and the text.
+        // Single-row bleed Kop in Header::FIRST: 10348 dxa wide, -714 dxa indent,
+        // Times New Roman typography, and a 2.25pt bottom border on the cells.
         $this->assertStringNotContainsString('<w:tblBorders>', $kop);
-        $this->assertStringContainsString('<w:gridSpan w:val="2"/>', $kop);
+        $this->assertStringContainsString('<w:tblW w:w="10348" w:type="dxa"/>', $kop);
+        $this->assertStringContainsString('<w:tblInd w:w="-714" w:type="dxa"/>', $kop);
+        $this->assertStringContainsString('Times New Roman', $kop);
         $this->assertStringContainsString('<w:bottom w:val="single" w:sz="'.$eighths.'"', $kop);
     }
 
     public function test_images_are_centred_except_the_block_signatures(): void
     {
         $body = $this->docxFor(Agenda::first());
-        $tables = $this->docxTables($body);
+        $tables = array_merge($this->docxHeaderTables($body), $this->docxTables($body));
         $centred = 0;
         $left = 0;
 

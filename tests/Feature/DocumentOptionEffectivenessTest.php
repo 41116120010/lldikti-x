@@ -245,7 +245,7 @@ class DocumentOptionEffectivenessTest extends TestCase
 
             $this->assertSame(
                 $pdfImages($this->pdfHtml($agenda, $config)),
-                $docxImages($this->docxXmlFor($agenda, $config)),
+                $docxImages($this->docxAllXml($this->docxFor($agenda, $config))),
                 "PDF dan DOCX harus mencetak jumlah gambar yang sama (toggle = {$value})."
             );
         }

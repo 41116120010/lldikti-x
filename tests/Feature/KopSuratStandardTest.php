@@ -48,9 +48,9 @@ class KopSuratStandardTest extends TestCase
         // Typography follows the official LLDIKTI letterhead: the ministry line is
         // the largest but is NOT bold, and the implementing agency is the one
         // that is bold. The previous design had this inverted.
-        $this->assertStringContainsString('font-size: 16pt; line-height: 19pt;', $html);
-        $this->assertStringContainsString('font-size: 14pt; line-height: 17pt;', $html);
-        $this->assertStringContainsString('font-size: 12pt; line-height: 14pt;', $html);
+        $this->assertStringContainsString('font-size: 16pt; line-height: 17.5pt;', $html);
+        $this->assertStringContainsString('font-size: 14pt; line-height: 16pt;', $html);
+        $this->assertStringContainsString('font-size: 12pt; line-height: 13.5pt;', $html);
 
         $this->assertMatchesRegularExpression(
             '/id="sheet-instansi-induk"[^>]*font-size: 16pt[^>]*font-weight: normal/',
@@ -66,43 +66,41 @@ class KopSuratStandardTest extends TestCase
         // Absolute line heights, so both renderers compute the same baselines.
         $this->assertStringContainsString('mso-line-height-rule: exactly', $html);
 
-        // A solid rule, not the double rule used for academic papers.
-        $this->assertStringContainsString('border-bottom: 1pt solid #000000', $html);
-        $this->assertStringNotContainsString('2.25pt double', $html);
+        // Single 2.25pt solid bottom rule matching the official Surat Dinas template.
+        $this->assertStringContainsString('border-bottom: 2.25pt solid #000000', $html);
+        $this->assertStringNotContainsString('double', $this->extractKop($html));
 
         // Letter spacing is not part of the convention and is unreliable in the
         // Word import path.
         $this->assertStringNotContainsString('letter-spacing', $html);
     }
 
-    public function test_every_font_in_the_document_is_times_new_roman(): void
+    public function test_letterhead_uses_times_new_roman_and_body_uses_arial(): void
     {
         $html = $this->exportHtml();
+        $kop = $this->extractKop($html);
+        $bodyStart = strpos($html, 'class="doc-title"');
+        $this->assertNotFalse($bodyStart);
+        $body = substr($html, $bodyStart);
 
-        // Courier New was used for the document number and a generic monospace
-        // for the NIP column. Both were confirmed to reach the PDF as real
-        // embedded fonts (CourierNewPSMT and DejaVuSansMono), so the document
-        // was not Times New Roman throughout.
         $this->assertStringNotContainsString('Courier', $html);
         $this->assertStringNotContainsString('monospace', $html);
-        $this->assertStringContainsString("font-family: 'Times New Roman', Times, serif", $html);
+        $this->assertStringContainsString("font-family: 'Times New Roman', Times, serif", $kop);
+        $this->assertStringContainsString('font-family: Arial, Helvetica, sans-serif', $body);
+        $this->assertStringNotContainsString('Times New Roman', $body);
     }
 
     public function test_the_page_margin_is_declared_and_measurable_on_the_page(): void
     {
         $html = $this->exportHtml();
 
-        // Measured against the official LLDIKTI letterhead: left 1.91 cm and
-        // right 1.41 cm, carried over to A4 almost unchanged. Top and bottom are
-        // deliberately NOT 0.81 cm and 0.47 cm as in the reference, because
-        // those fall inside the unprintable band of many office printers.
         $this->assertStringContainsString('@page', $html);
-        $this->assertStringContainsString('margin: 1.5cm 2cm 1.5cm 2cm', $html);
+        $this->assertStringContainsString('margin: 1.0cm 2cm 2.5cm 3cm', $html);
 
         // The bare @page is what Dompdf reads; the named one is Word's. The
         // margin has to be declared in both, so the test accepts either form.
         $this->assertMatchesRegularExpression(
-            '/@page( Section1)?\s*\{[^}]*margin: 1\.5cm 2cm 1\.5cm 2cm/',
+            '/@page( Section1)?\s*\{[^}]*margin: 1\.0cm 2cm 2\.5cm 3cm/',
             $html
         );
     }
@@ -135,9 +133,9 @@ class KopSuratStandardTest extends TestCase
         // The widths therefore live on the <td> themselves.
         $this->assertStringNotContainsString('<colgroup>', $html);
 
-        $this->assertSame(5, preg_match_all('/<td[^>]*width: 24%;/', $html), 'Kolom label harus 24%.');
+        $this->assertSame(5, preg_match_all('/<td[^>]*width: 28%;/', $html), 'Kolom label harus 28%.');
         $this->assertSame(5, preg_match_all('/<td[^>]*width: 2%;/', $html), 'Kolom titik dua harus 2%.');
-        $this->assertSame(5, preg_match_all('/<td[^>]*width: 74%;/', $html), 'Kolom isi harus 74%.');
+        $this->assertSame(5, preg_match_all('/<td[^>]*width: 70%;/', $html), 'Kolom isi harus 70%.');
     }
 
     public function test_workstation_and_export_render_an_identical_letterhead(): void

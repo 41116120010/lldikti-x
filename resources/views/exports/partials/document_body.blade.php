@@ -8,15 +8,15 @@
 
 <!-- Judul Dokumen & Nomor Berita Acara -->
 <div class="doc-title" style="text-align: center; margin: {{ DocumentLayout::DOC_TITLE_GAP_TOP_PT }}pt 0 {{ DocumentLayout::DOC_TITLE_GAP_BOTTOM_PT }}pt 0;">
-    <h1 style="font-size: {{ DocumentLayout::DOCUMENT_TITLE_SIZE_PT }}pt; font-weight: bold; text-decoration: underline; margin: 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif;">{{ $config['document_title'] ?? 'BERITA ACARA DAN DAFTAR HADIR RAPAT' }}</h1>
+    <h1 style="font-size: {{ DocumentLayout::DOCUMENT_TITLE_SIZE_PT }}pt; font-weight: bold; text-decoration: underline; margin: 0; text-transform: uppercase; font-family: {{ DocumentLayout::BODY_FONT_CSS }};">{{ $config['document_title'] ?? 'BERITA ACARA DAN DAFTAR HADIR RAPAT' }}</h1>
     @if($config['show_document_number'] ?? true)
-    <div style="font-size: {{ DocumentLayout::BODY_SIZE_PT }}pt; font-family: 'Times New Roman', Times, serif; margin-top: 2px;">Nomor: {{ $config['document_number'] ?? ('BA-RAPAT/' . date('Y') . '/' . str_pad($agenda->id, 4, '0', STR_PAD_LEFT)) }}</div>
+    <div style="font-size: {{ DocumentLayout::BODY_SIZE_PT }}pt; font-family: {{ DocumentLayout::BODY_FONT_CSS }}; margin-top: 2px;">Nomor: {{ $config['document_number'] ?? ('BA-RAPAT/' . date('Y') . '/' . str_pad($agenda->id, 4, '0', STR_PAD_LEFT)) }}</div>
     @endif
 </div>
 
 <!-- Informasi Pelaksanaan Rapat -->
 @if($config['show_meeting_info'] ?? true)
-<table class="info-table" width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; margin-bottom: {{ DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt; border-collapse: collapse; font-size: {{ DocumentLayout::INFO_SIZE_PT }}pt; border: none; font-family: 'Times New Roman', Times, serif; word-wrap: break-word; overflow-wrap: break-word;">
+<table class="info-table" width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; margin-bottom: {{ DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt; border-collapse: collapse; font-size: {{ DocumentLayout::INFO_SIZE_PT }}pt; line-height: {{ DocumentLayout::BODY_LINE_PT }}pt; border: none; font-family: {{ DocumentLayout::BODY_FONT_CSS }}; word-wrap: break-word; overflow-wrap: break-word;">
     <tr>
         <td style="font-weight: bold; padding: {{ DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ DocumentLayout::DETAIL_LABEL_COLUMN }};">Perihal / Agenda</td>
         <td style="padding: {{ DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ DocumentLayout::DETAIL_COLON_COLUMN }};">:</td>
@@ -43,19 +43,19 @@
     <tr>
         <td style="font-weight: bold; padding: {{ DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ DocumentLayout::DETAIL_LABEL_COLUMN }};">Penyelenggara Rapat</td>
         <td style="padding: {{ DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ DocumentLayout::DETAIL_COLON_COLUMN }};">:</td>
-        <td style="padding: 1.5pt 0; vertical-align: top; border: none; word-wrap: break-word; overflow-wrap: break-word; width: 74%;">{{ $agenda->creator?->name ?? 'Penyelenggara Rapat' }} ({{ $agenda->creator?->unit?->nama_unit ?? 'Tingkat Lembaga' }})</td>
+        <td style="padding: {{ DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; word-wrap: break-word; overflow-wrap: break-word; width: {{ DocumentLayout::DETAIL_VALUE_COLUMN }};">{{ $agenda->creator?->name ?? 'Penyelenggara Rapat' }} ({{ $agenda->creator?->unit?->nama_unit ?? 'Tingkat Lembaga' }})</td>
     </tr>
 </table>
 @endif
 
 @if(($config['show_dasar_surat'] ?? false) && trim((string) ($config['dasar_surat'] ?? '')) !== '')
-<p style="margin: 4pt 0; text-align: justify; font-size: {{ DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ DocumentLayout::BODY_LINE_PT }}pt; mso-line-height-rule: exactly; font-family: 'Times New Roman', Times, serif;">
+<p style="margin: 4pt 0; text-align: justify; font-size: {{ DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ DocumentLayout::BODY_LINE_PT }}pt; mso-line-height-rule: exactly; font-family: {{ DocumentLayout::BODY_FONT_CSS }};">
     <strong>Dasar:</strong> {{ $config['dasar_surat'] }}
 </p>
 @endif
 
 @if(($config['show_opening_ba'] ?? true) && trim((string) ($config['opening_ba'] ?? '')) !== '')
-<p style="margin: 4pt 0 6pt 0; text-align: justify; font-size: {{ DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ DocumentLayout::BODY_LINE_PT }}pt; mso-line-height-rule: exactly; font-family: 'Times New Roman', Times, serif;">
+<p style="margin: 4pt 0 6pt 0; text-align: justify; font-size: {{ DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ DocumentLayout::BODY_LINE_PT }}pt; mso-line-height-rule: exactly; font-family: {{ DocumentLayout::BODY_FONT_CSS }};">
     {{ $config['opening_ba'] }}
 </p>
 @endif
@@ -63,12 +63,12 @@
 <!-- Seksi I: Notulensi & Kesimpulan Rapat -->
 @if(($config['show_notulensi'] ?? true) || ($config['show_kesimpulan'] ?? true))
 <div style="margin-top: {{ DocumentLayout::SECTION_GAP_TOP_PT }}pt;">
-    <div class="section-title" style="font-size: {{ DocumentLayout::SECTION_SIZE_PT }}pt; font-weight: bold; margin: 0 0 {{ DocumentLayout::SECTION_GAP_BOTTOM_PT }}pt 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif; page-break-after: avoid; break-after: avoid;">I. NOTULENSI &amp; KESIMPULAN RAPAT</div>
+    <div class="section-title" style="font-size: {{ DocumentLayout::SECTION_SIZE_PT }}pt; font-weight: bold; margin: 0 0 {{ DocumentLayout::SECTION_GAP_BOTTOM_PT }}pt 0; text-transform: uppercase; font-family: {{ DocumentLayout::BODY_FONT_CSS }}; page-break-after: avoid; break-after: avoid;">I. NOTULENSI &amp; KESIMPULAN RAPAT</div>
 
     @if($config['show_notulensi'] ?? true)
     <div style="margin-bottom: {{ DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt;">
-        <div style="font-weight: bold; font-size: {{ DocumentLayout::SUBHEADING_SIZE_PT }}pt; margin-bottom: {{ DocumentLayout::SUBHEADING_GAP_BOTTOM_PT }}pt; font-family: 'Times New Roman', Times, serif; page-break-after: avoid; break-after: avoid;">A. Catatan Jalannya Rapat (Notulensi):</div>
-        <div class="prose-gov" style="border: {{ DocumentLayout::BORDER_PT }}pt solid #{{ DocumentLayout::BORDER_COLOR }}; padding: {{ DocumentLayout::PROSE_PAD_TOP_PT }}pt {{ DocumentLayout::PROSE_PAD_SIDE_PT }}pt; text-align: justify; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; font-size: {{ DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ DocumentLayout::BODY_LINE_PT }}pt; mso-line-height-rule: exactly; background: #{{ DocumentLayout::PROSE_BOX_FILL }}; font-family: 'Times New Roman', Times, serif;">
+        <div style="font-weight: bold; font-size: {{ DocumentLayout::SUBHEADING_SIZE_PT }}pt; margin-bottom: {{ DocumentLayout::SUBHEADING_GAP_BOTTOM_PT }}pt; font-family: {{ DocumentLayout::BODY_FONT_CSS }}; page-break-after: avoid; break-after: avoid;">A. Catatan Jalannya Rapat (Notulensi):</div>
+        <div class="prose-gov" style="border: {{ DocumentLayout::BORDER_PT }}pt solid #{{ DocumentLayout::BORDER_COLOR }}; padding: {{ DocumentLayout::PROSE_PAD_TOP_PT }}pt {{ DocumentLayout::PROSE_PAD_SIDE_PT }}pt; text-align: justify; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; font-size: {{ DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ DocumentLayout::BODY_LINE_PT }}pt; mso-line-height-rule: exactly; background: #{{ DocumentLayout::PROSE_BOX_FILL }}; font-family: {{ DocumentLayout::BODY_FONT_CSS }};">
             {!! $agenda->formatted_notulensi ?: '<span style="color: #64748b; font-style: italic;">Tidak ada catatan notulensi khusus yang dicatat.</span>' !!}
         </div>
     </div>
@@ -76,8 +76,8 @@
 
     @if($config['show_kesimpulan'] ?? true)
     <div>
-        <div style="font-weight: bold; font-size: {{ DocumentLayout::SUBHEADING_SIZE_PT }}pt; margin-bottom: {{ DocumentLayout::SUBHEADING_GAP_BOTTOM_PT }}pt; font-family: 'Times New Roman', Times, serif; page-break-after: avoid; break-after: avoid;">B. Kesimpulan &amp; Rencana Tindak Lanjut (RTL):</div>
-        <div class="prose-gov" style="border: {{ DocumentLayout::BORDER_PT }}pt solid #{{ DocumentLayout::BORDER_COLOR }}; padding: {{ DocumentLayout::PROSE_PAD_TOP_PT }}pt {{ DocumentLayout::PROSE_PAD_SIDE_PT }}pt; text-align: justify; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; font-size: {{ DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ DocumentLayout::BODY_LINE_PT }}pt; mso-line-height-rule: exactly; background: #{{ DocumentLayout::PROSE_BOX_FILL }}; font-family: 'Times New Roman', Times, serif;">
+        <div style="font-weight: bold; font-size: {{ DocumentLayout::SUBHEADING_SIZE_PT }}pt; margin-bottom: {{ DocumentLayout::SUBHEADING_GAP_BOTTOM_PT }}pt; font-family: {{ DocumentLayout::BODY_FONT_CSS }}; page-break-after: avoid; break-after: avoid;">B. Kesimpulan &amp; Rencana Tindak Lanjut (RTL):</div>
+        <div class="prose-gov" style="border: {{ DocumentLayout::BORDER_PT }}pt solid #{{ DocumentLayout::BORDER_COLOR }}; padding: {{ DocumentLayout::PROSE_PAD_TOP_PT }}pt {{ DocumentLayout::PROSE_PAD_SIDE_PT }}pt; text-align: justify; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; font-size: {{ DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ DocumentLayout::BODY_LINE_PT }}pt; mso-line-height-rule: exactly; background: #{{ DocumentLayout::PROSE_BOX_FILL }}; font-family: {{ DocumentLayout::BODY_FONT_CSS }};">
             {!! $agenda->formatted_kesimpulan ?: '<span style="color: #64748b; font-style: italic;">Tidak ada catatan kesimpulan khusus yang dicatat.</span>' !!}
         </div>
     </div>
@@ -86,7 +86,7 @@
 @endif
 
 @if(($config['show_closing_ba'] ?? true) && trim((string) ($config['penutup'] ?? '')) !== '')
-<p style="margin: {{ DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt 0 0 0; text-align: justify; font-size: {{ DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ DocumentLayout::BODY_LINE_PT }}pt; mso-line-height-rule: exactly; font-family: 'Times New Roman', Times, serif;">
+<p style="margin: {{ DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt 0 0 0; text-align: justify; font-size: {{ DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ DocumentLayout::BODY_LINE_PT }}pt; mso-line-height-rule: exactly; font-family: {{ DocumentLayout::BODY_FONT_CSS }};">
     {{ $config['penutup'] }}
 </p>
 @endif
@@ -94,22 +94,16 @@
 <!-- Tanda Tangan Pengesahan: kiri (Pimpinan) - tengah (Kepala LLDIKTI, hanya bila
      show_signer3 aktif) - kanan (Notulis). Urutan ini dipatok di sini. -->
 @php
-    // Lebar kolom dan lebar isi blok dihitung sekali, di satu tempat.
-    //
-    // Sebelumnya tiap sel menulis ulang ternary yang sama, dan lebar blok
-    // di dalam sel berupa angka tetap (175pt / 135pt). Angka tetap itulah
-    // sumber letaknya yang berantakan: begitu margin halaman berubah, lebar
-    // sel ikut berubah sementara blok tetap, sehingga teks keluar dari kolomnya.
-    // Persentase selalu mengikuti lebar sel, berapa pun margin yang dipakai.
     $ttdThird = (bool) ($config['show_signer3'] ?? false);
     $ttdCell = $ttdThird ? '33.3%' : '50%';
     $ttdCellMid = '33.4%';
-    $ttdInner = $ttdThird ? '76%' : '68%';
+    $ttdInner = $ttdThird ? DocumentLayout::TTD_INNER_WIDTH_THREE_COLUMN : DocumentLayout::TTD_INNER_WIDTH_TWO_COLUMN;
+    $ttdCellPad = $ttdThird ? '0 1pt' : '0 4pt';
 @endphp
 <div class="signature-block" style="margin-top: {{ DocumentLayout::TTD_GAP_PT }}pt; page-break-inside: avoid; break-inside: avoid; mso-yfti-row: cantSplit;">
-    <table class="signature-table" width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; border-collapse: collapse; border: none; margin: 8pt 0 4pt 0; page-break-inside: avoid; break-inside: avoid; mso-yfti-row: cantSplit;">
+    <table class="signature-table" width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; border-collapse: collapse; border: none; margin: 8pt 0 4pt 0; page-break-inside: avoid; break-inside: avoid; mso-yfti-row: cantSplit; font-family: {{ DocumentLayout::BODY_FONT_CSS }};">
         <tr style="page-break-inside: avoid; break-inside: avoid; mso-yfti-row: cantSplit;">
-            <td width="{{ $ttdCell }}" style="width: {{ $ttdCell }}; text-align: center; vertical-align: top; border: none; padding: 0 4pt; font-size: 12pt; font-family: 'Times New Roman', Times, serif;">
+            <td width="{{ $ttdCell }}" style="width: {{ $ttdCell }}; text-align: center; vertical-align: top; border: none; padding: {{ $ttdCellPad }}; font-size: {{ DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ DocumentLayout::BODY_LINE_PT }}pt; font-family: {{ DocumentLayout::BODY_FONT_CSS }};">
                 <div style="display: inline-block; width: {{ $ttdInner }}; text-align: left;">
                     @php $signer1Prefix = trim((string) ($config['signer1_prefix'] ?? 'Mengetahui,')); @endphp
                     @if($signer1Prefix !== ''){{ $signer1Prefix }}<br>@else&nbsp;<br>@endif
@@ -117,7 +111,7 @@
                 </div>
             </td>
             @if($ttdThird)
-            <td width="{{ $ttdCellMid }}" style="width: {{ $ttdCellMid }}; text-align: center; vertical-align: top; border: none; padding: 0 4pt; font-size: 12pt; font-family: 'Times New Roman', Times, serif;">
+            <td width="{{ $ttdCellMid }}" style="width: {{ $ttdCellMid }}; text-align: center; vertical-align: top; border: none; padding: {{ $ttdCellPad }}; font-size: {{ DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ DocumentLayout::BODY_LINE_PT }}pt; font-family: {{ DocumentLayout::BODY_FONT_CSS }};">
                 <div style="display: inline-block; width: {{ $ttdInner }}; text-align: left;">
                     @php $signer3Prefix = trim((string) ($config['signer3_prefix'] ?? '')); @endphp
                     @if($signer3Prefix !== ''){{ $signer3Prefix }}<br>@else&nbsp;<br>@endif
@@ -125,7 +119,7 @@
                 </div>
             </td>
             @endif
-            <td width="{{ $ttdCell }}" style="width: {{ $ttdCell }}; text-align: center; vertical-align: top; border: none; padding: 0 4pt; font-size: 12pt; font-family: 'Times New Roman', Times, serif;">
+            <td width="{{ $ttdCell }}" style="width: {{ $ttdCell }}; text-align: center; vertical-align: top; border: none; padding: {{ $ttdCellPad }}; font-size: {{ DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ DocumentLayout::BODY_LINE_PT }}pt; font-family: {{ DocumentLayout::BODY_FONT_CSS }};">
                 <div style="display: inline-block; width: {{ $ttdInner }}; text-align: left;">
                     {{ $config['signing_city'] ?? 'Padang' }}, {{ $config['signing_date'] ?? now()->translatedFormat('d F Y') }}<br>
                     <strong>{{ $config['signer2_role'] ?? 'Notulis Rapat' }}</strong>
@@ -158,24 +152,24 @@
             </td>
         </tr>
         <tr style="page-break-inside: avoid; break-inside: avoid; mso-yfti-row: cantSplit;">
-            <td width="{{ $ttdCell }}" style="width: {{ $ttdCell }}; text-align: center; vertical-align: top; border: none; padding: 0 4pt; font-size: 12pt; font-family: 'Times New Roman', Times, serif;">
+            <td width="{{ $ttdCell }}" style="width: {{ $ttdCell }}; text-align: center; vertical-align: top; border: none; padding: {{ $ttdCellPad }}; font-size: {{ DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ DocumentLayout::BODY_LINE_PT }}pt; font-family: {{ DocumentLayout::BODY_FONT_CSS }};">
                 <div style="display: inline-block; width: {{ $ttdInner }}; text-align: left;">
                     <strong>{{ $config['signer1_name'] ?? $agenda->nama_pimpinan }}</strong><br>
-                    NIP {{ $config['signer1_nip'] ?? $agenda->nip_pimpinan }}
+                    <span style="white-space: nowrap;">NIP {{ $config['signer1_nip'] ?? $agenda->nip_pimpinan }}</span>
                 </div>
             </td>
             @if($ttdThird)
-            <td width="{{ $ttdCellMid }}" style="width: {{ $ttdCellMid }}; text-align: center; vertical-align: top; border: none; padding: 0 4pt; font-size: 12pt; font-family: 'Times New Roman', Times, serif;">
+            <td width="{{ $ttdCellMid }}" style="width: {{ $ttdCellMid }}; text-align: center; vertical-align: top; border: none; padding: {{ $ttdCellPad }}; font-size: {{ DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ DocumentLayout::BODY_LINE_PT }}pt; font-family: {{ DocumentLayout::BODY_FONT_CSS }};">
                 <div style="display: inline-block; width: {{ $ttdInner }}; text-align: left;">
                     <strong>{{ $config['signer3_name'] ?? '-' }}</strong><br>
-                    NIP {{ $config['signer3_nip'] ?? '-' }}
+                    <span style="white-space: nowrap;">NIP {{ $config['signer3_nip'] ?? '-' }}</span>
                 </div>
             </td>
             @endif
-            <td width="{{ $ttdCell }}" style="width: {{ $ttdCell }}; text-align: center; vertical-align: top; border: none; padding: 0 4pt; font-size: 12pt; font-family: 'Times New Roman', Times, serif;">
+            <td width="{{ $ttdCell }}" style="width: {{ $ttdCell }}; text-align: center; vertical-align: top; border: none; padding: {{ $ttdCellPad }}; font-size: {{ DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ DocumentLayout::BODY_LINE_PT }}pt; font-family: {{ DocumentLayout::BODY_FONT_CSS }};">
                 <div style="display: inline-block; width: {{ $ttdInner }}; text-align: left;">
                     <strong>{{ $config['signer2_name'] ?? $agenda->nama_notulis }}</strong><br>
-                    NIP {{ $config['signer2_nip'] ?? $agenda->nip_notulis }}
+                    <span style="white-space: nowrap;">NIP {{ $config['signer2_nip'] ?? $agenda->nip_notulis }}</span>
                 </div>
             </td>
         </tr>
@@ -188,13 +182,13 @@
      sama sekali bila kolomnya kosong, supaya tidak tersisa garis pemisah
      tanpa teks di bawahnya. -->
 @if(($config['show_footer_note'] ?? false) && trim((string) ($config['footer_note'] ?? '')) !== '')
-<div class="document-footer-note" style="margin: {{ DocumentLayout::FOOTER_NOTE_GAP_PT }}pt 0 0 0; padding-top: {{ DocumentLayout::FOOTER_NOTE_PAD_TOP_PT }}pt; border-top: {{ DocumentLayout::FOOTER_NOTE_RULE_PT }}pt solid #{{ DocumentLayout::FOOTER_NOTE_RULE_COLOR }}; font-size: {{ DocumentLayout::FOOTER_NOTE_SIZE_PT }}pt; color: #{{ DocumentLayout::FOOTER_NOTE_COLOR }}; text-align: center; font-family: 'Times New Roman', Times, serif; page-break-inside: avoid; break-inside: avoid;">
+<div class="document-footer-note" style="margin: {{ DocumentLayout::FOOTER_NOTE_GAP_PT }}pt 0 0 0; padding-top: {{ DocumentLayout::FOOTER_NOTE_PAD_TOP_PT }}pt; border-top: {{ DocumentLayout::FOOTER_NOTE_RULE_PT }}pt solid #{{ DocumentLayout::FOOTER_NOTE_RULE_COLOR }}; font-size: {{ DocumentLayout::FOOTER_NOTE_SIZE_PT }}pt; color: #{{ DocumentLayout::FOOTER_NOTE_COLOR }}; text-align: center; font-family: {{ DocumentLayout::BODY_FONT_CSS }}; page-break-inside: avoid; break-inside: avoid;">
     <span id="sheet-footer-note">{{ $config['footer_note'] ?? '' }}</span>
 </div>
 @endif
 
 @if(($config['show_tembusan'] ?? false) && trim((string) ($config['tembusan'] ?? '')) !== '')
-<div style="margin-top: 8pt; font-size: {{ DocumentLayout::BODY_SIZE_PT - 1 }}pt; line-height: 15pt; font-family: 'Times New Roman', Times, serif; text-align: left; page-break-inside: avoid; break-inside: avoid;">
+<div style="margin-top: 8pt; font-size: {{ DocumentLayout::BODY_SIZE_PT - 1 }}pt; line-height: 15pt; font-family: {{ DocumentLayout::BODY_FONT_CSS }}; text-align: left; page-break-inside: avoid; break-inside: avoid;">
     <strong>Tembusan:</strong><br>
     {!! nl2br(e(trim((string) $config['tembusan']))) !!}
 </div>
@@ -202,26 +196,27 @@
 
 <!-- Seksi II: Daftar Hadir Peserta (Halaman Lampiran Baru Setelah Tanda Tangan) -->
 @if($config['show_attendees'] ?? true)
+@php $attendanceCols = DocumentLayout::attendanceColumns(); @endphp
 <div class="sheet-attendance-annex" style="page-break-before: always; break-before: page; margin: 0; padding: 0;">
-<div class="section-title" style="font-size: {{ DocumentLayout::SECTION_SIZE_PT }}pt; font-weight: bold; margin: 0 0 {{ DocumentLayout::SECTION_GAP_BOTTOM_PT }}pt 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif; page-break-after: avoid; break-after: avoid;">II. DAFTAR KEHADIRAN PESERTA ({{ $agenda->attendances->count() }} Orang)</div>
-<table class="attendance-table" width="100%" border="1" cellspacing="0" cellpadding="0" bordercolor="#{{ DocumentLayout::BORDER_COLOR }}" style="width: 100%; table-layout: fixed; border-collapse: collapse; border: {{ DocumentLayout::BORDER_PT }}px solid #{{ DocumentLayout::BORDER_COLOR }}; margin: 0; font-size: {{ DocumentLayout::ATTENDANCE_SIZE_PT }}pt; line-height: {{ DocumentLayout::ATTENDANCE_LINE_PT }}pt; font-family: 'Times New Roman', Times, serif; word-wrap: break-word; overflow-wrap: break-word;">
+<div class="section-title" style="font-size: {{ DocumentLayout::SECTION_SIZE_PT }}pt; font-weight: bold; margin: 0 0 {{ DocumentLayout::SECTION_GAP_BOTTOM_PT }}pt 0; text-transform: uppercase; font-family: {{ DocumentLayout::BODY_FONT_CSS }}; page-break-after: avoid; break-after: avoid;">II. DAFTAR KEHADIRAN PESERTA ({{ $agenda->attendances->count() }} Orang)</div>
+<table class="attendance-table" width="100%" border="1" cellspacing="0" cellpadding="0" bordercolor="#{{ DocumentLayout::BORDER_COLOR }}" style="width: 100%; table-layout: fixed; border-collapse: collapse; border: {{ DocumentLayout::BORDER_PT }}px solid #{{ DocumentLayout::BORDER_COLOR }}; margin: 0; font-size: {{ DocumentLayout::ATTENDANCE_SIZE_PT }}pt; line-height: {{ DocumentLayout::ATTENDANCE_LINE_PT }}pt; font-family: {{ DocumentLayout::BODY_FONT_CSS }}; word-wrap: break-word; overflow-wrap: break-word;">
     <thead>
         <tr style="background-color: #f2f2f2; mso-yfti-tblheader: yes; page-break-inside: avoid; break-inside: avoid;">
-            <th style="border: 1px solid #000000; padding: 3pt 2pt; text-align: center; width: 4%; font-weight: bold;">No</th>
+            <th style="border: 1px solid #000000; padding: 3pt 2pt; text-align: center; width: {{ $attendanceCols[0] }}; font-weight: bold;">No</th>
             <th style="border: 1px solid #000000; padding: 3pt 5pt; text-align: left; font-weight: bold;">Nama Lengkap</th>
             @if($config['show_nip'] ?? true)
-                <th style="border: 1px solid #000000; padding: 3pt 3pt; text-align: left; width: 21%; font-weight: bold; white-space: nowrap;">NIP</th>
+                <th style="border: 1px solid #000000; padding: 3pt 3pt; text-align: left; width: {{ $attendanceCols[1] }}; font-weight: bold; white-space: nowrap;">NIP</th>
             @endif
             @if($config['show_unit'] ?? true)
-                <th style="border: 1px solid #000000; padding: 3pt 3pt; text-align: left; width: 11%; font-weight: bold;">Unit Kerja / Pokja</th>
+                <th style="border: 1px solid #000000; padding: 3pt 3pt; text-align: left; width: {{ $attendanceCols[2] }}; font-weight: bold;">Unit Kerja / Pokja</th>
             @endif
             @if($config['show_attendance_time'] ?? true)
-                <th style="border: 1px solid #000000; padding: 3pt 2pt; text-align: center; width: 7%; font-weight: bold;">Waktu</th>
+                <th style="border: 1px solid #000000; padding: 3pt 2pt; text-align: center; width: {{ $attendanceCols[3] }}; font-weight: bold;">Waktu</th>
             @endif
             @if($config['show_selfie_photos'] ?? true)
-                <th style="border: 1px solid #000000; padding: 3pt 2pt; text-align: center; width: 11%; font-weight: bold;">Foto Kehadiran</th>
+                <th style="border: 1px solid #000000; padding: 3pt 2pt; text-align: center; width: {{ $attendanceCols[4] }}; font-weight: bold;">Foto Kehadiran</th>
             @endif
-            <th style="border: 1px solid #000000; padding: 3pt 3pt; text-align: center; width: 15%; font-weight: bold;">Tanda Tangan</th>
+            <th style="border: 1px solid #000000; padding: 3pt 3pt; text-align: center; width: {{ $attendanceCols[5] }}; font-weight: bold;">Tanda Tangan</th>
         </tr>
     </thead>
     <tbody>
@@ -230,13 +225,13 @@
                 <td style="border: 1px solid #000000; text-align: center; padding: 2pt 2pt; vertical-align: middle;">{{ $index + 1 }}</td>
                 <td style="border: 1px solid #000000; padding: 2pt 4pt; vertical-align: middle;"><strong>{{ $item['model']->user->name }}</strong></td>
                 @if($config['show_nip'] ?? true)
-                    <td style="border: 1px solid #000000; padding: 2pt 3pt; font-family: 'Times New Roman', Times, serif; font-size: 9pt; vertical-align: middle; white-space: nowrap;">{{ $item['model']->user->nip }}</td>
+                    <td style="border: 1px solid #000000; padding: 2pt 3pt; font-family: {{ DocumentLayout::BODY_FONT_CSS }}; font-size: {{ DocumentLayout::ATTENDANCE_SIZE_PT }}pt; vertical-align: middle; white-space: nowrap;">{{ $item['model']->user->nip }}</td>
                 @endif
                 @if($config['show_unit'] ?? true)
-                    <td style="border: 1px solid #000000; padding: 2pt 3pt; vertical-align: middle; font-size: 9pt;">{{ $item['model']->user->unit?->kode_unit ?? 'Pusat' }}</td>
+                    <td style="border: 1px solid #000000; padding: 2pt 3pt; vertical-align: middle; font-size: {{ DocumentLayout::ATTENDANCE_SIZE_PT }}pt;">{{ $item['model']->user->unit?->kode_unit ?? 'Pusat' }}</td>
                 @endif
                 @if($config['show_attendance_time'] ?? true)
-                    <td style="border: 1px solid #000000; text-align: center; padding: 2pt 2pt; font-size: 9pt; vertical-align: middle;">{{ $item['model']->signed_at->format('H:i') }}</td>
+                    <td style="border: 1px solid #000000; text-align: center; padding: 2pt 2pt; font-size: {{ DocumentLayout::ATTENDANCE_SIZE_PT }}pt; vertical-align: middle;">{{ $item['model']->signed_at->format('H:i') }}</td>
                 @endif
                 @if($config['show_selfie_photos'] ?? true)
                     <td style="border: 1px solid #000000; text-align: center; vertical-align: middle; padding: 1.5pt;">
@@ -284,7 +279,7 @@
      garis itu hanya menjadi garis yatim yang melayang di atas. -->
 @if(($config['show_documentation'] ?? true) && count($documentations) > 0)
 <div class="sheet-documentation-annex" style="page-break-before: always; break-before: page; margin: 0; padding: 0; border: none; page-break-inside: avoid; break-inside: avoid;">
-    <div class="section-title" style="font-size: 12pt; font-weight: bold; margin-bottom: 6pt; text-transform: uppercase; font-family: 'Times New Roman', Times, serif; text-align: center; page-break-after: avoid; break-after: avoid;">
+    <div class="section-title" style="font-size: {{ DocumentLayout::SECTION_SIZE_PT }}pt; font-weight: bold; margin-bottom: {{ DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt; text-transform: uppercase; font-family: {{ DocumentLayout::BODY_FONT_CSS }}; text-align: center; page-break-after: avoid; break-after: avoid;">
         III. LAMPIRAN FOTO DOKUMENTASI KEGIATAN
     </div>
     <table width="100%" border="0" cellspacing="0" cellpadding="4" style="width: 100%; border-collapse: collapse;">
@@ -297,7 +292,7 @@
                         <img src="{{ $docItem['base64'] }}" alt="Dokumentasi" width="220" height="135" style="width: 220px; height: 135px; max-height: 140px; max-width: 220px; object-fit: contain; margin: 0 auto; display: block; border: none;">
                     @endif
                     @if(!empty($docItem['model']->caption))
-                        <div style="font-size: 7.5pt; color: #334155; margin-top: 2pt; font-style: italic; font-family: 'Times New Roman', Times, serif;">{{ $docItem['model']->caption }}</div>
+                        <div style="font-size: {{ DocumentLayout::PHOTO_CAPTION_SIZE_PT }}pt; color: #334155; margin-top: 2pt; font-style: italic; font-family: {{ DocumentLayout::BODY_FONT_CSS }};">{{ $docItem['model']->caption }}</div>
                     @endif
                 </div>
             </td>

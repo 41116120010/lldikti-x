@@ -34,6 +34,49 @@ trait InspectsDocx
     }
 
     /**
+     * All header XML parts (word/header*.xml) concatenated as a string.
+     */
+    protected function docxHeaderXml(string $binary): string
+    {
+        $zip = $this->openDocx($binary);
+        $xml = '';
+
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $name = (string) $zip->getNameIndex($i);
+            if (preg_match('#^word/header\d+\.xml$#', $name)) {
+                $part = $zip->getFromName($name);
+                if (is_string($part)) {
+                    $xml .= $part;
+                }
+            }
+        }
+
+        $zip->close();
+
+        return $xml;
+    }
+
+    /**
+     * Header XML parts plus main document XML concatenated together.
+     */
+    protected function docxAllXml(string $binary): string
+    {
+        return $this->docxHeaderXml($binary).$this->docxXml($binary);
+    }
+
+    /**
+     * Every <w:tbl> inside word/header*.xml parts.
+     *
+     * @return list<string>
+     */
+    protected function docxHeaderTables(string $binary): array
+    {
+        preg_match_all('#<w:tbl>.*?</w:tbl>#s', $this->docxHeaderXml($binary), $matches);
+
+        return $matches[0];
+    }
+
+    /**
      * How many images the package carries.
      */
     protected function docxMediaCount(string $binary): int

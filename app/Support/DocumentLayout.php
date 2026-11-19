@@ -33,22 +33,38 @@ final class DocumentLayout
 
     public const A4_HEIGHT_CM = 29.7;
 
+    public const TOP_MARGIN_CM = 1.0;
+
+    public const RIGHT_MARGIN_CM = 2.0;
+
+    public const BOTTOM_MARGIN_CM = 2.5;
+
+    public const LEFT_MARGIN_CM = 3.0;
+
+    public const CONTENT_WIDTH_CM = 16.0;
+
+    public const DOCX_FIRST_HEADER_MARGIN_TOP_TWIPS = 333;
+
+    public const DOCX_FIRST_HEADER_HEIGHT_TWIPS = 142;
+
+    public const DOCX_MARGIN_RIGHT_TWIPS = 1134;
+
+    public const DOCX_MARGIN_BOTTOM_TWIPS = 1418;
+
+    public const DOCX_MARGIN_LEFT_TWIPS = 1701;
+
     /**
      * Page margins in centimetres: top, right, bottom, left.
-     *
-     * Left is deliberately wider: the letterhead guidance reserves that side for
-     * binding. The top margin also keeps the letterhead clear of the unprintable
-     * band of office printers.
      *
      * @return array{0: float, 1: float, 2: float, 3: float}
      */
     public static function marginsCm(): array
     {
         return [
-            self::cm((string) config('export.page.top', '1.5cm')),
+            self::cm((string) config('export.page.top', '1.0cm')),
             self::cm((string) config('export.page.right', '2cm')),
-            self::cm((string) config('export.page.bottom', '1.5cm')),
-            self::cm((string) config('export.page.left', '2cm')),
+            self::cm((string) config('export.page.bottom', '2.5cm')),
+            self::cm((string) config('export.page.left', '3cm')),
         ];
     }
 
@@ -82,31 +98,63 @@ final class DocumentLayout
     // Letterhead
     // ---------------------------------------------------------------------
 
+    public const KOP_FONT = 'Times New Roman';
+
+    public const KOP_FONT_CSS = "'Times New Roman', Times, serif";
+
+    public const BODY_FONT = 'Arial';
+
+    public const BODY_FONT_CSS = 'Arial, Helvetica, sans-serif';
+
+    public const KOP_WIDTH_CM = 18.25;
+
+    public const KOP_WIDTH_TWIPS = 10348;
+
+    public const KOP_BLEED_LEFT_CM = -1.26;
+
+    public const KOP_BLEED_LEFT_TWIPS = -714;
+
+    public const KOP_BLEED_RIGHT_CM = -0.99;
+
+    public const KOP_GAP_BOTTOM_PT = 12.0;
+
+    public const KOP_CELL_GAP_PT = 5.0;
+
+    public const KOP_CELL_PAD_BOTTOM_PT = 4.0;
+
+    public const KOP_LOGO_COL_TWIPS = 2043;
+
+    public const KOP_TEXT_COL_TWIPS = 8305;
+
+    public const KOP_LOGO_WIDTH_PT = 104.0;
+
+    public const KOP_LOGO_HEIGHT_PT = 111.0;
+
     /**
      * Ministry line: 16 pt, regular weight. It is the largest line but is NOT
      * bold - the implementing agency below it is what carries the weight.
      */
     public const MINISTRY_SIZE_PT = 16.0;
 
-    public const MINISTRY_LINE_PT = 19.0;
+    public const MINISTRY_LINE_PT = 17.5;
 
     public const AGENCY_SIZE_PT = 14.0;
 
-    public const AGENCY_LINE_PT = 17.0;
+    public const AGENCY_LINE_PT = 16.0;
 
     public const ADDRESS_SIZE_PT = 12.0;
 
-    public const ADDRESS_LINE_PT = 14.0;
+    public const ADDRESS_LINE_PT = 13.5;
 
-    /** Letterhead logo fits inside a 28 mm box. */
-    public const LOGO_BOX_PT = 79.4;
+    /** Letterhead logo fits inside 104 x 111 pt box matching official template. */
+    public const LOGO_BOX_PT = 111.0;
 
     /** Logo column and the text column beside it, as percentages. */
-    public const KOP_LOGO_COLUMN = '19%';
+    public const KOP_LOGO_COLUMN = '19.74%';
 
-    public const KOP_TEXT_COLUMN = '81%';
+    public const KOP_TEXT_COLUMN = '80.26%';
 
-    public const RULE_WEIGHT_PT = 1.0;
+    public const RULE_WEIGHT_PT = 2.25;
 
     // ---------------------------------------------------------------------
     // Body text
@@ -114,8 +162,8 @@ final class DocumentLayout
 
     public const BODY_SIZE_PT = 12.0;
 
-    /** Spasi 1,5, expressed absolutely so both renderers agree. */
-    public const BODY_LINE_PT = 18.0;
+    /** Spasi 1,15 (12 * 1.15 = 13.8 pt), expressed absolutely so both renderers agree. */
+    public const BODY_LINE_PT = 13.8;
 
     public const DOCUMENT_TITLE_SIZE_PT = 14.0;
 
@@ -167,19 +215,19 @@ final class DocumentLayout
     // Detail table (Perihal, Hari/Tanggal, ...)
     // ---------------------------------------------------------------------
 
-    public const DETAIL_LABEL_COLUMN = '24%';
+    public const DETAIL_LABEL_COLUMN = '28%';
 
     public const DETAIL_COLON_COLUMN = '2%';
 
-    public const DETAIL_VALUE_COLUMN = '74%';
+    public const DETAIL_VALUE_COLUMN = '70%';
 
     // ---------------------------------------------------------------------
     // Attendance table
     // ---------------------------------------------------------------------
 
-    public const ATTENDANCE_SIZE_PT = 9.0;
+    public const ATTENDANCE_SIZE_PT = 8.5;
 
-    public const ATTENDANCE_LINE_PT = 11.0;
+    public const ATTENDANCE_LINE_PT = 10.5;
 
     /** Header row fill, matching the PDF's table header. */
     public const ATTENDANCE_HEADER_FILL = 'f2f2f2';
@@ -207,7 +255,7 @@ final class DocumentLayout
      */
     public static function attendanceColumns(): array
     {
-        return ['4%', '21%', '11%', '7%', '11%', '15%'];
+        return ['4%', '22%', '11%', '7%', '11%', '15%'];
     }
 
     public const ATTENDANCE_SELFIE_PX = 26;
@@ -223,7 +271,7 @@ final class DocumentLayout
     /** Inner block width inside a signature column, as a percentage. */
     public const TTD_INNER_WIDTH_TWO_COLUMN = '68%';
 
-    public const TTD_INNER_WIDTH_THREE_COLUMN = '76%';
+    public const TTD_INNER_WIDTH_THREE_COLUMN = '98%';
 
     public const TTD_SIGNATURE_WIDTH_PX = 95;
 

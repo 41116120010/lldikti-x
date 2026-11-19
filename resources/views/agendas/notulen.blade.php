@@ -46,7 +46,7 @@
     }
 </style>
 @php
-    $defaultBundledLogoUrl = asset('images/tut-wuri-handayani.png');
+    $defaultBundledLogoUrl = asset('images/tut-wuri-handayani-kop.png');
     $currentSavedLogoUrl = (!empty($config['custom_logo_path']) && Storage::disk('public')->exists($config['custom_logo_path']))
         ? Storage::disk('public')->url($config['custom_logo_path'])
         : $defaultBundledLogoUrl;
@@ -466,9 +466,9 @@
                                 $kopLogoSrc = Storage::disk('public')->url($customLogo);
                                 $kopSourceFile = Storage::disk('public')->path($customLogo);
                             } else {
-                                $bundledLogo = public_path('images/tut-wuri-handayani.png');
+                                $bundledLogo = public_path('images/tut-wuri-handayani-kop.png');
                                 if (is_file($bundledLogo)) {
-                                    $kopLogoSrc = asset('images/tut-wuri-handayani.png');
+                                    $kopLogoSrc = asset('images/tut-wuri-handayani-kop.png');
                                     $kopSourceFile = $bundledLogo;
                                 }
                             }
@@ -488,26 +488,26 @@
 
                     <!-- Judul Dokumen & Nomor Berita Acara -->
                     <div class="doc-title" style="text-align: center; margin: {{ \App\Support\DocumentLayout::DOC_TITLE_GAP_TOP_PT }}pt 0 {{ \App\Support\DocumentLayout::DOC_TITLE_GAP_BOTTOM_PT }}pt 0;">
-                        <h1 id="sheet-document-title" style="font-size: {{ \App\Support\DocumentLayout::DOCUMENT_TITLE_SIZE_PT }}pt; font-weight: bold; text-decoration: underline; margin: 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif;">
+                        <h1 id="sheet-document-title" style="font-size: {{ \App\Support\DocumentLayout::DOCUMENT_TITLE_SIZE_PT }}pt; font-weight: bold; text-decoration: underline; margin: 0; text-transform: uppercase; font-family: Arial, Helvetica, sans-serif;">
                             {{ $config['document_title'] ?? 'BERITA ACARA DAN DAFTAR HADIR RAPAT' }}
                         </h1>
-                        <div id="sheet-document-number-wrapper" style="font-size: {{ \App\Support\DocumentLayout::BODY_SIZE_PT }}pt; font-family: 'Times New Roman', Times, serif; margin-top: 2px; {{ ($config['show_document_number'] ?? true) ? '' : 'display: none;' }}">
+                        <div id="sheet-document-number-wrapper" style="font-size: {{ \App\Support\DocumentLayout::BODY_SIZE_PT }}pt; font-family: Arial, Helvetica, sans-serif; margin-top: 2px; {{ ($config['show_document_number'] ?? true) ? '' : 'display: none;' }}">
                             Nomor: <span id="sheet-document-number">{{ $config['document_number'] ?? ('BA-RAPAT/' . date('Y') . '/' . str_pad($agenda->id, 4, '0', STR_PAD_LEFT)) }}</span>
                         </div>
                     </div>
 
                     <!-- Dasar / Rujukan Surat Undangan -->
-                    <div id="sheet-dasar-surat-block" style="font-size: {{ \App\Support\DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ \App\Support\DocumentLayout::BODY_LINE_PT }}pt; font-family: 'Times New Roman', Times, serif; margin-bottom: {{ \App\Support\DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt; text-align: justify; {{ (($config['show_dasar_surat'] ?? false) && trim((string) ($config['dasar_surat'] ?? '')) !== '') ? '' : 'display: none;' }}">
+                    <div id="sheet-dasar-surat-block" style="font-size: {{ \App\Support\DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ \App\Support\DocumentLayout::BODY_LINE_PT }}pt; font-family: Arial, Helvetica, sans-serif; margin-bottom: {{ \App\Support\DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt; text-align: justify; {{ (($config['show_dasar_surat'] ?? false) && trim((string) ($config['dasar_surat'] ?? '')) !== '') ? '' : 'display: none;' }}">
                         <strong>Dasar:</strong> <span id="sheet-dasar-surat-text">{{ $config['dasar_surat'] ?? '' }}</span>
                     </div>
 
                     <!-- Alinea Pembuka Berita Acara -->
-                    <div id="sheet-opening-ba-block" style="font-size: {{ \App\Support\DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ \App\Support\DocumentLayout::BODY_LINE_PT }}pt; font-family: 'Times New Roman', Times, serif; margin-bottom: {{ \App\Support\DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt; text-align: justify; {{ ($config['show_opening_ba'] ?? false) ? '' : 'display: none;' }}">
+                    <div id="sheet-opening-ba-block" style="font-size: {{ \App\Support\DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ \App\Support\DocumentLayout::BODY_LINE_PT }}pt; font-family: Arial, Helvetica, sans-serif; margin-bottom: {{ \App\Support\DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt; text-align: justify; {{ ($config['show_opening_ba'] ?? false) ? '' : 'display: none;' }}">
                         <p id="sheet-opening-ba-text" style="margin: 0; text-indent: 24pt;">{{ $config['opening_ba'] ?? '' }}</p>
                     </div>
 
                     <!-- Informasi Pelaksanaan Rapat -->
-                    <table id="sheet-meeting-info" class="info-table" width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; margin-bottom: {{ \App\Support\DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt; border-collapse: collapse; font-size: {{ \App\Support\DocumentLayout::INFO_SIZE_PT }}pt; border: none; font-family: 'Times New Roman', Times, serif; {{ ($config['show_meeting_info'] ?? true) ? '' : 'display: none;' }}">
+                    <table id="sheet-meeting-info" class="info-table" width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; margin-bottom: {{ \App\Support\DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt; border-collapse: collapse; font-size: {{ \App\Support\DocumentLayout::INFO_SIZE_PT }}pt; border: none; font-family: Arial, Helvetica, sans-serif; {{ ($config['show_meeting_info'] ?? true) ? '' : 'display: none;' }}">
                         <tr>
                             <td style="font-weight: bold; padding: {{ \App\Support\DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ \App\Support\DocumentLayout::DETAIL_LABEL_COLUMN }};">Perihal / Agenda</td>
                             <td style="padding: {{ \App\Support\DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ \App\Support\DocumentLayout::DETAIL_COLON_COLUMN }};">:</td>
@@ -537,14 +537,14 @@
 
                     <!-- Seksi I: Notulensi & Kesimpulan Rapat (Interactive WYSIWYG Editors) -->
                     <div id="sheet-seksi-1-container" style="margin-top: {{ \App\Support\DocumentLayout::SECTION_GAP_TOP_PT }}pt; {{ (($config['show_notulensi'] ?? true) || ($config['show_kesimpulan'] ?? true)) ? '' : 'display: none;' }}">
-                        <div id="sheet-seksi-1-title" class="section-title" style="font-size: {{ \App\Support\DocumentLayout::SECTION_SIZE_PT }}pt; font-weight: bold; margin: 0 0 {{ \App\Support\DocumentLayout::SECTION_GAP_BOTTOM_PT }}pt 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif;">
+                        <div id="sheet-seksi-1-title" class="section-title" style="font-size: {{ \App\Support\DocumentLayout::SECTION_SIZE_PT }}pt; font-weight: bold; margin: 0 0 {{ \App\Support\DocumentLayout::SECTION_GAP_BOTTOM_PT }}pt 0; text-transform: uppercase; font-family: Arial, Helvetica, sans-serif;">
                             I. NOTULENSI &amp; KESIMPULAN RAPAT
                         </div>
 
                         <!-- Bagian A: Catatan Jalannya Rapat (Notulensi) -->
                         <div id="sheet-section-notulensi-wrapper" style="margin-bottom: {{ \App\Support\DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt; {{ ($config['show_notulensi'] ?? true) ? '' : 'display: none;' }}">
                             <div class="flex items-center justify-between mb-1">
-                                <label for="notulensi-content" style="font-weight: bold; font-size: {{ \App\Support\DocumentLayout::SUBHEADING_SIZE_PT }}pt; font-family: 'Times New Roman', Times, serif;" class="text-slate-900">
+                                <label for="notulensi-content" style="font-weight: bold; font-size: {{ \App\Support\DocumentLayout::SUBHEADING_SIZE_PT }}pt; font-family: Arial, Helvetica, sans-serif;" class="text-slate-900">
                                     A. Catatan Jalannya Rapat (Notulensi):
                                 </label>
                                 <span class="text-[10px] text-slate-500 italic">Klik kolom di bawah untuk mulai mengetik</span>
@@ -556,7 +556,7 @@
                                 data-editor="notulensi"
                                 data-page="1"
                                 data-placeholder="Ketik catatan jalannya rapat, dinamika diskusi, arahan pimpinan, dan pembahasan di sini..."
-                                style="min-height: 80px; font-size: {{ \App\Support\DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ \App\Support\DocumentLayout::BODY_LINE_PT }}pt; text-align: justify; background: #{{ \App\Support\DocumentLayout::PROSE_BOX_FILL }}; border: {{ \App\Support\DocumentLayout::BORDER_PT }}pt solid #{{ \App\Support\DocumentLayout::BORDER_COLOR }}; border-radius: 0; padding: {{ \App\Support\DocumentLayout::PROSE_PAD_TOP_PT }}pt {{ \App\Support\DocumentLayout::PROSE_PAD_SIDE_PT }}pt;"
+                                style="min-height: 80px; font-family: Arial, Helvetica, sans-serif; font-size: {{ \App\Support\DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ \App\Support\DocumentLayout::BODY_LINE_PT }}pt; text-align: justify; background: #{{ \App\Support\DocumentLayout::PROSE_BOX_FILL }}; border: {{ \App\Support\DocumentLayout::BORDER_PT }}pt solid #{{ \App\Support\DocumentLayout::BORDER_COLOR }}; border-radius: 0; padding: {{ \App\Support\DocumentLayout::PROSE_PAD_TOP_PT }}pt {{ \App\Support\DocumentLayout::PROSE_PAD_SIDE_PT }}pt;"
                             >{!! \App\Support\Html::sanitize(old('notulensi', $agenda->notulensi)) !!}</div>
                             @error('notulensi')
                                 <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>
@@ -566,7 +566,7 @@
                         <!-- Bagian B: Kesimpulan & Rencana Tindak Lanjut (RTL) -->
                         <div id="sheet-section-kesimpulan-wrapper" style="{{ ($config['show_kesimpulan'] ?? true) ? '' : 'display: none;' }}">
                             <div class="flex items-center justify-between mb-1">
-                                <label for="kesimpulan-content" style="font-weight: bold; font-size: {{ \App\Support\DocumentLayout::SUBHEADING_SIZE_PT }}pt; font-family: 'Times New Roman', Times, serif;" class="text-slate-900">
+                                <label for="kesimpulan-content" style="font-weight: bold; font-size: {{ \App\Support\DocumentLayout::SUBHEADING_SIZE_PT }}pt; font-family: Arial, Helvetica, sans-serif;" class="text-slate-900">
                                     B. Kesimpulan &amp; Rencana Tindak Lanjut (RTL):
                                 </label>
                                 <span class="text-[10px] text-slate-500 italic">Klik kolom di bawah untuk mulai mengetik</span>
@@ -578,7 +578,7 @@
                                 data-editor="kesimpulan"
                                 data-page="1"
                                 data-placeholder="Ketik poin-poin kesimpulan akhir, keputusan yang disepakati, PIC penanggung jawab, dan tenggat waktu penyelesaian..."
-                                style="min-height: 70px; font-size: {{ \App\Support\DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ \App\Support\DocumentLayout::BODY_LINE_PT }}pt; text-align: justify; background: #{{ \App\Support\DocumentLayout::PROSE_BOX_FILL }}; border: {{ \App\Support\DocumentLayout::BORDER_PT }}pt solid #{{ \App\Support\DocumentLayout::BORDER_COLOR }}; border-radius: 0; padding: {{ \App\Support\DocumentLayout::PROSE_PAD_TOP_PT }}pt {{ \App\Support\DocumentLayout::PROSE_PAD_SIDE_PT }}pt;"
+                                style="min-height: 70px; font-family: Arial, Helvetica, sans-serif; font-size: {{ \App\Support\DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ \App\Support\DocumentLayout::BODY_LINE_PT }}pt; text-align: justify; background: #{{ \App\Support\DocumentLayout::PROSE_BOX_FILL }}; border: {{ \App\Support\DocumentLayout::BORDER_PT }}pt solid #{{ \App\Support\DocumentLayout::BORDER_COLOR }}; border-radius: 0; padding: {{ \App\Support\DocumentLayout::PROSE_PAD_TOP_PT }}pt {{ \App\Support\DocumentLayout::PROSE_PAD_SIDE_PT }}pt;"
                             >{!! \App\Support\Html::sanitize(old('kesimpulan', $agenda->kesimpulan)) !!}</div>
                             @error('kesimpulan')
                                 <p class="text-xs text-rose-700 font-bold mt-1">{{ $message }}</p>
@@ -589,16 +589,16 @@
                     <!-- Blok Pengesahan & Tanda Tangan (Dynamic Word Signature Flow) -->
                     <div id="sheet-pengesahan-final" class="sheet-signature-wrapper" style="margin-top: {{ \App\Support\DocumentLayout::TTD_GAP_PT }}pt;">
                         <!-- Alinea Penutup Berita Acara -->
-                        <div id="sheet-closing-ba-block" style="font-size: {{ \App\Support\DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ \App\Support\DocumentLayout::BODY_LINE_PT }}pt; font-family: 'Times New Roman', Times, serif; margin-bottom: {{ \App\Support\DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt; text-align: justify; {{ ($config['show_closing_ba'] ?? true) ? '' : 'display: none;' }}">
+                        <div id="sheet-closing-ba-block" style="font-size: {{ \App\Support\DocumentLayout::BODY_SIZE_PT }}pt; line-height: {{ \App\Support\DocumentLayout::BODY_LINE_PT }}pt; font-family: Arial, Helvetica, sans-serif; margin-bottom: {{ \App\Support\DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt; text-align: justify; {{ ($config['show_closing_ba'] ?? true) ? '' : 'display: none;' }}">
                             <p id="sheet-closing-ba-text" style="margin: 0; text-indent: 24pt;">{{ $config['penutup'] ?? 'Demikian Berita Acara rapat ini dibuat dengan sebenarnya untuk dapat dipergunakan sebagaimana mestinya.' }}</p>
                         </div>
 
                         <!-- Header if on standalone page -->
                         <div id="sheet-signature-standalone-header" style="display: none; text-align: center; margin-bottom: 8pt; padding-bottom: 4pt; border-bottom: 1.5pt solid #000;">
-                            <h2 style="font-size: 11pt; font-weight: bold; text-transform: uppercase; margin: 0; font-family: 'Times New Roman', Times, serif;">
+                            <h2 style="font-size: 11pt; font-weight: bold; text-transform: uppercase; margin: 0; font-family: Arial, Helvetica, sans-serif;">
                                 LEMBAR PENGESAHAN BERITA ACARA
                             </h2>
-                            <div style="font-size: 8.5pt; color: #334155; margin-top: 2pt; font-family: 'Times New Roman', Times, serif;">
+                            <div style="font-size: 8.5pt; color: #334155; margin-top: 2pt; font-family: Arial, Helvetica, sans-serif;">
                                 Pelaksanaan: {{ $agenda->waktu_mulai->translatedFormat('d F Y') }} &bull; Format: {{ ucfirst($agenda->tipe_rapat) }}
                             </div>
                         </div>
@@ -666,11 +666,12 @@
                             $signatureInner = $showSigner3Initial
                                 ? \App\Support\DocumentLayout::TTD_INNER_WIDTH_THREE_COLUMN
                                 : \App\Support\DocumentLayout::TTD_INNER_WIDTH_TWO_COLUMN;
+                            $signatureCellPad = $showSigner3Initial ? '0 1pt' : '0 4pt';
                             $signatureFont = 'font-size: '.\App\Support\DocumentLayout::BODY_SIZE_PT
-                                .'pt; font-family: \'Times New Roman\', Times, serif;';
+                                .'pt; font-family: Arial, Helvetica, sans-serif;';
                         @endphp
                         <div class="signature-block" style="margin-top: {{ \App\Support\DocumentLayout::TTD_GAP_PT }}pt; page-break-inside: avoid; break-inside: avoid;">
-                            <table id="sheet-signature-table" class="signature-table" width="100%" border="0" cellspacing="0" cellpadding="0" data-inner-two="{{ \App\Support\DocumentLayout::TTD_INNER_WIDTH_TWO_COLUMN }}" data-inner-three="{{ \App\Support\DocumentLayout::TTD_INNER_WIDTH_THREE_COLUMN }}" style="width: 100%; table-layout: fixed; border-collapse: collapse; border: none; font-family: 'Times New Roman', Times, serif;">
+                            <table id="sheet-signature-table" class="signature-table" width="100%" border="0" cellspacing="0" cellpadding="0" data-inner-two="{{ \App\Support\DocumentLayout::TTD_INNER_WIDTH_TWO_COLUMN }}" data-inner-three="{{ \App\Support\DocumentLayout::TTD_INNER_WIDTH_THREE_COLUMN }}" style="width: 100%; table-layout: fixed; border-collapse: collapse; border: none; font-family: Arial, Helvetica, sans-serif;">
                                 <colgroup>
                                     @foreach($signatureSigners as $signatureSigner)
                                         <col @if($signatureSigner['isSigner3']) data-signer3-col @endif data-signer-col style="width: {{ $signatureColWidth }}; {{ ($signatureSigner['isSigner3'] && !$showSigner3Initial) ? 'display: none;' : '' }}">
@@ -678,7 +679,7 @@
                                 </colgroup>
                                 <tr>
                                     @foreach($signatureSigners as $signatureSigner)
-                                        <td @if($signatureSigner['isSigner3']) data-signer3-col @endif data-signer-col style="width: {{ $signatureColWidth }}; text-align: center; vertical-align: top; border: none; padding: 0 4pt; {{ ($signatureSigner['isSigner3'] && !$showSigner3Initial) ? 'display: none;' : '' }}">
+                                        <td @if($signatureSigner['isSigner3']) data-signer3-col @endif data-signer-col data-signer-pad-cell style="width: {{ $signatureColWidth }}; text-align: center; vertical-align: top; border: none; padding: {{ $signatureCellPad }}; {{ ($signatureSigner['isSigner3'] && !$showSigner3Initial) ? 'display: none;' : '' }}">
                                             <div data-signer-inner style="display: inline-block; width: {{ $signatureInner }}; text-align: left;">
                                                 <span style="{{ $signatureFont }}">{!! $signatureSigner['label'] !!}</span><br>
                                                 <strong style="{{ $signatureFont }}">@if($signatureSigner['roleId'])<span id="{{ $signatureSigner['roleId'] }}">@endif{{ $signatureSigner['role'] }}@if($signatureSigner['roleId'])</span>@endif</strong>
@@ -705,10 +706,10 @@
                                 </tr>
                                 <tr>
                                     @foreach($signatureSigners as $signatureSigner)
-                                        <td @if($signatureSigner['isSigner3']) data-signer3-col @endif data-signer-col style="width: {{ $signatureColWidth }}; text-align: center; vertical-align: top; border: none; padding: 0 4pt; {{ ($signatureSigner['isSigner3'] && !$showSigner3Initial) ? 'display: none;' : '' }}">
+                                        <td @if($signatureSigner['isSigner3']) data-signer3-col @endif data-signer-col data-signer-pad-cell style="width: {{ $signatureColWidth }}; text-align: center; vertical-align: top; border: none; padding: {{ $signatureCellPad }}; {{ ($signatureSigner['isSigner3'] && !$showSigner3Initial) ? 'display: none;' : '' }}">
                                             <div data-signer-inner style="display: inline-block; width: {{ $signatureInner }}; text-align: left; {{ $signatureFont }}">
                                                 <strong>@if($signatureSigner['nameId'])<span id="{{ $signatureSigner['nameId'] }}">@endif{{ $signatureSigner['name'] }}@if($signatureSigner['nameId'])</span>@endif</strong><br>
-                                                NIP @if($signatureSigner['nipId'])<span id="{{ $signatureSigner['nipId'] }}">@endif{{ $signatureSigner['nip'] }}@if($signatureSigner['nipId'])</span>@endif
+                                                <span style="white-space: nowrap;">NIP @if($signatureSigner['nipId'])<span id="{{ $signatureSigner['nipId'] }}">@endif{{ $signatureSigner['nip'] }}@if($signatureSigner['nipId'])</span>@endif</span>
                                             </div>
                                         </td>
                                     @endforeach
@@ -717,7 +718,7 @@
                         </div>
 
                         <!-- Tembusan (Opsional di bawah blok pengesahan) -->
-                        <div id="sheet-tembusan-block" style="margin-top: 10pt; font-size: {{ \App\Support\DocumentLayout::BODY_SIZE_PT - 0.5 }}pt; line-height: 1.3; font-family: 'Times New Roman', Times, serif; {{ (($config['show_tembusan'] ?? false) && trim((string) ($config['tembusan'] ?? '')) !== '') ? '' : 'display: none;' }}">
+                        <div id="sheet-tembusan-block" style="margin-top: 10pt; font-size: {{ \App\Support\DocumentLayout::BODY_SIZE_PT - 0.5 }}pt; line-height: 1.3; font-family: Arial, Helvetica, sans-serif; {{ (($config['show_tembusan'] ?? false) && trim((string) ($config['tembusan'] ?? '')) !== '') ? '' : 'display: none;' }}">
                             <div style="font-weight: bold; margin-bottom: 2pt;">Tembusan:</div>
                             <div id="sheet-tembusan-list">
                                 @foreach(preg_split('/\r\n|\r|\n/', trim((string) ($config['tembusan'] ?? ''))) as $tembusanLine)
@@ -729,7 +730,7 @@
                         </div>
 
                         <!-- Catatan Kaki Dokumen Resmi (Selalu ada di DOM agar live toggle berfungsi) -->
-                        <div id="sheet-footer-note-block" class="document-footer-note" style="margin: {{ \App\Support\DocumentLayout::FOOTER_NOTE_GAP_PT }}pt 0 0 0; padding-top: {{ \App\Support\DocumentLayout::FOOTER_NOTE_PAD_TOP_PT }}pt; border-top: {{ \App\Support\DocumentLayout::FOOTER_NOTE_RULE_PT }}pt solid #{{ \App\Support\DocumentLayout::FOOTER_NOTE_RULE_COLOR }}; font-size: {{ \App\Support\DocumentLayout::FOOTER_NOTE_SIZE_PT }}pt; color: #{{ \App\Support\DocumentLayout::FOOTER_NOTE_COLOR }}; text-align: center; font-family: 'Times New Roman', Times, serif; page-break-inside: avoid; break-inside: avoid; {{ (($config['show_footer_note'] ?? false) && trim((string) ($config['footer_note'] ?? '')) !== '') ? '' : 'display: none;' }}">
+                        <div id="sheet-footer-note-block" class="document-footer-note" style="margin: {{ \App\Support\DocumentLayout::FOOTER_NOTE_GAP_PT }}pt 0 0 0; padding-top: {{ \App\Support\DocumentLayout::FOOTER_NOTE_PAD_TOP_PT }}pt; border-top: {{ \App\Support\DocumentLayout::FOOTER_NOTE_RULE_PT }}pt solid #{{ \App\Support\DocumentLayout::FOOTER_NOTE_RULE_COLOR }}; font-size: {{ \App\Support\DocumentLayout::FOOTER_NOTE_SIZE_PT }}pt; color: #{{ \App\Support\DocumentLayout::FOOTER_NOTE_COLOR }}; text-align: center; font-family: Arial, Helvetica, sans-serif; page-break-inside: avoid; break-inside: avoid; {{ (($config['show_footer_note'] ?? false) && trim((string) ($config['footer_note'] ?? '')) !== '') ? '' : 'display: none;' }}">
                             <span id="sheet-footer-note">{{ $config['footer_note'] ?? '' }}</span>
                         </div>
                     </div>
@@ -737,7 +738,7 @@
                     <!-- Seksi II: Daftar Kehadiran Peserta (Spreadsheet / Word Table, Halaman Lampiran Baru) -->
                     <div id="sheet-seksi-2-wrapper" class="sheet-attendance-annex" style="page-break-before: always; break-before: page; {{ ($config['show_attendees'] ?? true) ? '' : 'display: none;' }}">
                     <div class="attendance-annex-page-break" aria-hidden="true">Halaman Lampiran Baru — Daftar Kehadiran Peserta</div>
-                    <div id="sheet-seksi-2-container" class="section-title" style="font-size: {{ \App\Support\DocumentLayout::SECTION_SIZE_PT }}pt; font-weight: bold; margin: 0 0 {{ \App\Support\DocumentLayout::SECTION_GAP_BOTTOM_PT }}pt 0; text-transform: uppercase; font-family: 'Times New Roman', Times, serif;">
+                    <div id="sheet-seksi-2-container" class="section-title" style="font-size: {{ \App\Support\DocumentLayout::SECTION_SIZE_PT }}pt; font-weight: bold; margin: 0 0 {{ \App\Support\DocumentLayout::SECTION_GAP_BOTTOM_PT }}pt 0; text-transform: uppercase; font-family: Arial, Helvetica, sans-serif;">
                         II. DAFTAR KEHADIRAN PESERTA ({{ $attendances->count() }} Orang)
                     </div>
                     @php
@@ -771,7 +772,7 @@
 
                         $presenceHeaderPad = fn (string $side): string => '3pt '.$side;
                     @endphp
-                    <table id="sheet-attendance-table" class="doc-spreadsheet-table attendance-table" width="100%" border="1" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; border-collapse: collapse; border: {{ \App\Support\DocumentLayout::BORDER_PT }}px solid #{{ \App\Support\DocumentLayout::BORDER_COLOR }}; font-size: {{ \App\Support\DocumentLayout::ATTENDANCE_SIZE_PT }}pt; line-height: {{ \App\Support\DocumentLayout::ATTENDANCE_LINE_PT }}pt; font-family: 'Times New Roman', Times, serif;">
+                    <table id="sheet-attendance-table" class="doc-spreadsheet-table attendance-table" width="100%" border="1" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; border-collapse: collapse; border: {{ \App\Support\DocumentLayout::BORDER_PT }}px solid #{{ \App\Support\DocumentLayout::BORDER_COLOR }}; font-size: {{ \App\Support\DocumentLayout::ATTENDANCE_SIZE_PT }}pt; line-height: {{ \App\Support\DocumentLayout::ATTENDANCE_LINE_PT }}pt; font-family: Arial, Helvetica, sans-serif;">
                         <colgroup>
                             <col data-col="no" data-col-width="{{ $presenceWidths['no'] }}" style="width: {{ $presenceWidths['no'] }};">
                             <col data-col="name" style="width: {{ $presenceWidths['name'] }};">
@@ -852,7 +853,7 @@
 
                     <!-- Lampiran Bersih Foto Dokumentasi pada Lembar Cetak (Selalu ada di DOM agar sinkronisasi live berfungsi) -->
                     <div id="sheet-documentation-annex" class="sheet-documentation-annex" style="margin-top: 10pt; padding-top: 8pt; border-top: 1.5px solid #000; {{ ($documentations->count() > 0 && ($config['show_documentation'] ?? true)) ? '' : 'display: none;' }}">
-                        <div style="font-size: {{ \App\Support\DocumentLayout::SECTION_SIZE_PT }}pt; font-weight: bold; margin-bottom: {{ \App\Support\DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt; text-transform: uppercase; font-family: 'Times New Roman', Times, serif; text-align: center;">
+                        <div style="font-size: {{ \App\Support\DocumentLayout::SECTION_SIZE_PT }}pt; font-weight: bold; margin-bottom: {{ \App\Support\DocumentLayout::BLOCK_GAP_BOTTOM_PT }}pt; text-transform: uppercase; font-family: Arial, Helvetica, sans-serif; text-align: center;">
                             III. LAMPIRAN FOTO DOKUMENTASI KEGIATAN
                         </div>
                         <table width="100%" border="0" cellspacing="0" cellpadding="4" style="width: 100%; border-collapse: collapse;">
@@ -873,7 +874,7 @@
                                                     title="Klik untuk pratinjau foto perbesar"
                                                 >
                                                     <img src="{{ Storage::disk('public')->url($doc->file_path) }}" alt="Foto Dokumentasi" style="width: 100%; max-height: 120px; object-fit: contain; display: block; margin: 0 auto;">
-                                                    <div id="sheet-doc-caption-{{ $doc->id }}" style="font-size: 7.5pt; color: #334155; margin-top: 2pt; font-style: italic; font-family: 'Times New Roman', Times, serif; {{ $doc->caption ? '' : 'display: none;' }}">{{ $doc->caption }}</div>
+                                                    <div id="sheet-doc-caption-{{ $doc->id }}" style="font-size: 7.5pt; color: #334155; margin-top: 2pt; font-style: italic; font-family: Arial, Helvetica, sans-serif; {{ $doc->caption ? '' : 'display: none;' }}">{{ $doc->caption }}</div>
                                                 </div>
                                             </td>
                                         @endforeach
@@ -1219,11 +1220,11 @@
                                         </div>
                                     @else
                                         <div class="w-12 h-12 rounded-lg border border-slate-300 bg-white p-1 flex items-center justify-center shrink-0">
-                                            <img id="modal-logo-preview-img" src="{{ asset('images/tut-wuri-handayani.png') }}" alt="Logo Tut Wuri" class="max-h-10 max-w-10 object-contain">
+                                            <img id="modal-logo-preview-img" src="{{ asset('images/tut-wuri-handayani-kop.png') }}" alt="Logo Tut Wuri" class="max-h-10 max-w-10 object-contain">
                                         </div>
                                         <div>
                                             <span id="modal-logo-badge" class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">Logo Tut Wuri Handayani</span>
-                                            <div class="text-[10px] text-slate-500 mt-0.5">Bawaan standar resmi kementerian</div>
+                                            <div class="text-[10px] text-slate-500 mt-0.5">Bawaan standar resmi kementerian (monokrom)</div>
                                         </div>
                                     @endif
                                 </div>
@@ -1238,18 +1239,18 @@
 
                         <!-- Instansi Induk & Pelaksana -->
                         <div class="space-y-1.5">
-                            <label class="font-bold text-slate-800 block">Nama Kementerian / Lembaga Induk</label>
-                            <input type="text" name="instansi_induk" value="{{ old('instansi_induk', $config['instansi_induk'] ?? 'KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI') }}" class="w-full text-xs rounded-xl border-slate-300 focus:border-slate-900 focus:ring-slate-900 py-2.5 px-3">
+                            <label class="font-bold text-slate-800 block">Nama Kementerian / Lembaga Induk (Pisahkan baris sesuai kop resmi)</label>
+                            <textarea name="instansi_induk" rows="2" class="w-full text-xs rounded-xl border-slate-300 focus:border-slate-900 focus:ring-slate-900 py-2 px-3">{{ old('instansi_induk', $config['instansi_induk'] ?? "KEMENTERIAN PENDIDIKAN TINGGI,\nSAINS, DAN TEKNOLOGI") }}</textarea>
                         </div>
 
                         <div class="space-y-1.5">
                             <label class="font-bold text-slate-800 block">Nama Satuan Kerja / Instansi Pelaksana</label>
-                            <input type="text" name="instansi_pelaksana" value="{{ old('instansi_pelaksana', $config['instansi_pelaksana'] ?? 'LEMBAGA LAYANAN PENDIDIKAN TINGGI (LLDIKTI) WILAYAH X') }}" class="w-full text-xs rounded-xl border-slate-300 focus:border-slate-900 focus:ring-slate-900 py-2.5 px-3">
+                            <input type="text" name="instansi_pelaksana" value="{{ old('instansi_pelaksana', $config['instansi_pelaksana'] ?? 'LEMBAGA LAYANAN PENDIDIKAN TINGGI WILAYAH X') }}" class="w-full text-xs rounded-xl border-slate-300 focus:border-slate-900 focus:ring-slate-900 py-2.5 px-3">
                         </div>
 
                         <div class="space-y-1.5">
-                            <label class="font-bold text-slate-800 block">Alamat, Kontak &amp; Laman Resmi</label>
-                            <input type="text" name="alamat_kontak" value="{{ old('alamat_kontak', $config['alamat_kontak'] ?? 'Jalan Khatib Sulaiman Padang 25137 • Telepon (0751) 70567376 • Laman: lldikti10.kemdiktisaintek.go.id • Pos-el: info.lldikti10@kemdiktisaintek.go.id') }}" class="w-full text-xs rounded-xl border-slate-300 focus:border-slate-900 focus:ring-slate-900 py-2.5 px-3">
+                            <label class="font-bold text-slate-800 block">Alamat, Kontak &amp; Laman Resmi (3 Baris)</label>
+                            <textarea name="alamat_kontak" rows="3" class="w-full text-xs rounded-xl border-slate-300 focus:border-slate-900 focus:ring-slate-900 py-2 px-3">{{ old('alamat_kontak', $config['alamat_kontak'] ?? "Jalan Khatib Sulaiman Padang 25137\nTelepon (0751) 70567376\nLaman lldikti10.kemdiktisaintek.go.id  Pos-el info.lldikti10@kemdiktisaintek.go.id") }}</textarea>
                         </div>
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
@@ -1805,7 +1806,7 @@
                         title="Klik untuk pratinjau foto perbesar"
                     >
                         <img src="${escapeHtml(item.url)}" alt="Foto Dokumentasi" style="width: 100%; max-height: 120px; object-fit: contain; display: block; margin: 0 auto;">
-                        <div id="sheet-doc-caption-${escapeHtml(item.id)}" style="font-size: 7.5pt; color: #334155; margin-top: 2pt; font-style: italic; font-family: 'Times New Roman', Times, serif; ${captionStyle}">${escapeHtml(item.caption)}</div>
+                        <div id="sheet-doc-caption-${escapeHtml(item.id)}" style="font-size: 7.5pt; color: #334155; margin-top: 2pt; font-style: italic; font-family: Arial, Helvetica, sans-serif; ${captionStyle}">${escapeHtml(item.caption)}</div>
                     </div>
                 </td>`;
             });
@@ -1881,6 +1882,21 @@
                 .join('');
         }
 
+        const renderMultilineText = (targetEl, rawText) => {
+            if (!targetEl) return;
+            const lines = String(rawText ?? '')
+                .split(/\r?\n/)
+                .map(line => line.trim())
+                .filter(Boolean);
+            targetEl.textContent = '';
+            lines.forEach((line, idx) => {
+                if (idx > 0) {
+                    targetEl.appendChild(document.createElement('br'));
+                }
+                targetEl.appendChild(document.createTextNode(line));
+            });
+        };
+
         // Header Kop & Logo
         const kopEl = document.getElementById('sheet-header-kop');
         if (kopEl) kopEl.style.display = isChecked('show_kop') ? 'block' : 'none';
@@ -1893,9 +1909,9 @@
             logoEl = document.createElement('img');
             logoEl.id = 'sheet-logo-img';
             logoEl.alt = 'Logo Instansi';
-            logoEl.width = 86;
-            logoEl.height = 86;
-            logoEl.style.cssText = 'width: 65pt; height: 65pt; object-fit: contain; display: block; margin: 0 auto; border: none;';
+            logoEl.width = 139;
+            logoEl.height = 148;
+            logoEl.style.cssText = 'width: 104pt; height: 111pt; display: block; margin: 0 auto; border: none;';
             logoEl.src = workstation ? (workstation.dataset.currentLogoSrc || workstation.dataset.defaultLogoSrc || '') : '';
             logoCell.appendChild(logoEl);
         }
@@ -1919,8 +1935,8 @@
         }
 
         if (logoCell) {
-            const logoWidth = showLogo ? '17%' : '0%';
-            const textWidth = showLogo ? '83%' : '100%';
+            const logoWidth = showLogo ? '19.74%' : '0%';
+            const textWidth = showLogo ? '80.26%' : '100%';
             logoCell.style.width = logoWidth;
             logoCell.setAttribute('width', logoWidth);
             if (logoCell.nextElementSibling) {
@@ -1930,13 +1946,13 @@
         }
 
         const indukEl = document.getElementById('sheet-instansi-induk');
-        if (indukEl && val('instansi_induk')) indukEl.textContent = val('instansi_induk');
+        if (indukEl && val('instansi_induk')) renderMultilineText(indukEl, val('instansi_induk'));
 
         const pelaksanaEl = document.getElementById('sheet-instansi-pelaksana');
         if (pelaksanaEl && val('instansi_pelaksana')) pelaksanaEl.textContent = val('instansi_pelaksana');
 
         const kontakEl = document.getElementById('sheet-alamat-kontak');
-        if (kontakEl && val('alamat_kontak')) kontakEl.textContent = val('alamat_kontak');
+        if (kontakEl && val('alamat_kontak')) renderMultilineText(kontakEl, val('alamat_kontak'));
 
         // Document Title & Number
         const titleEl = document.getElementById('sheet-document-title');
@@ -2029,15 +2045,19 @@
         const sigTable = document.getElementById('sheet-signature-table');
         if (sigTable) {
             const colWidth = showSigner3 ? '33.4%' : '50%';
+            const cellPad = showSigner3 ? '0 1pt' : '0 4pt';
             const innerWidth = showSigner3
-                ? (sigTable.dataset.innerThree || '88%')
-                : (sigTable.dataset.innerTwo || '78%');
+                ? (sigTable.dataset.innerThree || '98%')
+                : (sigTable.dataset.innerTwo || '68%');
 
             sigTable.querySelectorAll('[data-signer3-col]').forEach(el => {
                 el.style.display = showSigner3 ? '' : 'none';
             });
             sigTable.querySelectorAll('[data-signer-col]').forEach(el => {
                 el.style.width = colWidth;
+            });
+            sigTable.querySelectorAll('[data-signer-pad-cell]').forEach(el => {
+                el.style.padding = cellPad;
             });
             sigTable.querySelectorAll('[data-signer-inner]').forEach(el => {
                 el.style.width = innerWidth;

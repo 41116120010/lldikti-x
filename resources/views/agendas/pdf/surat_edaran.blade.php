@@ -63,7 +63,7 @@
             width: 19.74%;
             text-align: center;
             vertical-align: middle;
-            padding: 0 4pt 4pt 0;
+            padding: 0 5pt 4pt 0;
         }
         .kop-logo-cell img {
             width: 104pt;
@@ -75,7 +75,7 @@
             width: 80.26%;
             text-align: center;
             vertical-align: middle;
-            padding: 0 0 4pt 0;
+            padding: 0 0 4pt 5pt;
             font-family: 'Times New Roman', Times, serif;
         }
         .kop-ministry-line {
@@ -272,7 +272,7 @@
         }
         .page-2-header {
             text-align: center;
-            font-family: 'Times New Roman', Times, serif;
+            font-family: Arial, Helvetica, sans-serif;
             font-size: 12pt;
             font-weight: normal;
             margin: 0 0 18pt 0;

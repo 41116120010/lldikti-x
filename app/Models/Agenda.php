@@ -698,7 +698,7 @@ class Agenda extends Model
         return $this->attendances()->where('user_id', $notulisId)->first();
     }
 
-    public const DEFAULT_REPORT_ALAMAT_KONTAK = 'Jalan Khatib Sulaiman Padang 25137 • Telepon (0751) 70567376 • Laman: lldikti10.kemdiktisaintek.go.id • Pos-el: info.lldikti10@kemdiktisaintek.go.id';
+    public const DEFAULT_REPORT_ALAMAT_KONTAK = "Jalan Khatib Sulaiman Padang 25137\nTelepon (0751) 70567376\nLaman lldikti10.kemdiktisaintek.go.id  Pos-el info.lldikti10@kemdiktisaintek.go.id";
 
     public const DEFAULT_REPORT_PENUTUP = 'Demikian Berita Acara ini dibuat dengan sesungguhnya untuk dapat dipergunakan sebagaimana mestinya.';
 
@@ -732,8 +732,8 @@ class Agenda extends Model
             'show_kop' => true,
             'show_logo' => true,
             'custom_logo_path' => null,
-            'instansi_induk' => 'KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI',
-            'instansi_pelaksana' => 'LEMBAGA LAYANAN PENDIDIKAN TINGGI (LLDIKTI) WILAYAH X',
+            'instansi_induk' => "KEMENTERIAN PENDIDIKAN TINGGI,\nSAINS, DAN TEKNOLOGI",
+            'instansi_pelaksana' => 'LEMBAGA LAYANAN PENDIDIKAN TINGGI WILAYAH X',
             'alamat_kontak' => self::DEFAULT_REPORT_ALAMAT_KONTAK,
             'document_title' => 'BERITA ACARA DAN DAFTAR HADIR RAPAT',
             'show_document_number' => true,
@@ -798,7 +798,16 @@ class Agenda extends Model
 
         $resolved = array_replace($defaults, $stored);
 
-        if (str_contains((string) ($resolved['alamat_kontak'] ?? ''), 'lldikti10.kemdikbud.go.id')) {
+        if (trim((string) ($resolved['instansi_induk'] ?? '')) === 'KEMENTERIAN PENDIDIKAN TINGGI, SAINS, DAN TEKNOLOGI') {
+            $resolved['instansi_induk'] = $defaults['instansi_induk'];
+        }
+
+        if (trim((string) ($resolved['instansi_pelaksana'] ?? '')) === 'LEMBAGA LAYANAN PENDIDIKAN TINGGI (LLDIKTI) WILAYAH X') {
+            $resolved['instansi_pelaksana'] = $defaults['instansi_pelaksana'];
+        }
+
+        $alamatStored = (string) ($resolved['alamat_kontak'] ?? '');
+        if (str_contains($alamatStored, 'lldikti10.kemdikbud.go.id') || (str_contains($alamatStored, '•') && str_contains($alamatStored, 'Jalan Khatib Sulaiman Padang 25137'))) {
             $resolved['alamat_kontak'] = $defaults['alamat_kontak'];
         }
 

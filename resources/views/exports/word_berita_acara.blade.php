@@ -37,12 +37,12 @@
         @if(($pageMode ?? 'named') === 'plain')
         @page {
             size: 595.3pt 841.9pt; /* A4 Portrait: 21.0cm x 29.7cm */
-            margin: {{ config('export.page.top', '1.5cm') }} {{ config('export.page.right', '2cm') }} {{ config('export.page.bottom', '1.5cm') }} {{ config('export.page.left', '2cm') }};
+            margin: {{ config('export.page.top', '1.0cm') }} {{ config('export.page.right', '2cm') }} {{ config('export.page.bottom', '2.5cm') }} {{ config('export.page.left', '3cm') }};
         }
         @else
         @page Section1 {
             size: 595.3pt 841.9pt; /* A4 Portrait: 21.0cm x 29.7cm */
-            margin: {{ config('export.page.top', '1.5cm') }} {{ config('export.page.right', '2cm') }} {{ config('export.page.bottom', '1.5cm') }} {{ config('export.page.left', '2cm') }};
+            margin: {{ config('export.page.top', '1.0cm') }} {{ config('export.page.right', '2cm') }} {{ config('export.page.bottom', '2.5cm') }} {{ config('export.page.left', '3cm') }};
             mso-header-margin: 1.25cm;
             mso-footer-margin: 1.25cm;
             mso-paper-source: 0;
@@ -54,9 +54,9 @@
         @endif
 
         body {
-            font-family: 'Times New Roman', Times, serif;
-            font-size: 12pt;
-            line-height: 18pt; mso-line-height-rule: exactly;
+            font-family: {{ \App\Support\DocumentLayout::BODY_FONT_CSS }};
+            font-size: {{ \App\Support\DocumentLayout::BODY_SIZE_PT }}pt;
+            line-height: {{ \App\Support\DocumentLayout::BODY_LINE_PT }}pt; mso-line-height-rule: exactly;
             color: #000000;
             background: #ffffff;
             margin: 0;
@@ -102,8 +102,9 @@
             width: 100%;
             border: 1pt solid #000000;
             margin-top: 0pt;
-            font-size: 9pt;
-            line-height: 11pt;
+            font-family: {{ \App\Support\DocumentLayout::BODY_FONT_CSS }};
+            font-size: {{ \App\Support\DocumentLayout::ATTENDANCE_SIZE_PT }}pt;
+            line-height: {{ \App\Support\DocumentLayout::ATTENDANCE_LINE_PT }}pt;
         }
 
         table.attendance-table th {
@@ -142,7 +143,7 @@
 
         /* Rich-text print rules (.prose-gov) for Dompdf / Word */
         .prose-gov {
-            font-family: 'Times New Roman', Times, serif;
+            font-family: {{ \App\Support\DocumentLayout::BODY_FONT_CSS }};
             word-wrap: break-word;
             overflow-wrap: break-word;
         }
@@ -166,7 +167,7 @@
         }
         .prose-gov h4 {
             font-size: 12pt;
-            line-height: 18pt;
+            line-height: {{ \App\Support\DocumentLayout::BODY_LINE_PT }}pt;
             font-weight: bold;
             margin: 4pt 0pt 2pt 0pt;
         }

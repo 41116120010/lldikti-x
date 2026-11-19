@@ -1685,8 +1685,8 @@ const OfficeWorkstation = {
                 ? sheet.offsetWidth * (297 / 210)
                 : 1122;
             const footerReserve = sheet.offsetWidth > 0
-                ? sheet.offsetWidth * (24 / 210)
-                : 90;
+                ? sheet.offsetWidth * (34 / 210)
+                : 128;
             const maxContentBottom = pageMaxHeight - footerReserve;
             return getBottomInSheet(sheet, element) > maxContentBottom;
         };
@@ -3829,7 +3829,7 @@ const SuratEdaranWorkstation = {
             }
 
             currentZoomVal = numericVal;
-            zoomContainer.dataset.zoom = numericVal;
+            zoomContainer.dataset.currentZoom = String(numericVal);
             zoomContainer.style.transform = numericVal === 100 ? 'none' : `scale(${numericVal / 100})`;
             zoomContainer.style.transformOrigin = 'center top';
             if (statusZoomEl) {
@@ -3837,7 +3837,7 @@ const SuratEdaranWorkstation = {
             }
             updateZoomCompensation(numericVal);
 
-            workstation.querySelectorAll('[data-zoom]').forEach(b => {
+            workstation.querySelectorAll('button[data-zoom]').forEach(b => {
                 if (b.dataset.zoom === String(val)) {
                     b.className = 'px-2 py-1 text-[11px] font-bold rounded-md active-zoom bg-slate-900 text-white transition cursor-pointer';
                 } else {
@@ -3904,7 +3904,7 @@ const SuratEdaranWorkstation = {
             deskCanvas.addEventListener('scroll', updateActivePageStatus, { passive: true });
         }
 
-        workstation.querySelectorAll('[data-zoom]').forEach(btn => {
+        workstation.querySelectorAll('button[data-zoom]').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
                 applyZoom(btn.dataset.zoom);

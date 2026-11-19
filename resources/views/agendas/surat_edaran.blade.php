@@ -468,7 +468,7 @@
             <div class="ruler-margin-zone ruler-margin-right" title="Margin Kanan: 2.0 cm"></div>
         </div>
 
-        <div id="office-zoom-container" class="office-zoom-container" data-zoom="100">
+        <div id="office-zoom-container" class="office-zoom-container" data-current-zoom="100">
             {{-- ================= HALAMAN 1: NASKAH SURAT UTAMA ================= --}}
             <div id="surat-sheet-page-1" class="office-paper-sheet paper-a4" data-paper-format="a4" data-page-number="1">
                 <div class="office-paper-margin-guide">
@@ -478,10 +478,10 @@
                         <div class="header-kop" id="sheet-header-kop" style="display: {{ $activeShowKop ? 'block' : 'none' }}; margin: 0; padding: 0; text-align: center; width: 100%; font-family: 'Times New Roman', Times, serif;">
                             <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; table-layout: fixed; border-collapse: collapse; border-bottom: 2.25pt solid #000000; margin: 0; padding: 0;">
                                 <tr>
-                                    <td id="sheet-logo-cell" width="{{ $activeShowLogo ? '19.74%' : '0%' }}" align="center" valign="middle" style="width: {{ $activeShowLogo ? '19.74%' : '0%' }}; display: {{ $activeShowLogo ? 'table-cell' : 'none' }}; text-align: center; vertical-align: middle; border: none; padding: 0 4pt 4pt 0;">
+                                    <td id="sheet-logo-cell" width="{{ $activeShowLogo ? '19.74%' : '0%' }}" align="center" valign="middle" style="width: {{ $activeShowLogo ? '19.74%' : '0%' }}; display: {{ $activeShowLogo ? 'table-cell' : 'none' }}; text-align: center; vertical-align: middle; border: none; padding: 0 5pt 4pt 0;">
                                         <img id="sheet-logo-img" src="{{ $currentSavedLogoUrl }}" alt="Logo Instansi" onerror="this.onerror=null;this.src='{{ asset('images/tut-wuri-handayani.png') }}';" style="width: 36.67mm; height: 39.19mm; object-fit: contain; display: {{ $activeShowLogo ? 'block' : 'none' }}; margin: 0 auto; border: none;">
                                     </td>
-                                    <td id="sheet-kop-text-cell" width="{{ $activeShowLogo ? '80.26%' : '100%' }}" align="center" valign="middle" style="width: {{ $activeShowLogo ? '80.26%' : '100%' }}; text-align: center; vertical-align: middle; border: none; padding: 0 0 4pt 0; font-family: 'Times New Roman', Times, serif;">
+                                    <td id="sheet-kop-text-cell" width="{{ $activeShowLogo ? '80.26%' : '100%' }}" align="center" valign="middle" style="width: {{ $activeShowLogo ? '80.26%' : '100%' }}; text-align: center; vertical-align: middle; border: none; padding: 0 0 4pt 5pt; font-family: 'Times New Roman', Times, serif;">
                                         <div id="sheet-instansi-induk" style="margin: 0; padding: 0; font-size: 16pt; line-height: 1.08; font-weight: normal; text-transform: uppercase; font-family: 'Times New Roman', Times, serif;">
                                             @foreach($instansiIndukLines as $idx => $line)
                                                 @if($idx > 0)<br>@endif{{ $line }}
@@ -543,24 +543,24 @@
                         <!-- Tabel Rincian Pelaksanaan Rapat (TBL#8: 17.2% | 2.6% | 80.2%, tinggi baris ~21pt) -->
                         <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 6pt 0 10pt 0; border: none; font-family: Arial, Helvetica, sans-serif; font-size: 12pt; line-height: 1.15;">
                             <tr style="height: 21pt;">
-                                <td style="width: 17.2%; vertical-align: top; border: none; padding: 4pt 0;">hari, tanggal</td>
-                                <td style="width: 2.6%; vertical-align: top; border: none; padding: 4pt 0;">:</td>
-                                <td style="width: 80.2%; vertical-align: top; border: none; padding: 4pt 0;" id="sheet-detail-hari-tanggal" data-default="{{ $defaultHariTanggalText }}">{{ trim($hariTanggalTextVal) !== '' ? $hariTanggalTextVal : $defaultHariTanggalText }}</td>
+                                <td style="width: 17.2%; vertical-align: top; border: none; padding: 4.5pt 0;">hari, tanggal</td>
+                                <td style="width: 2.6%; vertical-align: top; border: none; padding: 4.5pt 0;">:</td>
+                                <td style="width: 80.2%; vertical-align: top; border: none; padding: 4.5pt 0;" id="sheet-detail-hari-tanggal" data-default="{{ $defaultHariTanggalText }}">{{ trim($hariTanggalTextVal) !== '' ? $hariTanggalTextVal : $defaultHariTanggalText }}</td>
                             </tr>
                             <tr style="height: 21pt;">
-                                <td style="width: 17.2%; vertical-align: top; border: none; padding: 4pt 0;">pukul</td>
-                                <td style="width: 2.6%; vertical-align: top; border: none; padding: 4pt 0;">:</td>
-                                <td style="width: 80.2%; vertical-align: top; border: none; padding: 4pt 0;" id="sheet-detail-pukul" data-default="{{ $defaultPukulText }}">{{ trim($pukulTextVal) !== '' ? $pukulTextVal : $defaultPukulText }}</td>
+                                <td style="width: 17.2%; vertical-align: top; border: none; padding: 4.5pt 0;">pukul</td>
+                                <td style="width: 2.6%; vertical-align: top; border: none; padding: 4.5pt 0;">:</td>
+                                <td style="width: 80.2%; vertical-align: top; border: none; padding: 4.5pt 0;" id="sheet-detail-pukul" data-default="{{ $defaultPukulText }}">{{ trim($pukulTextVal) !== '' ? $pukulTextVal : $defaultPukulText }}</td>
                             </tr>
                             <tr style="height: 21pt;">
-                                <td style="width: 17.2%; vertical-align: top; border: none; padding: 4pt 0;">tempat</td>
-                                <td style="width: 2.6%; vertical-align: top; border: none; padding: 4pt 0;">:</td>
-                                <td style="width: 80.2%; vertical-align: top; border: none; padding: 4pt 0;" id="sheet-detail-tempat" data-default="{{ $defaultTempatText }}">{{ trim($tempatTextVal) !== '' ? $tempatTextVal : $defaultTempatText }}</td>
+                                <td style="width: 17.2%; vertical-align: top; border: none; padding: 4.5pt 0;">tempat</td>
+                                <td style="width: 2.6%; vertical-align: top; border: none; padding: 4.5pt 0;">:</td>
+                                <td style="width: 80.2%; vertical-align: top; border: none; padding: 4.5pt 0;" id="sheet-detail-tempat" data-default="{{ $defaultTempatText }}">{{ trim($tempatTextVal) !== '' ? $tempatTextVal : $defaultTempatText }}</td>
                             </tr>
                             <tr style="height: 21pt;">
-                                <td style="width: 17.2%; vertical-align: top; border: none; padding: 4pt 0;">acara</td>
-                                <td style="width: 2.6%; vertical-align: top; border: none; padding: 4pt 0;">:</td>
-                                <td style="width: 80.2%; vertical-align: top; border: none; padding: 4pt 0;" id="sheet-detail-acara" data-default="{{ $defaultAcaraText }}">{{ trim($acaraTextVal) !== '' ? $acaraTextVal : $defaultAcaraText }}</td>
+                                <td style="width: 17.2%; vertical-align: top; border: none; padding: 4.5pt 0;">acara</td>
+                                <td style="width: 2.6%; vertical-align: top; border: none; padding: 4.5pt 0;">:</td>
+                                <td style="width: 80.2%; vertical-align: top; border: none; padding: 4.5pt 0;" id="sheet-detail-acara" data-default="{{ $defaultAcaraText }}">{{ trim($acaraTextVal) !== '' ? $acaraTextVal : $defaultAcaraText }}</td>
                             </tr>
                         </table>
 
@@ -627,7 +627,7 @@
                     </div>
 
                     {{-- AREA PENGESAHAN & TEMBUSAN (P#14-22: 55.5%, blank/stamp/tte_placeholder, NIP Normal non-bold sejajar Tembusan:) --}}
-                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 14pt; border: none; font-family: Arial, Helvetica, sans-serif; font-size: 12pt; line-height: 1.15; page-break-inside: avoid;">
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 18pt; border: none; font-family: Arial, Helvetica, sans-serif; font-size: 12pt; line-height: 1.15; page-break-inside: avoid;">
                         <tr>
                             <td style="width: 55.5%; vertical-align: top; border: none;"></td>
                             <td style="width: 44.5%; vertical-align: top; border: none;">

@@ -54,11 +54,15 @@ class WordExportService
                 if ($customLogo && Storage::disk('public')->exists($customLogo)) {
                     $raw = Storage::disk('public')->get($customLogo);
                     $logoSize = $this->assertSafeImageBinary($raw);
-                    $logoBase64 = $this->optimizeAndEncodeImage($raw, 100, 'png');
+                    $logoBase64 = $this->optimizeAndEncodeImage($raw, 300, 'png');
+                } elseif (file_exists(public_path('images/tut-wuri-handayani-kop.png'))) {
+                    $raw = file_get_contents(public_path('images/tut-wuri-handayani-kop.png'));
+                    $logoSize = $this->assertSafeImageBinary($raw);
+                    $logoBase64 = $this->optimizeAndEncodeImage($raw, 300, 'png');
                 } elseif (file_exists(public_path('images/tut-wuri-handayani.png'))) {
                     $raw = file_get_contents(public_path('images/tut-wuri-handayani.png'));
                     $logoSize = $this->assertSafeImageBinary($raw);
-                    $logoBase64 = $this->optimizeAndEncodeImage($raw, 100, 'png');
+                    $logoBase64 = $this->optimizeAndEncodeImage($raw, 300, 'png');
                 }
             } catch (\Throwable $e) {
                 Log::warning('Failed to load institution logo for document export: ' . $e->getMessage());
