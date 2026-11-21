@@ -20,6 +20,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -244,21 +245,25 @@ class ReportController extends Controller
     {
         Gate::authorize('view', $agenda);
 
-        $config = $this->extractReportConfig($request, $agenda);
+        $config = $this->resolveReportConfigSafely($request, $agenda);
 
-        ActivityLogger::log(
-            type: 'EXPORT_PDF',
-            description: "Mengekspor Berita Acara & Daftar Hadir PDF untuk agenda: {$agenda->judul_rapat}",
-            targetModel: Agenda::class,
-            targetId: $agenda->id,
-            properties: ['custom_config' => !empty($request->all())]
-        );
+        try {
+            ActivityLogger::log(
+                type: 'EXPORT_PDF',
+                description: "Mengekspor Berita Acara & Daftar Hadir PDF untuk agenda: {$agenda->judul_rapat}",
+                targetModel: Agenda::class,
+                targetId: $agenda->id,
+                properties: ['custom_config' => !empty($request->all())]
+            );
+        } catch (\Throwable $logEx) {
+            $this->safeLog('warning', 'Gagal mencatat log aktivitas ekspor PDF: ' . $logEx->getMessage());
+        }
 
         try {
             // Always attempt true binary PDF download first (via LibreOffice headless)
             return $pdfService->exportBinaryPdf($agenda, $config);
         } catch (\Throwable $e) {
-            Log::warning('Gagal mengekspor PDF biner (LibreOffice tidak tersedia), menggunakan fallback cetak browser: ' . $e->getMessage(), [
+            $this->safeLog('warning', 'Gagal mengekspor PDF biner (LibreOffice tidak tersedia), menggunakan fallback cetak browser: ' . $e->getMessage(), [
                 'agenda_id' => $agenda->id,
             ]);
 
@@ -266,7 +271,7 @@ class ReportController extends Controller
                 // Fallback: return inline print-ready HTML — user can Ctrl+P / Save as PDF
                 return $pdfService->exportBeritaAcara($agenda, $config);
             } catch (\Throwable $fallbackException) {
-                Log::error('Gagal memuat fallback pratinjau PDF: ' . $fallbackException->getMessage(), [
+                $this->safeLog('error', 'Gagal memuat fallback pratinjau PDF: ' . $fallbackException->getMessage(), [
                     'agenda_id' => $agenda->id,
                     'exception' => $fallbackException,
                 ]);
@@ -291,7 +296,7 @@ class ReportController extends Controller
     ): Response|RedirectResponse {
         Gate::authorize('view', $agenda);
 
-        $config = $this->extractReportConfig($request, $agenda);
+        $config = $this->resolveReportConfigSafely($request, $agenda);
 
         try {
             ActivityLogger::log(
@@ -302,13 +307,13 @@ class ReportController extends Controller
                 properties: ['custom_config' => !empty($request->all())]
             );
         } catch (\Throwable $logEx) {
-            Log::warning('Gagal mencatat log aktivitas ekspor Word: ' . $logEx->getMessage());
+            $this->safeLog('warning', 'Gagal mencatat log aktivitas ekspor Word: ' . $logEx->getMessage());
         }
 
         try {
             return $docxService->exportBeritaAcara($agenda, $config);
         } catch (\Throwable $e) {
-            Log::warning('Gagal mengekspor OpenXML Word (.docx), mencoba fallback format Word (.doc): ' . $e->getMessage(), [
+            $this->safeLog('warning', 'Gagal mengekspor OpenXML Word (.docx), mencoba fallback format Word (.doc): ' . $e->getMessage(), [
                 'agenda_id' => $agenda->id,
                 'exception' => $e,
             ]);
@@ -316,7 +321,7 @@ class ReportController extends Controller
             try {
                 return $wordExportService->exportBeritaAcara($agenda, $config);
             } catch (\Throwable $fallbackException) {
-                Log::error('Gagal mengekspor dokumen Word fallback (.doc): ' . $fallbackException->getMessage(), [
+                $this->safeLog('error', 'Gagal mengekspor dokumen Word fallback (.doc): ' . $fallbackException->getMessage(), [
                     'agenda_id' => $agenda->id,
                     'exception' => $fallbackException,
                 ]);
@@ -327,6 +332,38 @@ class ReportController extends Controller
                     'Terjadi kesalahan saat mengekspor dokumen Word. Silakan coba kembali atau gunakan format Pratinjau Dokumen.'
                 );
             }
+        }
+    }
+
+    /**
+     * Write a log entry without letting storage/log permission failures abort export delivery.
+     *
+     * @param  array<string,mixed>  $context
+     */
+    private function safeLog(string $level, string $message, array $context = []): void
+    {
+        try {
+            Log::{$level}($message, $context);
+        } catch (\Throwable) {
+            // Suppress logger I/O errors so fallback document responses still stream cleanly
+        }
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    private function resolveReportConfigSafely(Request $request, Agenda $agenda): array
+    {
+        try {
+            return $this->extractReportConfig($request, $agenda);
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            $this->safeLog('warning', 'Gagal memproses konfigurasi ekspor kustom, memakai konfigurasi agenda tersimpan: ' . $e->getMessage(), [
+                'agenda_id' => $agenda->id,
+            ]);
+
+            return $agenda->resolved_report_config;
         }
     }
 

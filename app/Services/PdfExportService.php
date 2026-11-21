@@ -67,10 +67,14 @@ class PdfExportService
         try {
             $pdf = $this->dompdf()->render($html);
         } catch (Throwable $e) {
-            Log::error('PDF export failed', [
-                'agenda_id' => $agenda->id,
-                'error' => $e->getMessage(),
-            ]);
+            try {
+                Log::error('PDF export failed', [
+                    'agenda_id' => $agenda->id,
+                    'error' => $e->getMessage(),
+                ]);
+            } catch (Throwable) {
+                // Suppress logger I/O errors so fallback can execute
+            }
 
             throw new \RuntimeException('Gagal membuat dokumen PDF. Silakan coba lagi.', previous: $e);
         }

@@ -7,6 +7,7 @@ use App\Support\DocumentLayout;
 use App\Support\DocxHtmlRenderer;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use PhpOffice\PhpWord\ComplexType\TblWidth as ComplexTblWidth;
 use PhpOffice\PhpWord\Element\Header;
 use PhpOffice\PhpWord\IOFactory;
@@ -54,24 +55,19 @@ class DocxExportService
      */
     public function exportBeritaAcara(Agenda $agenda, array $config = []): Response
     {
-        $data = $this->wordExportService->prepareViewData($agenda, $config);
-
         $oldReporting = error_reporting();
         error_reporting($oldReporting & ~E_DEPRECATED & ~E_USER_DEPRECATED);
 
         try {
+            $data = $this->wordExportService->prepareViewData($agenda, $config);
             $bytes = $this->build($data);
         } finally {
             error_reporting($oldReporting);
             $this->cleanTemporaryFiles();
         }
 
-        $filename = 'Berita_Acara_'.$agenda->slug.'.docx';
-
-        Log::info('DOCX export selesai', [
-            'agenda_id' => $agenda->id,
-            'bytes' => strlen($bytes),
-        ]);
+        $safeSlug = Str::slug((string) ($agenda->slug ?: $agenda->judul_rapat)) ?: 'Rapat_' . ($agenda->id ?? 'Resmi');
+        $filename = 'Berita_Acara_' . $safeSlug . '.docx';
 
         return response($bytes, 200, [
             'Content-Type' => self::CONTENT_TYPE,
@@ -91,6 +87,7 @@ class DocxExportService
                 ? Settings::ZIPARCHIVE
                 : Settings::PCLZIP
         );
+        Settings::setTempDir($this->resolveTempDir());
 
         $document = new PhpWord;
         $document->setDefaultFontName(DocumentLayout::BODY_FONT);
@@ -131,11 +128,10 @@ class DocxExportService
         $this->addAttendance($section, $data);
         $this->addPhotoAnnex($section, $data);
 
-        $file = tempnam(sys_get_temp_dir(), 'siperapat_docx_');
-        if ($file === false) {
+        $file = $this->createTempFile('siperapat_docx_');
+        if ($file === null) {
             throw new RuntimeException('Tidak dapat membuat berkas sementara untuk ekspor Word Berita Acara.');
         }
-        $this->temporaryFiles[] = $file;
 
         IOFactory::createWriter($document, 'Word2007')->save($file);
 
@@ -275,10 +271,10 @@ class DocxExportService
 
         $rows = [
             ['Perihal / Agenda', $config['custom_agenda_title'] ?? $agenda->judul_rapat],
-            ['Hari / Tanggal', $agenda->waktu_mulai->translatedFormat('l, d F Y')],
-            ['Waktu Pelaksanaan', $agenda->waktu_mulai->format('H:i').' '
+            ['Hari / Tanggal', $agenda->waktu_mulai?->translatedFormat('l, d F Y') ?? '-'],
+            ['Waktu Pelaksanaan', ($agenda->waktu_mulai?->format('H:i') ?? '-').' '
                 .($agenda->waktu_selesai ? 's.d. '.$agenda->waktu_selesai->format('H:i').' WIB' : 'WIB s.d. Selesai')],
-            ['Format & Tempat', ucfirst($agenda->tipe_rapat).' - '
+            ['Format & Tempat', ucfirst((string) ($agenda->tipe_rapat ?? 'offline')).' - '
                 .($config['custom_location'] ?? ($agenda->lokasi_ruang ?? 'Daring (Online Meeting)'))],
             ['Penyelenggara Rapat', ($agenda->creator?->name ?? '-').' ('
                 .($agenda->creator?->unit?->nama_unit ?? 'Tingkat Lembaga').')'],
@@ -1015,10 +1011,14 @@ class DocxExportService
                 'height' => $hPt,
             ]);
         } catch (\Throwable $e) {
-            Log::warning('Gagal menyematkan gambar ke dalam dokumen Word: '.$e->getMessage(), [
-                'path' => $path,
-                'extension' => $extension,
-            ]);
+            try {
+                Log::warning('Gagal menyematkan gambar ke dalam dokumen Word: '.$e->getMessage(), [
+                    'path' => $path,
+                    'extension' => $extension,
+                ]);
+            } catch (\Throwable) {
+                // Ignore logger failures during document assembly
+            }
         }
     }
 
@@ -1109,13 +1109,14 @@ class DocxExportService
         return $style;
     }
 
-    private function plain(?string $html): string
+    private function plain(?string $html, bool $collapseSpaces = true): string
     {
         $text = preg_replace('/<[^>]+>/', ' ', (string) $html) ?? '';
         $text = html_entity_decode($text, ENT_QUOTES, 'UTF-8');
-        $text = preg_replace('/\s+/u', ' ', $text) ?? '';
+        $text = preg_replace($collapseSpaces ? '/\s+/u' : '/[\r\n\t]+/u', ' ', $text) ?? '';
+        $text = DocxHtmlRenderer::stripInvalidXmlControlChars($text);
 
-        return htmlspecialchars(trim($text), ENT_XML1 | ENT_QUOTES, 'UTF-8');
+        return htmlspecialchars(trim($text), ENT_XML1 | ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 
     /**
@@ -1123,11 +1124,7 @@ class DocxExportService
      */
     private function plainKeepMultiSpaces(?string $html): string
     {
-        $text = preg_replace('/<[^>]+>/', ' ', (string) $html) ?? '';
-        $text = html_entity_decode($text, ENT_QUOTES, 'UTF-8');
-        $text = preg_replace('/[\r\n\t]+/u', ' ', $text) ?? '';
-
-        return htmlspecialchars(trim($text), ENT_XML1 | ENT_QUOTES, 'UTF-8');
+        return $this->plain($html, false);
     }
 
     /**
@@ -1203,19 +1200,32 @@ class DocxExportService
             }
         }
 
-        $base = tempnam(sys_get_temp_dir(), 'siperapat_img_');
-        if ($base === false) {
+        $base = $this->createTempFile('siperapat_img_');
+        if ($base === null) {
             return null;
         }
-        $this->temporaryFiles[] = $base;
 
         $path = $base.'.'.$extension;
-        if (file_put_contents($path, $binary) === false) {
+        if (@file_put_contents($path, $binary) === false) {
             return null;
         }
         $this->temporaryFiles[] = $path;
 
         return $path;
+    }
+
+    /**
+     * Resolve an application-writable temp directory for PhpWord and image spilling,
+     * avoiding failures when the OS /tmp directory is restricted by open_basedir.
+     */
+    private function resolveTempDir(): string
+    {
+        return WordExportService::resolveDocxTempDir();
+    }
+
+    private function createTempFile(string $prefix): ?string
+    {
+        return WordExportService::createTempFile($prefix, $this->temporaryFiles);
     }
 
     private function cleanTemporaryFiles(): void

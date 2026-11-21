@@ -259,41 +259,44 @@ class SuratEdaranService
      */
     public function renderDocx(Agenda $agenda): string
     {
+        WordExportService::applyRuntimeLimits(512, 120);
+
         $config = $agenda->resolved_surat_edaran_config;
         $tempFiles = [];
-
-        Settings::setZipClass(
-            extension_loaded('zip')
-                ? Settings::ZIPARCHIVE
-                : Settings::PCLZIP
-        );
-
-        $word = new PhpWord;
-        $word->setDefaultFontName('Arial');
-        $word->setDefaultFontSize(12);
-        $word->getSettings()->setEvenAndOddHeaders(false);
-
-        // Fixed A4 Portrait (21.0 cm × 29.7 cm = 11906 × 16838 dxa)
-        // Margins: Left 3.0cm (1701 dxa), Right 2.0cm (1134 dxa), Bottom 2.5cm (1418 dxa),
-        // Top 0.59cm (333 dxa) with headerHeight 142 dxa when Kop active, else 1.0cm (567 dxa).
-        // Printable width = 16.0 cm = 9071 dxa
-        $printableTwips = 9071;
-        $section = $word->addSection([
-            'paperSize' => 'A4',
-            'orientation' => 'portrait',
-            'pageSizeW' => 11906,
-            'pageSizeH' => 16838,
-            'marginTop' => ! empty($config['show_kop']) ? 333 : 567,
-            'marginRight' => 1134,
-            'marginBottom' => 1418,
-            'marginLeft' => 1701,
-            'headerHeight' => 142,
-        ]);
 
         $oldReporting = error_reporting();
         error_reporting($oldReporting & ~E_DEPRECATED & ~E_USER_DEPRECATED);
 
         try {
+            Settings::setZipClass(
+                extension_loaded('zip')
+                    ? Settings::ZIPARCHIVE
+                    : Settings::PCLZIP
+            );
+            Settings::setTempDir($this->resolveTempDir());
+
+            $word = new PhpWord;
+            $word->setDefaultFontName('Arial');
+            $word->setDefaultFontSize(12);
+            $word->getSettings()->setEvenAndOddHeaders(false);
+
+            // Fixed A4 Portrait (21.0 cm × 29.7 cm = 11906 × 16838 dxa)
+            // Margins: Left 3.0cm (1701 dxa), Right 2.0cm (1134 dxa), Bottom 2.5cm (1418 dxa),
+            // Top 0.59cm (333 dxa) with headerHeight 142 dxa when Kop active, else 1.0cm (567 dxa).
+            // Printable width = 16.0 cm = 9071 dxa
+            $printableTwips = 9071;
+            $section = $word->addSection([
+                'paperSize' => 'A4',
+                'orientation' => 'portrait',
+                'pageSizeW' => 11906,
+                'pageSizeH' => 16838,
+                'marginTop' => ! empty($config['show_kop']) ? 333 : 567,
+                'marginRight' => 1134,
+                'marginBottom' => 1418,
+                'marginLeft' => 1701,
+                'headerHeight' => 142,
+            ]);
+
             // 1. Kop Surat Dinas Resmi (Header Halaman 1 — titlePg aktif) & Running Page Number Halaman 2+
             if (! empty($config['show_kop'])) {
                 $this->addDocxKopSurat($section, $config, $tempFiles);
@@ -537,11 +540,10 @@ class SuratEdaranService
             $this->appendHtmlBlocksToSection($section, (string) $config['lampiran_content']);
         }
 
-            $tempDocx = tempnam(sys_get_temp_dir(), 'siperapat_surat_docx_');
-            if ($tempDocx === false) {
+            $tempDocx = WordExportService::createTempFile('siperapat_surat_docx_', $tempFiles);
+            if ($tempDocx === null) {
                 throw new RuntimeException('Tidak dapat membuat berkas sementara untuk ekspor Word Surat Dinas.');
             }
-            $tempFiles[] = $tempDocx;
 
             IOFactory::createWriter($word, 'Word2007')->save($tempDocx);
             $bytes = file_get_contents($tempDocx);
@@ -570,6 +572,24 @@ class SuratEdaranService
 
         return response($docxBytes, 200, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            'Cache-Control' => 'private, no-cache, no-store, must-revalidate',
+            'X-Content-Type-Options' => 'nosniff',
+            'X-Accel-Buffering' => 'no',
+        ]);
+    }
+
+    /**
+     * Return a Microsoft Word HTML-compatible (.doc) fallback response when OpenXML (.docx) generation fails.
+     */
+    public function downloadLegacyWordResponse(Agenda $agenda): Response
+    {
+        WordExportService::applyRuntimeLimits(512, 120);
+        $html = $this->renderHtml($agenda);
+        $filename = 'Surat_Undangan_'.(Str::slug((string) $agenda->judul_rapat) ?: 'Rapat_'.($agenda->id ?? 'Resmi')).'.doc';
+
+        return response("\xef\xbb\xbf".$html, 200, [
+            'Content-Type' => 'application/vnd.ms-word; charset=UTF-8',
             'Content-Disposition' => 'attachment; filename="'.$filename.'"',
             'Cache-Control' => 'private, no-cache, no-store, must-revalidate',
             'X-Content-Type-Options' => 'nosniff',
@@ -907,9 +927,14 @@ class SuratEdaranService
         ]);
     }
 
+    private function resolveTempDir(): string
+    {
+        return WordExportService::resolveDocxTempDir();
+    }
+
     private function xmlSafe(string $text): string
     {
-        return htmlspecialchars($text, ENT_XML1 | ENT_COMPAT, 'UTF-8');
+        return htmlspecialchars(DocxHtmlRenderer::stripInvalidXmlControlChars($text), ENT_XML1 | ENT_COMPAT | ENT_SUBSTITUTE, 'UTF-8');
     }
 
     private function xmlSafeKeepSpaces(string $text): string
@@ -946,13 +971,12 @@ class SuratEdaranService
         imagealphablending($gdImg, false);
         imagesavealpha($gdImg, true);
 
-        $base = tempnam(sys_get_temp_dir(), 'siperapat_kop_');
-        if ($base === false) {
+        $base = WordExportService::createTempFile('siperapat_kop_', $tempFiles);
+        if ($base === null) {
             imagedestroy($gdImg);
 
             return null;
         }
-        $tempFiles[] = $base;
 
         $pngPath = $base.'.png';
         $saved = @imagepng($gdImg, $pngPath);

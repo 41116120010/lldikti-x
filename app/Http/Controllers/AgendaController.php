@@ -815,9 +815,9 @@ class AgendaController extends Controller
     }
 
     /**
-     * Export digital circular letter / meeting invitation as Microsoft Word (.docx).
+     * Export digital circular letter / meeting invitation as Microsoft Word (.docx with .doc fallback).
      */
-    public function exportSuratEdaranWord(Agenda $agenda, SuratEdaranService $suratEdaranService): Response|RedirectResponse
+    public function exportSuratEdaranWord(Request $request, Agenda $agenda, SuratEdaranService $suratEdaranService): Response|RedirectResponse
     {
         if (Auth::user()?->isStaff()) {
             Gate::authorize('viewStaff', $agenda);
@@ -825,23 +825,59 @@ class AgendaController extends Controller
             Gate::authorize('view', $agenda);
         }
 
-        $agenda->load([
-            'creator.unit',
-            'pimpinan.unit',
-            'notulis.unit',
-            'units',
-            'invitedUsers.unit',
-        ]);
-
         try {
-            return $suratEdaranService->downloadWordResponse($agenda);
-        } catch (\Throwable $e) {
-            Log::error('Gagal mengekspor Surat Dinas Word: '.$e->getMessage(), [
-                'agenda_id' => $agenda->id,
-                'exception' => $e,
+            $agenda->load([
+                'creator.unit',
+                'pimpinan.unit',
+                'notulis.unit',
+                'units',
+                'invitedUsers.unit',
             ]);
 
-            return back()->with('error', 'Gagal mengekspor dokumen Word Surat Dinas. Silakan coba kembali atau gunakan format PDF.');
+            return $suratEdaranService->downloadWordResponse($agenda);
+        } catch (\Throwable $e) {
+            try {
+                Log::warning('Gagal mengekspor Surat Dinas OpenXML Word (.docx), mencoba fallback format Word (.doc): '.$e->getMessage(), [
+                    'agenda_id' => $agenda->id,
+                    'exception' => $e,
+                ]);
+            } catch (\Throwable) {
+                // Suppress logger I/O errors so fallback still runs
+            }
+
+            try {
+                return $suratEdaranService->downloadLegacyWordResponse($agenda);
+            } catch (\Throwable $fallbackException) {
+                try {
+                    Log::error('Gagal mengekspor Surat Dinas Word fallback (.doc): '.$fallbackException->getMessage(), [
+                        'agenda_id' => $agenda->id,
+                        'exception' => $fallbackException,
+                    ]);
+                } catch (\Throwable) {
+                    // Suppress logger I/O errors so safe redirect still runs
+                }
+
+                $errorMsg = 'Gagal mengekspor dokumen Word Surat Dinas. Silakan coba kembali atau gunakan format PDF.';
+                $referer = (string) $request->headers->get('referer', '');
+                if ($referer !== '') {
+                    $refererHost = parse_url($referer, PHP_URL_HOST);
+                    $refererPath = (string) parse_url($referer, PHP_URL_PATH);
+
+                    if (
+                        ($refererHost === null || $refererHost === $request->getHost())
+                        && ! str_contains($refererPath, '/surat-edaran/export/word')
+                        && ! str_contains($refererPath, '/surat-edaran/word')
+                    ) {
+                        return back()->with('error', $errorMsg);
+                    }
+                }
+
+                if (Auth::user()?->isStaff()) {
+                    return redirect()->route('agendas.show', $agenda)->with('error', $errorMsg);
+                }
+
+                return redirect()->route('admin.agendas.surat-edaran', $agenda)->with('error', $errorMsg);
+            }
         }
     }
 }

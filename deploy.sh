@@ -272,10 +272,13 @@ php artisan event:cache 2>/dev/null || true
 php artisan storage:link 2>/dev/null || true
 
 # Normalisasi hak akses direktori storage, cache, dan build aset
-mkdir -p storage/logs public/build
+mkdir -p storage/logs storage/framework/cache/docx public/build
 touch storage/logs/laravel.log storage/logs/cron.log 2>/dev/null || true
 find storage bootstrap/cache public/build -type d -exec chmod 775 {} + 2>/dev/null || true
 find storage bootstrap/cache public/build -type f -exec chmod 664 {} + 2>/dev/null || true
+if [ "$(id -u)" -eq 0 ] && id "www-data" &>/dev/null; then
+    chown -R www-data:www-data storage bootstrap/cache public/build 2>/dev/null || true
+fi
 echo -e "      ${CLR_SUCCESS}✓ Seluruh cache performa (Config, Route, View) berhasil dikompilasi.${CLR_RESET}"
 
 MAIL_PROBE=$(php -r "require 'vendor/autoload.php'; \$app = require_once 'bootstrap/app.php'; \$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap(); \$m = config('mail.default'); \$f = config('mail.from.address'); if (\$m === 'smtp') { echo 'SMTP (' . config('mail.mailers.smtp.host') . ':' . config('mail.mailers.smtp.port') . ', scheme=' . config('mail.mailers.smtp.scheme') . ', from=' . \$f . ')'; } elseif (\$m === 'brevo') { echo 'BREVO_API (HTTPS Port 443, from=' . \$f . ')'; } else { echo 'WARN:' . \$m; }" 2>/dev/null || echo "UNKNOWN")
@@ -293,15 +296,34 @@ echo -e "${CLR_INFO}[8/9] Memeriksa status Cron Scheduler...${CLR_RESET}"
 PHP_BIN=$(command -v php || echo "/usr/bin/php")
 CRON_ENTRY="* * * * * cd ${SCRIPT_DIR} && ${PHP_BIN} artisan schedule:run >> ${SCRIPT_DIR}/storage/logs/cron.log 2>&1"
 
-if crontab -l 2>/dev/null | grep -q "schedule:run"; then
-    echo -e "      ${CLR_SUCCESS}✓ Cron job Laravel scheduler terdeteksi aktif di crontab.${CLR_RESET}"
-else
-    echo -e "      ${CLR_INFO}Mendaftarkan cron job Laravel scheduler ke crontab...${CLR_RESET}"
-    if (crontab -l 2>/dev/null | grep -v -F "schedule:run"; echo "${CRON_ENTRY}") | crontab - 2>/dev/null; then
-        echo -e "      ${CLR_SUCCESS}✓ Cron job berhasil disimpan secara otomatis ke crontab.${CLR_RESET}"
+CRON_USER=""
+if [ "$(id -u)" -eq 0 ] && id "www-data" &>/dev/null; then
+    CRON_USER="www-data"
+fi
+
+if [ -n "$CRON_USER" ]; then
+    if crontab -u "$CRON_USER" -l 2>/dev/null | grep -q "schedule:run"; then
+        echo -e "      ${CLR_SUCCESS}✓ Cron job Laravel scheduler terdeteksi aktif di crontab (${CRON_USER}).${CLR_RESET}"
     else
-        echo -e "      ${CLR_WARN}Tidak dapat menulis otomatis ke crontab. Jalankan perintah manual:${CLR_RESET}"
-        echo -e "      ${CLR_INFO}(crontab -l 2>/dev/null; echo \"${CRON_ENTRY}\") | crontab -${CLR_RESET}"
+        echo -e "      ${CLR_INFO}Mendaftarkan cron job Laravel scheduler ke crontab (${CRON_USER})...${CLR_RESET}"
+        if (crontab -u "$CRON_USER" -l 2>/dev/null | grep -v -F "schedule:run"; echo "${CRON_ENTRY}") | crontab -u "$CRON_USER" - 2>/dev/null; then
+            echo -e "      ${CLR_SUCCESS}✓ Cron job berhasil disimpan secara otomatis ke crontab (${CRON_USER}).${CLR_RESET}"
+        else
+            echo -e "      ${CLR_WARN}Tidak dapat menulis otomatis ke crontab (${CRON_USER}). Jalankan perintah manual:${CLR_RESET}"
+            echo -e "      ${CLR_INFO}(crontab -u ${CRON_USER} -l 2>/dev/null; echo \"${CRON_ENTRY}\") | crontab -u ${CRON_USER} -${CLR_RESET}"
+        fi
+    fi
+else
+    if crontab -l 2>/dev/null | grep -q "schedule:run"; then
+        echo -e "      ${CLR_SUCCESS}✓ Cron job Laravel scheduler terdeteksi aktif di crontab.${CLR_RESET}"
+    else
+        echo -e "      ${CLR_INFO}Mendaftarkan cron job Laravel scheduler ke crontab...${CLR_RESET}"
+        if (crontab -l 2>/dev/null | grep -v -F "schedule:run"; echo "${CRON_ENTRY}") | crontab - 2>/dev/null; then
+            echo -e "      ${CLR_SUCCESS}✓ Cron job berhasil disimpan secara otomatis ke crontab.${CLR_RESET}"
+        else
+            echo -e "      ${CLR_WARN}Tidak dapat menulis otomatis ke crontab. Jalankan perintah manual:${CLR_RESET}"
+            echo -e "      ${CLR_INFO}(crontab -l 2>/dev/null; echo \"${CRON_ENTRY}\") | crontab -${CLR_RESET}"
+        fi
     fi
 fi
 
@@ -356,6 +378,10 @@ fi
 
 SANITY_CHECK=$(php -r "require 'vendor/autoload.php'; \$app = require_once 'bootstrap/app.php'; \$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap(); echo 'Agendas: '.App\Models\Agenda::count().' | Users: '.App\Models\User::count().' | Units: '.App\Models\Unit::count();" 2>/dev/null || echo "Data check skipped")
 echo -e "      Status Data : ${CLR_BOLD}${SANITY_CHECK}${CLR_RESET}"
+
+if [ "$(id -u)" -eq 0 ] && id "www-data" &>/dev/null; then
+    chown -R www-data:www-data storage/logs bootstrap/cache 2>/dev/null || true
+fi
 
 echo ""
 echo -e "${CLR_SUCCESS}====================================================================${CLR_RESET}"

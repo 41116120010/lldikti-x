@@ -6,7 +6,10 @@ use App\Models\Agenda;
 use App\Models\Attendance;
 use App\Models\User;
 use App\Services\DocxExportService;
+use App\Services\SuratEdaranService;
 use App\Services\WordExportService;
+use Illuminate\Support\Facades\Log;
+use Psr\Log\AbstractLogger;
 use Tests\Support\InspectsDocx;
 use Tests\TestCase;
 
@@ -216,16 +219,37 @@ class WordExportIntegrityTest extends TestCase
         $agendaRefererResponse->assertSessionHas('error');
     }
 
+    public function test_surat_edaran_word_export_seamlessly_falls_back_to_doc_when_docx_fails(): void
+    {
+        $superadmin = User::where('role', 'administrator')->first();
+        $agenda = Agenda::first();
+
+        $this->partialMock(SuratEdaranService::class, function ($mock): void {
+            $mock->shouldReceive('downloadWordResponse')
+                ->once()
+                ->andThrow(new \RuntimeException('Simulated Surat Dinas DOCX failure'));
+        });
+
+        $response = $this->actingAs($superadmin)
+            ->get(route('admin.agendas.export-surat-edaran-word', $agenda));
+
+        $response->assertStatus(200);
+        $this->assertStringContainsString('ms-word', (string) $response->headers->get('Content-Type'));
+        $this->assertStringContainsString('.doc', (string) $response->headers->get('Content-Disposition'));
+    }
+
     public function test_surat_edaran_word_export_error_handling_gracefully_redirects_on_controller_failure(): void
     {
         $superadmin = User::where('role', 'administrator')->first();
         $agenda = Agenda::first();
 
-        $mock = $this->createMock(\App\Services\SuratEdaranService::class);
+        $mock = $this->createMock(SuratEdaranService::class);
         $mock->method('downloadWordResponse')
             ->willThrowException(new \RuntimeException('Simulated Surat Dinas Word export failure'));
+        $mock->method('downloadLegacyWordResponse')
+            ->willThrowException(new \RuntimeException('Simulated Surat Dinas Word fallback failure'));
 
-        $this->app->instance(\App\Services\SuratEdaranService::class, $mock);
+        $this->app->instance(SuratEdaranService::class, $mock);
 
         $response = $this->actingAs($superadmin)
             ->from(route('admin.agendas.surat-edaran', $agenda))
@@ -233,5 +257,87 @@ class WordExportIntegrityTest extends TestCase
 
         $response->assertRedirect(route('admin.agendas.surat-edaran', $agenda));
         $response->assertSessionHas('error');
+    }
+
+    public function test_word_export_succeeds_even_when_logger_throws_permission_denied(): void
+    {
+        $superadmin = User::where('role', 'administrator')->first();
+        $agenda = Agenda::first();
+
+        $originalLog = Log::getFacadeRoot();
+        $failingLogger = new class extends AbstractLogger
+        {
+            public function log($level, string|\Stringable $message, array $context = []): void
+            {
+                throw new \UnexpectedValueException('The stream or file "storage/logs/laravel.log" could not be opened in append mode: Permission denied');
+            }
+        };
+
+        Log::swap($failingLogger);
+
+        try {
+            // 1. Happy path must succeed without hitting any file logger (Web & API)
+            $webResponse = $this->actingAs($superadmin)->get("/admin/reports/{$agenda->id}/export/word");
+            $webResponse->assertStatus(200);
+            $this->assertStringContainsString('wordprocessingml.document', (string) $webResponse->headers->get('Content-Type'));
+
+            $apiResponse = $this->actingAs($superadmin, 'sanctum')->get("/api/v1/reports/agendas/{$agenda->id}/export/word");
+            $apiResponse->assertStatus(200);
+            $this->assertStringContainsString('wordprocessingml.document', (string) $apiResponse->headers->get('Content-Type'));
+
+            // 2. Fallback path must STILL succeed when DocxExportService throws AND logger throws
+            $mockDocx = $this->createMock(DocxExportService::class);
+            $mockDocx->method('exportBeritaAcara')
+                ->willThrowException(new \RuntimeException('Simulated DOCX write failure'));
+            $this->app->instance(DocxExportService::class, $mockDocx);
+
+            $webFallback = $this->actingAs($superadmin)->get("/admin/reports/{$agenda->id}/export/word");
+            $webFallback->assertStatus(200);
+            $this->assertStringContainsString('ms-word', (string) $webFallback->headers->get('Content-Type'));
+
+            $apiFallback = $this->actingAs($superadmin, 'sanctum')->get("/api/v1/reports/agendas/{$agenda->id}/export/word");
+            $apiFallback->assertStatus(200);
+            $this->assertStringContainsString('ms-word', (string) $apiFallback->headers->get('Content-Type'));
+        } finally {
+            Log::swap($originalLog);
+        }
+    }
+
+    public function test_word_export_fallback_handles_null_attendee_user_and_array_query_params_safely(): void
+    {
+        $superadmin = User::where('role', 'administrator')->first();
+        $agenda = Agenda::first();
+
+        // 1. Verify legacy HTML .doc template renders safely even when attendee user, signed_at, or agenda waktu_mulai is null
+        $viewData = app(WordExportService::class)->prepareViewData($agenda);
+        $nullAttendance = new Attendance([
+            'agenda_id' => $agenda->id,
+            'status' => 'hadir',
+            'signed_at' => null,
+        ]);
+        $nullAttendance->setRelation('user', null);
+        $viewData['attendances'] = collect([[
+            'model' => $nullAttendance,
+            'sig_base64' => null,
+            'selfie_base64' => null,
+        ]]);
+        $agendaClone = clone $agenda;
+        $agendaClone->waktu_mulai = null;
+        $agendaClone->waktu_selesai = null;
+        $viewData['agenda'] = $agendaClone;
+
+        $renderedHtml = view('exports.word_berita_acara', $viewData)->render();
+        $this->assertStringContainsString('Peserta (Anonim)', $renderedHtml);
+
+        // 2. Verify array query parameters (?instansi_induk[]=bad) do not cause TypeError in ReportConfigService
+        $mockDocx = $this->createMock(DocxExportService::class);
+        $mockDocx->method('exportBeritaAcara')
+            ->willThrowException(new \RuntimeException('Simulated DOCX failure'));
+        $this->app->instance(DocxExportService::class, $mockDocx);
+
+        $response = $this->actingAs($superadmin)
+            ->get("/admin/reports/{$agenda->id}/export/word?instansi_induk[]=bad&signer1_name[]=bad");
+        $response->assertStatus(200);
+        $this->assertStringContainsString('ms-word', (string) $response->headers->get('Content-Type'));
     }
 }

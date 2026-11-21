@@ -14,6 +14,8 @@ use PhpOffice\PhpWord\SimpleType\TblWidth;
  */
 final class DocxHtmlRenderer
 {
+    private const MAX_TABLE_SPAN = 50;
+
     private const BLOCK_TAGS = [
         'p', 'div', 'h2', 'h3', 'h4', 'ul', 'ol', 'blockquote', 'hr', 'table',
     ];
@@ -200,7 +202,7 @@ final class DocxHtmlRenderer
         foreach ($rows as $rowMeta) {
             $colSum = 0;
             foreach ($rowMeta['cells'] as $cell) {
-                $colSum += max(1, (int) ($cell->getAttribute('colspan') ?: 1));
+                $colSum += min(self::MAX_TABLE_SPAN, max(1, (int) ($cell->getAttribute('colspan') ?: 1)));
             }
             $maxCols = max($maxCols, $colSum);
         }
@@ -259,9 +261,9 @@ final class DocxHtmlRenderer
                 }
 
                 $domCell = $domCells[$domIdx++];
-                $colSpan = max(1, (int) ($domCell->getAttribute('colspan') ?: 1));
+                $colSpan = min(self::MAX_TABLE_SPAN, max(1, (int) ($domCell->getAttribute('colspan') ?: 1)));
                 $colSpan = min($colSpan, $maxCols - $colCursor);
-                $rowSpan = max(1, (int) ($domCell->getAttribute('rowspan') ?: 1));
+                $rowSpan = min(self::MAX_TABLE_SPAN, max(1, (int) ($domCell->getAttribute('rowspan') ?: 1)));
 
                 $cellWidthTwips = 0;
                 for ($i = 0; $i < $colSpan; $i++) {
@@ -866,8 +868,13 @@ final class DocxHtmlRenderer
         return true;
     }
 
+    public static function stripInvalidXmlControlChars(string $text): string
+    {
+        return preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $text) ?? $text;
+    }
+
     public static function xmlSafe(string $text): string
     {
-        return htmlspecialchars($text, ENT_XML1 | ENT_QUOTES, 'UTF-8');
+        return htmlspecialchars(self::stripInvalidXmlControlChars($text), ENT_XML1 | ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 }

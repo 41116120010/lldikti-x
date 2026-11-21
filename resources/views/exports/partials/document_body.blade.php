@@ -25,18 +25,18 @@
     <tr>
         <td style="font-weight: bold; padding: {{ DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ DocumentLayout::DETAIL_LABEL_COLUMN }};">Hari / Tanggal</td>
         <td style="padding: {{ DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ DocumentLayout::DETAIL_COLON_COLUMN }};">:</td>
-        <td style="padding: {{ DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ DocumentLayout::DETAIL_VALUE_COLUMN }};">{{ $agenda->waktu_mulai->translatedFormat('l, d F Y') }}</td>
+        <td style="padding: {{ DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ DocumentLayout::DETAIL_VALUE_COLUMN }};">{{ $agenda->waktu_mulai?->translatedFormat('l, d F Y') ?? '-' }}</td>
     </tr>
     <tr>
         <td style="font-weight: bold; padding: {{ DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ DocumentLayout::DETAIL_LABEL_COLUMN }};">Waktu Pelaksanaan</td>
         <td style="padding: {{ DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ DocumentLayout::DETAIL_COLON_COLUMN }};">:</td>
-        <td style="padding: {{ DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ DocumentLayout::DETAIL_VALUE_COLUMN }};">{{ $agenda->waktu_mulai->format('H:i') }} {{ $agenda->waktu_selesai ? 's.d. ' . $agenda->waktu_selesai->format('H:i') . ' WIB' : 'WIB s.d. Selesai' }}</td>
+        <td style="padding: {{ DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ DocumentLayout::DETAIL_VALUE_COLUMN }};">{{ $agenda->waktu_mulai?->format('H:i') ?? '-' }} {{ $agenda->waktu_selesai ? 's.d. ' . $agenda->waktu_selesai->format('H:i') . ' WIB' : 'WIB s.d. Selesai' }}</td>
     </tr>
     <tr>
         <td style="font-weight: bold; padding: {{ DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ DocumentLayout::DETAIL_LABEL_COLUMN }};">Format &amp; Tempat</td>
         <td style="padding: {{ DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; width: {{ DocumentLayout::DETAIL_COLON_COLUMN }};">:</td>
         <td style="padding: {{ DocumentLayout::INFO_CELL_PAD_PT }}pt 0; vertical-align: top; border: none; word-wrap: break-word; overflow-wrap: break-word; width: {{ DocumentLayout::DETAIL_VALUE_COLUMN }};">
-            {{ ucfirst($agenda->tipe_rapat) }} &mdash;
+            {{ ucfirst((string) ($agenda->tipe_rapat ?? 'offline')) }} &mdash;
             {{ $config['custom_location'] ?? ($agenda->lokasi_ruang ?? 'Daring (Online Meeting)') }}
         </td>
     </tr>
@@ -223,15 +223,15 @@
         @forelse($attendances as $index => $item)
             <tr style="mso-yfti-row: cantSplit; page-break-inside: avoid; break-inside: avoid;">
                 <td style="border: 1px solid #000000; text-align: center; padding: 2pt 2pt; vertical-align: middle;">{{ $index + 1 }}</td>
-                <td style="border: 1px solid #000000; padding: 2pt 4pt; vertical-align: middle;"><strong>{{ $item['model']->user->name }}</strong></td>
+                <td style="border: 1px solid #000000; padding: 2pt 4pt; vertical-align: middle;"><strong>{{ $item['model']->user?->name ?? 'Peserta (Anonim)' }}</strong></td>
                 @if($config['show_nip'] ?? true)
-                    <td style="border: 1px solid #000000; padding: 2pt 3pt; font-family: {{ DocumentLayout::BODY_FONT_CSS }}; font-size: {{ DocumentLayout::ATTENDANCE_SIZE_PT }}pt; vertical-align: middle; white-space: nowrap;">{{ $item['model']->user->nip }}</td>
+                    <td style="border: 1px solid #000000; padding: 2pt 3pt; font-family: {{ DocumentLayout::BODY_FONT_CSS }}; font-size: {{ DocumentLayout::ATTENDANCE_SIZE_PT }}pt; vertical-align: middle; white-space: nowrap;">{{ $item['model']->user?->nip ?? '-' }}</td>
                 @endif
                 @if($config['show_unit'] ?? true)
-                    <td style="border: 1px solid #000000; padding: 2pt 3pt; vertical-align: middle; font-size: {{ DocumentLayout::ATTENDANCE_SIZE_PT }}pt;">{{ $item['model']->user->unit?->kode_unit ?? 'Pusat' }}</td>
+                    <td style="border: 1px solid #000000; padding: 2pt 3pt; vertical-align: middle; font-size: {{ DocumentLayout::ATTENDANCE_SIZE_PT }}pt;">{{ $item['model']->user?->unit?->kode_unit ?? 'Pusat' }}</td>
                 @endif
                 @if($config['show_attendance_time'] ?? true)
-                    <td style="border: 1px solid #000000; text-align: center; padding: 2pt 2pt; font-size: {{ DocumentLayout::ATTENDANCE_SIZE_PT }}pt; vertical-align: middle;">{{ $item['model']->signed_at->format('H:i') }}</td>
+                    <td style="border: 1px solid #000000; text-align: center; padding: 2pt 2pt; font-size: {{ DocumentLayout::ATTENDANCE_SIZE_PT }}pt; vertical-align: middle;">{{ $item['model']->signed_at?->format('H:i') ?? '-' }}</td>
                 @endif
                 @if($config['show_selfie_photos'] ?? true)
                     <td style="border: 1px solid #000000; text-align: center; vertical-align: middle; padding: 1.5pt;">

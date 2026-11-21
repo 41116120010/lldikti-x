@@ -6,6 +6,7 @@ use App\Models\Agenda;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class WordExportService
 {
@@ -14,6 +15,80 @@ class WordExportService
      * Anything larger is refused before it is handed to GD.
      */
     private const MAX_SOURCE_DIMENSION = 4000;
+
+    /**
+     * Raise PHP memory_limit only when the configured ceiling is below $minMegabytes,
+     * never downgrading an unlimited (-1) or larger server allocation.
+     */
+    public static function applyRuntimeLimits(int $minMegabytes = 512, int $timeLimitSeconds = 120): void
+    {
+        $raw = trim((string) @ini_get('memory_limit'));
+        $bytes = null;
+
+        if ($raw === '-1') {
+            $bytes = -1;
+        } elseif ($raw !== '' && preg_match('/^(\d+)\s*([KMG])?$/i', $raw, $m)) {
+            $value = (int) $m[1];
+            $bytes = match (strtoupper($m[2] ?? '')) {
+                'G' => $value * 1024 * 1024 * 1024,
+                'M' => $value * 1024 * 1024,
+                'K' => $value * 1024,
+                default => $value,
+            };
+        }
+
+        if ($bytes !== -1 && ($bytes === null || $bytes < $minMegabytes * 1024 * 1024)) {
+            @ini_set('memory_limit', $minMegabytes.'M');
+        }
+
+        @set_time_limit($timeLimitSeconds);
+    }
+
+    public function ensureExportRuntimeLimits(int $minMegabytes = 512, int $timeLimitSeconds = 120): void
+    {
+        self::applyRuntimeLimits($minMegabytes, $timeLimitSeconds);
+    }
+
+    /**
+     * Resolve an application-writable temporary directory for PhpWord / media spilling,
+     * falling back to sys_get_temp_dir() if storage is not writable.
+     */
+    public static function resolveDocxTempDir(): string
+    {
+        $dir = storage_path('framework/cache/docx');
+        if (! is_dir($dir)) {
+            @mkdir($dir, 0775, true);
+        }
+
+        if (is_dir($dir) && is_writable($dir)) {
+            return $dir;
+        }
+
+        return sys_get_temp_dir();
+    }
+
+    /**
+     * Create a temporary file in the resolved writable directory and register it for cleanup.
+     *
+     * @param  array<int, string>  $tracked
+     */
+    public static function createTempFile(string $prefix, array &$tracked = []): ?string
+    {
+        $tempDir = self::resolveDocxTempDir();
+        $file = @tempnam($tempDir, $prefix);
+
+        if ($file === false && $tempDir !== sys_get_temp_dir()) {
+            $file = @tempnam(sys_get_temp_dir(), $prefix);
+        }
+
+        if ($file === false) {
+            return null;
+        }
+
+        $tracked[] = $file;
+
+        return $file;
+    }
 
     /**
      * Prepare resolved data and optimized base64 media for document export.
@@ -27,8 +102,7 @@ class WordExportService
      */
     public function prepareViewData(Agenda $agenda, array $config = [], string $pageMode = 'named'): array
     {
-        @ini_set('memory_limit', '256M');
-        @set_time_limit(120);
+        $this->ensureExportRuntimeLimits(512, 120);
 
         $agenda->load([
             'creator.unit',
@@ -161,7 +235,8 @@ class WordExportService
     public function exportBeritaAcara(Agenda $agenda, array $config = []): Response
     {
         $content = $this->generateDocumentContent($agenda, $config);
-        $filename = 'Berita_Acara_' . $agenda->slug . '.doc';
+        $safeSlug = Str::slug((string) ($agenda->slug ?: $agenda->judul_rapat)) ?: 'Rapat_' . ($agenda->id ?? 'Resmi');
+        $filename = 'Berita_Acara_' . $safeSlug . '.doc';
 
         return response("\xef\xbb\xbf" . $content, 200, [
             'Content-Type' => 'application/vnd.ms-word; charset=UTF-8',
